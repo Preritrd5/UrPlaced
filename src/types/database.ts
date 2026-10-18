@@ -134,8 +134,88 @@ export type PreparationPlanStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED";
 export type ReportOrigin = "CANDIDATE_REPORTED" | "COLLEGE_CONFIRMED";
 export type ModerationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-export type StudentRow = Database["public"]["Tables"]["students"]["Row"];
+// Phase 06: Question Bank Management (QuestionBank Sentinel)
+export type QuestionType =
+  | "SINGLE_CHOICE"
+  | "MULTIPLE_SELECT"
+  | "NUMERIC"
+  | "SHORT_ANSWER"
+  | "CODING";
 
+export type QuestionLifecycleStatus =
+  | "DRAFT"
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "PUBLISHED"
+  | "WITHDRAWN"
+  | "ARCHIVED";
+
+export type QuestionDifficulty = "EASY" | "MEDIUM" | "HARD";
+export type QuestionContentFormat = "MARKDOWN" | "HTML" | "PLAIN";
+
+export type QuestionSourceType =
+  | "COLLEGE_AUTHORED"
+  | "PLATFORM_ORIGINAL"
+  | "OFFICIAL_COMPANY_PUBLIC"
+  | "LICENSED_THIRD_PARTY"
+  | "CANDIDATE_REPORTED"
+  | "AI_GENERATED";
+
+export type QuestionLicenseType =
+  | "PROPRIETARY"
+  | "PUBLIC_DOMAIN"
+  | "PERMISSIVE"
+  | "CANDIDATE_SHARED"
+  | "RESTRICTED";
+
+export type AnswerKeyReviewStatus =
+  | "UNREVIEWED"
+  | "VERIFIED_CORRECT"
+  | "NEEDS_REVISION"
+  | "REJECTED";
+
+export type BankCategory =
+  | "CODING"
+  | "APTITUDE"
+  | "TECHNICAL_CORE"
+  | "BEHAVIORAL"
+  | "GENERAL"
+  | "COMPANY_SPECIFIC";
+
+export type BankSharingPolicy =
+  | "COLLEGE_PRIVATE"
+  | "EXPLICITLY_SHARED"
+  | "GLOBAL_SHARED";
+
+export type BankStatus = "ACTIVE" | "ARCHIVED";
+
+export type ImportJobStatus =
+  | "PREVIEWED"
+  | "COMMITTED"
+  | "FAILED"
+  | "CANCELLED";
+
+export type DuplicateDetectionMethod =
+  | "EXACT_FINGERPRINT"
+  | "TEXT_SIMILARITY"
+  | "OPTION_OVERLAP";
+
+export type DuplicateStatus =
+  | "PENDING_REVIEW"
+  | "CONFIRMED_DUPLICATE"
+  | "FALSE_POSITIVE"
+  | "RESOLVED";
+
+export type QuestionSetPurpose =
+  | "ASSESSMENT"
+  | "PRACTICE"
+  | "DIAGNOSTIC"
+  | "COMPANY_PREP"
+  | "INTERVIEW";
+
+export type QuestionSetStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+export type StudentRow = Database["public"]["Tables"]["students"]["Row"];
 
 export interface Database {
   public: {
@@ -870,6 +950,223 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["recruitment_experience_reports"]["Insert"]>;
       };
+      question_banks: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          description: string | null;
+          category: BankCategory;
+          sharing_policy: BankSharingPolicy;
+          status: BankStatus;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          name: string;
+          description?: string | null;
+          category: BankCategory;
+          sharing_policy?: BankSharingPolicy;
+          status?: BankStatus;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["question_banks"]["Insert"]>;
+      };
+      questions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          bank_id: string;
+          question_type: QuestionType;
+          current_version_id: string | null;
+          lifecycle_status: QuestionLifecycleStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          bank_id: string;
+          question_type: QuestionType;
+          current_version_id?: string | null;
+          lifecycle_status?: QuestionLifecycleStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["questions"]["Insert"]>;
+      };
+      question_versions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          question_id: string;
+          version_number: number;
+          prompt: string;
+          content_format: QuestionContentFormat;
+          options: Json;
+          answer_key: Json;
+          explanation: string | null;
+          difficulty: QuestionDifficulty;
+          skill_id: string | null;
+          topic_tags: string[];
+          source_type: QuestionSourceType;
+          source_reference: string | null;
+          license_type: QuestionLicenseType;
+          review_status: AnswerKeyReviewStatus;
+          review_notes: string | null;
+          fingerprint: string;
+          change_summary: string | null;
+          published_at: string | null;
+          created_by: string | null;
+          reviewed_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          question_id: string;
+          version_number?: number;
+          prompt: string;
+          content_format?: QuestionContentFormat;
+          options?: Json;
+          answer_key?: Json;
+          explanation?: string | null;
+          difficulty?: QuestionDifficulty;
+          skill_id?: string | null;
+          topic_tags?: string[];
+          source_type?: QuestionSourceType;
+          source_reference?: string | null;
+          license_type?: QuestionLicenseType;
+          review_status?: AnswerKeyReviewStatus;
+          review_notes?: string | null;
+          fingerprint: string;
+          change_summary?: string | null;
+          published_at?: string | null;
+          created_by?: string | null;
+          reviewed_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["question_versions"]["Insert"]>;
+      };
+      question_import_jobs: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          bank_id: string | null;
+          file_name: string;
+          total_rows: number;
+          valid_rows: number;
+          invalid_rows: number;
+          duplicate_rows: number;
+          status: ImportJobStatus;
+          error_report: Json;
+          created_by: string | null;
+          created_at: string;
+          committed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          bank_id?: string | null;
+          file_name: string;
+          total_rows?: number;
+          valid_rows?: number;
+          invalid_rows?: number;
+          duplicate_rows?: number;
+          status?: ImportJobStatus;
+          error_report?: Json;
+          created_by?: string | null;
+          created_at?: string;
+          committed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["question_import_jobs"]["Insert"]>;
+      };
+      question_duplicate_candidates: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          source_question_id: string;
+          matched_question_id: string;
+          similarity_score: number;
+          detection_method: DuplicateDetectionMethod;
+          status: DuplicateStatus;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          source_question_id: string;
+          matched_question_id: string;
+          similarity_score: number;
+          detection_method: DuplicateDetectionMethod;
+          status?: DuplicateStatus;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["question_duplicate_candidates"]["Insert"]>;
+      };
+      question_sets: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          name: string;
+          description: string | null;
+          purpose: QuestionSetPurpose;
+          status: QuestionSetStatus;
+          version_number: number;
+          is_locked: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          name: string;
+          description?: string | null;
+          purpose?: QuestionSetPurpose;
+          status?: QuestionSetStatus;
+          version_number?: number;
+          is_locked?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["question_sets"]["Insert"]>;
+      };
+      question_set_items: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          set_id: string;
+          question_id: string;
+          version_id: string;
+          sequence_order: number;
+          points: number;
+          negative_points: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          set_id: string;
+          question_id: string;
+          version_id: string;
+          sequence_order?: number;
+          points?: number;
+          negative_points?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["question_set_items"]["Insert"]>;
+      };
     };
   };
 }
@@ -882,4 +1179,12 @@ export type RequirementSkillMappingRow = Database["public"]["Tables"]["requireme
 export type StudentPreparationPlanRow = Database["public"]["Tables"]["student_preparation_plans"]["Row"];
 export type PreparationTaskRow = Database["public"]["Tables"]["preparation_tasks"]["Row"];
 export type RecruitmentExperienceReportRow = Database["public"]["Tables"]["recruitment_experience_reports"]["Row"];
+
+export type QuestionBankRow = Database["public"]["Tables"]["question_banks"]["Row"];
+export type QuestionRow = Database["public"]["Tables"]["questions"]["Row"];
+export type QuestionVersionRow = Database["public"]["Tables"]["question_versions"]["Row"];
+export type QuestionImportJobRow = Database["public"]["Tables"]["question_import_jobs"]["Row"];
+export type QuestionDuplicateCandidateRow = Database["public"]["Tables"]["question_duplicate_candidates"]["Row"];
+export type QuestionSetRow = Database["public"]["Tables"]["question_sets"]["Row"];
+export type QuestionSetItemRow = Database["public"]["Tables"]["question_set_items"]["Row"];
 

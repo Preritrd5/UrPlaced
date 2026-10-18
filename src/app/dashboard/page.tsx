@@ -15,6 +15,7 @@ import {
   Clock,
   LogOut,
   AlertCircle,
+  BookOpen,
 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { PlacementMetricsService } from "@/modules/placement/services/placement-metrics-service";
@@ -179,12 +180,22 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick Placement Actions */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Button asChild variant="primary" className="h-auto py-3 px-4 justify-between">
           <Link href="/dashboard/drives/new">
             <div className="flex items-center gap-2">
               <PlusCircle className="h-4 w-4" />
               <span>Launch Drive</span>
+            </div>
+            <ArrowUpRight className="h-4 w-4 opacity-75" />
+          </Link>
+        </Button>
+
+        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between">
+          <Link href="/dashboard/questions">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span>Question Bank</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75" />
           </Link>

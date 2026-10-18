@@ -17,6 +17,7 @@ import {
   Briefcase,
   School,
   Users,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,11 @@ export function AppShell({ children }: AppShellProps) {
       name: "Recruitment Drives",
       href: "/dashboard/drives",
       icon: Briefcase,
+    },
+    {
+      name: "Question Bank",
+      href: "/dashboard/questions",
+      icon: BookOpen,
     },
     {
       name: "Academic Structure",
