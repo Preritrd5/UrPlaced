@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ========================================================
+     UrPlaced Strict Design System — Invariant Brand Tokens
+     ======================================================== */
+  --color-primary: #5052C9;
+  --color-secondary-accent: #2E8F86;
+  --color-background: #EDECE7;
+  --color-card-bg: #F8F7F3;
+  --color-input-bg: #FBFAF7;
+  --color-primary-text: #24283A;
+  --color-secondary-text: #292D40;
+  --gradient-primary: linear-gradient(135deg, #7779D8 0%, #5052C9 100%);
+
+  /* Derived Interactive States */
+  --color-primary-hover: #4345B0;
+  --color-primary-active: #383A99;
+  --color-primary-subtle: rgba(80, 82, 201, 0.08);
+  --color-primary-ring: rgba(80, 82, 201, 0.25);
+
+  --color-secondary-hover: #267870;
+  --color-secondary-active: #1F615B;
+  --color-secondary-subtle: rgba(46, 143, 134, 0.10);
+
+  /* Derived Borders & Dividers */
+  --color-border: #DDDCD5;
+  --color-border-subtle: rgba(36, 40, 58, 0.08);
+  --color-border-strong: rgba(36, 40, 58, 0.20);
+  --color-border-focus: #5052C9;
+
+  /* Derived Muted & Disabled */
+  --color-text-muted: rgba(41, 45, 64, 0.65);
+  --color-text-disabled: rgba(41, 45, 64, 0.38);
+  --color-bg-disabled: rgba(36, 40, 58, 0.06);
+
+  /* Derived Semantic Status Indicators */
+  --color-success: #2E8F86;
+  --color-success-subtle: rgba(46, 143, 134, 0.12);
+  --color-info: #5052C9;
+  --color-info-subtle: rgba(80, 82, 201, 0.10);
+  --color-warning: #8F6E2E;
+  --color-warning-subtle: rgba(143, 110, 46, 0.12);
+  --color-danger: #B33A3A;
+  --color-danger-subtle: rgba(179, 58, 58, 0.12);
+
+  /* Elevation Shadows (Derived from #24283A) */
+  --shadow-sm: 0 1px 3px rgba(36, 40, 58, 0.06), 0 1px 2px rgba(36, 40, 58, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(36, 40, 58, 0.07), 0 2px 4px -2px rgba(36, 40, 58, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(36, 40, 58, 0.08), 0 4px 6px -4px rgba(36, 40, 58, 0.04);
+
+  /* Fallback Font Stacks if Next Font variables are not applied */
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Base Document Styling */
+html, body {
+  background-color: var(--color-background);
+  color: var(--color-primary-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--color-primary-text);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+}
+
+/* Selection and Focus Highlights */
+::selection {
+  background-color: rgba(80, 82, 201, 0.20);
+  color: var(--color-primary-text);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-sm), 0 0 0 3px var(--color-primary-ring);
+  border-color: var(--color-primary);
+}
