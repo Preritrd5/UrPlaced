@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Calendar,
   Building2,
+  Sparkles,
 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { DriveService } from "@/modules/recruitment-drives/services/drive-service";
@@ -191,11 +192,18 @@ export default async function DrivesPage({ searchParams }: DrivesPageProps) {
                     <span>{drive.applicants_count || 0} Registered</span>
                   </div>
 
-                  <Button asChild variant="ghost" size="sm" className="h-7 px-2">
-                    <Link href={`/dashboard/drives/${drive.id}`}>
-                      Manage <ExternalLink className="h-3 w-3 ml-1" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button asChild variant="outline" size="sm" className="h-7 px-2 text-[11px] text-primary">
+                      <Link href={`/dashboard/drives/${drive.id}/prep`}>
+                        <Sparkles className="h-3 w-3 mr-1" /> DriveFit Prep
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[11px]">
+                      <Link href={`/dashboard/drives/${drive.id}`}>
+                        Manage <ExternalLink className="h-3 w-3 ml-1" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

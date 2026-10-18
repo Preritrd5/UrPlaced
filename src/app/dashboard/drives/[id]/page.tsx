@@ -20,12 +20,14 @@ import {
   X,
   Play,
   StopCircle,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DriveIntelligenceTab } from "@/components/drives/drive-intelligence-tab";
 
 interface DriveDetailPageProps {
   params: Promise<{ id: string }>;
@@ -35,7 +37,9 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "criteria" | "stages" | "candidates" | "offers">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "criteria" | "stages" | "candidates" | "offers" | "intelligence"
+  >("overview");
   const [drive, setDrive] = useState<any | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [offers, setOffers] = useState<any[]>([]);
@@ -431,6 +435,17 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
           }`}
         >
           Placement Offers ({offers.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("intelligence")}
+          className={`py-2 px-3 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === "intelligence"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-secondary hover:text-text-primary"
+          }`}
+        >
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          DriveFit Intelligence
         </button>
       </div>
 
@@ -906,6 +921,17 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Tab 6: DriveFit Intelligence */}
+      {activeTab === "intelligence" && (
+        <DriveIntelligenceTab
+          driveId={id}
+          companyId={drive.company_id}
+          companyName={drive.company?.name || "Company"}
+          roleTitle={drive.role_title}
+          driveTitle={drive.title}
+        />
       )}
     </div>
   );

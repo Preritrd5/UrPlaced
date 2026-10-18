@@ -65,6 +65,18 @@ export const Permissions = {
   // Training & Audit
   TRAINING_MANAGE: "training.manage",
   AUDIT_LOG_READ: "audit_log.read",
+
+  // DriveFit & Recruitment Intelligence
+  INTELLIGENCE_SOURCES_MANAGE: "intelligence.sources.manage",
+  INTELLIGENCE_SOURCES_READ: "intelligence.sources.read",
+  INTELLIGENCE_REQUIREMENTS_MANAGE: "intelligence.requirements.manage",
+  INTELLIGENCE_REQUIREMENTS_VERIFY: "intelligence.requirements.verify",
+  INTELLIGENCE_PUBLISH: "intelligence.publish",
+  INTELLIGENCE_MAPPINGS_MANAGE: "intelligence.mappings.manage",
+  DRIVEFIT_PLAN_MANAGE_OWN: "drivefit.plan.manage_own",
+  DRIVEFIT_READ_PUBLISHED: "drivefit.read_published",
+  EXPERIENCE_REPORTS_MODERATE: "experience_reports.moderate",
+  EXPERIENCE_REPORTS_SUBMIT: "experience_reports.submit",
 } as const;
 
 export type PermissionIdentifier =
@@ -87,6 +99,8 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.AUDIT_LOG_READ,
     Permissions.DASHBOARD_READ,
     Permissions.REPORTS_EXPORT,
+    Permissions.INTELLIGENCE_SOURCES_READ,
+    Permissions.DRIVEFIT_READ_PUBLISHED,
   ],
   PLACEMENT_HEAD: [
     Permissions.STAFF_MANAGE,
@@ -117,6 +131,14 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.RESULTS_READ_COHORT,
     Permissions.TRAINING_MANAGE,
     Permissions.AUDIT_LOG_READ,
+    Permissions.INTELLIGENCE_SOURCES_MANAGE,
+    Permissions.INTELLIGENCE_SOURCES_READ,
+    Permissions.INTELLIGENCE_REQUIREMENTS_MANAGE,
+    Permissions.INTELLIGENCE_REQUIREMENTS_VERIFY,
+    Permissions.INTELLIGENCE_PUBLISH,
+    Permissions.INTELLIGENCE_MAPPINGS_MANAGE,
+    Permissions.DRIVEFIT_READ_PUBLISHED,
+    Permissions.EXPERIENCE_REPORTS_MODERATE,
   ],
   PLACEMENT_STAFF: [
     Permissions.STAFF_INVITE,
@@ -138,6 +160,14 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.QUESTIONS_REVIEW,
     Permissions.ASSESSMENTS_CREATE,
     Permissions.RESULTS_READ_COHORT,
+    Permissions.INTELLIGENCE_SOURCES_MANAGE,
+    Permissions.INTELLIGENCE_SOURCES_READ,
+    Permissions.INTELLIGENCE_REQUIREMENTS_MANAGE,
+    Permissions.INTELLIGENCE_REQUIREMENTS_VERIFY,
+    Permissions.INTELLIGENCE_PUBLISH,
+    Permissions.INTELLIGENCE_MAPPINGS_MANAGE,
+    Permissions.DRIVEFIT_READ_PUBLISHED,
+    Permissions.EXPERIENCE_REPORTS_MODERATE,
   ],
   TRAINER: [
     Permissions.DASHBOARD_READ,
@@ -147,6 +177,8 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.ASSESSMENTS_CREATE,
     Permissions.RESULTS_READ_COHORT,
     Permissions.TRAINING_MANAGE,
+    Permissions.INTELLIGENCE_SOURCES_READ,
+    Permissions.DRIVEFIT_READ_PUBLISHED,
   ],
   STUDENT: [
     Permissions.DASHBOARD_READ,
@@ -157,6 +189,9 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.ASSESSMENTS_ATTEMPT,
     Permissions.RESULTS_READ_OWN,
     Permissions.MISTAKE_BANK_MANAGE_OWN,
+    Permissions.DRIVEFIT_READ_PUBLISHED,
+    Permissions.DRIVEFIT_PLAN_MANAGE_OWN,
+    Permissions.EXPERIENCE_REPORTS_SUBMIT,
   ],
 };
 

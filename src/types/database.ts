@@ -59,7 +59,83 @@ export type StageResultStatus =
 
 export type OfferStatus = "OFFERED" | "ACCEPTED" | "DECLINED" | "RESCINDED";
 
+export type SourceType =
+  | "OFFICIAL_WEBSITE"
+  | "PLACEMENT_NOTICE"
+  | "OFFICIAL_JD"
+  | "STUDENT_REPORT"
+  | "HISTORICAL_REPORT"
+  | "MANUAL_ENTRY";
+
+export type VerificationStatus =
+  | "DRAFT"
+  | "PENDING_REVIEW"
+  | "VERIFIED"
+  | "REJECTED"
+  | "SUPERSEDED"
+  | "ARCHIVED";
+
+export type AccessClassification = "PUBLIC" | "TENANT_CONFIDENTIAL" | "RESTRICTED";
+
+export type ScopeLevel = "COMPANY" | "ROLE" | "DRIVE";
+
+export type RequirementCategory =
+  | "ELIGIBILITY"
+  | "ROLE_RESPONSIBILITIES"
+  | "TECHNICAL_SKILL"
+  | "PROGRAMMING_LANGUAGE"
+  | "APTITUDE_TOPIC"
+  | "RECRUITMENT_PROCESS"
+  | "COMPENSATION_BENEFITS"
+  | "PREPARATION_TOPIC";
+
+export type EvidenceLevel = "OFFICIAL" | "REPORTED" | "INFERRED" | "UNKNOWN";
+
+export type SkillCategory =
+  | "QUANTITATIVE_APTITUDE"
+  | "LOGICAL_REASONING"
+  | "VERBAL_ABILITY"
+  | "PROGRAMMING_FUNDAMENTALS"
+  | "DATA_STRUCTURES_ALGORITHMS"
+  | "DATABASE_MANAGEMENT"
+  | "OPERATING_SYSTEMS"
+  | "COMPUTER_NETWORKS"
+  | "OBJECT_ORIENTED_PROGRAMMING"
+  | "SYSTEM_DESIGN"
+  | "BEHAVIORAL_HR"
+  | "CORE_ENGINEERING"
+  | "OTHER";
+
+export type MappingImportance = "MANDATORY" | "PREFERRED" | "RECOMMENDED";
+export type MappingOrigin = "HUMAN_AUTHORED" | "AI_SUGGESTED" | "VERIFIED";
+
+export type ResourceType =
+  | "OFFICIAL_GUIDE"
+  | "PRACTICE_SET"
+  | "SYLLABUS_OUTLINE"
+  | "INTERVIEW_CHECKLIST"
+  | "SAMPLE_QUESTIONS"
+  | "REVISION_NOTES";
+
+export type ContentClass =
+  | "OFFICIAL_COMPANY_RESOURCE"
+  | "PREVIOUS_RECRUITMENT_QUESTIONS"
+  | "NEWLY_AUTHORED_PRACTICE";
+
+export type PreparationActivityType =
+  | "CONCEPT_REVIEW"
+  | "PRACTICE_DRILL"
+  | "MOCK_EXAM_PREPARATION"
+  | "CHECKLIST_ITEM";
+
+export type PreparationPriority = "HIGH" | "MEDIUM" | "LOW";
+export type PreparationTaskStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
+export type PreparationPlanStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED";
+export type ReportOrigin = "CANDIDATE_REPORTED" | "COLLEGE_CONFIRMED";
+export type ModerationStatus = "PENDING" | "APPROVED" | "REJECTED";
+
 export type StudentRow = Database["public"]["Tables"]["students"]["Row"];
+
 
 export interface Database {
   public: {
@@ -500,6 +576,310 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["audit_logs"]["Insert"]>;
       };
+      canonical_skills: {
+        Row: {
+          id: string;
+          name: string;
+          normalized_name: string;
+          category: SkillCategory;
+          description: string | null;
+          tags: string[];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          normalized_name: string;
+          category: SkillCategory;
+          description?: string | null;
+          tags?: string[];
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["canonical_skills"]["Insert"]>;
+      };
+      practice_resources: {
+        Row: {
+          id: string;
+          tenant_id: string | null;
+          skill_id: string;
+          title: string;
+          resource_type: ResourceType;
+          content_class: ContentClass;
+          url: string | null;
+          description: string | null;
+          estimated_minutes: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id?: string | null;
+          skill_id: string;
+          title: string;
+          resource_type: ResourceType;
+          content_class: ContentClass;
+          url?: string | null;
+          description?: string | null;
+          estimated_minutes?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["practice_resources"]["Insert"]>;
+      };
+      recruitment_sources: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          company_id: string;
+          drive_id: string | null;
+          title: string;
+          publisher: string;
+          source_type: SourceType;
+          canonical_url: string | null;
+          document_ref: string | null;
+          published_at: string | null;
+          effective_at: string | null;
+          collected_at: string;
+          last_checked_at: string;
+          verification_status: VerificationStatus;
+          access_classification: AccessClassification;
+          raw_content: string | null;
+          excerpt: string | null;
+          created_by: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          review_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          company_id: string;
+          drive_id?: string | null;
+          title: string;
+          publisher: string;
+          source_type: SourceType;
+          canonical_url?: string | null;
+          document_ref?: string | null;
+          published_at?: string | null;
+          effective_at?: string | null;
+          collected_at?: string;
+          last_checked_at?: string;
+          verification_status?: VerificationStatus;
+          access_classification?: AccessClassification;
+          raw_content?: string | null;
+          excerpt?: string | null;
+          created_by?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          review_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["recruitment_sources"]["Insert"]>;
+      };
+      recruitment_requirements: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          company_id: string;
+          drive_id: string | null;
+          source_id: string | null;
+          scope_level: ScopeLevel;
+          category: RequirementCategory;
+          title: string;
+          description: string | null;
+          structured_value: Json | null;
+          source_excerpt: string | null;
+          evidence_level: EvidenceLevel;
+          verification_status: VerificationStatus;
+          is_published_to_students: boolean;
+          has_conflict: boolean;
+          conflict_details: Json | null;
+          is_stale: boolean;
+          stale_reason: string | null;
+          verified_by: string | null;
+          verified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          company_id: string;
+          drive_id?: string | null;
+          source_id?: string | null;
+          scope_level?: ScopeLevel;
+          category: RequirementCategory;
+          title: string;
+          description?: string | null;
+          structured_value?: Json | null;
+          source_excerpt?: string | null;
+          evidence_level?: EvidenceLevel;
+          verification_status?: VerificationStatus;
+          is_published_to_students?: boolean;
+          has_conflict?: boolean;
+          conflict_details?: Json | null;
+          is_stale?: boolean;
+          stale_reason?: string | null;
+          verified_by?: string | null;
+          verified_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["recruitment_requirements"]["Insert"]>;
+      };
+      requirement_skill_mappings: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          drive_id: string;
+          requirement_id: string;
+          skill_id: string;
+          importance: MappingImportance;
+          mapping_rationale: string;
+          mapping_origin: MappingOrigin;
+          verification_status: VerificationStatus;
+          evidence_level: EvidenceLevel;
+          verified_by: string | null;
+          verified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          drive_id: string;
+          requirement_id: string;
+          skill_id: string;
+          importance?: MappingImportance;
+          mapping_rationale: string;
+          mapping_origin?: MappingOrigin;
+          verification_status?: VerificationStatus;
+          evidence_level?: EvidenceLevel;
+          verified_by?: string | null;
+          verified_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["requirement_skill_mappings"]["Insert"]>;
+      };
+      student_preparation_plans: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          student_id: string;
+          drive_id: string;
+          status: PreparationPlanStatus;
+          target_completion_date: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          student_id: string;
+          drive_id: string;
+          status?: PreparationPlanStatus;
+          target_completion_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["student_preparation_plans"]["Insert"]>;
+      };
+      preparation_tasks: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          plan_id: string;
+          requirement_id: string | null;
+          skill_id: string;
+          resource_id: string | null;
+          stage_id: string | null;
+          title: string;
+          activity_type: PreparationActivityType;
+          priority: PreparationPriority;
+          status: PreparationTaskStatus;
+          recommendation_rationale: string | null;
+          due_date: string | null;
+          estimated_minutes: number;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          plan_id: string;
+          requirement_id?: string | null;
+          skill_id: string;
+          resource_id?: string | null;
+          stage_id?: string | null;
+          title: string;
+          activity_type?: PreparationActivityType;
+          priority?: PreparationPriority;
+          status?: PreparationTaskStatus;
+          recommendation_rationale?: string | null;
+          due_date?: string | null;
+          estimated_minutes?: number;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["preparation_tasks"]["Insert"]>;
+      };
+      recruitment_experience_reports: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          company_id: string;
+          drive_id: string | null;
+          academic_year_id: string | null;
+          role_title: string;
+          recruitment_cycle: string;
+          report_origin: ReportOrigin;
+          rounds_described: Json;
+          key_topics: string[];
+          moderation_status: ModerationStatus;
+          is_anonymous: boolean;
+          student_id: string | null;
+          verified_by: string | null;
+          verified_at: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          company_id: string;
+          drive_id?: string | null;
+          academic_year_id?: string | null;
+          role_title: string;
+          recruitment_cycle: string;
+          report_origin?: ReportOrigin;
+          rounds_described?: Json;
+          key_topics?: string[];
+          moderation_status?: ModerationStatus;
+          is_anonymous?: boolean;
+          student_id?: string | null;
+          verified_by?: string | null;
+          verified_at?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["recruitment_experience_reports"]["Insert"]>;
+      };
     };
   };
 }
+
+export type CanonicalSkillRow = Database["public"]["Tables"]["canonical_skills"]["Row"];
+export type PracticeResourceRow = Database["public"]["Tables"]["practice_resources"]["Row"];
+export type RecruitmentSourceRow = Database["public"]["Tables"]["recruitment_sources"]["Row"];
+export type RecruitmentRequirementRow = Database["public"]["Tables"]["recruitment_requirements"]["Row"];
+export type RequirementSkillMappingRow = Database["public"]["Tables"]["requirement_skill_mappings"]["Row"];
+export type StudentPreparationPlanRow = Database["public"]["Tables"]["student_preparation_plans"]["Row"];
+export type PreparationTaskRow = Database["public"]["Tables"]["preparation_tasks"]["Row"];
+export type RecruitmentExperienceReportRow = Database["public"]["Tables"]["recruitment_experience_reports"]["Row"];
+
