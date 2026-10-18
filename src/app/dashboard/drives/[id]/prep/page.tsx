@@ -376,37 +376,108 @@ export default function DriveStudentPrepPage({ params }: PrepPageProps) {
         </CardContent>
       </Card>
 
-      {/* 3. Verified Drive Requirements & Competencies */}
+      {/* 3. Verified Drive Requirements & Evidence Provenance */}
       {requirements.length > 0 && (
-        <Card>
+        <Card className="border-border shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold font-heading text-text-primary flex items-center gap-1.5">
-              <Award className="h-4 w-4 text-secondary" /> Verified Employer Expectations ({requirements.length})
-            </CardTitle>
-            <CardDescription className="text-xs text-text-secondary">
-              Official competencies and technical concepts extracted from official notices.
-            </CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm font-bold font-heading text-text-primary flex items-center gap-1.5">
+                  <Award className="h-4 w-4 text-secondary" /> Requirements &amp; Evidence Provenance ({requirements.length})
+                </CardTitle>
+                <CardDescription className="text-xs text-text-secondary mt-0.5">
+                  Distinguishing officially confirmed employer criteria, reported candidate experiences, and DriveFit recommendations.
+                </CardDescription>
+              </div>
+            </div>
+
+            {/* Evidence Classification Trust Legend */}
+            <div className="mt-3 p-3 rounded-md bg-background border border-border text-[11px] grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="flex items-start gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-secondary flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-text-primary">Confirmed by Employer:</strong> Sourced directly from official placement circulars or job specifications.
+                </span>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-text-primary">Reported Experience:</strong> Observed and shared by previous candidates from past recruitment drives.
+                </span>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-text-primary">Recommended Guidance:</strong> Suggested curriculum preparation inferred by DriveFit.
+                </span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {requirements.map((req) => (
-                <div key={req.id} className="p-3 rounded-md border border-border bg-card text-xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-text-primary">{req.title}</span>
-                    <Badge variant="outline" className="text-[10px]">
-                      {req.category}
-                    </Badge>
+              {requirements.map((req) => {
+                const isOfficial = req.evidence_level === "OFFICIAL";
+                const isReported = req.evidence_level === "REPORTED";
+                const isInferred = req.evidence_level === "INFERRED" || !req.evidence_level;
+
+                return (
+                  <div
+                    key={req.id}
+                    className={`p-3.5 rounded-md border text-xs space-y-2 transition-colors ${
+                      isOfficial
+                        ? "border-secondary/40 bg-[rgba(46,143,134,0.03)]"
+                        : isReported
+                        ? "border-primary/30 bg-card"
+                        : "border-border bg-card"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-bold text-text-primary">{req.title}</span>
+                      <Badge
+                        variant={
+                          isOfficial
+                            ? "success"
+                            : isReported
+                            ? "info"
+                            : "warning"
+                        }
+                        className="text-[10px] flex items-center gap-1 font-semibold"
+                      >
+                        {isOfficial ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3" /> Confirmed by Employer
+                          </>
+                        ) : isReported ? (
+                          <>
+                            <MessageSquare className="h-3 w-3" /> Reported Previous Experience
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3" /> DriveFit Recommendation
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                      <Badge variant="outline" className="text-[10px]">
+                        {req.category}
+                      </Badge>
+                      <span>Scope: {req.scope_level}</span>
+                    </div>
+
+                    {req.description && (
+                      <p className="text-text-secondary text-[11px] leading-relaxed">{req.description}</p>
+                    )}
+
+                    {req.source_excerpt && (
+                      <div className="p-2 rounded bg-background text-[11px] text-text-muted italic border-l-2 border-primary">
+                        &quot;{req.source_excerpt}&quot;
+                      </div>
+                    )}
                   </div>
-                  {req.description && (
-                    <p className="text-text-secondary text-[11px]">{req.description}</p>
-                  )}
-                  {req.source_excerpt && (
-                    <p className="text-text-muted text-[10px] italic border-l border-primary pl-1.5 mt-1">
-                      &quot;{req.source_excerpt}&quot;
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
