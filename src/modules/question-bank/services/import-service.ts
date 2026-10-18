@@ -203,7 +203,7 @@ export class ImportService {
       const rowWarnings: string[] = [];
 
       const qTypeRaw = (row[colIndex("question_type")] || "").trim().toUpperCase().replace(/^'/, "");
-      const prompt = (row[colIndex("prompt")] || "").trim().replace(/^'/, "");
+      const prompt = (row[colIndex("prompt")] || "").trim();
       const difficultyRaw = (row[colIndex("difficulty")] || "MEDIUM").trim().toUpperCase().replace(/^'/, "");
       const correctAnswer = (row[colIndex("correct_answer")] || "").trim().replace(/^'/, "");
       const explanation = (row[colIndex("explanation")] || "").trim().replace(/^'/, "");
