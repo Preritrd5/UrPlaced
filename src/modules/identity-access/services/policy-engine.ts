@@ -1,0 +1,195 @@
+/**
+ * Policy Engine & Scoped RBAC Permissions Registry
+ * Enforces deny-by-default authorization based on role, tenant membership, and resource scope.
+ */
+
+export const Permissions = {
+  // Platform Administration
+  TENANT_CREATE: "tenant.create",
+  TENANT_MANAGE: "tenant.manage",
+  TENANT_SUSPEND: "tenant.suspend",
+  TENANT_REACTIVATE: "tenant.reactivate",
+  PLATFORM_HEALTH_READ: "platform.health.read",
+
+  // Staff & Role Governance
+  STAFF_MANAGE: "staff.manage",
+  STAFF_INVITE: "staff.invite",
+  STAFF_ROLES_ASSIGN: "staff.roles.assign",
+
+  // Student Administration
+  STUDENTS_READ: "students.read",
+  STUDENTS_IMPORT: "students.import",
+  STUDENTS_EDIT: "students.edit",
+
+  // Companies & Recruitment Drives
+  DRIVES_MANAGE: "drives.manage",
+  DRIVES_PUBLISH: "drives.publish",
+  DRIVES_VIEW_INTERNAL: "drives.view_internal",
+
+  // Eligibility
+  ELIGIBILITY_RULES_MANAGE: "eligibility.rules.manage",
+  ELIGIBILITY_EVALUATE: "eligibility.evaluate",
+  ELIGIBILITY_READ_OWN: "eligibility.read_own",
+
+  // QuestionBank Sentinel & Assessments
+  QUESTIONS_CREATE: "questions.create",
+  QUESTIONS_REVIEW: "questions.review",
+  ASSESSMENTS_CREATE: "assessments.create",
+  ASSESSMENTS_ATTEMPT: "assessments.attempt",
+
+  // Results & Mistake Bank
+  RESULTS_READ_OWN: "results.read_own",
+  RESULTS_READ_COHORT: "results.read_cohort",
+  MISTAKE_BANK_MANAGE_OWN: "mistake_bank.manage_own",
+
+  // Training & Audit
+  TRAINING_MANAGE: "training.manage",
+  AUDIT_LOG_READ: "audit_log.read",
+} as const;
+
+export type PermissionIdentifier =
+  (typeof Permissions)[keyof typeof Permissions];
+
+export type UserRole =
+  | "SUPER_ADMIN"
+  | "PLACEMENT_HEAD"
+  | "PLACEMENT_STAFF"
+  | "TRAINER"
+  | "STUDENT";
+
+export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = {
+  SUPER_ADMIN: [
+    Permissions.TENANT_CREATE,
+    Permissions.TENANT_MANAGE,
+    Permissions.TENANT_SUSPEND,
+    Permissions.TENANT_REACTIVATE,
+    Permissions.PLATFORM_HEALTH_READ,
+    Permissions.AUDIT_LOG_READ,
+  ],
+  PLACEMENT_HEAD: [
+    Permissions.STAFF_MANAGE,
+    Permissions.STAFF_INVITE,
+    Permissions.STAFF_ROLES_ASSIGN,
+    Permissions.STUDENTS_READ,
+    Permissions.STUDENTS_IMPORT,
+    Permissions.STUDENTS_EDIT,
+    Permissions.DRIVES_MANAGE,
+    Permissions.DRIVES_PUBLISH,
+    Permissions.DRIVES_VIEW_INTERNAL,
+    Permissions.ELIGIBILITY_RULES_MANAGE,
+    Permissions.ELIGIBILITY_EVALUATE,
+    Permissions.QUESTIONS_CREATE,
+    Permissions.QUESTIONS_REVIEW,
+    Permissions.ASSESSMENTS_CREATE,
+    Permissions.RESULTS_READ_COHORT,
+    Permissions.TRAINING_MANAGE,
+    Permissions.AUDIT_LOG_READ,
+  ],
+  PLACEMENT_STAFF: [
+    Permissions.STAFF_INVITE,
+    Permissions.STUDENTS_READ,
+    Permissions.STUDENTS_IMPORT,
+    Permissions.DRIVES_MANAGE,
+    Permissions.ELIGIBILITY_EVALUATE,
+    Permissions.QUESTIONS_CREATE,
+    Permissions.QUESTIONS_REVIEW,
+    Permissions.ASSESSMENTS_CREATE,
+    Permissions.RESULTS_READ_COHORT,
+  ],
+  TRAINER: [
+    Permissions.STUDENTS_READ,
+    Permissions.QUESTIONS_CREATE,
+    Permissions.ASSESSMENTS_CREATE,
+    Permissions.RESULTS_READ_COHORT,
+    Permissions.TRAINING_MANAGE,
+  ],
+  STUDENT: [
+    Permissions.ELIGIBILITY_READ_OWN,
+    Permissions.ASSESSMENTS_ATTEMPT,
+    Permissions.RESULTS_READ_OWN,
+    Permissions.MISTAKE_BANK_MANAGE_OWN,
+  ],
+};
+
+export interface PolicyContext {
+  userId: string;
+  isPlatformAdmin?: boolean;
+  tenantId?: string;
+  tenantStatus?: string;
+  membershipStatus?: string;
+  role?: UserRole;
+  customPermissions?: string[];
+}
+
+export interface ResourceTarget {
+  tenantId?: string;
+  ownerId?: string;
+}
+
+/**
+ * Central Policy Function: can(context, action, resource)
+ * Evaluates authorization with deny-by-default semantics.
+ */
+export function can(
+  ctx: PolicyContext,
+  action: PermissionIdentifier,
+  resource?: ResourceTarget
+): boolean {
+  // 1. Platform Super Admin permissions check
+  if (ctx.isPlatformAdmin) {
+    const platformPerms = RoleDefaultPermissions.SUPER_ADMIN;
+    if (platformPerms.includes(action)) {
+      return true;
+    }
+    // Super Admin has NO automatic access to student-private data without support elevation
+    if (
+      action === Permissions.RESULTS_READ_OWN ||
+      action === Permissions.MISTAKE_BANK_MANAGE_OWN
+    ) {
+      return false;
+    }
+  }
+
+  // 2. Deny if tenant is not ACTIVE
+  if (ctx.tenantStatus && ctx.tenantStatus !== "ACTIVE") {
+    return false;
+  }
+
+  // 3. Deny if membership is not ACTIVE
+  if (ctx.membershipStatus && ctx.membershipStatus !== "ACTIVE") {
+    return false;
+  }
+
+  // 4. Strict Tenant Boundary Check
+  if (resource?.tenantId && ctx.tenantId && resource.tenantId !== ctx.tenantId) {
+    return false;
+  }
+
+  // 5. Ownership Boundary Check
+  if (
+    (action === Permissions.RESULTS_READ_OWN ||
+      action === Permissions.MISTAKE_BANK_MANAGE_OWN) &&
+    resource?.ownerId &&
+    resource.ownerId !== ctx.userId
+  ) {
+    return false;
+  }
+
+  // 6. Role Permissions Check
+  if (!ctx.role) {
+    return false;
+  }
+
+  const rolePerms = RoleDefaultPermissions[ctx.role] || [];
+  if (rolePerms.includes(action)) {
+    return true;
+  }
+
+  // 7. Check Custom Granular Permissions
+  if (ctx.customPermissions && ctx.customPermissions.includes(action)) {
+    return true;
+  }
+
+  // Default to DENY
+  return false;
+}
