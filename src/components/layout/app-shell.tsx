@@ -10,7 +10,13 @@ import {
   Palette,
   Layers,
   ChevronRight,
-  ShieldAlert,
+  ShieldCheck,
+  LayoutDashboard,
+  GraduationCap,
+  Building2,
+  Briefcase,
+  School,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,20 +29,58 @@ export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
 
-  const navigation = [
+  // If on auth routes, render standalone without navigation sidebar
+  if (pathname.startsWith("/auth")) {
+    return <div className="min-h-screen bg-background">{children}</div>;
+  }
+
+  const placementNavigation = [
     {
-      name: "Design System Showcase",
-      href: "/design-system",
-      icon: Palette,
-      badge: "Internal Dev",
+      name: "Placement Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
     },
     {
-      name: "Architecture & Blueprint",
+      name: "Student Directory",
+      href: "/dashboard/students",
+      icon: GraduationCap,
+    },
+    {
+      name: "Companies",
+      href: "/dashboard/companies",
+      icon: Building2,
+    },
+    {
+      name: "Recruitment Drives",
+      href: "/dashboard/drives",
+      icon: Briefcase,
+    },
+    {
+      name: "Academic Structure",
+      href: "/dashboard/settings/academic",
+      icon: School,
+    },
+    {
+      name: "College Members",
+      href: "/dashboard/members",
+      icon: Users,
+    },
+  ];
+
+  const devNavigation = [
+    {
+      name: "Design System",
+      href: "/design-system",
+      icon: Palette,
+      badge: "Showcase",
+    },
+    {
+      name: "Architecture Blueprint",
       href: "/design-system/architecture",
       icon: Layers,
     },
     {
-      name: "Phase Status",
+      name: "Roadmap Status",
       href: "/design-system/status",
       icon: Compass,
     },
@@ -86,7 +130,7 @@ export function AppShell({ children }: AppShellProps) {
       >
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-border">
-          <div className="flex items-center gap-2.5">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-lg bg-primary-gradient flex items-center justify-center text-white font-bold text-base shadow-sm">
               UP
             </div>
@@ -95,10 +139,10 @@ export function AppShell({ children }: AppShellProps) {
                 UrPlaced
               </span>
               <span className="text-[10px] text-text-secondary font-mono tracking-wider">
-                Multi-Tenant SaaS
+                Placement SaaS
               </span>
             </div>
-          </div>
+          </Link>
           {mobileMenuOpen && (
             <button
               onClick={() => setMobileMenuOpen(false)}
@@ -111,49 +155,79 @@ export function AppShell({ children }: AppShellProps) {
         </div>
 
         {/* Navigation Section */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
-            Foundation & Theme
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+          {/* Placement Operations */}
+          <div className="space-y-1">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
+              Placement Operations
+            </div>
+            {placementNavigation.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
+                    isActive
+                      ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
+                      : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
+                    <span>{item.name}</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-          {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
-                  isActive
-                    ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
-                    : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
-                  <span>{item.name}</span>
-                </div>
-                {item.badge && (
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary text-white">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
 
-          <div className="pt-6 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
-            Phase 01–10 Modules
+          {/* Foundation & Tools */}
+          <div className="space-y-1">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
+              Architecture &amp; Docs
+            </div>
+            {devNavigation.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
+                    isActive
+                      ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
+                      : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
+                    <span>{item.name}</span>
+                  </div>
+                  {item.badge && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary text-white">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
-          <div className="px-3 py-2 text-xs text-text-muted space-y-2">
+
+          {/* Phase Badge */}
+          <div className="px-3 pt-2">
             <div className="p-2.5 rounded-lg border border-border bg-input">
-              <div className="flex items-center gap-1.5 text-secondary font-semibold mb-1">
+              <div className="flex items-center gap-1.5 text-secondary font-semibold mb-1 text-xs">
                 <ChevronRight className="h-3.5 w-3.5" />
-                <span>Phase 02 Active</span>
+                <span>Phase 04 Active</span>
               </div>
               <p className="text-[11px] text-text-secondary leading-relaxed">
-                Application Foundation, Tokens & Base UI System. Business modules load in Phases 03–10.
+                College Placement Management, Student Roster, Companies &amp; Recruitment Drives.
               </p>
             </div>
           </div>
@@ -162,9 +236,9 @@ export function AppShell({ children }: AppShellProps) {
         {/* Phase Guard Notice Footer */}
         <div className="p-4 border-t border-border bg-[rgba(36,40,58,0.02)]">
           <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <ShieldAlert className="h-4 w-4 text-secondary shrink-0" />
+            <ShieldCheck className="h-4 w-4 text-secondary shrink-0" />
             <span className="text-[11px] leading-tight">
-              Strict Design System locked. Production auth inactive in Phase 02.
+              Tenant isolation enforced via PostgreSQL RLS &amp; policy engine.
             </span>
           </div>
         </div>
@@ -178,7 +252,7 @@ export function AppShell({ children }: AppShellProps) {
 
         <footer className="py-6 px-4 sm:px-6 lg:px-10 border-t border-border text-center text-xs text-text-secondary bg-card">
           <p>
-            UrPlaced Multi-College Placement Preparation SaaS &bull; Strict Design System &bull; V1.0 Foundation
+            UrPlaced Multi-College Placement Preparation SaaS &bull; Strict Design System &bull; Phase 04
           </p>
         </footer>
       </div>

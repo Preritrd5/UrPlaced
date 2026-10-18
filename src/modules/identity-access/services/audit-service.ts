@@ -76,7 +76,11 @@ export async function logAuditEvent(params: LogAuditParams): Promise<void> {
       user_agent: params.userAgent || null,
     });
   } catch (err) {
-    // Fail-safe: log locally without crashing application flow
     console.error("[Audit Service Warning] Failed to persist audit log entry:", err);
   }
 }
+
+export const AuditService = {
+  log: logAuditEvent,
+};
+

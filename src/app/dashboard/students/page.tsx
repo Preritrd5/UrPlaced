@@ -1,0 +1,265 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import {
+  GraduationCap,
+  PlusCircle,
+  FileSpreadsheet,
+  Download,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
+import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
+import { StudentService } from "@/modules/students/services/student-service";
+import { DepartmentService } from "@/modules/academic/services/department-service";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export const dynamic = "force-dynamic";
+
+interface StudentsPageProps {
+  searchParams: Promise<{
+    search?: string;
+    departmentId?: string;
+    graduationYear?: string;
+    page?: string;
+  }>;
+}
+
+export default async function StudentsPage({ searchParams }: StudentsPageProps) {
+  const profile = await getCurrentUserProfile();
+  if (!profile) redirect("/auth/signin");
+
+  const activeTenant = profile.activeMembership?.tenants;
+  if (!activeTenant) {
+    return (
+      <div className="p-8 text-center text-text-secondary">
+        No active college workspace found.
+      </div>
+    );
+  }
+
+  const resolvedParams = await searchParams;
+  const search = resolvedParams.search || "";
+  const departmentId = resolvedParams.departmentId || "";
+  const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1;
+
+  const [studentsResult, departments] = await Promise.all([
+    StudentService.list({
+      tenantId: activeTenant.id,
+      search: search || undefined,
+      departmentId: departmentId || undefined,
+      page,
+      pageSize: 15,
+    }),
+    DepartmentService.listByTenant(activeTenant.id),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight font-heading text-text-primary">
+            Student Directory
+          </h1>
+          <p className="text-xs text-text-secondary">
+            Manage student academic profiles, eligibility parameters, and placement readiness.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button asChild variant="outline" size="sm">
+            <a href="/api/placement/students/export" download>
+              <Download className="h-4 w-4 mr-1.5" /> Export CSV
+            </a>
+          </Button>
+
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/dashboard/students/import">
+              <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Bulk Import
+            </Link>
+          </Button>
+
+          <Button asChild variant="primary" size="sm">
+            <Link href="/dashboard/students/new">
+              <PlusCircle className="h-4 w-4 mr-1.5" /> Add Student
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <form method="GET" className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+              <Input
+                name="search"
+                defaultValue={search}
+                placeholder="Search by name, enrollment ID, or email..."
+                className="pl-9 h-9 text-xs"
+              />
+            </div>
+
+            <div className="w-full sm:w-48">
+              <select
+                name="departmentId"
+                defaultValue={departmentId}
+                className="w-full h-9 rounded-lg border border-border bg-input px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.code} — {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Button type="submit" variant="outline" size="sm" className="h-9">
+              <Filter className="h-3.5 w-3.5 mr-1.5" /> Apply Filter
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Students Table */}
+      <Card>
+        <CardHeader className="py-4 border-b border-border">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              Roster ({studentsResult.total} Total)
+            </CardTitle>
+            <span className="text-xs text-text-secondary font-mono">
+              Page {studentsResult.page} of {studentsResult.totalPages}
+            </span>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {studentsResult.students.length === 0 ? (
+            <div className="text-center py-12 text-text-muted space-y-3">
+              <GraduationCap className="h-10 w-10 mx-auto opacity-40" />
+              <p className="text-sm">No students match the selected filters.</p>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard/students">Reset Filters</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-input text-text-secondary font-mono border-b border-border uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th className="py-3 px-4">Enrollment ID</th>
+                    <th className="py-3 px-4">Student Name</th>
+                    <th className="py-3 px-4">Department</th>
+                    <th className="py-3 px-4">Batch</th>
+                    <th className="py-3 px-4">CGPA</th>
+                    <th className="py-3 px-4">Backlogs</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {studentsResult.students.map((student) => (
+                    <tr key={student.id} className="hover:bg-input/50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-medium text-text-primary">
+                        {student.enrollment_number}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-text-primary">{student.full_name}</div>
+                        <div className="text-[11px] text-text-muted truncate max-w-[200px]">
+                          {student.email}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant="secondary" className="font-mono text-[10px]">
+                          {student.department?.code || "—"}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 font-mono">{student.graduation_year}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-text-primary">
+                        {student.cgpa.toFixed(2)}
+                      </td>
+                      <td className="py-3 px-4 font-mono">
+                        {student.active_backlogs > 0 ? (
+                          <span className="text-red-600 font-semibold">
+                            {student.active_backlogs} Active
+                          </span>
+                        ) : (
+                          <span className="text-secondary">0</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge
+                          variant={
+                            student.academic_status === "ACTIVE"
+                              ? "success"
+                              : student.academic_status === "GRADUATED"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="text-[10px]"
+                        >
+                          {student.academic_status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Button asChild variant="ghost" size="sm" className="h-7 px-2">
+                          <Link href={`/dashboard/students/${student.id}`}>
+                            Details <ExternalLink className="h-3 w-3 ml-1" />
+                          </Link>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {studentsResult.totalPages > 1 && (
+            <div className="p-4 border-t border-border flex items-center justify-between">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                disabled={studentsResult.page <= 1}
+              >
+                <Link
+                  href={`/dashboard/students?search=${search}&departmentId=${departmentId}&page=${studentsResult.page - 1}`}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                </Link>
+              </Button>
+
+              <span className="text-xs text-text-secondary">
+                Page {studentsResult.page} of {studentsResult.totalPages}
+              </span>
+
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                disabled={studentsResult.page >= studentsResult.totalPages}
+              >
+                <Link
+                  href={`/dashboard/students?search=${search}&departmentId=${departmentId}&page=${studentsResult.page + 1}`}
+                >
+                  Next <ChevronRight className="h-4 w-4 ml-1" />
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

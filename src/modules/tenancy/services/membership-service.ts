@@ -185,3 +185,10 @@ export async function updateMemberRole(params: {
     afterState: { role: params.newRole, permissions: params.newPermissions },
   });
 }
+
+export const MembershipService = {
+  listUserMemberships: getUserMemberships,
+  getTenantMembers: listTenantMembers,
+  updateMemberRole,
+};
+

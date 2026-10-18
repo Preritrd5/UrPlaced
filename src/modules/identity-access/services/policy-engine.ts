@@ -19,12 +19,32 @@ export const Permissions = {
   // Student Administration
   STUDENTS_READ: "students.read",
   STUDENTS_IMPORT: "students.import",
+  STUDENTS_EXPORT: "students.export",
   STUDENTS_EDIT: "students.edit",
+  STUDENTS_ARCHIVE: "students.archive",
+
+  // Academic Structure
+  ACADEMIC_YEARS_MANAGE: "academic_years.manage",
+  DEPARTMENTS_MANAGE: "departments.manage",
 
   // Companies & Recruitment Drives
+  COMPANIES_MANAGE: "companies.manage",
+  COMPANIES_READ: "companies.read",
   DRIVES_MANAGE: "drives.manage",
   DRIVES_PUBLISH: "drives.publish",
   DRIVES_VIEW_INTERNAL: "drives.view_internal",
+
+  // Candidate Registration & Stages
+  CANDIDATES_REGISTER: "candidates.register",
+  STAGES_MANAGE: "stages.manage",
+
+  // Outcomes & Offers
+  OUTCOMES_MANAGE: "outcomes.manage",
+  OUTCOMES_READ_OWN: "outcomes.read_own",
+
+  // Reports & Dashboard
+  DASHBOARD_READ: "dashboard.read",
+  REPORTS_EXPORT: "reports.export",
 
   // Eligibility
   ELIGIBILITY_RULES_MANAGE: "eligibility.rules.manage",
@@ -65,17 +85,30 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.TENANT_REACTIVATE,
     Permissions.PLATFORM_HEALTH_READ,
     Permissions.AUDIT_LOG_READ,
+    Permissions.DASHBOARD_READ,
+    Permissions.REPORTS_EXPORT,
   ],
   PLACEMENT_HEAD: [
     Permissions.STAFF_MANAGE,
     Permissions.STAFF_INVITE,
     Permissions.STAFF_ROLES_ASSIGN,
+    Permissions.DASHBOARD_READ,
+    Permissions.ACADEMIC_YEARS_MANAGE,
+    Permissions.DEPARTMENTS_MANAGE,
+    Permissions.COMPANIES_MANAGE,
+    Permissions.COMPANIES_READ,
     Permissions.STUDENTS_READ,
     Permissions.STUDENTS_IMPORT,
+    Permissions.STUDENTS_EXPORT,
     Permissions.STUDENTS_EDIT,
+    Permissions.STUDENTS_ARCHIVE,
     Permissions.DRIVES_MANAGE,
     Permissions.DRIVES_PUBLISH,
     Permissions.DRIVES_VIEW_INTERNAL,
+    Permissions.CANDIDATES_REGISTER,
+    Permissions.STAGES_MANAGE,
+    Permissions.OUTCOMES_MANAGE,
+    Permissions.REPORTS_EXPORT,
     Permissions.ELIGIBILITY_RULES_MANAGE,
     Permissions.ELIGIBILITY_EVALUATE,
     Permissions.QUESTIONS_CREATE,
@@ -87,9 +120,19 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
   ],
   PLACEMENT_STAFF: [
     Permissions.STAFF_INVITE,
+    Permissions.DASHBOARD_READ,
+    Permissions.COMPANIES_MANAGE,
+    Permissions.COMPANIES_READ,
     Permissions.STUDENTS_READ,
     Permissions.STUDENTS_IMPORT,
+    Permissions.STUDENTS_EXPORT,
+    Permissions.STUDENTS_EDIT,
     Permissions.DRIVES_MANAGE,
+    Permissions.DRIVES_PUBLISH,
+    Permissions.DRIVES_VIEW_INTERNAL,
+    Permissions.CANDIDATES_REGISTER,
+    Permissions.STAGES_MANAGE,
+    Permissions.OUTCOMES_MANAGE,
     Permissions.ELIGIBILITY_EVALUATE,
     Permissions.QUESTIONS_CREATE,
     Permissions.QUESTIONS_REVIEW,
@@ -97,14 +140,20 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.RESULTS_READ_COHORT,
   ],
   TRAINER: [
+    Permissions.DASHBOARD_READ,
     Permissions.STUDENTS_READ,
+    Permissions.COMPANIES_READ,
     Permissions.QUESTIONS_CREATE,
     Permissions.ASSESSMENTS_CREATE,
     Permissions.RESULTS_READ_COHORT,
     Permissions.TRAINING_MANAGE,
   ],
   STUDENT: [
+    Permissions.DASHBOARD_READ,
+    Permissions.COMPANIES_READ,
     Permissions.ELIGIBILITY_READ_OWN,
+    Permissions.CANDIDATES_REGISTER,
+    Permissions.OUTCOMES_READ_OWN,
     Permissions.ASSESSMENTS_ATTEMPT,
     Permissions.RESULTS_READ_OWN,
     Permissions.MISTAKE_BANK_MANAGE_OWN,

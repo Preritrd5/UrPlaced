@@ -193,3 +193,12 @@ export async function updateTenantStatus(params: {
 
   return data as TenantRecord;
 }
+
+export const TenantService = {
+  getById: getTenantById,
+  getBySlug: getTenantBySlug,
+  create: createTenant,
+  list: listTenants,
+  updateStatus: updateTenantStatus,
+};
+
