@@ -55,9 +55,18 @@ function SignInContent() {
           Sign In to Your Workspace
         </h2>
         <p className="text-xs text-text-secondary">
-          Enter your institutional credentials to access your college placement cell.
+          Enter your student or institutional credentials to access your preparation portal or placement cell.
         </p>
       </div>
+
+      {searchParams.get("registered") === "true" && (
+        <Alert variant="success">
+          <AlertTitle>Registration Successful</AlertTitle>
+          <AlertDescription>
+            Your account has been created. Please sign in with your credentials to access your workspace.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {errorMsg && (
         <Alert variant="destructive">
@@ -126,12 +135,18 @@ function SignInContent() {
         </Button>
       </form>
 
-      <div className="pt-4 border-t border-border text-center">
+      <div className="pt-4 border-t border-border text-center space-y-2">
         <p className="text-xs text-text-secondary">
-          New student or faculty member?
+          Don&apos;t have an account yet?{" "}
+          <Link
+            href="/auth/signup"
+            className="font-semibold text-primary hover:underline ml-1"
+          >
+            Create an Account
+          </Link>
         </p>
-        <p className="text-[11px] text-text-muted mt-0.5">
-          UrPlaced accounts are invitation-based. Use the activation link sent to your institutional email.
+        <p className="text-[11px] text-text-muted">
+          Institutional member with an invite? You can also activate via your invitation link.
         </p>
       </div>
     </div>

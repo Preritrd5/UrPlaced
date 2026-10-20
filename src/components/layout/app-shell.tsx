@@ -7,9 +7,6 @@ import {
   Menu,
   X,
   Compass,
-  Palette,
-  Layers,
-  ChevronRight,
   ShieldCheck,
   LayoutDashboard,
   GraduationCap,
@@ -18,6 +15,9 @@ import {
   School,
   Users,
   BookOpen,
+  Target,
+  CheckCircle2,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,14 +30,14 @@ export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
 
-  // If on auth routes, render standalone without navigation sidebar
-  if (pathname.startsWith("/auth")) {
+  // If on public landing page or auth routes, render standalone without navigation sidebar
+  if (pathname === "/" || pathname.startsWith("/auth")) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
   const placementNavigation = [
     {
-      name: "Placement Dashboard",
+      name: "Placement Command Center",
       href: "/dashboard",
       icon: LayoutDashboard,
     },
@@ -57,10 +57,46 @@ export function AppShell({ children }: AppShellProps) {
       icon: Briefcase,
     },
     {
-      name: "Question Bank",
+      name: "Question Bank Sentinel",
       href: "/dashboard/questions",
       icon: BookOpen,
     },
+    {
+      name: "Targeted Training",
+      href: "/dashboard/training",
+      icon: Target,
+    },
+    {
+      name: "Mistake Analytics",
+      href: "/dashboard/mistakes",
+      icon: CheckCircle2,
+    },
+    {
+      name: "Placement Memory",
+      href: "/dashboard/memory",
+      icon: BarChart3,
+    },
+  ];
+
+  const studentPortalNavigation = [
+    {
+      name: "Assessments & Practice",
+      href: "/dashboard/student/assessments",
+      icon: Compass,
+    },
+    {
+      name: "Mistake Bank & Mastery",
+      href: "/dashboard/student/mistakes",
+      icon: CheckCircle2,
+    },
+    {
+      name: "Student Analytics",
+      href: "/dashboard/student/analytics",
+      icon: BarChart3,
+    },
+  ];
+
+  const adminNavigation = [
     {
       name: "Academic Structure",
       href: "/dashboard/settings/academic",
@@ -70,25 +106,6 @@ export function AppShell({ children }: AppShellProps) {
       name: "College Members",
       href: "/dashboard/members",
       icon: Users,
-    },
-  ];
-
-  const devNavigation = [
-    {
-      name: "Design System",
-      href: "/design-system",
-      icon: Palette,
-      badge: "Showcase",
-    },
-    {
-      name: "Architecture Blueprint",
-      href: "/design-system/architecture",
-      icon: Layers,
-    },
-    {
-      name: "Roadmap Status",
-      href: "/design-system/status",
-      icon: Compass,
     },
   ];
 
@@ -191,13 +208,13 @@ export function AppShell({ children }: AppShellProps) {
             })}
           </div>
 
-          {/* Foundation & Tools */}
+          {/* Student Portal Navigation */}
           <div className="space-y-1">
             <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
-              Architecture &amp; Docs
+              Student Preparation
             </div>
-            {devNavigation.map((item) => {
-              const isActive = pathname === item.href;
+            {studentPortalNavigation.map((item) => {
+              const isActive = pathname.startsWith(item.href);
               const Icon = item.icon;
               return (
                 <Link
@@ -215,35 +232,46 @@ export function AppShell({ children }: AppShellProps) {
                     <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
                     <span>{item.name}</span>
                   </div>
-                  {item.badge && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary text-white">
-                      {item.badge}
-                    </span>
-                  )}
                 </Link>
               );
             })}
           </div>
 
-          {/* Phase Badge */}
-          <div className="px-3 pt-2">
-            <div className="p-2.5 rounded-lg border border-border bg-input">
-              <div className="flex items-center gap-1.5 text-secondary font-semibold mb-1 text-xs">
-                <ChevronRight className="h-3.5 w-3.5" />
-                <span>Phase 04 Active</span>
-              </div>
-              <p className="text-[11px] text-text-secondary leading-relaxed">
-                College Placement Management, Student Roster, Companies &amp; Recruitment Drives.
-              </p>
+          {/* Institutional Settings */}
+          <div className="space-y-1">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
+              College Administration
             </div>
+            {adminNavigation.map((item) => {
+              const isActive = pathname.startsWith(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
+                    isActive
+                      ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
+                      : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
+                    <span>{item.name}</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </nav>
 
-        {/* Phase Guard Notice Footer */}
+        {/* Security & Tenant Isolation Notice */}
         <div className="p-4 border-t border-border bg-[rgba(36,40,58,0.02)]">
           <div className="flex items-center gap-2 text-xs text-text-secondary">
             <ShieldCheck className="h-4 w-4 text-secondary shrink-0" />
-            <span className="text-[11px] leading-tight">
+            <span className="text-[11px] leading-tight font-medium">
               Tenant isolation enforced via PostgreSQL RLS &amp; policy engine.
             </span>
           </div>
@@ -258,7 +286,7 @@ export function AppShell({ children }: AppShellProps) {
 
         <footer className="py-6 px-4 sm:px-6 lg:px-10 border-t border-border text-center text-xs text-text-secondary bg-card">
           <p>
-            UrPlaced Multi-College Placement Preparation SaaS &bull; Strict Design System &bull; Phase 04
+            UrPlaced Multi-College Placement Preparation &amp; Management Platform &bull; Enterprise V1.0
           </p>
         </footer>
       </div>

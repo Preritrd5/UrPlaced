@@ -215,6 +215,173 @@ export type QuestionSetPurpose =
 
 export type QuestionSetStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
+// Phase 07: Assessment Engine & Student Preparation
+export type AssessmentPurpose =
+  | "ASSESSMENT"
+  | "PRACTICE"
+  | "DIAGNOSTIC"
+  | "COMPANY_PREP"
+  | "INTERVIEW";
+
+export type AssessmentStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type ReviewPolicy = "IMMEDIATE" | "AFTER_DEADLINE" | "NEVER";
+export type ReleasePolicy = "IMMEDIATE" | "AFTER_DEADLINE" | "MANUAL_STAFF_RELEASE";
+export type AssignmentStatus = "ACTIVE" | "COMPLETED" | "REVOKED";
+export type AttemptStatus =
+  | "NOT_STARTED"
+  | "IN_PROGRESS"
+  | "SUBMITTED"
+  | "EXPIRED"
+  | "SCORING"
+  | "SCORED"
+  | "RESULT_RELEASED";
+
+export type AttemptScoringStatus = "PENDING" | "PROVISIONAL" | "FINAL";
+export type ResponseScoringStatus =
+  | "UNSCORED"
+  | "AUTOMATICALLY_SCORED"
+  | "MANUAL_REVIEW_REQUIRED"
+  | "REVIEWED";
+
+export type BehavioralCategory =
+  | "HR_INTERVIEW"
+  | "GROUP_DISCUSSION"
+  | "SITUATIONAL";
+
+// Phase 08: Mistake Bank & Mistake-to-Mastery Engine
+export type MistakePrimaryReason =
+  | "INCORRECT_ANSWER"
+  | "SKIPPED_UNANSWERED"
+  | "STUDENT_FLAGGED"
+  | "CORRECT_REVIEW_LATER"
+  | "CONTENT_DEFECT_SUSPECTED";
+
+export type ReviewTargetStatus =
+  | "NEEDS_REVIEW"
+  | "PRACTISING"
+  | "REVISION_DUE"
+  | "IMPROVING"
+  | "PROVISIONAL_MASTERY"
+  | "MASTERY_DEMONSTRATED"
+  | "CONTENT_DEFECT_SUSPECTED"
+  | "RESOLVED_DISMISSED"
+  | "CONTENT_INVALIDATED";
+
+export type StudentReasonCategory =
+  | "CONCEPT_NOT_UNDERSTOOD"
+  | "FORMULA_FACT_FORGOTTEN"
+  | "CALCULATION_MISTAKE"
+  | "MISREAD_QUESTION"
+  | "TIME_PRESSURE"
+  | "GUESSED"
+  | "CONFUSED_CHOICES"
+  | "CARELESS_ERROR"
+  | "NOT_SURE"
+  | "OTHER";
+
+export type MistakeCaptureReason =
+  | "INCORRECT_ANSWER"
+  | "SKIPPED_UNANSWERED"
+  | "STUDENT_FLAGGED"
+  | "CORRECT_REVIEW_LATER"
+  | "MANUAL_SCORE_INCORRECT";
+
+export type ReviewActionType =
+  | "EXPLANATION_VIEWED"
+  | "REFLECTION_SAVED"
+  | "PRACTICE_STARTED"
+  | "REVISION_RESCHEDULED"
+  | "TARGET_DISMISSED";
+
+export type MasteryStatus =
+  | "UNASSESSED"
+  | "NEEDS_REVIEW"
+  | "PRACTISING"
+  | "IMPROVING"
+  | "PROVISIONAL_MASTERY"
+  | "MASTERY_DEMONSTRATED"
+  | "NEEDS_REASSESSMENT";
+
+export type EvidenceValidityStatus =
+  | "VALID"
+  | "INVALIDATED_DEFECT"
+  | "EXPIRED"
+  | "SUPERSEDED";
+
+export type QuestionDefectType =
+  | "INCORRECT_ANSWER_KEY"
+  | "AMBIGUOUS_PROMPT"
+  | "MISSING_INVALID_OPTION"
+  | "ERRONEOUS_EXPLANATION"
+  | "BROKEN_RUNNER_CONFIG"
+  | "WRONG_SKILL_MAPPING"
+  | "OTHER";
+
+export type DefectReportStatus =
+  | "PENDING"
+  | "CONFIRMED_DEFECT"
+  | "FALSE_ALARM"
+  | "RESOLVED";
+
+// Phase 09: Placement Memory, Analytics & Improvement
+export type HistoricalRecordType =
+  | "OFFICIAL_NOTICE"
+  | "COLLEGE_CONFIRMED"
+  | "VERIFIED_REPORT"
+  | "CANDIDATE_REPORTED"
+  | "QUESTION_SET_REFERENCE"
+  | "SUPERSEDED";
+
+export type HistoricalReliabilityLabel =
+  | "OFFICIAL_CONFIRMED"
+  | "VERIFIED_HISTORICAL"
+  | "CANDIDATE_REPORTED"
+  | "INFERRED_GUIDANCE"
+  | "DISPUTED"
+  | "SUPERSEDED";
+
+export type DriveMatchingBasis =
+  | "SAME_COMPANY_AND_ROLE"
+  | "SAME_COMPANY_DIFFERENT_ROLE"
+  | "ROLE_FAMILY_MATCH"
+  | "MANUAL_COMPARISON";
+
+export type DriveComparabilityStatus =
+  | "HIGHLY_COMPARABLE"
+  | "PARTIALLY_COMPARABLE"
+  | "LIMITED_EVIDENCE"
+  | "INCOMPATIBLE";
+
+export type TrainingSessionStatus =
+  | "SCHEDULED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export type TrainingEnrollmentStatus =
+  | "ENROLLED"
+  | "WAITLISTED"
+  | "DROPPED";
+
+export type TrainingAttendanceStatus =
+  | "ATTENDED"
+  | "ABSENT"
+  | "EXCUSED";
+
+export type AnalyticsReportType =
+  | "HISTORICAL_DRIVES"
+  | "CANDIDATE_REPORTS"
+  | "DRIVE_COMPARISONS"
+  | "STUDENT_PERFORMANCE"
+  | "COHORT_SKILL_GAPS"
+  | "TRAINING_BEFORE_AFTER"
+  | "PLACEMENT_OUTCOMES";
+
+export type ExportJobStatus =
+  | "PENDING"
+  | "COMPLETED"
+  | "FAILED";
+
 export type StudentRow = Database["public"]["Tables"]["students"]["Row"];
 
 export interface Database {
@@ -1167,6 +1334,649 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["question_set_items"]["Insert"]>;
       };
+      assessments: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          title: string;
+          description: string | null;
+          purpose: AssessmentPurpose;
+          question_set_id: string;
+          set_version_id: number;
+          drive_id: string | null;
+          time_limit_minutes: number | null;
+          allowed_attempts: number;
+          review_policy: ReviewPolicy;
+          release_policy: ReleasePolicy;
+          shuffle_questions: boolean;
+          pass_percentage: number;
+          status: AssessmentStatus;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          title: string;
+          description?: string | null;
+          purpose?: AssessmentPurpose;
+          question_set_id: string;
+          set_version_id?: number;
+          drive_id?: string | null;
+          time_limit_minutes?: number | null;
+          allowed_attempts?: number;
+          review_policy?: ReviewPolicy;
+          release_policy?: ReleasePolicy;
+          shuffle_questions?: boolean;
+          pass_percentage?: number;
+          status?: AssessmentStatus;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["assessments"]["Insert"]>;
+      };
+      assessment_assignments: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          assessment_id: string;
+          student_id: string | null;
+          cohort_name: string | null;
+          window_start: string | null;
+          window_end: string | null;
+          max_attempts_override: number | null;
+          status: AssignmentStatus;
+          assigned_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          assessment_id: string;
+          student_id?: string | null;
+          cohort_name?: string | null;
+          window_start?: string | null;
+          window_end?: string | null;
+          max_attempts_override?: number | null;
+          status?: AssignmentStatus;
+          assigned_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["assessment_assignments"]["Insert"]>;
+      };
+      assessment_attempts: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          assessment_id: string;
+          assignment_id: string | null;
+          student_id: string;
+          attempt_number: number;
+          status: AttemptStatus;
+          started_at: string;
+          expires_at: string | null;
+          submitted_at: string | null;
+          total_points: number;
+          earned_points: number;
+          score_percentage: number;
+          is_passed: boolean;
+          scoring_status: AttemptScoringStatus;
+          client_meta: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          assessment_id: string;
+          assignment_id?: string | null;
+          student_id: string;
+          attempt_number?: number;
+          status?: AttemptStatus;
+          started_at?: string;
+          expires_at?: string | null;
+          submitted_at?: string | null;
+          total_points?: number;
+          earned_points?: number;
+          score_percentage?: number;
+          is_passed?: boolean;
+          scoring_status?: AttemptScoringStatus;
+          client_meta?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["assessment_attempts"]["Insert"]>;
+      };
+      attempt_responses: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          attempt_id: string;
+          question_id: string;
+          version_id: string;
+          response_payload: Json;
+          save_sequence: number;
+          is_flagged: boolean;
+          is_answered: boolean;
+          points_awarded: number;
+          is_correct: boolean | null;
+          scoring_status: ResponseScoringStatus;
+          manual_notes: string | null;
+          last_saved_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          attempt_id: string;
+          question_id: string;
+          version_id: string;
+          response_payload?: Json;
+          save_sequence?: number;
+          is_flagged?: boolean;
+          is_answered?: boolean;
+          points_awarded?: number;
+          is_correct?: boolean | null;
+          scoring_status?: ResponseScoringStatus;
+          manual_notes?: string | null;
+          last_saved_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["attempt_responses"]["Insert"]>;
+      };
+      preparation_practice_sessions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          student_id: string;
+          skill_id: string | null;
+          topic: string | null;
+          questions_practiced: number;
+          correct_count: number;
+          time_spent_seconds: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          student_id: string;
+          skill_id?: string | null;
+          topic?: string | null;
+          questions_practiced?: number;
+          correct_count?: number;
+          time_spent_seconds?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["preparation_practice_sessions"]["Insert"]>;
+      };
+      student_behavioral_responses: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          student_id: string;
+          prompt: string;
+          category: BehavioralCategory;
+          response_text: string;
+          self_reflection: string | null;
+          key_learnings: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          student_id: string;
+          prompt: string;
+          category?: BehavioralCategory;
+          response_text: string;
+          self_reflection?: string | null;
+          key_learnings?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["student_behavioral_responses"]["Insert"]>;
+      };
+      mistake_review_targets: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          student_id: string;
+          question_id: string;
+          version_id: string;
+          skill_id: string | null;
+          primary_reason: MistakePrimaryReason;
+          status: ReviewTargetStatus;
+          occurrence_count: number;
+          revision_stage: number;
+          last_reviewed_at: string | null;
+          next_due_at: string;
+          first_observed_at: string;
+          last_observed_at: string;
+          student_reflection: string | null;
+          student_reason_category: StudentReasonCategory | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          student_id: string;
+          question_id: string;
+          version_id: string;
+          skill_id?: string | null;
+          primary_reason: MistakePrimaryReason;
+          status?: ReviewTargetStatus;
+          occurrence_count?: number;
+          revision_stage?: number;
+          last_reviewed_at?: string | null;
+          next_due_at?: string;
+          first_observed_at?: string;
+          last_observed_at?: string;
+          student_reflection?: string | null;
+          student_reason_category?: StudentReasonCategory | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["mistake_review_targets"]["Insert"]>;
+      };
+      mistake_occurrences: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          target_id: string;
+          student_id: string;
+          attempt_id: string;
+          response_id: string | null;
+          question_id: string;
+          version_id: string;
+          capture_reason: MistakeCaptureReason;
+          submitted_payload: Json;
+          points_awarded: number;
+          occurred_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          target_id: string;
+          student_id: string;
+          attempt_id: string;
+          response_id?: string | null;
+          question_id: string;
+          version_id: string;
+          capture_reason: MistakeCaptureReason;
+          submitted_payload?: Json;
+          points_awarded?: number;
+          occurred_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["mistake_occurrences"]["Insert"]>;
+      };
+      review_sessions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          target_id: string;
+          student_id: string;
+          action_type: ReviewActionType;
+          notes: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          target_id: string;
+          student_id: string;
+          action_type: ReviewActionType;
+          notes?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["review_sessions"]["Insert"]>;
+      };
+      mastery_evidence_records: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          student_id: string;
+          skill_id: string;
+          target_id: string | null;
+          evidence_question_id: string;
+          evidence_version_id: string;
+          attempt_id: string | null;
+          is_new_question: boolean;
+          is_correct: boolean;
+          points_earned: number;
+          difficulty: QuestionDifficulty;
+          validity_status: EvidenceValidityStatus;
+          invalidation_reason: string | null;
+          recorded_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          student_id: string;
+          skill_id: string;
+          target_id?: string | null;
+          evidence_question_id: string;
+          evidence_version_id: string;
+          attempt_id?: string | null;
+          is_new_question?: boolean;
+          is_correct: boolean;
+          points_earned?: number;
+          difficulty?: QuestionDifficulty;
+          validity_status?: EvidenceValidityStatus;
+          invalidation_reason?: string | null;
+          recorded_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["mastery_evidence_records"]["Insert"]>;
+      };
+      student_skill_mastery: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          student_id: string;
+          skill_id: string;
+          mastery_status: MasteryStatus;
+          total_mistakes_count: number;
+          active_review_count: number;
+          independent_correct_count: number;
+          independent_attempts_count: number;
+          accuracy_percentage: number;
+          last_evidence_at: string | null;
+          policy_version: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          student_id: string;
+          skill_id: string;
+          mastery_status?: MasteryStatus;
+          total_mistakes_count?: number;
+          active_review_count?: number;
+          independent_correct_count?: number;
+          independent_attempts_count?: number;
+          accuracy_percentage?: number;
+          last_evidence_at?: string | null;
+          policy_version?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["student_skill_mastery"]["Insert"]>;
+      };
+      question_defect_reports: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          question_id: string;
+          version_id: string;
+          reported_by: string | null;
+          defect_type: QuestionDefectType;
+          description: string;
+          status: DefectReportStatus;
+          reviewed_by: string | null;
+          resolution_notes: string | null;
+          resolved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          question_id: string;
+          version_id: string;
+          reported_by?: string | null;
+          defect_type: QuestionDefectType;
+          description: string;
+          status?: DefectReportStatus;
+          reviewed_by?: string | null;
+          resolution_notes?: string | null;
+          resolved_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["question_defect_reports"]["Insert"]>;
+      };
+      historical_recruitment_records: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          company_id: string;
+          role_title: string;
+          recruitment_year: string;
+          recruitment_cycle: string;
+          historical_drive_id: string | null;
+          source_id: string | null;
+          record_type: HistoricalRecordType;
+          reliability_label: HistoricalReliabilityLabel;
+          process_summary: string | null;
+          eligibility_criteria_snapshot: Json;
+          confirmed_rounds: Json;
+          reported_rounds: Json;
+          relevant_question_set_id: string | null;
+          verification_status: VerificationStatus;
+          source_date: string | null;
+          last_verified_at: string | null;
+          is_superseded: boolean;
+          superseded_by: string | null;
+          sharing_scope: "COLLEGE_PRIVATE" | "GLOBAL_SHARED";
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          company_id: string;
+          role_title: string;
+          recruitment_year: string;
+          recruitment_cycle: string;
+          historical_drive_id?: string | null;
+          source_id?: string | null;
+          record_type?: HistoricalRecordType;
+          reliability_label?: HistoricalReliabilityLabel;
+          process_summary?: string | null;
+          eligibility_criteria_snapshot?: Json;
+          confirmed_rounds?: Json;
+          reported_rounds?: Json;
+          relevant_question_set_id?: string | null;
+          verification_status?: VerificationStatus;
+          source_date?: string | null;
+          last_verified_at?: string | null;
+          is_superseded?: boolean;
+          superseded_by?: string | null;
+          sharing_scope?: "COLLEGE_PRIVATE" | "GLOBAL_SHARED";
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["historical_recruitment_records"]["Insert"]>;
+      };
+      historical_drive_comparisons: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          current_drive_id: string;
+          historical_record_id: string;
+          matching_basis: DriveMatchingBasis;
+          shared_attributes: Json;
+          differing_attributes: Json;
+          unknown_fields: Json;
+          conflicts: Json;
+          comparability_status: DriveComparabilityStatus;
+          limitations_disclaimer: string;
+          generated_by: string | null;
+          generated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          current_drive_id: string;
+          historical_record_id: string;
+          matching_basis: DriveMatchingBasis;
+          shared_attributes?: Json;
+          differing_attributes?: Json;
+          unknown_fields?: Json;
+          conflicts?: Json;
+          comparability_status?: DriveComparabilityStatus;
+          limitations_disclaimer: string;
+          generated_by?: string | null;
+          generated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["historical_drive_comparisons"]["Insert"]>;
+      };
+      experience_report_moderation_logs: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          report_id: string;
+          previous_status: string;
+          new_status: string;
+          moderated_by: string | null;
+          moderation_notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          report_id: string;
+          previous_status: string;
+          new_status: string;
+          moderated_by?: string | null;
+          moderation_notes?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["experience_report_moderation_logs"]["Insert"]>;
+      };
+      training_sessions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          title: string;
+          description: string | null;
+          skill_id: string | null;
+          topic: string;
+          trainer_id: string | null;
+          session_date: string;
+          duration_minutes: number;
+          baseline_assessment_id: string | null;
+          follow_up_assessment_id: string | null;
+          status: TrainingSessionStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          title: string;
+          description?: string | null;
+          skill_id?: string | null;
+          topic: string;
+          trainer_id?: string | null;
+          session_date: string;
+          duration_minutes?: number;
+          baseline_assessment_id?: string | null;
+          follow_up_assessment_id?: string | null;
+          status?: TrainingSessionStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_sessions"]["Insert"]>;
+      };
+      training_attendance: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          session_id: string;
+          student_id: string;
+          enrollment_status: TrainingEnrollmentStatus;
+          attendance_status: TrainingAttendanceStatus;
+          pre_score: number | null;
+          post_score: number | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          session_id: string;
+          student_id: string;
+          enrollment_status?: TrainingEnrollmentStatus;
+          attendance_status?: TrainingAttendanceStatus;
+          pre_score?: number | null;
+          post_score?: number | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_attendance"]["Insert"]>;
+      };
+      training_before_after_comparisons: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          session_id: string;
+          skill_id: string | null;
+          baseline_assessment_id: string;
+          follow_up_assessment_id: string;
+          eligible_students_count: number;
+          paired_students_count: number;
+          baseline_avg_score: number;
+          followup_avg_score: number;
+          absolute_delta: number;
+          relative_percentage_delta: number | null;
+          limitations_disclaimer: string;
+          generated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          session_id: string;
+          skill_id?: string | null;
+          baseline_assessment_id: string;
+          follow_up_assessment_id: string;
+          eligible_students_count?: number;
+          paired_students_count?: number;
+          baseline_avg_score?: number;
+          followup_avg_score?: number;
+          absolute_delta?: number;
+          relative_percentage_delta?: number | null;
+          limitations_disclaimer: string;
+          generated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["training_before_after_comparisons"]["Insert"]>;
+      };
+      analytics_export_jobs: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          requested_by: string | null;
+          report_type: AnalyticsReportType;
+          filter_payload: Json;
+          file_name: string;
+          file_path: string | null;
+          status: ExportJobStatus;
+          record_count: number;
+          error_message: string | null;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          requested_by?: string | null;
+          report_type: AnalyticsReportType;
+          filter_payload?: Json;
+          file_name: string;
+          file_path?: string | null;
+          status?: ExportJobStatus;
+          record_count?: number;
+          error_message?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["analytics_export_jobs"]["Insert"]>;
+      };
     };
   };
 }
@@ -1187,4 +1997,26 @@ export type QuestionImportJobRow = Database["public"]["Tables"]["question_import
 export type QuestionDuplicateCandidateRow = Database["public"]["Tables"]["question_duplicate_candidates"]["Row"];
 export type QuestionSetRow = Database["public"]["Tables"]["question_sets"]["Row"];
 export type QuestionSetItemRow = Database["public"]["Tables"]["question_set_items"]["Row"];
+
+export type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"];
+export type AssessmentAssignmentRow = Database["public"]["Tables"]["assessment_assignments"]["Row"];
+export type AssessmentAttemptRow = Database["public"]["Tables"]["assessment_attempts"]["Row"];
+export type AttemptResponseRow = Database["public"]["Tables"]["attempt_responses"]["Row"];
+export type PreparationPracticeSessionRow = Database["public"]["Tables"]["preparation_practice_sessions"]["Row"];
+export type StudentBehavioralResponseRow = Database["public"]["Tables"]["student_behavioral_responses"]["Row"];
+
+export type MistakeReviewTargetRow = Database["public"]["Tables"]["mistake_review_targets"]["Row"];
+export type MistakeOccurrenceRow = Database["public"]["Tables"]["mistake_occurrences"]["Row"];
+export type ReviewSessionRow = Database["public"]["Tables"]["review_sessions"]["Row"];
+export type MasteryEvidenceRecordRow = Database["public"]["Tables"]["mastery_evidence_records"]["Row"];
+export type StudentSkillMasteryRow = Database["public"]["Tables"]["student_skill_mastery"]["Row"];
+export type QuestionDefectReportRow = Database["public"]["Tables"]["question_defect_reports"]["Row"];
+
+export type HistoricalRecruitmentRecordRow = Database["public"]["Tables"]["historical_recruitment_records"]["Row"];
+export type HistoricalDriveComparisonRow = Database["public"]["Tables"]["historical_drive_comparisons"]["Row"];
+export type ExperienceReportModerationLogRow = Database["public"]["Tables"]["experience_report_moderation_logs"]["Row"];
+export type TrainingSessionRow = Database["public"]["Tables"]["training_sessions"]["Row"];
+export type TrainingAttendanceRow = Database["public"]["Tables"]["training_attendance"]["Row"];
+export type TrainingBeforeAfterComparisonRow = Database["public"]["Tables"]["training_before_after_comparisons"]["Row"];
+export type AnalyticsExportJobRow = Database["public"]["Tables"]["analytics_export_jobs"]["Row"];
 

@@ -9,7 +9,7 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen bg-background flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       {/* Brand Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-lg text-center mb-8">
         <Link href="/" className="inline-flex items-center gap-2.5">
           <div className="h-10 w-10 rounded-xl bg-primary-gradient flex items-center justify-center text-white font-bold text-lg shadow-sm">
             UP
@@ -24,7 +24,7 @@ export default function AuthLayout({
       </div>
 
       {/* Main Auth Card Container */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="sm:mx-auto sm:w-full sm:max-w-lg">
         <div className="bg-card py-8 px-6 shadow-md rounded-2xl border border-border sm:px-10">
           {children}
         </div>

@@ -1,9 +1,14 @@
 /**
- * Domain Module: Training Management & Peer Practice
- * Scope: Workshops, diagnostic tests, attendance, structured peer preparation scheduling.
- * Scheduled for Implementation: Phase 08
+ * ==============================================================================
+ * UrPlaced: Multi-College Placement Preparation & Management SaaS
+ * Training & Interventions Module (Phase 09)
+ * ==============================================================================
  */
+
+export * from "./services/training-session-service";
+
 export const TrainingModule = {
   name: "training",
-  status: "placeholder",
+  version: "1.0.0",
+  phase: "09",
 } as const;

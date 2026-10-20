@@ -16,6 +16,7 @@ import {
   LogOut,
   AlertCircle,
   BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { PlacementMetricsService } from "@/modules/placement/services/placement-metrics-service";
@@ -180,12 +181,32 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick Placement Actions */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Button asChild variant="primary" className="h-auto py-3 px-4 justify-between">
-          <Link href="/dashboard/drives/new">
+          <Link href="/dashboard/assessments">
             <div className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" />
-              <span>Launch Drive</span>
+              <BookOpen className="h-4 w-4" />
+              <span>Assessments Engine</span>
+            </div>
+            <ArrowUpRight className="h-4 w-4 opacity-75" />
+          </Link>
+        </Button>
+
+        <Button asChild variant="secondary" className="h-auto py-3 px-4 justify-between">
+          <Link href="/dashboard/student/mistakes">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4" />
+              <span>Mistake Bank & Revision</span>
+            </div>
+            <ArrowUpRight className="h-4 w-4 opacity-75" />
+          </Link>
+        </Button>
+
+        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between">
+          <Link href="/dashboard/mistakes">
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              <span>Cohort Error Analytics</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75" />
           </Link>
@@ -194,40 +215,43 @@ export default async function DashboardPage() {
         <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between">
           <Link href="/dashboard/questions">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
+              <FileSpreadsheet className="h-4 w-4" />
               <span>Question Bank</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75" />
           </Link>
         </Button>
+      </div>
 
-        <Button asChild variant="secondary" className="h-auto py-3 px-4 justify-between">
-          <Link href="/dashboard/students/import">
+      {/* Phase 09: Placement Memory, Analytics & Training Hub */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between border-primary/20 hover:bg-card">
+          <Link href="/dashboard/analytics">
             <div className="flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              <span>Import Students</span>
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-text-primary">Institutional Analytics</span>
             </div>
-            <ArrowUpRight className="h-4 w-4 opacity-75" />
+            <ArrowUpRight className="h-4 w-4 opacity-75 text-primary" />
           </Link>
         </Button>
 
-        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between">
-          <Link href="/dashboard/companies/new">
+        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between border-secondary/20 hover:bg-card">
+          <Link href="/dashboard/memory">
             <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              <span>Add Company</span>
+              <Building2 className="h-4 w-4 text-secondary" />
+              <span className="font-semibold text-text-primary">Placement Memory & Debriefs</span>
             </div>
-            <ArrowUpRight className="h-4 w-4 opacity-75" />
+            <ArrowUpRight className="h-4 w-4 opacity-75 text-secondary" />
           </Link>
         </Button>
 
-        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between">
-          <Link href="/dashboard/students/new">
+        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between border-primary/20 hover:bg-card">
+          <Link href="/dashboard/training">
             <div className="flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />
-              <span>Add Student</span>
+              <GraduationCap className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-text-primary">Training & Workshops</span>
             </div>
-            <ArrowUpRight className="h-4 w-4 opacity-75" />
+            <ArrowUpRight className="h-4 w-4 opacity-75 text-primary" />
           </Link>
         </Button>
       </div>

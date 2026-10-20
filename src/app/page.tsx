@@ -1,144 +1,636 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import {
-  Palette,
-  Layers,
-  CheckCircle2,
-  ShieldCheck,
+  GraduationCap,
+  Building2,
   ArrowRight,
-  Code2,
+  ShieldCheck,
+  CheckCircle2,
+  BookOpen,
+  Target,
+  BarChart3,
+  Sparkles,
+  ChevronRight,
+  Award,
+  Lock,
+  Menu,
+  X,
+  UserPlus,
+  LogIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function HomePage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+
   return (
-    <div className="space-y-8 max-w-5xl">
-      {/* Header Banner */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="px-3 py-1 text-xs">
-            Phase 02 Active
-          </Badge>
-          <span className="text-xs text-text-secondary font-mono">
-            V1.0 Architectural Baseline
-          </span>
+    <div className="min-h-screen bg-background text-text-primary flex flex-col selection:bg-primary/20">
+      {/* 1. Global Public Navigation Header */}
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          {/* Brand Wordmark */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="h-11 w-11 rounded-xl bg-primary-gradient flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
+              UP
+            </div>
+            <div className="flex flex-col">
+              <span className="font-heading font-extrabold text-2xl tracking-tight text-text-primary leading-none">
+                UrPlaced
+              </span>
+              <span className="text-xs text-text-secondary font-mono tracking-wider mt-1">
+                Placement SaaS
+              </span>
+            </div>
+          </Link>
+
+          {/* Center Navigation Links (Focused on Student Prep & College Operations) */}
+          <nav className="hidden md:flex items-center gap-1 lg:gap-3">
+            <a
+              href="#solutions"
+              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+            >
+              Platform
+            </a>
+            <a
+              href="#students"
+              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+            >
+              For Students
+            </a>
+            <a
+              href="#colleges"
+              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+            >
+              For Colleges
+            </a>
+            <a
+              href="#how-it-works"
+              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+            >
+              How It Works
+            </a>
+          </nav>
+
+          {/* Right Action Buttons */}
+          <div className="hidden sm:flex items-center gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 px-5 text-sm font-semibold border-border hover:border-primary hover:bg-surface text-text-primary"
+            >
+              <Link href="/auth/signin">
+                <LogIn className="h-4 w-4 mr-1.5" />
+                Sign In
+              </Link>
+            </Button>
+          
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="flex md:hidden items-center gap-2">
+            <Button
+              asChild
+              size="sm"
+              variant="primary"
+              className="bg-primary text-white text-xs px-3 h-9"
+            >
+              <Link href="/auth/signup">Sign Up</Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+              className="h-10 w-10 text-text-primary"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary font-heading">
-          UrPlaced Application Foundation &amp; Design System
-        </h1>
-        <p className="text-base sm:text-lg text-text-secondary max-w-3xl leading-relaxed">
-          The unified technical scaffold, centralized design tokens, and accessible component library
-          for the Multi-College Placement Preparation &amp; Management SaaS platform.
-        </p>
-      </div>
 
-      {/* Phase Guard Notice */}
-      <Alert variant="info">
-        <AlertTitle>Phase 02 Architecture Boundary</AlertTitle>
-        <AlertDescription>
-          In accordance with the agreed phase roadmap, Phase 02 implements the technical foundation,
-          design tokens, and shared UI primitives only. Database-backed business modules (authentication,
-          student ingestion, drives, question bank, and assessments) are intentionally scoped to Phases 03–10.
-        </AlertDescription>
-      </Alert>
-
-      {/* Quick Action Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="hover:border-primary/50 transition-colors">
-          <CardHeader>
-            <div className="h-10 w-10 rounded-lg bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center mb-2">
-              <Palette className="h-5 w-5" />
+        {/* Mobile Navigation Dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-b border-border bg-card px-4 pt-3 pb-6 space-y-3 shadow-lg">
+            <div className="flex flex-col space-y-1">
+              <a
+                href="#solutions"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+              >
+                Platform
+              </a>
+              <a
+                href="#students"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+              >
+                For Students
+              </a>
+              <a
+                href="#colleges"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+              >
+                For Colleges
+              </a>
+              <a
+                href="#how-it-works"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+              >
+                How It Works
+              </a>
             </div>
-            <CardTitle>Design System Showcase</CardTitle>
-            <CardDescription>
-              Inspect the exact color palette, typography hierarchy, button states, inputs, tables,
-              and accessibility compliance.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="primary" className="w-full sm:w-auto">
-              <Link href="/design-system" className="inline-flex items-center gap-2">
-                Launch Showcase <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:border-secondary/50 transition-colors">
-          <CardHeader>
-            <div className="h-10 w-10 rounded-lg bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center mb-2">
-              <Layers className="h-5 w-5" />
+            <div className="pt-3 border-t border-border flex flex-col gap-2">
+              <Button asChild variant="outline" className="w-full justify-center h-11 text-sm font-semibold">
+                <Link href="/auth/signin">Sign In</Link>
+              </Button>
+              <Button asChild variant="primary" className="w-full justify-center h-11 text-sm font-semibold bg-primary text-white">
+                <Link href="/auth/signup">Create Account</Link>
+              </Button>
             </div>
-            <CardTitle>Architecture &amp; Blueprint</CardTitle>
-            <CardDescription>
-              Review the 11 accepted Phase 01 specifications covering modular-monolith service boundaries,
-              PostgreSQL RLS, and data models.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href="/design-system/architecture" className="inline-flex items-center gap-2">
-                View Architecture Summary <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        )}
+      </header>
 
-      {/* Invariants & Foundation Verification */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Phase 02 Core Invariants Verified</CardTitle>
-          <CardDescription>
-            Rigorous adherence to strict design tokens and modular architecture rules.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-text-primary">Exact Fixed Brand Palette</p>
-                <p className="text-xs text-text-secondary">
-                  Single source of truth in CSS tokens (<code className="font-mono text-[11px]">#5052C9</code>, <code className="font-mono text-[11px]">#2E8F86</code>, <code className="font-mono text-[11px]">#EDECE7</code>, etc.).
-                </p>
-              </div>
+      {/* 2. Expanded Hero Section (Fills Viewport Naturally) */}
+      <section className="relative min-h-[calc(100vh-5rem)] flex flex-col justify-between py-10 md:py-16 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full my-auto">
+          <div className="text-center max-w-4xl mx-auto space-y-8">
+            {/* Top Enterprise Badge */}
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-card border border-border text-xs sm:text-sm font-medium text-text-secondary shadow-sm">
+              <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider bg-secondary text-white">
+                Multi-College Placement SaaS
+              </Badge>
+              <span>Student Preparation &amp; Institutional Placement Management</span>
             </div>
 
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-text-primary">Strict Typography Stack</p>
-                <p className="text-xs text-text-secondary">
-                  Headings in <strong className="font-semibold">Outfit</strong>, Body in <strong className="font-semibold">Inter</strong>, Code in <strong className="font-semibold">JetBrains Mono</strong>.
-                </p>
-              </div>
-            </div>
+            {/* Core Hero Headline */}
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-text-primary font-heading leading-[1.08]">
+              Your Career Starts Here.
+            </h1>
 
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-text-primary">Derived Semantic States</p>
-                <p className="text-xs text-text-secondary">
-                  Hover, active, border, and focus rings strictly derived without invented hues.
-                </p>
-              </div>
-            </div>
+            {/* Value Proposition Subtitle */}
+            <p className="text-lg sm:text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto leading-relaxed">
+              The intelligent placement ecosystem connecting students and higher-education institutions with industry hiring standards. Turn campus recruitment into verifiable student mastery and streamlined, high-trust institutional operations.
+            </p>
 
-            <div className="flex items-start gap-3">
-              <Code2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-text-primary">Modular Monolith Layout</p>
-                <p className="text-xs text-text-secondary">
-                  16 domain module boundaries isolated under <code className="font-mono text-[11px]">src/modules/</code>.
-                </p>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <Button
+                asChild
+                size="lg"
+                className="w-full sm:w-auto h-14 px-8 text-base font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-lg rounded-xl transition-all"
+              >
+                <Link href="/auth/signin?next=/dashboard" className="inline-flex items-center justify-center gap-2.5">
+                  <span>Enter College Workspace</span>
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              </Button>
+
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto h-14 px-8 text-base font-semibold border-2 border-border bg-card hover:bg-surface hover:border-primary text-text-primary rounded-xl shadow-sm transition-all"
+              >
+                <Link href="/auth/signin?next=/dashboard/student/assessments" className="inline-flex items-center justify-center gap-2.5">
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                  <span>Student Practice Portal</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {/* Viewport Anchor: 4 Pillar Proof Card */}
+          <div className="max-w-6xl mx-auto w-full mt-12 md:mt-16">
+            <div className="p-6 sm:p-8 rounded-2xl bg-card border border-border shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="flex items-start gap-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center shrink-0">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold font-heading text-text-primary">Multi-Tenant Isolation</h3>
+                    <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
+                      PostgreSQL RLS security guarantees complete data segregation per institution.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center shrink-0">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold font-heading text-text-primary">QuestionBank Sentinel</h3>
+                    <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
+                      Curated, peer-reviewed question repository mapped to recruitment patterns.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center shrink-0">
+                    <Target className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold font-heading text-text-primary">Mistake-to-Mastery</h3>
+                    <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
+                      Algorithmic revision cycles converting incorrect answers into proven mastery.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center shrink-0">
+                    <BarChart3 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold font-heading text-text-primary">Placement Memory</h3>
+                    <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
+                      Audited historical records and defensible cohort before/after analytics.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+      </section>
+
+      {/* 3. Two Core Pillars: Students & Colleges (Clean 2-Column Balanced Grid) */}
+      <section id="solutions" className="py-20 md:py-28 bg-surface border-y border-border scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-secondary font-mono">
+              Designed For the Entire Placement Lifecycle
+            </h2>
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-text-primary font-heading">
+              One Unified System. Two Purpose-Built Experiences.
+            </h3>
+            <p className="text-base sm:text-lg text-text-secondary">
+              UrPlaced bridges the gap between individual student preparation and institutional placement cell management.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2 max-w-5xl mx-auto items-stretch">
+            {/* Track 1: For Students */}
+            <div id="students" className="scroll-mt-28 flex">
+              <Card className="w-full flex flex-col justify-between border-border bg-card shadow-sm hover:shadow-lg transition-all rounded-2xl p-2">
+                <CardHeader className="space-y-3 p-6 sm:p-8">
+                  <div className="h-14 w-14 rounded-2xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center">
+                    <GraduationCap className="h-7 w-7" />
+                  </div>
+                  <Badge variant="outline" className="w-fit text-xs font-semibold text-primary border-primary/30 py-1 px-2.5">
+                    For Students
+                  </Badge>
+                  <CardTitle className="text-2xl sm:text-3xl font-heading font-bold text-text-primary">
+                    Targeted Mastery for Every Drive
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-text-secondary leading-relaxed pt-1">
+                    Eliminate guesswork. Prepare with precision for upcoming campus drives using company-aligned question banks, timed mock assessments, and intelligent error remediation.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 flex-1 flex flex-col justify-between p-6 sm:p-8 pt-0">
+                  <ul className="space-y-3.5 text-xs sm:text-sm text-text-secondary">
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                      <span><strong>DriveFit Assessments:</strong> Practice tests mapped to actual company recruitment rounds, topics, and syllabus cutoffs.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                      <span><strong>Mistake Bank:</strong> Automated capture of missed concepts with step-by-step explanations and scheduled revision retries.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                      <span><strong>Readiness Tracking:</strong> Objective mastery metrics indicating your real preparation readiness against drive benchmarks.</span>
+                    </li>
+                  </ul>
+                  <div className="pt-6 border-t border-border flex flex-col gap-2.5">
+                    <Button asChild variant="primary" className="w-full justify-between h-12 text-sm font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-sm rounded-xl">
+                      <Link href="/auth/signup?role=student">
+                        <span>Get Started as Student</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="w-full justify-center h-10 text-xs text-text-secondary hover:text-primary">
+                      <Link href="/auth/signin?next=/dashboard/student/assessments">
+                        <span>Already registered? Sign In to Student Portal</span>
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Track 2: For Placement Cells & Colleges */}
+            <div id="colleges" className="scroll-mt-28 flex">
+              <Card className="w-full flex flex-col justify-between border-border bg-card shadow-sm hover:shadow-lg transition-all rounded-2xl p-2">
+                <CardHeader className="space-y-3 p-6 sm:p-8">
+                  <div className="h-14 w-14 rounded-2xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center">
+                    <Building2 className="h-7 w-7" />
+                  </div>
+                  <Badge variant="outline" className="w-fit text-xs font-semibold text-secondary border-secondary/30 py-1 px-2.5">
+                    For Colleges &amp; Placement Cells
+                  </Badge>
+                  <CardTitle className="text-2xl sm:text-3xl font-heading font-bold text-text-primary">
+                    Institutional Command &amp; Efficiency
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base text-text-secondary leading-relaxed pt-1">
+                    Manage multi-company campus placement seasons seamlessly with automated student eligibility gating, company directory management, multi-round tracking, and verifiable reporting.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 flex-1 flex flex-col justify-between p-6 sm:p-8 pt-0">
+                  <ul className="space-y-3.5 text-xs sm:text-sm text-text-secondary">
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                      <span><strong>Roster Ingestion:</strong> Bulk student onboarding with academic branch, batch, and CGPA validation.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                      <span><strong>Automated Eligibility Gating:</strong> Real-time filtering against backlogs, minimum marks, and department cutoffs.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-secondary shrink-0 mt-0.5" />
+                      <span><strong>Placement Memory:</strong> Sourced institutional memory and defensible cohort before/after analytics.</span>
+                    </li>
+                  </ul>
+                  <div className="pt-6 border-t border-border flex flex-col gap-2.5">
+                    <Button asChild variant="primary" className="w-full justify-between h-12 text-sm font-semibold bg-secondary hover:bg-[var(--color-secondary-hover)] text-white shadow-sm rounded-xl">
+                      <Link href="/auth/signup?role=college">
+                        <span>Register Your Institution</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="w-full justify-center h-10 text-xs text-text-secondary hover:text-primary">
+                      <Link href="/auth/signin?next=/dashboard">
+                        <span>Already registered? Sign In to Placement Console</span>
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. How It Works: Step-by-Step Flow */}
+      <section id="how-it-works" className="py-20 md:py-28 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-secondary font-mono">
+              Simple &amp; Repeatable
+            </h2>
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-text-primary font-heading">
+              How UrPlaced Powers Campus Recruitment
+            </h3>
+            <p className="text-base sm:text-lg text-text-secondary">
+              A transparent, four-step process connecting college institutional preparation to verified corporate hiring outcomes.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-4">
+            {/* Step 1 */}
+            <div className="p-7 rounded-2xl bg-card border border-border space-y-3.5 relative shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-heading font-extrabold text-primary/30">
+                01
+              </div>
+              <h4 className="text-lg font-bold font-heading text-text-primary">
+                Onboard Campus &amp; Roster
+              </h4>
+              <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Colleges configure departments, academic years, and ingest verified student records under isolated tenant boundaries.
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="p-7 rounded-2xl bg-card border border-border space-y-3.5 relative shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-heading font-extrabold text-secondary/40">
+                02
+              </div>
+              <h4 className="text-lg font-bold font-heading text-text-primary">
+                Manage Companies &amp; Drives
+              </h4>
+              <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Placement officers configure hiring companies, drive criteria cutoffs, eligibility rules, and required assessment skill targets.
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="p-7 rounded-2xl bg-card border border-border space-y-3.5 relative shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-heading font-extrabold text-primary/30">
+                03
+              </div>
+              <h4 className="text-lg font-bold font-heading text-text-primary">
+                Targeted Prep &amp; Mastery
+              </h4>
+              <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Students practice role-specific questions, take timed assessments, and remediate errors via the Mistake-to-Mastery engine.
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="p-7 rounded-2xl bg-card border border-border space-y-3.5 relative shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-4xl font-heading font-extrabold text-secondary/40">
+                04
+              </div>
+              <h4 className="text-lg font-bold font-heading text-text-primary">
+                Placement &amp; Institutional Memory
+              </h4>
+              <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Recruitment drives execute with verified offer logging, cohort before/after analytics, and historical placement memory.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. Platform Core Pillars & Real Benefits */}
+      <section className="py-20 md:py-28 bg-surface border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-secondary font-mono">
+              Engineered For Institutional Rigor
+            </h2>
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-text-primary font-heading">
+              Built on Evidence, Not Guesses
+            </h3>
+            <p className="text-base sm:text-lg text-text-secondary">
+              Every feature in UrPlaced is engineered to produce defensible data, ensure tenant isolation, and deliver measurable placement growth.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-border bg-card p-6 shadow-sm">
+              <CardHeader className="p-0 pb-3">
+                <div className="h-12 w-12 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center mb-3">
+                  <BookOpen className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-lg font-heading">QuestionBank Sentinel</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Peer-reviewed question bank with multi-tier tags, cognitive complexity levels, and versioned answer keys.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card p-6 shadow-sm">
+              <CardHeader className="p-0 pb-3">
+                <div className="h-12 w-12 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center mb-3">
+                  <Target className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-lg font-heading">DriveFit Matching</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Transparent student readiness indicators calculating match percentages against specific hiring requirements.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card p-6 shadow-sm">
+              <CardHeader className="p-0 pb-3">
+                <div className="h-12 w-12 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center mb-3">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-lg font-heading">Mistake-to-Mastery</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Algorithmic error capture that turns incorrect answers into scheduled revisions and evidence-backed skill mastery.
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card p-6 shadow-sm">
+              <CardHeader className="p-0 pb-3">
+                <div className="h-12 w-12 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center mb-3">
+                  <BarChart3 className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-lg font-heading">Placement Memory</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Audited historical records and paired before/after cohort measurements that demonstrate actual institutional impact.
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. High-Conversion Institutional Call to Action */}
+      <section className="py-20 md:py-28 bg-background">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="rounded-3xl p-8 sm:p-14 bg-card border border-border shadow-lg text-center space-y-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--color-primary-subtle)] text-primary text-xs sm:text-sm font-semibold">
+              <Award className="h-4 w-4" />
+              <span>Campus Recruitment Excellence</span>
+            </div>
+
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-heading text-text-primary">
+              Ready to Transform Your Campus Placements?
+            </h3>
+
+            <p className="text-base sm:text-lg text-text-secondary max-w-2xl mx-auto leading-relaxed">
+              Empower students with role-specific mastery, streamline drive operations for placement officers, and manage your complete campus recruitment ecosystem.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <Button
+                asChild
+                size="lg"
+                className="w-full sm:w-auto h-12 px-8 text-sm font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-md rounded-xl"
+              >
+                <Link href="/auth/signup">Create Your Account</Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto h-12 px-8 text-sm font-semibold border-border hover:bg-surface rounded-xl"
+              >
+                <Link href="/auth/signin?next=/dashboard">Sign In to Workspace</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Professional SaaS Footer */}
+      <footer className="mt-auto border-t border-border bg-card py-16 text-text-secondary text-xs sm:text-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 pb-12 border-b border-border">
+            {/* Brand Column */}
+            <div className="col-span-2 md:col-span-1 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-primary-gradient flex items-center justify-center text-white font-bold text-base shadow-sm">
+                  UP
+                </div>
+                <span className="font-heading font-bold text-xl text-text-primary">
+                  UrPlaced
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                Enterprise Multi-College Placement Preparation &amp; Management SaaS platform.
+              </p>
+              <div className="flex items-center gap-2 text-xs text-text-secondary pt-1">
+                <Lock className="h-4 w-4 text-secondary" />
+                <span>Strict Tenant Data Isolation</span>
+              </div>
+            </div>
+
+            {/* Platform Column */}
+            <div className="space-y-3">
+              <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
+                Platform
+              </div>
+              <ul className="space-y-2.5 text-xs sm:text-sm">
+                <li><Link href="/auth/signin?next=/dashboard" className="hover:text-primary transition-colors">Placement Command Center</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/students" className="hover:text-primary transition-colors">Student Roster Management</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/companies" className="hover:text-primary transition-colors">Company Directory</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/drives" className="hover:text-primary transition-colors">Recruitment Drives</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/questions" className="hover:text-primary transition-colors">QuestionBank Sentinel</Link></li>
+              </ul>
+            </div>
+
+            {/* Preparation Column */}
+            <div className="space-y-3">
+              <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
+                Preparation
+              </div>
+              <ul className="space-y-2.5 text-xs sm:text-sm">
+                <li><Link href="/auth/signin?next=/dashboard/student/assessments" className="hover:text-primary transition-colors">Assessment Engine</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/student/mistakes" className="hover:text-primary transition-colors">Mistake Bank</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/training" className="hover:text-primary transition-colors">Targeted Interventions</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/memory" className="hover:text-primary transition-colors">Placement Memory</Link></li>
+              </ul>
+            </div>
+
+            {/* Security & Access Column */}
+            <div className="space-y-3">
+              <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
+                Enterprise &amp; Access
+              </div>
+              <ul className="space-y-2.5 text-xs sm:text-sm">
+                <li><Link href="/auth/signup" className="hover:text-primary transition-colors">Create User Account</Link></li>
+                <li><Link href="/auth/signin" className="hover:text-primary transition-colors">Institutional Single Sign-On</Link></li>
+                <li><Link href="/dashboard/settings/academic" className="hover:text-primary transition-colors">Academic Configuration</Link></li>
+                <li><Link href="/api/health" className="hover:text-primary transition-colors">System Health &amp; Readiness</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-secondary">
+            <div>
+              &copy; {new Date().getFullYear()} UrPlaced. Multi-College Placement Preparation &amp; Management Platform. All rights reserved.
+            </div>
+            <div className="font-mono">
+              PostgreSQL RLS &bull; Multi-Tenant &bull; Enterprise V1.0
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
