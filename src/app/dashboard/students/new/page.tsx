@@ -3,17 +3,31 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function NewStudentPage() {
   const router = useRouter();
+  const { role, isLoading: isLoadingAuth } = useAuthContext();
   const [departments, setDepartments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const canManageStudents = role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role);
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageStudents) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageStudents, isLoadingAuth, router]);
 
   const [formData, setFormData] = useState({
     enrollmentNumber: "",
@@ -85,6 +99,14 @@ export default function NewStudentPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isLoadingAuth || !canManageStudents) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

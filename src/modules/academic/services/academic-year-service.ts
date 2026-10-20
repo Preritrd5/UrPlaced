@@ -30,6 +30,14 @@ export class AcademicYearService {
       .order("start_date", { ascending: false });
 
     if (error) {
+      if (
+        error.code === "PGRST205" ||
+        error.code === "42P01" ||
+        error.message?.includes("schema cache") ||
+        error.message?.includes("does not exist")
+      ) {
+        return [];
+      }
       throw new Error(`Failed to list academic years: ${error.message}`);
     }
 
@@ -49,6 +57,14 @@ export class AcademicYearService {
       .maybeSingle();
 
     if (error) {
+      if (
+        error.code === "PGRST205" ||
+        error.code === "42P01" ||
+        error.message?.includes("schema cache") ||
+        error.message?.includes("does not exist")
+      ) {
+        return null;
+      }
       throw new Error(`Failed to get active academic year: ${error.message}`);
     }
 

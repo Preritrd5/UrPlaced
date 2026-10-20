@@ -30,9 +30,19 @@ interface CompaniesPageProps {
 export default async function CompaniesPage({ searchParams }: CompaniesPageProps) {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/auth/signin");
+  if (!profile.isVerifiedMembership) redirect("/auth/access-denied");
 
   const activeTenant = profile.activeMembership?.tenants;
   if (!activeTenant) redirect("/auth/signin");
+
+  const role = profile.activeMembership?.role;
+
+  // Students are redirected to the student portal
+  if (role === "STUDENT") {
+    redirect("/dashboard/student");
+  }
+
+  const canManageCompanies = ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role || "");
 
   const resolvedParams = await searchParams;
   const search = resolvedParams.search || "";
@@ -58,11 +68,13 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
           </p>
         </div>
 
-        <Button asChild variant="primary" size="sm">
-          <Link href="/dashboard/companies/new">
-            <PlusCircle className="h-4 w-4 mr-1.5" /> Add Company
-          </Link>
-        </Button>
+        {canManageCompanies && (
+          <Button asChild variant="primary" size="sm">
+            <Link href="/dashboard/companies/new">
+              <PlusCircle className="h-4 w-4 mr-1.5" /> Add Company
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Search Bar */}
@@ -90,9 +102,11 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
         <Card className="text-center py-12 text-text-muted space-y-3">
           <Building2 className="h-10 w-10 mx-auto opacity-40" />
           <p className="text-sm">No companies registered yet.</p>
-          <Button asChild variant="primary" size="sm">
-            <Link href="/dashboard/companies/new">Add First Company</Link>
-          </Button>
+          {canManageCompanies && (
+            <Button asChild variant="primary" size="sm">
+              <Link href="/dashboard/companies/new">Add First Company</Link>
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

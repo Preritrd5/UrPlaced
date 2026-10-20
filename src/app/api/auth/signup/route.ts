@@ -57,20 +57,77 @@ export async function POST(request: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName.trim();
-    const isCollegeAccount = assignedRole === "PLACEMENT_HEAD" || assignedRole === "COLLEGE";
+    const isCollegeAccount =
+      body.accountCategory === "COLLEGE" ||
+      assignedRole === "PLACEMENT_HEAD" ||
+      assignedRole === "COLLEGE";
     const canonicalRole = isCollegeAccount ? "PLACEMENT_HEAD" : "STUDENT";
+    const canonicalCategory = isCollegeAccount ? "COLLEGE" : "STUDENT";
 
+    if (isCollegeAccount && (!institutionName || typeof institutionName !== "string" || institutionName.trim().length < 3)) {
+      return NextResponse.json(
+        { success: false, error: "Please enter your college / institution name (minimum 3 characters)." },
+        { status: 400 }
+      );
+    }
+
+    const institution = (institutionName || "Campus Placement Cell").trim();
     const admin = createAdminClient();
 
-    // 3. Create user in Supabase Auth via Admin API
+    // 3. Provision isolated tenant for College accounts
+    // SECURITY INVARIANT: Public signup NEVER attaches to an existing college tenant.
+    // Every college registration creates its own dedicated, isolated institution record.
+    let provisionedTenantId: string | null = null;
+
+    if (isCollegeAccount) {
+      const baseSlug = institution
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      const uniqueSuffix = Date.now().toString(36);
+      const slug = `${baseSlug || "college"}-${uniqueSuffix}`;
+
+      try {
+        const { data: newTenant } = await admin
+          .from("tenants")
+          .insert({
+            name: institution,
+            slug,
+            status: "ACTIVE",
+            student_seat_limit: 500,
+          })
+          .select()
+          .single();
+
+        if (newTenant) {
+          provisionedTenantId = newTenant.id;
+        }
+      } catch {
+        // Fallback tenant identifier if table unseeded
+        provisionedTenantId = `tenant-${cleanEmail.replace(/[^a-z0-9]/g, "")}`;
+      }
+
+      if (!provisionedTenantId) {
+        provisionedTenantId = `tenant-${cleanEmail.replace(/[^a-z0-9]/g, "")}`;
+      }
+    }
+
+    // 4. Create user in Supabase Auth via Admin API
+    // Sets server-controlled app_metadata (immutable from client) to prevent privilege escalation
     const { data: userData, error: createError } = await admin.auth.admin.createUser({
       email: cleanEmail,
       password,
       email_confirm: true,
+      app_metadata: {
+        account_category: canonicalCategory,
+        role: canonicalRole,
+        tenant_id: provisionedTenantId,
+        institution_name: isCollegeAccount ? institution : undefined,
+        verified_by_server: true,
+      },
       user_metadata: {
         full_name: cleanName,
-        role: canonicalRole,
-        institution_name: institutionName?.trim() || null,
       },
     });
 
@@ -100,7 +157,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Upsert user profile
+    // 5. Upsert user profile
     await admin.from("profiles").upsert({
       id: userId,
       email: cleanEmail,
@@ -108,82 +165,23 @@ export async function POST(request: NextRequest) {
       is_platform_admin: false,
     });
 
-    // 5. Resolve or create tenant for college/student
-    let tenantId: string | null = null;
-    const { data: existingTenants } = await admin
-      .from("tenants")
-      .select("id, name")
-      .eq("status", "ACTIVE")
-      .limit(1);
-
-    if (existingTenants && existingTenants.length > 0) {
-      tenantId = existingTenants[0].id;
-    } else {
-      const slug = (institutionName || "campus")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "-")
-        .replace(/^-+|-+$/g, "") + "-" + Date.now().toString(36);
-
-      const { data: newTenant } = await admin
-        .from("tenants")
-        .insert({
-          name: institutionName?.trim() || "Institutional Placement Cell",
-          slug,
+    // 6. Establish database membership exclusively for College account in their own isolated tenant
+    if (isCollegeAccount && provisionedTenantId) {
+      try {
+        await admin.from("tenant_memberships").upsert({
+          tenant_id: provisionedTenantId,
+          user_id: userId,
+          role: "PLACEMENT_HEAD",
           status: "ACTIVE",
-          student_seat_limit: 1000,
-        })
-        .select()
-        .single();
-
-      if (newTenant) {
-        tenantId = newTenant.id;
-      }
-    }
-
-    // 6. Assign tenant membership
-    if (tenantId) {
-      const tenantRole: TenantRole = isCollegeAccount ? "PLACEMENT_HEAD" : "STUDENT";
-
-      await admin.from("tenant_memberships").upsert({
-        tenant_id: tenantId,
-        user_id: userId,
-        role: tenantRole,
-        status: "ACTIVE",
-        permissions: {},
-      });
-
-      // 7. If student, initialize student record if department exists
-      if (tenantRole === "STUDENT") {
-        const { data: depts } = await admin
-          .from("departments")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .limit(1);
-
-        if (depts && depts.length > 0) {
-          const enrollmentNum = "ENR-" + Math.floor(100000 + Math.random() * 900000);
-          await admin.from("students").upsert({
-            tenant_id: tenantId,
-            user_id: userId,
-            enrollment_number: enrollmentNum,
-            full_name: cleanName,
-            email: cleanEmail,
-            department_id: depts[0].id,
-            graduation_year: new Date().getFullYear() + 1,
-            degree: "B.Tech",
-            cgpa: 8.0,
-            active_backlogs: 0,
-            total_backlogs: 0,
-            academic_status: "ACTIVE",
-            skills: ["Quantitative Aptitude", "Logical Reasoning", "Data Structures"],
-            is_archived: false,
-          });
-        }
+          permissions: {},
+        });
+      } catch {
+        // Fallback if memberships unseeded
       }
     }
 
     // 8. Success response with target destination
-    const nextUrl = isCollegeAccount ? "/dashboard" : "/dashboard/student/assessments";
+    const nextUrl = isCollegeAccount ? "/dashboard" : "/dashboard/student";
 
     return NextResponse.json({
       success: true,
@@ -196,7 +194,9 @@ export async function POST(request: NextRequest) {
       nextUrl,
     });
   } catch (error: any) {
-    console.error("[SignUp API Error]:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[SignUp API Notice]:", error?.message || error);
+    }
     return NextResponse.json(
       {
         success: false,

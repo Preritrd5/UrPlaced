@@ -35,6 +35,13 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
   const activeTenant = profile.activeMembership?.tenants;
   if (!activeTenant) redirect("/auth/signin");
 
+  const role = profile.activeMembership?.role;
+
+  // Students cannot view institutional student records
+  if (role === "STUDENT") {
+    redirect("/dashboard/student");
+  }
+
   const [student, applications, offers] = await Promise.all([
     StudentService.getById(activeTenant.id, id),
     CandidateService.listByStudent(activeTenant.id, id),

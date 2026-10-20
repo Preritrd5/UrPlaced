@@ -75,8 +75,10 @@ export async function logAuditEvent(params: LogAuditParams): Promise<void> {
       ip_address: params.ipAddress || null,
       user_agent: params.userAgent || null,
     });
-  } catch (err) {
-    console.error("[Audit Service Warning] Failed to persist audit log entry:", err);
+  } catch (err: any) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[Audit Service Notice] Failed to persist audit log entry:", err?.message || err);
+    }
   }
 }
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   School,
   Calendar,
@@ -11,19 +12,35 @@ import {
   CheckCircle2,
   AlertCircle,
   Check,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function AcademicSettingsPage() {
+  const router = useRouter();
+  const { role, isVerifiedMembership, isLoading: isLoadingAuth } = useAuthContext();
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const canManageAcademic = !!isVerifiedMembership && role === "PLACEMENT_HEAD";
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageAcademic) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageAcademic, isLoadingAuth, router]);
 
   // New Year Form
   const [newYear, setNewYear] = useState({
@@ -104,6 +121,14 @@ export default function AcademicSettingsPage() {
     } catch (err: any) {
       setError(err.message);
     }
+  }
+
+  if (isLoadingAuth || !canManageAcademic) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

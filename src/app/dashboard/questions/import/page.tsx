@@ -16,10 +16,13 @@ import {
   FileSpreadsheet,
   ShieldCheck,
   Send,
+  Loader2,
 } from "lucide-react";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function QuestionImportPage() {
   const router = useRouter();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
   const [banks, setBanks] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -27,6 +30,18 @@ export default function QuestionImportPage() {
   const [previewResult, setPreviewResult] = useState<any | null>(null);
   const [commitStatus, setCommitStatus] = useState<any | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  const canManageQuestions = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageQuestions) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageQuestions, isLoadingAuth, router]);
 
   // Load Banks
   useEffect(() => {
@@ -113,6 +128,14 @@ export default function QuestionImportPage() {
       setLoading(false);
     }
   };
+
+  if (isLoadingAuth || !canManageQuestions) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl">

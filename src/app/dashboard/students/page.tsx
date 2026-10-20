@@ -33,6 +33,17 @@ interface StudentsPageProps {
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/auth/signin");
+  if (!profile.isVerifiedMembership) redirect("/auth/access-denied");
+
+  const userRole = profile.activeMembership?.role || "STUDENT";
+
+  // Strict role guard: Students cannot access the college student directory
+  if (userRole === "STUDENT") {
+    redirect("/dashboard/student");
+  }
+
+  const canManageStudents =
+    userRole === "PLACEMENT_HEAD" || userRole === "PLACEMENT_STAFF";
 
   const activeTenant = profile.activeMembership?.tenants;
   if (!activeTenant) {
@@ -72,25 +83,27 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button asChild variant="outline" size="sm">
-            <a href="/api/placement/students/export" download>
-              <Download className="h-4 w-4 mr-1.5" /> Export CSV
-            </a>
-          </Button>
+        {canManageStudents && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button asChild variant="outline" size="sm">
+              <a href="/api/placement/students/export" download>
+                <Download className="h-4 w-4 mr-1.5" /> Export CSV
+              </a>
+            </Button>
 
-          <Button asChild variant="secondary" size="sm">
-            <Link href="/dashboard/students/import">
-              <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Bulk Import
-            </Link>
-          </Button>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/dashboard/students/import">
+                <FileSpreadsheet className="h-4 w-4 mr-1.5" /> Bulk Import
+              </Link>
+            </Button>
 
-          <Button asChild variant="primary" size="sm">
-            <Link href="/dashboard/students/new">
-              <PlusCircle className="h-4 w-4 mr-1.5" /> Add Student
-            </Link>
-          </Button>
-        </div>
+            <Button asChild variant="primary" size="sm">
+              <Link href="/dashboard/students/new">
+                <PlusCircle className="h-4 w-4 mr-1.5" /> Add Student
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filter and Search Bar */}

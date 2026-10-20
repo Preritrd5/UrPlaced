@@ -1,18 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function NewCompanyPage() {
   const router = useRouter();
+  const { role, isLoading: isLoadingAuth } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const canManage = role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role);
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManage) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManage, isLoadingAuth, router]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -23,6 +37,14 @@ export default function NewCompanyPage() {
     contactPhone: "",
     internalNotes: "",
   });
+
+  if (isLoadingAuth || !canManage) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -78,6 +78,20 @@ export class StudentService {
     const { data, count, error } = await query;
 
     if (error) {
+      if (
+        error.code === "PGRST205" ||
+        error.code === "42P01" ||
+        error.message?.includes("schema cache") ||
+        error.message?.includes("does not exist")
+      ) {
+        return {
+          students: [],
+          total: 0,
+          page,
+          pageSize,
+          totalPages: 1,
+        };
+      }
       throw new Error(`Failed to list students: ${error.message}`);
     }
 

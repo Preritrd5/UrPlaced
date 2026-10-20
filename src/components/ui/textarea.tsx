@@ -18,6 +18,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
         ref={ref}
         aria-invalid={error ? "true" : undefined}
+        suppressHydrationWarning
         {...props}
       />
     );

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   FileSpreadsheet,
@@ -11,19 +12,35 @@ import {
   AlertCircle,
   AlertTriangle,
   Layers,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function StudentImportPage() {
+  const router = useRouter();
+  const { role, isLoading: isLoadingAuth } = useAuthContext();
   const [csvContent, setCsvContent] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
   const [previewResult, setPreviewResult] = useState<any | null>(null);
   const [commitResult, setCommitResult] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const canManageStudents = role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role);
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageStudents) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageStudents, isLoadingAuth, router]);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -96,6 +113,14 @@ export default function StudentImportPage() {
     } finally {
       setIsCommitting(false);
     }
+  }
+
+  if (isLoadingAuth || !canManageStudents) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

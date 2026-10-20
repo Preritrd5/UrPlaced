@@ -34,15 +34,31 @@ export default async function DashboardPage() {
     redirect("/auth/signin");
   }
 
+  const activeMembership = profile.activeMembership;
+
+  // 1. Strict category redirection: Students are routed to their personal preparation dashboard
+  if (profile.accountCategory === "STUDENT") {
+    redirect("/dashboard/student");
+  }
+
+  // 2. Suspended or revoked college members are redirected to the membership suspended notice
+  if (profile.membershipStatus === "SUSPENDED" || profile.membershipStatus === "REVOKED") {
+    redirect("/auth/membership-suspended");
+  }
+
+  // 3. Trainers are routed to their assigned training operations hub
+  if (profile.role === "TRAINER") {
+    redirect("/dashboard/training");
+  }
+
+  const canManageDrives = ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(profile.role);
+
   async function handleSignOut() {
     "use server";
     const supabase = await createClient();
     await supabase.auth.signOut();
     redirect("/auth/signin");
   }
-
-  const isSuperAdmin = profile.isPlatformAdmin;
-  const activeMembership = profile.activeMembership;
   const activeTenant = activeMembership?.tenants;
 
   let metrics = {
@@ -76,11 +92,6 @@ export default async function DashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary font-heading">
               Placement Command Center
             </h1>
-            {isSuperAdmin && (
-              <Badge variant="default" className="bg-primary text-white">
-                Platform Admin
-              </Badge>
-            )}
             {activeMembership && (
               <Badge variant="secondary">
                 {activeMembership.role}
@@ -193,10 +204,10 @@ export default async function DashboardPage() {
         </Button>
 
         <Button asChild variant="secondary" className="h-auto py-3 px-4 justify-between">
-          <Link href="/dashboard/student/mistakes">
+          <Link href="/dashboard/students">
             <div className="flex items-center gap-2">
               <GraduationCap className="h-4 w-4" />
-              <span>Mistake Bank & Revision</span>
+              <span>Student Directory</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75" />
           </Link>
@@ -274,9 +285,11 @@ export default async function DashboardPage() {
               <div className="text-center py-8 text-text-muted space-y-3">
                 <Briefcase className="h-8 w-8 mx-auto opacity-50" />
                 <p className="text-sm">No active recruitment drives scheduled yet.</p>
-                <Button asChild variant="primary" size="sm">
-                  <Link href="/dashboard/drives/new">Create First Drive</Link>
-                </Button>
+                {canManageDrives && (
+                  <Button asChild variant="primary" size="sm">
+                    <Link href="/dashboard/drives/new">Create First Drive</Link>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="divide-y divide-border">

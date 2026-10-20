@@ -32,9 +32,19 @@ interface DrivesPageProps {
 export default async function DrivesPage({ searchParams }: DrivesPageProps) {
   const profile = await getCurrentUserProfile();
   if (!profile) redirect("/auth/signin");
+  if (!profile.isVerifiedMembership) redirect("/auth/access-denied");
 
   const activeTenant = profile.activeMembership?.tenants;
   if (!activeTenant) redirect("/auth/signin");
+
+  const role = profile.activeMembership?.role;
+
+  // Students are redirected to the student portal
+  if (role === "STUDENT") {
+    redirect("/dashboard/student");
+  }
+
+  const canManageDrives = ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role || "");
 
   const resolvedParams = await searchParams;
   const search = resolvedParams.search || "";
@@ -49,8 +59,6 @@ export default async function DrivesPage({ searchParams }: DrivesPageProps) {
     pageSize: 12,
   });
 
-  const isStaff = profile.activeMembership?.role !== "STUDENT";
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -64,7 +72,7 @@ export default async function DrivesPage({ searchParams }: DrivesPageProps) {
           </p>
         </div>
 
-        {isStaff && (
+        {canManageDrives && (
           <Button asChild variant="primary" size="sm">
             <Link href="/dashboard/drives/new">
               <PlusCircle className="h-4 w-4 mr-1.5" /> Launch Drive
@@ -115,7 +123,7 @@ export default async function DrivesPage({ searchParams }: DrivesPageProps) {
         <Card className="text-center py-12 text-text-muted space-y-3">
           <Briefcase className="h-10 w-10 mx-auto opacity-40" />
           <p className="text-sm">No recruitment drives found.</p>
-          {isStaff && (
+          {canManageDrives && (
             <Button asChild variant="primary" size="sm">
               <Link href="/dashboard/drives/new">Launch Drive</Link>
             </Button>

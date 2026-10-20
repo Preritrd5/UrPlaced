@@ -3,16 +3,30 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Save, AlertCircle, Briefcase } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, Briefcase, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 function NewDriveForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedCompanyId = searchParams.get("companyId") || "";
+  const { role, isLoading: isLoadingAuth } = useAuthContext();
+
+  const canManageDrives = role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role);
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageDrives) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageDrives, isLoadingAuth, router]);
 
   const [companies, setCompanies] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -93,6 +107,14 @@ function NewDriveForm() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isLoadingAuth || !canManageDrives) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

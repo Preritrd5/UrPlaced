@@ -19,6 +19,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         ref={ref}
         aria-invalid={error ? "true" : undefined}
+        suppressHydrationWarning
         {...props}
       />
     );

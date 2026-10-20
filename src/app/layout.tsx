@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { fontHeading, fontBody, fontMono } from "@/lib/fonts";
 import "@/styles/globals.css";
 import { AppShell } from "@/components/layout/app-shell";
+import { AuthContextProvider } from "@/lib/auth/auth-context-provider";
 
 export const metadata: Metadata = {
   title: "UrPlaced — Multi-College Placement Preparation & Management SaaS",
@@ -17,10 +18,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${fontHeading.variable} ${fontBody.variable} ${fontMono.variable}`}
     >
-      <body className="font-body bg-background text-text-primary min-h-screen antialiased">
-        <AppShell>{children}</AppShell>
+      <body suppressHydrationWarning className="font-body bg-background text-text-primary min-h-screen antialiased">
+        <AuthContextProvider>
+          <AppShell>{children}</AppShell>
+        </AuthContextProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   GraduationCap,
   Calendar,
@@ -11,12 +12,16 @@ import {
   Clock,
   TrendingUp,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function TrainingManagementPage() {
+  const router = useRouter();
+  const { role, isPlatformAdmin, isVerifiedMembership, isLoading: isLoadingAuth } = useAuthContext();
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
@@ -24,9 +29,25 @@ export default function TrainingManagementPage() {
   const [computingImpact, setComputingImpact] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const canManageTraining =
+    isPlatformAdmin ||
+    (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
   useEffect(() => {
-    loadSessions();
-  }, []);
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageTraining) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageTraining, isLoadingAuth, router]);
+
+  useEffect(() => {
+    if (!isLoadingAuth && canManageTraining) {
+      loadSessions();
+    }
+  }, [isLoadingAuth, canManageTraining]);
 
   async function loadSessions() {
     setLoading(true);
@@ -62,6 +83,14 @@ export default function TrainingManagementPage() {
     } finally {
       setComputingImpact(false);
     }
+  }
+
+  if (isLoadingAuth || !canManageTraining) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

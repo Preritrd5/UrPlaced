@@ -1,11 +1,36 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { QuestionForm } from "@/components/questions/question-form";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function NewQuestionPage() {
+  const router = useRouter();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
+
+  const canManageQuestions = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageQuestions) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageQuestions, isLoadingAuth, router]);
+
+  if (isLoadingAuth || !canManageQuestions) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">

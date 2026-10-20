@@ -19,14 +19,31 @@ import {
   Calendar,
   X,
   Send,
+  Loader2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function QuestionSetsPage() {
+  const router = useRouter();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
   const [sets, setSets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSetId, setActiveSetId] = useState<string | null>(null);
   const [activeSetDetail, setActiveSetDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  const canManageQuestions = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageQuestions) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageQuestions, isLoadingAuth, router]);
 
   // Create Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -180,6 +197,14 @@ export default function QuestionSetsPage() {
       console.error(err);
     }
   };
+
+  if (isLoadingAuth || !canManageQuestions) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-6xl">

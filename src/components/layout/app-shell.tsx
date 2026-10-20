@@ -6,21 +6,20 @@ import { usePathname } from "next/navigation";
 import {
   Menu,
   X,
-  Compass,
   ShieldCheck,
-  LayoutDashboard,
-  GraduationCap,
-  Building2,
-  Briefcase,
-  School,
-  Users,
-  BookOpen,
-  Target,
-  CheckCircle2,
-  BarChart3,
+  LogOut,
+  Building,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import {
+  getAuthorizedNavigation,
+  getRoleDefaultDashboard,
+  type NavigationSection,
+} from "@/lib/navigation/navigation-config";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -29,85 +28,31 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
+  const auth = useAuthContext();
+
+  const role = auth.role || "STUDENT";
+
+  // Resolve authorized navigation sections based on verified session context
+  const navigationSections: NavigationSection[] = React.useMemo(() => {
+    if (!auth.isAuthenticated && !auth.isLoading) {
+      return [];
+    }
+    return getAuthorizedNavigation(role, false, auth.permissions);
+  }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading]);
 
   // If on public landing page or auth routes, render standalone without navigation sidebar
   if (pathname === "/" || pathname.startsWith("/auth")) {
     return <div className="min-h-screen bg-background">{children}</div>;
   }
 
-  const placementNavigation = [
-    {
-      name: "Placement Command Center",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      name: "Student Directory",
-      href: "/dashboard/students",
-      icon: GraduationCap,
-    },
-    {
-      name: "Companies",
-      href: "/dashboard/companies",
-      icon: Building2,
-    },
-    {
-      name: "Recruitment Drives",
-      href: "/dashboard/drives",
-      icon: Briefcase,
-    },
-    {
-      name: "Question Bank Sentinel",
-      href: "/dashboard/questions",
-      icon: BookOpen,
-    },
-    {
-      name: "Targeted Training",
-      href: "/dashboard/training",
-      icon: Target,
-    },
-    {
-      name: "Mistake Analytics",
-      href: "/dashboard/mistakes",
-      icon: CheckCircle2,
-    },
-    {
-      name: "Placement Memory",
-      href: "/dashboard/memory",
-      icon: BarChart3,
-    },
-  ];
+  const defaultDashboard = getRoleDefaultDashboard(role);
 
-  const studentPortalNavigation = [
-    {
-      name: "Assessments & Practice",
-      href: "/dashboard/student/assessments",
-      icon: Compass,
-    },
-    {
-      name: "Mistake Bank & Mastery",
-      href: "/dashboard/student/mistakes",
-      icon: CheckCircle2,
-    },
-    {
-      name: "Student Analytics",
-      href: "/dashboard/student/analytics",
-      icon: BarChart3,
-    },
-  ];
-
-  const adminNavigation = [
-    {
-      name: "Academic Structure",
-      href: "/dashboard/settings/academic",
-      icon: School,
-    },
-    {
-      name: "College Members",
-      href: "/dashboard/members",
-      icon: Users,
-    },
-  ];
+  const roleDisplayNames: Record<string, string> = {
+    STUDENT: "Student",
+    PLACEMENT_HEAD: "Placement Head",
+    PLACEMENT_STAFF: "Placement Officer",
+    TRAINER: "Faculty / Trainer",
+  };
 
   return (
     <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row">
@@ -121,7 +66,7 @@ export function AppShell({ children }: AppShellProps) {
             UrPlaced
           </span>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--color-primary-subtle)] text-primary">
-            V1.0
+            {roleDisplayNames[role] || "Workspace"}
           </span>
         </div>
         <Button
@@ -152,17 +97,19 @@ export function AppShell({ children }: AppShellProps) {
         )}
       >
         {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-border">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-primary-gradient flex items-center justify-center text-white font-bold text-base shadow-sm">
+        <div className="h-16 flex items-center justify-between px-5 border-b border-border">
+          <Link href={defaultDashboard} className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 rounded-lg bg-primary-gradient flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0">
               UP
             </div>
-            <div>
-              <span className="font-heading font-bold text-lg tracking-tight text-text-primary block leading-none">
+            <div className="min-w-0 flex-1">
+              <span className="font-heading font-bold text-lg tracking-tight text-text-primary block leading-none truncate">
                 UrPlaced
               </span>
-              <span className="text-[10px] text-text-secondary font-mono tracking-wider">
-                Placement SaaS
+              <span className="text-[11px] text-text-secondary font-mono tracking-wider block truncate mt-0.5">
+                {auth.accountCategory === "COLLEGE"
+                  ? (auth.tenant?.name || "Placement Portal")
+                  : "Student Workspace"}
               </span>
             </div>
           </Link>
@@ -177,102 +124,118 @@ export function AppShell({ children }: AppShellProps) {
           )}
         </div>
 
-        {/* Navigation Section */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-          {/* Placement Operations */}
-          <div className="space-y-1">
-            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
-              Placement Operations
+        {/* Navigation Content */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+          {auth.isLoading ? (
+            /* Loading Skeleton to prevent premature unauthorized flash */
+            <div className="space-y-4 px-2 animate-pulse">
+              <div className="h-3 w-20 bg-border/60 rounded" />
+              <div className="space-y-2">
+                <div className="h-8 bg-surface rounded-lg" />
+                <div className="h-8 bg-surface rounded-lg" />
+                <div className="h-8 bg-surface rounded-lg" />
+              </div>
+              <div className="h-3 w-24 bg-border/60 rounded pt-2" />
+              <div className="space-y-2">
+                <div className="h-8 bg-surface rounded-lg" />
+                <div className="h-8 bg-surface rounded-lg" />
+              </div>
             </div>
-            {placementNavigation.map((item) => {
-              const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
-                    isActive
-                      ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
-                      : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
-                    <span>{item.name}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          ) : (
+            navigationSections.map((section) => (
+              <div key={section.title} className="space-y-1">
+                <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
+                  {section.title}
+                </div>
+                {section.items.map((item) => {
+                  const isActive = item.exactMatch
+                    ? pathname === item.href
+                    : pathname === item.href || pathname.startsWith(item.href + "/");
 
-          {/* Student Portal Navigation */}
-          <div className="space-y-1">
-            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
-              Student Preparation
-            </div>
-            {studentPortalNavigation.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
-                    isActive
-                      ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
-                      : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
-                    <span>{item.name}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  const Icon = item.icon;
 
-          {/* Institutional Settings */}
-          <div className="space-y-1">
-            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
-              College Administration
-            </div>
-            {adminNavigation.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
-                    isActive
-                      ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
-                      : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={cn("h-4 w-4", isActive ? "text-primary" : "text-text-secondary")} />
-                    <span>{item.name}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  return (
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
+                        isActive
+                          ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
+                          : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            isActive ? "text-primary" : "text-text-secondary"
+                          )}
+                        />
+                        <span className="truncate">{item.name}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary text-white ml-2">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))
+          )}
         </nav>
 
-        {/* Security & Tenant Isolation Notice */}
-        <div className="p-4 border-t border-border bg-[rgba(36,40,58,0.02)]">
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <ShieldCheck className="h-4 w-4 text-secondary shrink-0" />
-            <span className="text-[11px] leading-tight font-medium">
-              Tenant isolation enforced via PostgreSQL RLS &amp; policy engine.
+        {/* User Identity & Active College Section */}
+        <div className="border-t border-border bg-card p-3 space-y-2">
+          {/* Authenticated User Info */}
+          {auth.isAuthenticated && (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-surface border border-border/70">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                  {auth.fullName ? auth.fullName.charAt(0).toUpperCase() : <User className="h-3.5 w-3.5" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-text-primary truncate leading-tight">
+                    {auth.fullName || auth.email}
+                  </div>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5 text-secondary border-secondary/40 font-mono">
+                    {auth.accountCategory === "COLLEGE"
+                      ? `College / Cell • ${roleDisplayNames[role] || "Placement Head"}`
+                      : "Student"}
+                  </Badge>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={auth.signOut}
+                title="Sign Out"
+                className="h-7 w-7 text-text-secondary hover:text-text-primary"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+
+          {/* Multiple College Switcher Link */}
+          {auth.availableTenants.length > 1 && (
+            <Link
+              href="/dashboard/select-tenant"
+              className="flex items-center justify-center gap-1.5 py-1 text-[11px] font-medium text-primary hover:underline"
+            >
+              <Building className="h-3 w-3" />
+              <span>Switch College ({auth.availableTenants.length})</span>
+            </Link>
+          )}
+
+          {/* Tenant Isolation Badge */}
+          <div className="flex items-center gap-2 text-[10px] text-text-secondary px-1 pt-1">
+            <ShieldCheck className="h-3.5 w-3.5 text-secondary shrink-0" />
+            <span className="leading-tight truncate">
+              {auth.accountCategory === "STUDENT" ? "Student Privacy Protected" : "Tenant Isolation Active"}
             </span>
           </div>
         </div>

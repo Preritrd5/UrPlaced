@@ -35,7 +35,14 @@ export default async function CompanyDetailPage({ params }: CompanyDetailPagePro
     notFound();
   }
 
-  const isStaff = profile.activeMembership?.role !== "STUDENT";
+  const role = profile.activeMembership?.role;
+
+  // Students are redirected to their preparation workspace
+  if (role === "STUDENT") {
+    redirect("/dashboard/student");
+  }
+
+  const canManageDrives = ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role || "");
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -62,7 +69,7 @@ export default async function CompanyDetailPage({ params }: CompanyDetailPagePro
           </div>
         </div>
 
-        {isStaff && (
+        {canManageDrives && (
           <Button asChild variant="primary" size="sm">
             <Link href={`/dashboard/drives/new?companyId=${company.id}`}>
               <PlusCircle className="h-4 w-4 mr-1.5" /> Launch Drive
@@ -136,7 +143,7 @@ export default async function CompanyDetailPage({ params }: CompanyDetailPagePro
             </div>
 
             {/* Internal Placement Team Notes */}
-            {isStaff && company.internal_notes && (
+            {canManageDrives && company.internal_notes && (
               <div className="pt-4 border-t border-border">
                 <span className="text-xs font-semibold text-text-secondary block mb-1.5">
                   Restricted Internal Placement Notes (Confidential)

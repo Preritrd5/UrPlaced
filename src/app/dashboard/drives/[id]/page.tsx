@@ -21,6 +21,7 @@ import {
   Play,
   StopCircle,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DriveIntelligenceTab } from "@/components/drives/drive-intelligence-tab";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 interface DriveDetailPageProps {
   params: Promise<{ id: string }>;
@@ -36,6 +38,20 @@ interface DriveDetailPageProps {
 export default function DriveDetailPage({ params }: DriveDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { role, isLoading: isLoadingAuth } = useAuthContext();
+
+  const canManageDrives = Boolean(role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role));
+  const isStaff = Boolean(role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace(`/dashboard/drives/${id}/prep`);
+      } else if (!isStaff) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, isStaff, isLoadingAuth, router, id]);
 
   const [activeTab, setActiveTab] = useState<
     "overview" | "criteria" | "stages" | "candidates" | "offers" | "intelligence"
@@ -257,7 +273,7 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingAuth || !isStaff) {
     return (
       <div className="p-12 text-center text-text-muted space-y-2">
         <Briefcase className="h-8 w-8 mx-auto animate-pulse text-primary" />
@@ -311,61 +327,63 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
         </div>
 
         {/* State Machine Action Controls */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {drive.status === "DRAFT" && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => handleStatusTransition("PUBLISHED")}
-            >
-              <Check className="h-4 w-4 mr-1.5" /> Publish Drive
-            </Button>
-          )}
+        {canManageDrives && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {drive.status === "DRAFT" && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleStatusTransition("PUBLISHED")}
+              >
+                <Check className="h-4 w-4 mr-1.5" /> Publish Drive
+              </Button>
+            )}
 
-          {drive.status === "PUBLISHED" && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleStatusTransition("REGISTRATION_OPEN")}
-            >
-              <Play className="h-4 w-4 mr-1.5" /> Open Registrations
-            </Button>
-          )}
+            {drive.status === "PUBLISHED" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleStatusTransition("REGISTRATION_OPEN")}
+              >
+                <Play className="h-4 w-4 mr-1.5" /> Open Registrations
+              </Button>
+            )}
 
-          {drive.status === "REGISTRATION_OPEN" && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => handleStatusTransition("IN_PROGRESS")}
-            >
-              <Play className="h-4 w-4 mr-1.5" /> Start Drive (In Progress)
-            </Button>
-          )}
+            {drive.status === "REGISTRATION_OPEN" && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleStatusTransition("IN_PROGRESS")}
+              >
+                <Play className="h-4 w-4 mr-1.5" /> Start Drive (In Progress)
+              </Button>
+            )}
 
-          {drive.status === "IN_PROGRESS" && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleStatusTransition("COMPLETED")}
-            >
-              <CheckCircle2 className="h-4 w-4 mr-1.5" /> Mark Completed
-            </Button>
-          )}
+            {drive.status === "IN_PROGRESS" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleStatusTransition("COMPLETED")}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1.5" /> Mark Completed
+              </Button>
+            )}
 
-          {drive.status !== "COMPLETED" && drive.status !== "CANCELLED" && drive.status !== "ARCHIVED" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-600 hover:bg-red-50"
-              onClick={() => {
-                const reason = prompt("Enter cancellation reason:");
-                if (reason) handleStatusTransition("CANCELLED", reason);
-              }}
-            >
-              <X className="h-4 w-4 mr-1" /> Cancel
-            </Button>
-          )}
-        </div>
+            {drive.status !== "COMPLETED" && drive.status !== "CANCELLED" && drive.status !== "ARCHIVED" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  const reason = prompt("Enter cancellation reason:");
+                  if (reason) handleStatusTransition("CANCELLED", reason);
+                }}
+              >
+                <X className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {actionError && (

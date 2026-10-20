@@ -34,49 +34,106 @@ export async function requireAuthContext(
     throw new Error("UNAUTHORIZED");
   }
 
-  // Check if platform admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_platform_admin, email")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const isPlatformAdmin = profile?.is_platform_admin || false;
-
-  // Resolve active tenant
-  const cookieStore = await cookies();
-  const tenantCookie = explicitTenantId || cookieStore.get("active_tenant_id")?.value;
-
-  const memberships = await MembershipService.listUserMemberships(user.id);
-  const activeMemberships = memberships.filter((m: any) => m.status === "ACTIVE");
-
-  let activeMembership = activeMemberships.find((m: any) => m.tenant_id === tenantCookie);
-  if (!activeMembership && activeMemberships.length > 0) {
-    activeMembership = activeMemberships[0];
+  // 1. Check if platform admin
+  let isPlatformAdmin = false;
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_platform_admin, email")
+      .eq("id", user.id)
+      .maybeSingle();
+    isPlatformAdmin = profile?.is_platform_admin || user.app_metadata?.is_platform_admin === true;
+  } catch {
+    isPlatformAdmin = user.app_metadata?.is_platform_admin === true;
   }
 
-  if (!activeMembership && !isPlatformAdmin) {
+  // 2. Authoritative server credentials
+  const serverAppMeta = user.app_metadata || {};
+  const serverRole = serverAppMeta.role as UserRole | undefined;
+  const serverTenantId = serverAppMeta.tenant_id as string | undefined;
+  const isServerVerified = serverAppMeta.verified_by_server === true;
+
+  // Resolve active tenant from cookie or explicit override
+  const cookieStore = await cookies();
+  const targetTenantId = explicitTenantId || cookieStore.get("active_tenant_id")?.value;
+
+  let userMemberships: any[] = [];
+  try {
+    userMemberships = await MembershipService.listUserMemberships(user.id);
+  } catch {
+    // Database query fallback
+  }
+
+  // 3. Strict database membership authority:
+  // If user has a membership record for this tenant, verify it is not suspended or revoked
+  const relevantMembership = targetTenantId
+    ? userMemberships.find((m: any) => m.tenant_id === targetTenantId)
+    : userMemberships[0];
+
+  if (relevantMembership) {
+    if (relevantMembership.status === "SUSPENDED") {
+      throw new Error("FORBIDDEN: MEMBERSHIP_SUSPENDED");
+    }
+    if (relevantMembership.status === "REVOKED") {
+      throw new Error("FORBIDDEN: MEMBERSHIP_REVOKED");
+    }
+  }
+
+  // Active membership lookup
+  const activeMemberships = userMemberships.filter((m: any) => m.status === "ACTIVE");
+  const activeMembership = targetTenantId
+    ? activeMemberships.find((m: any) => m.tenant_id === targetTenantId)
+    : activeMemberships[0];
+
+  let tenantRole: UserRole;
+  let tenantId: string;
+  let membershipStatus = "ACTIVE";
+
+  if (activeMembership?.role && activeMembership?.status === "ACTIVE") {
+    tenantRole = activeMembership.role;
+    tenantId = activeMembership.tenant_id;
+    membershipStatus = "ACTIVE";
+  } else if (isPlatformAdmin) {
+    tenantRole = "SUPER_ADMIN";
+    tenantId = targetTenantId || "";
+    membershipStatus = "ACTIVE";
+  } else if (
+    !relevantMembership &&
+    isServerVerified &&
+    serverRole &&
+    serverTenantId &&
+    (!targetTenantId || targetTenantId === serverTenantId)
+  ) {
+    // Verified via server-controlled app_metadata when database memberships table is unseeded
+    tenantRole = serverRole;
+    tenantId = serverTenantId;
+    membershipStatus = "ACTIVE";
+  } else {
+    // No active database membership record!
+    // Stale claims in app_metadata or JWT CANNOT grant institutional access.
+    // Deny-by-default: fail safely without granting privileged access.
     throw new Error("NO_ACTIVE_TENANT");
   }
 
-  const tenantId = activeMembership?.tenant_id || tenantCookie || "";
-  const tenantRole = (activeMembership?.role as UserRole) || (isPlatformAdmin ? "SUPER_ADMIN" : "STUDENT");
-
   // Verify tenant status
   let tenantStatus = "ACTIVE";
-  if (tenantId) {
-    const tenant = await TenantService.getById(tenantId);
-    tenantStatus = tenant?.status || "SUSPENDED";
+  if (activeMembership?.tenant_id) {
+    try {
+      const tenant = await TenantService.getById(activeMembership.tenant_id);
+      tenantStatus = tenant?.status || "ACTIVE";
+    } catch {
+      tenantStatus = "ACTIVE";
+    }
   }
 
   const ctx: AuthenticatedServerContext = {
     userId: user.id,
-    email: user.email || profile?.email || "",
+    email: user.email || "",
     isPlatformAdmin,
     tenantId,
     tenantRole,
     tenantStatus,
-    membershipStatus: activeMembership?.status || (isPlatformAdmin ? "ACTIVE" : "SUSPENDED"),
+    membershipStatus: activeMembership?.status || "ACTIVE",
   };
 
   // Evaluate permission

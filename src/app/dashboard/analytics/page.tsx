@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BarChart3,
   Download,
@@ -12,10 +13,12 @@ import {
   FileSpreadsheet,
   Activity,
   Percent,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 interface AnalyticsData {
   placement: {
@@ -53,13 +56,29 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsDashboardPage() {
+  const router = useRouter();
+  const { role, isVerifiedMembership, isLoading: isLoadingAuth } = useAuthContext();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
+  const canViewAnalytics = !!isVerifiedMembership && role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(role);
+
   useEffect(() => {
-    fetchCohortAnalytics();
-  }, []);
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student/analytics");
+      } else if (!canViewAnalytics) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canViewAnalytics, isLoadingAuth, router]);
+
+  useEffect(() => {
+    if (!isLoadingAuth && canViewAnalytics) {
+      fetchCohortAnalytics();
+    }
+  }, [isLoadingAuth, canViewAnalytics]);
 
   async function fetchCohortAnalytics() {
     setLoading(true);
@@ -99,6 +118,14 @@ export default function AnalyticsDashboardPage() {
     } finally {
       setExporting(false);
     }
+  }
+
+  if (isLoadingAuth || !canViewAnalytics) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

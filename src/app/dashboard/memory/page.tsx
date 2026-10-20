@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Archive,
   GitCompare,
@@ -12,17 +13,33 @@ import {
   ShieldCheck,
   Building2,
   Calendar,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function PlacementMemoryPage() {
+  const router = useRouter();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
   const [activeTab, setActiveTab] = useState<"RECORDS" | "COMPARE" | "MODERATION">("RECORDS");
   const [records, setRecords] = useState<any[]>([]);
   const [pendingReports, setPendingReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const canViewMemory = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student/memory");
+      } else if (!canViewMemory) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canViewMemory, isLoadingAuth, router]);
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -84,6 +101,14 @@ export default function PlacementMemoryPage() {
       default:
         return <Badge variant="secondary">{label}</Badge>;
     }
+  }
+
+  if (isLoadingAuth || !canViewMemory) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

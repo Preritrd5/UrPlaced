@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Brain,
   AlertTriangle,
@@ -14,16 +15,32 @@ import {
   BarChart3,
   Filter,
   Check,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function PlacementMistakesAnalyticsPage() {
+  const router = useRouter();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
   const [activeTab, setActiveTab] = useState<"SKILLS" | "QUESTIONS" | "DEFECTS">("SKILLS");
   const [loading, setLoading] = useState(true);
+
+  const canViewCohortMistakes = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student/mistakes");
+      } else if (!canViewCohortMistakes) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canViewCohortMistakes, isLoadingAuth, router]);
 
   // Cohort analytics data
   const [summaryData, setSummaryData] = useState<{
@@ -107,6 +124,14 @@ export default function PlacementMistakesAnalyticsPage() {
     } finally {
       setSubmittingResolution(false);
     }
+  }
+
+  if (isLoadingAuth || !canViewCohortMistakes) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

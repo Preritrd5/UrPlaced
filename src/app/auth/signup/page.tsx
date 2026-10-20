@@ -75,6 +75,7 @@ function SignUpContent() {
           email: email.trim().toLowerCase(),
           password,
           role,
+          accountCategory: role === "STUDENT" ? "STUDENT" : "COLLEGE",
           institutionName: institutionName.trim() || undefined,
         }),
       });
@@ -105,7 +106,7 @@ function SignUpContent() {
 
       // 3. Redirect to appropriate destination
       const destination =
-        data.nextUrl || (role === "STUDENT" ? "/dashboard/student/assessments" : "/dashboard");
+        data.nextUrl || (role === "STUDENT" ? "/dashboard/student" : "/dashboard");
       router.push(destination);
       router.refresh();
     } catch (err: any) {

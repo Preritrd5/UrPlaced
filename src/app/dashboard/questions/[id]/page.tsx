@@ -24,7 +24,9 @@ import {
   Send,
   Code2,
   FileText,
+  Loader2,
 } from "lucide-react";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function QuestionDetailPage({
   params,
@@ -33,11 +35,24 @@ export default function QuestionDetailPage({
 }) {
   const router = useRouter();
   const { id } = use(params);
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
 
   const [question, setQuestion] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  const canManageQuestions = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageQuestions) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageQuestions, isLoadingAuth, router]);
 
   // Review Modal State
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -97,10 +112,10 @@ export default function QuestionDetailPage({
     }
   };
 
-  if (loading) {
+  if (loading || isLoadingAuth || !canManageQuestions) {
     return (
-      <div className="p-12 text-center text-sm text-text-secondary">
-        Loading question record and version history...
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }

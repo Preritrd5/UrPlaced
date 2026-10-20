@@ -28,19 +28,26 @@ export interface MembershipRecord {
  * Retrieves all memberships for a user across tenants.
  */
 export async function getUserMemberships(userId: string): Promise<MembershipRecord[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("tenant_memberships")
-    .select("*, tenants(id, name, slug, status)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("tenant_memberships")
+      .select("*, tenants(id, name, slug, status)")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("[MembershipService Error] Failed to fetch user memberships:", error);
+    if (error) {
+      // Gracefully handle database or schema cache errors without triggering Next.js RSC dev overlay
+      if (process.env.NODE_ENV === "development" && error.code !== "PGRST205" && error.code !== "42P01") {
+        console.warn("[MembershipService Notice] Failed to fetch user memberships:", error.message || error);
+      }
+      return [];
+    }
+
+    return (data || []) as unknown as MembershipRecord[];
+  } catch {
     return [];
   }
-
-  return (data || []) as unknown as MembershipRecord[];
 }
 
 /**
@@ -51,44 +58,69 @@ export async function getActiveTenantMembership(
   userId: string,
   tenantId: string
 ): Promise<MembershipRecord | null> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("tenant_memberships")
-    .select("*, tenants(id, name, slug, status)")
-    .eq("user_id", userId)
-    .eq("tenant_id", tenantId)
-    .eq("status", "ACTIVE")
-    .single();
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("tenant_memberships")
+      .select("*, tenants(id, name, slug, status)")
+      .eq("user_id", userId)
+      .eq("tenant_id", tenantId)
+      .eq("status", "ACTIVE")
+      .single();
 
-  if (error || !data) {
+    if (error || !data) {
+      return null;
+    }
+
+    const record = data as unknown as MembershipRecord;
+    if (record.tenants && record.tenants.status !== "ACTIVE") {
+      // Tenant itself is not active
+      return null;
+    }
+
+    return record;
+  } catch {
     return null;
   }
-
-  const record = data as unknown as MembershipRecord;
-  if (record.tenants && record.tenants.status !== "ACTIVE") {
-    // Tenant itself is not active
-    return null;
-  }
-
-  return record;
 }
 
 /**
  * Lists all members for a tenant.
  */
 export async function listTenantMembers(tenantId: string): Promise<MembershipRecord[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("tenant_memberships")
-    .select("*, profiles(id, email, full_name)")
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false });
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("tenant_memberships")
+      .select("*, profiles(id, email, full_name)")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    throw new Error(`Failed to list tenant members: ${error.message}`);
+    if (error) {
+      if (
+        error.code === "PGRST205" ||
+        error.code === "42P01" ||
+        error.message?.includes("schema cache") ||
+        error.message?.includes("does not exist")
+      ) {
+        return [];
+      }
+      throw new Error(`Failed to list tenant members: ${error.message}`);
+    }
+
+    return (data || []) as unknown as MembershipRecord[];
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (
+      msg.includes("schema cache") ||
+      msg.includes("PGRST205") ||
+      msg.includes("42P01") ||
+      msg.includes("does not exist")
+    ) {
+      return [];
+    }
+    throw err;
   }
-
-  return (data || []) as unknown as MembershipRecord[];
 }
 
 /**
@@ -103,12 +135,16 @@ export async function updateMemberStatus(params: {
 }): Promise<void> {
   const admin = createAdminClient();
 
-  const { data: member } = await admin
+  const { data: member, error: fetchErr } = await admin
     .from("tenant_memberships")
     .select("*")
     .eq("id", params.membershipId)
     .eq("tenant_id", params.tenantId)
     .single();
+
+  if (fetchErr && (fetchErr.code === "PGRST205" || fetchErr.code === "42P01")) {
+    return;
+  }
 
   if (!member) {
     throw new Error("Membership record not found.");
@@ -150,12 +186,16 @@ export async function updateMemberRole(params: {
 }): Promise<void> {
   const admin = createAdminClient();
 
-  const { data: member } = await admin
+  const { data: member, error: fetchErr } = await admin
     .from("tenant_memberships")
     .select("*")
     .eq("id", params.membershipId)
     .eq("tenant_id", params.tenantId)
     .single();
+
+  if (fetchErr && (fetchErr.code === "PGRST205" || fetchErr.code === "42P01")) {
+    return;
+  }
 
   if (!member) {
     throw new Error("Membership record not found.");

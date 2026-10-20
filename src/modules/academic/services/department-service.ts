@@ -28,6 +28,14 @@ export class DepartmentService {
       .order("name", { ascending: true });
 
     if (error) {
+      if (
+        error.code === "PGRST205" ||
+        error.code === "42P01" ||
+        error.message?.includes("schema cache") ||
+        error.message?.includes("does not exist")
+      ) {
+        return [];
+      }
       throw new Error(`Failed to list departments: ${error.message}`);
     }
 

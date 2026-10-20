@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileCheck,
   PlusCircle,
@@ -15,6 +16,7 @@ import {
   BookOpen,
   ArrowRight,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,13 +24,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function StaffAssessmentsPage() {
+  const router = useRouter();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
   const [assessments, setAssessments] = useState<any[]>([]);
   const [questionSets, setQuestionSets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"ALL" | "PUBLISHED" | "DRAFT" | "ARCHIVED">("ALL");
+
+  const canViewAssessments = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student/assessments");
+      } else if (!canViewAssessments) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canViewAssessments, isLoadingAuth, router]);
 
   // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -208,6 +225,14 @@ export default function StaffAssessmentsPage() {
     if (activeTab === "ALL") return true;
     return a.status === activeTab;
   });
+
+  if (isLoadingAuth || !canViewAssessments) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

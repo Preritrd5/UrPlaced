@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -25,12 +26,28 @@ import {
   BookOpen,
   ArrowRight,
   Send,
+  Loader2,
 } from "lucide-react";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 export default function QuestionsDashboardPage() {
+  const router = useRouter();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
   const [questions, setQuestions] = useState<any[]>([]);
   const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const canManageQuestions = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      if (role === "STUDENT") {
+        router.replace("/dashboard/student");
+      } else if (!canManageQuestions) {
+        router.replace("/auth/access-denied");
+      }
+    }
+  }, [role, canManageQuestions, isLoadingAuth, router]);
 
   // Filters
   const [selectedBank, setSelectedBank] = useState<string>("");
@@ -123,6 +140,14 @@ export default function QuestionsDashboardPage() {
     (q) => q.lifecycle_status === "PENDING_REVIEW" || q.current_version?.review_status === "UNREVIEWED"
   ).length;
   const publishedCount = questions.filter((q) => q.lifecycle_status === "PUBLISHED").length;
+
+  if (isLoadingAuth || !canManageQuestions) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

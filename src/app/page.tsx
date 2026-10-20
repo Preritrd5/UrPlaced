@@ -41,9 +41,6 @@ export default function HomePage() {
               <span className="font-heading font-extrabold text-2xl tracking-tight text-text-primary leading-none">
                 UrPlaced
               </span>
-              <span className="text-xs text-text-secondary font-mono tracking-wider mt-1">
-                Placement SaaS
-              </span>
             </div>
           </Link>
 
@@ -312,19 +309,7 @@ export default function HomePage() {
                       <span><strong>Readiness Tracking:</strong> Objective mastery metrics indicating your real preparation readiness against drive benchmarks.</span>
                     </li>
                   </ul>
-                  <div className="pt-6 border-t border-border flex flex-col gap-2.5">
-                    <Button asChild variant="primary" className="w-full justify-between h-12 text-sm font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-sm rounded-xl">
-                      <Link href="/auth/signup?role=student">
-                        <span>Get Started as Student</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-center h-10 text-xs text-text-secondary hover:text-primary">
-                      <Link href="/auth/signin?next=/dashboard/student/assessments">
-                        <span>Already registered? Sign In to Student Portal</span>
-                      </Link>
-                    </Button>
-                  </div>
+            
                 </CardContent>
               </Card>
             </div>
@@ -361,19 +346,6 @@ export default function HomePage() {
                       <span><strong>Placement Memory:</strong> Sourced institutional memory and defensible cohort before/after analytics.</span>
                     </li>
                   </ul>
-                  <div className="pt-6 border-t border-border flex flex-col gap-2.5">
-                    <Button asChild variant="primary" className="w-full justify-between h-12 text-sm font-semibold bg-secondary hover:bg-[var(--color-secondary-hover)] text-white shadow-sm rounded-xl">
-                      <Link href="/auth/signup?role=college">
-                        <span>Register Your Institution</span>
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button asChild variant="ghost" className="w-full justify-center h-10 text-xs text-text-secondary hover:text-primary">
-                      <Link href="/auth/signin?next=/dashboard">
-                        <span>Already registered? Sign In to Placement Console</span>
-                      </Link>
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -515,44 +487,6 @@ export default function HomePage() {
                 Audited historical records and paired before/after cohort measurements that demonstrate actual institutional impact.
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. High-Conversion Institutional Call to Action */}
-      <section className="py-20 md:py-28 bg-background">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl p-8 sm:p-14 bg-card border border-border shadow-lg text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--color-primary-subtle)] text-primary text-xs sm:text-sm font-semibold">
-              <Award className="h-4 w-4" />
-              <span>Campus Recruitment Excellence</span>
-            </div>
-
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold font-heading text-text-primary">
-              Ready to Transform Your Campus Placements?
-            </h3>
-
-            <p className="text-base sm:text-lg text-text-secondary max-w-2xl mx-auto leading-relaxed">
-              Empower students with role-specific mastery, streamline drive operations for placement officers, and manage your complete campus recruitment ecosystem.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Button
-                asChild
-                size="lg"
-                className="w-full sm:w-auto h-12 px-8 text-sm font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-md rounded-xl"
-              >
-                <Link href="/auth/signup">Create Your Account</Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto h-12 px-8 text-sm font-semibold border-border hover:bg-surface rounded-xl"
-              >
-                <Link href="/auth/signin?next=/dashboard">Sign In to Workspace</Link>
-              </Button>
-            </div>
           </div>
         </div>
       </section>

@@ -39,7 +39,19 @@ function SignInContent() {
       }
 
       if (data.session) {
-        router.push(next);
+        let destination = next;
+        if (!searchParams.get("next")) {
+          const metaRole = data.user?.user_metadata?.role;
+          const metaCategory = data.user?.user_metadata?.account_category;
+          if (metaCategory === "STUDENT" || metaRole === "STUDENT") {
+            destination = "/dashboard/student";
+          } else if (metaRole === "TRAINER") {
+            destination = "/dashboard/training";
+          } else {
+            destination = "/dashboard";
+          }
+        }
+        router.push(destination);
         router.refresh();
       }
     } catch {
