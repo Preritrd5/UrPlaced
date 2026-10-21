@@ -3,21 +3,21 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogIn } from "lucide-react";
+import { LogIn, GraduationCap, Building2, ArrowRight, AlertCircle, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-function SignInContent() {
+function StudentSignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/dashboard";
+  const next = searchParams.get("next") || "/dashboard/student";
 
-  const [email, setEmail] = React.useState("");
+  const [email, setEmail] = React.useState(searchParams.get("email") || "");
   const [password, setPassword] = React.useState("");
-  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = React.useState<React.ReactNode | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
 
   async function handleSignIn(e: React.FormEvent) {
@@ -38,19 +38,57 @@ function SignInContent() {
         return;
       }
 
-      if (data.session) {
-        let destination = next;
-        if (!searchParams.get("next")) {
-          const metaRole = data.user?.user_metadata?.role;
-          const metaCategory = data.user?.user_metadata?.account_category;
-          if (metaCategory === "STUDENT" || metaRole === "STUDENT") {
-            destination = "/dashboard/student";
-          } else if (metaRole === "TRAINER") {
-            destination = "/dashboard/training";
-          } else {
-            destination = "/dashboard";
+      if (data.session && data.user) {
+        // Enforce Category Boundary: Verify that account is a STUDENT account
+        const appMeta = data.user.app_metadata || {};
+        const userMeta = data.user.user_metadata || {};
+        const metaCategory = appMeta.account_category || userMeta.account_category;
+        const metaRole = appMeta.role || userMeta.role;
+
+        // Check authoritative context via /api/auth/context
+        let authoritativeCategory = metaCategory;
+        try {
+          const ctxRes = await fetch("/api/auth/context");
+          if (ctxRes.ok) {
+            const ctx = await ctxRes.json();
+            if (ctx.authenticated && ctx.accountCategory) {
+              authoritativeCategory = ctx.accountCategory;
+            }
           }
+        } catch {
+          // Context fallback
         }
+
+        const isCollegeUser =
+          authoritativeCategory === "COLLEGE" ||
+          metaRole === "PLACEMENT_HEAD" ||
+          metaRole === "PLACEMENT_STAFF" ||
+          metaRole === "TRAINER";
+
+        if (isCollegeUser) {
+          // Reject cross-category login attempt immediately
+          await supabase.auth.signOut();
+          setErrorMsg(
+            <div className="space-y-2">
+              <p>
+                This sign-in portal is exclusively for <strong>Students</strong>. Your account is registered under <strong>College / Cell</strong>.
+              </p>
+              <div className="pt-1">
+                <Link
+                  href={`/auth/college/signin?email=${encodeURIComponent(email)}`}
+                  className="inline-flex items-center gap-1 font-semibold text-primary underline hover:text-[var(--color-primary-hover)]"
+                >
+                  Sign In to College Portal <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        // Legitimate student login: destination strictly within student workspace
+        const destination = next.startsWith("/dashboard/student") ? next : "/dashboard/student";
         router.push(destination);
         router.refresh();
       }
@@ -62,28 +100,27 @@ function SignInContent() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1 text-center">
-        <h2 className="text-xl font-bold font-heading text-text-primary">
-          Sign In to Your Workspace
+      {/* Header */}
+      <div className="space-y-2 text-center">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-primary-subtle)] text-primary text-xs font-semibold">
+          <GraduationCap className="h-4 w-4" />
+          <span>Student Portal</span>
+        </div>
+        <h2 className="text-2xl font-bold font-heading text-text-primary">
+          Student Sign In
         </h2>
         <p className="text-xs text-text-secondary">
-          Enter your student or institutional credentials to access your preparation portal or placement cell.
+          Enter your student credentials to access your personal placement preparation workspace.
         </p>
       </div>
 
+      {/* URL alerts */}
       {searchParams.get("registered") === "true" && (
         <Alert variant="success">
           <AlertTitle>Registration Successful</AlertTitle>
           <AlertDescription>
-            Your account has been created. Please sign in with your credentials to access your workspace.
+            Your student account has been created. Please sign in with your credentials.
           </AlertDescription>
-        </Alert>
-      )}
-
-      {errorMsg && (
-        <Alert variant="destructive">
-          <AlertTitle>Authentication Failed</AlertTitle>
-          <AlertDescription>{errorMsg}</AlertDescription>
         </Alert>
       )}
 
@@ -96,16 +133,26 @@ function SignInContent() {
         </Alert>
       )}
 
+      {errorMsg && (
+        <Alert variant="destructive">
+          <AlertTitle className="flex items-center gap-1.5">
+            <ShieldAlert className="h-4 w-4" /> Access Restricted
+          </AlertTitle>
+          <AlertDescription>{errorMsg}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Form */}
       <form onSubmit={handleSignIn} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="email" required>
-            Institutional Email
+            Student Email
           </Label>
           <Input
             id="email"
             type="email"
             autoComplete="email"
-            placeholder="you@campus.edu"
+            placeholder="student@campus.edu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -143,13 +190,14 @@ function SignInContent() {
           className="w-full mt-2"
           isLoading={isLoading}
         >
-          <LogIn className="h-4 w-4 mr-2" /> Sign In
+          <LogIn className="h-4 w-4 mr-2" /> Sign In as Student
         </Button>
       </form>
 
-      <div className="pt-4 border-t border-border text-center space-y-2">
+      {/* Navigation & Portal Switching */}
+      <div className="pt-4 border-t border-border space-y-3 text-center">
         <p className="text-xs text-text-secondary">
-          Don&apos;t have an account yet?{" "}
+          Don&apos;t have a Student account yet?{" "}
           <Link
             href="/auth/signup"
             className="font-semibold text-primary hover:underline ml-1"
@@ -157,24 +205,22 @@ function SignInContent() {
             Create an Account
           </Link>
         </p>
-        <p className="text-[11px] text-text-muted">
-          Institutional member with an invite? You can also activate via your invitation link.
-        </p>
+
       </div>
     </div>
   );
 }
 
-export default function SignInPage() {
+export default function StudentSignInPage() {
   return (
     <React.Suspense
       fallback={
         <div className="py-8 text-center text-xs text-text-muted">
-          Loading sign in...
+          Loading student sign in...
         </div>
       }
     >
-      <SignInContent />
+      <StudentSignInContent />
     </React.Suspense>
   );
 }

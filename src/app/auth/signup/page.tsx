@@ -2,36 +2,20 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  UserPlus,
-  GraduationCap,
-  Building2,
-  CheckCircle2,
-  ArrowRight,
-  AlertCircle,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { GraduationCap, ArrowRight, Building2, UserPlus, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
-type SupportedAccountRole = "STUDENT" | "PLACEMENT_HEAD";
-
-function SignUpContent() {
+function StudentSignUpContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const roleParam = searchParams.get("role");
-
-  // Only allow STUDENT or PLACEMENT_HEAD. Any unsupported query param (e.g. recruiter) defaults safely to STUDENT.
-  const [role, setRole] = React.useState<SupportedAccountRole>(
-    roleParam === "college" ? "PLACEMENT_HEAD" : "STUDENT"
-  );
 
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [institutionName, setInstitutionName] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -49,7 +33,7 @@ function SignUpContent() {
     }
 
     if (!email.trim() || !email.includes("@")) {
-      setErrorMsg("Please enter a valid email address.");
+      setErrorMsg("Please enter a valid student email address.");
       return;
     }
 
@@ -66,7 +50,7 @@ function SignUpContent() {
     setIsLoading(true);
 
     try {
-      // 1. Call server-side signup API
+      // 1. Call server-side signup API with fixed STUDENT category
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,21 +58,20 @@ function SignUpContent() {
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
           password,
-          role,
-          accountCategory: role === "STUDENT" ? "STUDENT" : "COLLEGE",
-          institutionName: institutionName.trim() || undefined,
+          role: "STUDENT",
+          accountCategory: "STUDENT",
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMsg(data.error || "Failed to create account. Please try again.");
+        setErrorMsg(data.error || "Failed to create student account. Please try again.");
         setIsLoading(false);
         return;
       }
 
-      setSuccessMsg("Account created! Signing you in...");
+      setSuccessMsg("Student account created! Signing you in...");
 
       // 2. Automatically authenticate session in browser client
       const supabase = createClient();
@@ -99,20 +82,16 @@ function SignUpContent() {
         });
 
       if (signInError || !authData.session) {
-        // If automatic sign-in couldn't create session, redirect to signin page with notice
         router.push(`/auth/signin?registered=true&email=${encodeURIComponent(email)}`);
         return;
       }
 
-      // 3. Redirect to appropriate destination
-      const destination =
-        data.nextUrl || (role === "STUDENT" ? "/dashboard/student" : "/dashboard");
-      router.push(destination);
+      // 3. Redirect to Student Workspace
+      router.push("/dashboard/student");
       router.refresh();
-    } catch (err: any) {
-      setErrorMsg(
-        err?.message || "An unexpected error occurred during registration. Please try again."
-      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred during registration. Please try again.";
+      setErrorMsg(msg);
       setIsLoading(false);
     }
   }
@@ -120,101 +99,46 @@ function SignUpContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-1.5 text-center">
+      <div className="space-y-2 text-center">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-primary-subtle)] text-primary text-xs font-semibold">
+          <GraduationCap className="h-4 w-4" />
+          <span>Student Portal</span>
+        </div>
         <h2 className="text-2xl font-bold font-heading text-text-primary">
-          Create Your UrPlaced Account
+          Create Your Student Account
         </h2>
         <p className="text-xs text-text-secondary max-w-sm mx-auto leading-relaxed">
-          Select your account type to register for placement preparation or institutional cell management.
+          Register for personalized placement preparation, mock assessment practice, and mistake mastery tracking.
         </p>
       </div>
 
-      {/* Account Type Selector (Strictly Two Supported Roles: Student & College) */}
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold text-text-secondary">Register As:</Label>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setRole("STUDENT")}
-            className={`p-3.5 rounded-xl border text-left transition-all flex flex-col gap-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary ${
-              role === "STUDENT"
-                ? "border-primary bg-[var(--color-primary-subtle)] text-text-primary shadow-sm ring-1 ring-primary"
-                : "border-border bg-input hover:border-border-strong text-text-secondary"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <div
-                className={`h-7 w-7 rounded-lg flex items-center justify-center ${
-                  role === "STUDENT"
-                    ? "bg-primary text-white"
-                    : "bg-surface text-text-secondary"
-                }`}
-              >
-                <GraduationCap className="h-4 w-4" />
-              </div>
-              <span className="font-bold text-sm font-heading">Student</span>
-            </div>
-            <p className="text-[11px] text-text-secondary mt-1 leading-tight">
-              Personal placement preparation, assessments, and mistake mastery.
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setRole("PLACEMENT_HEAD")}
-            className={`p-3.5 rounded-xl border text-left transition-all flex flex-col gap-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary ${
-              role === "PLACEMENT_HEAD"
-                ? "border-primary bg-[var(--color-primary-subtle)] text-text-primary shadow-sm ring-1 ring-primary"
-                : "border-border bg-input hover:border-border-strong text-text-secondary"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <div
-                className={`h-7 w-7 rounded-lg flex items-center justify-center ${
-                  role === "PLACEMENT_HEAD"
-                    ? "bg-primary text-white"
-                    : "bg-surface text-text-secondary"
-                }`}
-              >
-                <Building2 className="h-4 w-4" />
-              </div>
-              <span className="font-bold text-sm font-heading">College / Cell</span>
-            </div>
-            <p className="text-[11px] text-text-secondary mt-1 leading-tight">
-              Manage student roster, recruitment drives, and placement memory.
-            </p>
-          </button>
-        </div>
-      </div>
-
-      {/* Alerts */}
+      {/* Notifications */}
       {errorMsg && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Registration Notice</AlertTitle>
+          <AlertTitle className="flex items-center gap-1.5">
+            <AlertCircle className="h-4 w-4" /> Registration Failed
+          </AlertTitle>
           <AlertDescription>{errorMsg}</AlertDescription>
         </Alert>
       )}
 
       {successMsg && (
         <Alert variant="success">
-          <CheckCircle2 className="h-4 w-4 text-secondary" />
-          <AlertTitle>Account Created</AlertTitle>
+          <AlertTitle>Success</AlertTitle>
           <AlertDescription>{successMsg}</AlertDescription>
         </Alert>
       )}
 
-      {/* Registration Form */}
-      <form onSubmit={handleSignUp} className="space-y-3.5">
-        <div className="space-y-1">
+      {/* Form */}
+      <form onSubmit={handleSignUp} className="space-y-4">
+        <div className="space-y-1.5">
           <Label htmlFor="fullName" required>
             Full Name
           </Label>
           <Input
             id="fullName"
             type="text"
-            autoComplete="name"
-            placeholder={role === "STUDENT" ? "Ananya Sharma" : "Dr. Rajesh Kumar"}
+            placeholder="John Doe"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
@@ -222,19 +146,14 @@ function SignUpContent() {
           />
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <Label htmlFor="email" required>
-            {role === "STUDENT" ? "Student Email (Campus or Personal)" : "College / Institutional Email"}
+            Student Email
           </Label>
           <Input
             id="email"
             type="email"
-            autoComplete="email"
-            placeholder={
-              role === "STUDENT"
-                ? "student@campus.edu"
-                : "placement.head@engineering.edu"
-            }
+            placeholder="student@campus.edu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -242,49 +161,34 @@ function SignUpContent() {
           />
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="institutionName">
-            College / University Name {role === "PLACEMENT_HEAD" && <span className="text-primary">*</span>}
-          </Label>
-          <Input
-            id="institutionName"
-            type="text"
-            placeholder="Institute of Technology &amp; Science"
-            value={institutionName}
-            onChange={(e) => setInstitutionName(e.target.value)}
-            required={role === "PLACEMENT_HEAD"}
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <Label htmlFor="password" required>
             Password (min. 8 characters)
           </Label>
           <Input
             id="password"
             type="password"
-            autoComplete="new-password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            minLength={8}
             disabled={isLoading}
           />
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <Label htmlFor="confirmPassword" required>
             Confirm Password
           </Label>
           <Input
             id="confirmPassword"
             type="password"
-            autoComplete="new-password"
             placeholder="••••••••"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
+            minLength={8}
             disabled={isLoading}
           />
         </div>
@@ -292,41 +196,40 @@ function SignUpContent() {
         <Button
           type="submit"
           variant="primary"
-          className="w-full mt-4 h-11 text-sm font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-sm"
+          className="w-full mt-2"
           isLoading={isLoading}
         >
-          <UserPlus className="h-4 w-4 mr-2" />
-          {role === "STUDENT" ? "Create Student Account" : "Register Placement Cell"}
+          <UserPlus className="h-4 w-4 mr-2" /> Create Student Account
         </Button>
       </form>
 
-      {/* Switch to Sign In */}
-      <div className="pt-4 border-t border-border text-center">
+      {/* Navigation & Portal Switching */}
+      <div className="pt-4 border-t border-border space-y-3 text-center">
         <p className="text-xs text-text-secondary">
-          Already have an account?{" "}
+          Already have a Student account?{" "}
           <Link
             href="/auth/signin"
-            className="font-semibold text-primary hover:underline inline-flex items-center gap-0.5 ml-1"
+            className="font-semibold text-primary hover:underline ml-1"
           >
-            <span>Sign In</span>
-            <ArrowRight className="h-3 w-3" />
+            Sign In
           </Link>
         </p>
+
       </div>
     </div>
   );
 }
 
-export default function SignUpPage() {
+export default function StudentSignUpPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="py-12 text-center text-xs text-text-muted">
-          Loading registration portal...
+        <div className="py-8 text-center text-xs text-text-muted">
+          Loading student registration...
         </div>
       }
     >
-      <SignUpContent />
+      <StudentSignUpContent />
     </React.Suspense>
   );
 }

@@ -49,18 +49,37 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
 
   if (isProtectedRoute && !user) {
-    const redirectUrl = new URL("/auth/signin", request.url);
+    const isStudentRoute = pathname.startsWith("/dashboard/student");
+    const targetSignIn = isStudentRoute ? "/auth/signin" : "/auth/college/signin";
+    const redirectUrl = new URL(targetSignIn, request.url);
     redirectUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // 2. Auth routes guard (redirect already logged-in users away from /auth/signin)
+  // 2. Auth routes guard (redirect already logged-in users away from auth pages)
   const isAuthRoute =
     pathname === "/auth/signin" ||
+    pathname === "/auth/signup" ||
+    pathname === "/auth/college/signin" ||
+    pathname === "/auth/college/signup" ||
     pathname === "/auth/forgot-password";
 
   if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const appMeta = user.app_metadata || {};
+    const userMeta = user.user_metadata || {};
+    const metaCategory = appMeta.account_category || userMeta.account_category;
+    const metaRole = appMeta.role || userMeta.role;
+
+    const isStudent = metaCategory === "STUDENT" || metaRole === "STUDENT";
+    const isTrainer = metaRole === "TRAINER";
+
+    const destination = isStudent
+      ? "/dashboard/student"
+      : isTrainer
+      ? "/dashboard/training"
+      : "/dashboard";
+
+    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   // Security Headers
@@ -76,6 +95,8 @@ export const config = {
     "/dashboard/:path*",
     "/admin/:path*",
     "/auth/signin",
+    "/auth/signup",
+    "/auth/college/:path*",
     "/auth/forgot-password",
   ],
 };

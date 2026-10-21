@@ -99,7 +99,13 @@ export default function InviteAcceptancePage() {
         });
       }
 
-      router.push("/dashboard");
+      const targetDest =
+        state.role === "STUDENT"
+          ? "/dashboard/student"
+          : state.role === "TRAINER"
+          ? "/dashboard/training"
+          : "/dashboard";
+      router.push(targetDest);
       router.refresh();
     } catch {
       setSubmitError("An unexpected error occurred during account activation.");
@@ -135,7 +141,9 @@ export default function InviteAcceptancePage() {
         </p>
 
         <Button asChild variant="outline" className="w-full">
-          <Link href="/auth/signin">Return to Sign In</Link>
+          <Link href={state.role === "STUDENT" ? "/auth/signin" : "/auth/college/signin"}>
+            Return to {state.role === "STUDENT" ? "Student" : "College"} Sign In
+          </Link>
         </Button>
       </div>
     );

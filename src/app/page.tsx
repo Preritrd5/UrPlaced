@@ -77,14 +77,23 @@ export default function HomePage() {
             <Button
               asChild
               variant="outline"
-              className="h-11 px-5 text-sm font-semibold border-border hover:border-primary hover:bg-surface text-text-primary"
+              className="h-10 px-4 text-xs font-semibold border-border hover:border-primary hover:bg-surface text-text-primary"
             >
               <Link href="/auth/signin">
-                <LogIn className="h-4 w-4 mr-1.5" />
-                Sign In
+                <GraduationCap className="h-4 w-4 mr-1.5 text-primary" />
+                Student Login
               </Link>
             </Button>
-          
+            {/* <Button
+              asChild
+              variant="primary"
+              className="h-10 px-4 text-xs font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-sm"
+            >
+              <Link href="/auth/college/signin">
+                <Building2 className="h-4 w-4 mr-1.5" />
+                College Portal
+              </Link>
+            </Button> */}
           </div>
 
           {/* Mobile menu button */}
@@ -92,19 +101,27 @@ export default function HomePage() {
             <Button
               asChild
               size="sm"
-              variant="primary"
-              className="bg-primary text-white text-xs px-3 h-9"
+              variant="outline"
+              className="text-xs px-2.5 h-8 border-border text-text-primary"
             >
-              <Link href="/auth/signup">Sign Up</Link>
+              <Link href="/auth/signin">Student</Link>
+            </Button>
+            <Button
+              asChild
+              size="sm"
+              variant="primary"
+              className="bg-primary text-white text-xs px-2.5 h-8"
+            >
+              <Link href="/auth/college/signin">College</Link>
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
-              className="h-10 w-10 text-text-primary"
+              className="h-9 w-9 text-text-primary"
             >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
         </div>
@@ -143,12 +160,22 @@ export default function HomePage() {
               </a>
             </div>
             <div className="pt-3 border-t border-border flex flex-col gap-2">
-              <Button asChild variant="outline" className="w-full justify-center h-11 text-sm font-semibold">
-                <Link href="/auth/signin">Sign In</Link>
-              </Button>
-              <Button asChild variant="primary" className="w-full justify-center h-11 text-sm font-semibold bg-primary text-white">
-                <Link href="/auth/signup">Create Account</Link>
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button asChild variant="outline" className="w-full justify-center h-10 text-xs font-semibold">
+                  <Link href="/auth/signin">Student Sign In</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full justify-center h-10 text-xs font-semibold">
+                  <Link href="/auth/signup">Student Sign Up</Link>
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button asChild variant="primary" className="w-full justify-center h-10 text-xs font-semibold bg-primary text-white">
+                  <Link href="/auth/college/signin">College Sign In</Link>
+                </Button>
+                <Button asChild variant="secondary" className="w-full justify-center h-10 text-xs font-semibold bg-secondary text-white">
+                  <Link href="/auth/college/signup">Register Cell</Link>
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -178,16 +205,6 @@ export default function HomePage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Button
-                asChild
-                size="lg"
-                className="w-full sm:w-auto h-14 px-8 text-base font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-lg rounded-xl transition-all"
-              >
-                <Link href="/auth/signin?next=/dashboard" className="inline-flex items-center justify-center gap-2.5">
-                  <span>Enter College Workspace</span>
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
-              </Button>
 
               <Button
                 asChild
@@ -195,7 +212,7 @@ export default function HomePage() {
                 size="lg"
                 className="w-full sm:w-auto h-14 px-8 text-base font-semibold border-2 border-border bg-card hover:bg-surface hover:border-primary text-text-primary rounded-xl shadow-sm transition-all"
               >
-                <Link href="/auth/signin?next=/dashboard/student/assessments" className="inline-flex items-center justify-center gap-2.5">
+                <Link href="/auth/signin" className="inline-flex items-center justify-center gap-2.5">
                   <GraduationCap className="h-5 w-5 text-primary" />
                   <span>Student Practice Portal</span>
                 </Link>
@@ -517,40 +534,40 @@ export default function HomePage() {
             {/* Platform Column */}
             <div className="space-y-3">
               <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
-                Platform
+                College Platform
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/signin?next=/dashboard" className="hover:text-primary transition-colors">Placement Command Center</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/students" className="hover:text-primary transition-colors">Student Roster Management</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/companies" className="hover:text-primary transition-colors">Company Directory</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/drives" className="hover:text-primary transition-colors">Recruitment Drives</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/questions" className="hover:text-primary transition-colors">QuestionBank Sentinel</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard" className="hover:text-primary transition-colors">Placement Command Center</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/students" className="hover:text-primary transition-colors">Student Roster Management</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/companies" className="hover:text-primary transition-colors">Company Directory</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/drives" className="hover:text-primary transition-colors">Recruitment Drives</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/questions" className="hover:text-primary transition-colors">QuestionBank Sentinel</Link></li>
               </ul>
             </div>
 
             {/* Preparation Column */}
             <div className="space-y-3">
               <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
-                Preparation
+                Student Preparation
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
                 <li><Link href="/auth/signin?next=/dashboard/student/assessments" className="hover:text-primary transition-colors">Assessment Engine</Link></li>
                 <li><Link href="/auth/signin?next=/dashboard/student/mistakes" className="hover:text-primary transition-colors">Mistake Bank</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/training" className="hover:text-primary transition-colors">Targeted Interventions</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/memory" className="hover:text-primary transition-colors">Placement Memory</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/training" className="hover:text-primary transition-colors">Targeted Interventions</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/memory" className="hover:text-primary transition-colors">Placement Memory</Link></li>
               </ul>
             </div>
 
             {/* Security & Access Column */}
             <div className="space-y-3">
               <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
-                Enterprise &amp; Access
+                Portals &amp; Access
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/signup" className="hover:text-primary transition-colors">Create User Account</Link></li>
-                <li><Link href="/auth/signin" className="hover:text-primary transition-colors">Institutional Single Sign-On</Link></li>
-                <li><Link href="/dashboard/settings/academic" className="hover:text-primary transition-colors">Academic Configuration</Link></li>
-                <li><Link href="/api/health" className="hover:text-primary transition-colors">System Health &amp; Readiness</Link></li>
+                <li><Link href="/auth/signup" className="hover:text-primary transition-colors">Student Registration</Link></li>
+                <li><Link href="/auth/signin" className="hover:text-primary transition-colors">Student Sign In</Link></li>
+                <li><Link href="/auth/college/signup" className="hover:text-primary transition-colors">Register College / Cell</Link></li>
+                <li><Link href="/auth/college/signin" className="hover:text-primary transition-colors">College Portal Sign In</Link></li>
               </ul>
             </div>
           </div>
