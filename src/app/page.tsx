@@ -30,156 +30,133 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background text-text-primary flex flex-col selection:bg-primary/20">
       {/* 1. Global Public Navigation Header */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          {/* Brand Wordmark */}
-          <Link href="/" className="flex items-center gap-3 group">
+
+
+
+
+      <header className="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-10 rounded-[2rem] md:rounded-full border-2 border-slate-400/70 bg-gradient-to-r from-orange-50/95 via-white/95 to-sky-50/95 shadow-[0_10px_35px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all">
+        <div className="relative w-full px-5 sm:px-8 lg:px-10 h-20 flex items-center justify-between">
+
+          {/* Brand - Left Corner */}
+          <Link href="/" className="flex items-center gap-3 group shrink-0">
             <div className="h-11 w-11 rounded-xl bg-primary-gradient flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
               UP
             </div>
-            <div className="flex flex-col">
-              <span className="font-heading font-extrabold text-2xl tracking-tight text-text-primary leading-none">
-                UrPlaced
-              </span>
-            </div>
+            <span className="font-heading font-extrabold text-2xl tracking-tight text-slate-900 leading-none">
+              UrPlaced
+            </span>
           </Link>
 
-          {/* Center Navigation Links (Focused on Student Prep & College Operations) */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-3">
+          {/* Center Navigation */}
+          <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 lg:gap-3">
             <a
               href="#solutions"
-              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+              className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 hover:text-primary hover:bg-slate-900/5 transition-colors whitespace-nowrap"
             >
               Platform
             </a>
             <a
               href="#students"
-              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+              className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 hover:text-primary hover:bg-slate-900/5 transition-colors whitespace-nowrap"
             >
               For Students
             </a>
             <a
               href="#colleges"
-              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+              className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 hover:text-primary hover:bg-slate-900/5 transition-colors whitespace-nowrap"
             >
               For Colleges
             </a>
             <a
               href="#how-it-works"
-              className="px-4 py-2 rounded-lg text-[15px] font-semibold text-text-primary hover:text-primary hover:bg-black/5 transition-colors"
+              className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 hover:text-primary hover:bg-slate-900/5 transition-colors whitespace-nowrap"
             >
               How It Works
             </a>
           </nav>
 
-          {/* Right Action Buttons */}
-          <div className="hidden sm:flex items-center gap-3">
+          {/* Student Login - Right Corner */}
+          <div className="hidden sm:flex items-center shrink-0">
             <Button
               asChild
               variant="outline"
-              className="h-10 px-4 text-xs font-semibold border-border hover:border-primary hover:bg-surface text-text-primary"
+              className="h-11 px-5 rounded-xl text-sm font-semibold border-slate-300 bg-white/60 hover:border-primary hover:bg-orange-50 text-slate-800 transition-colors"
             >
               <Link href="/auth/signin">
                 <GraduationCap className="h-4 w-4 mr-1.5 text-primary" />
                 Student Login
               </Link>
             </Button>
-            {/* <Button
-              asChild
-              variant="primary"
-              className="h-10 px-4 text-xs font-semibold bg-primary hover:bg-[var(--color-primary-hover)] text-white shadow-sm"
-            >
-              <Link href="/auth/college/signin">
-                <Building2 className="h-4 w-4 mr-1.5" />
-                College Portal
-              </Link>
-            </Button> */}
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile Menu Controls */}
           <div className="flex md:hidden items-center gap-2">
-            <Button
-              asChild
-              size="sm"
-              variant="outline"
-              className="text-xs px-2.5 h-8 border-border text-text-primary"
-            >
-              <Link href="/auth/signin">Student</Link>
-            </Button>
-            <Button
-              asChild
-              size="sm"
-              variant="primary"
-              className="bg-primary text-white text-xs px-2.5 h-8"
-            >
-              <Link href="/auth/college/signin">College</Link>
-            </Button>
+
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
-              className="h-9 w-9 text-text-primary"
+              className="h-9 w-9 text-slate-800"
             >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </Button>
           </div>
         </div>
 
         {/* Mobile Navigation Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-border bg-card px-4 pt-3 pb-6 space-y-3 shadow-lg">
+          <div className="md:hidden border-t border-slate-200/80 px-4 pt-3 pb-6 space-y-3 bg-white/90 rounded-b-[2rem]">
             <div className="flex flex-col space-y-1">
               <a
                 href="#solutions"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 Platform
               </a>
               <a
                 href="#students"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 For Students
               </a>
               <a
                 href="#colleges"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 For Colleges
               </a>
               <a
                 href="#how-it-works"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-text-primary hover:bg-surface"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
               >
                 How It Works
               </a>
             </div>
-            <div className="pt-3 border-t border-border flex flex-col gap-2">
-              <div className="grid grid-cols-2 gap-2">
-                <Button asChild variant="outline" className="w-full justify-center h-10 text-xs font-semibold">
-                  <Link href="/auth/signin">Student Sign In</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full justify-center h-10 text-xs font-semibold">
-                  <Link href="/auth/signup">Student Sign Up</Link>
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button asChild variant="primary" className="w-full justify-center h-10 text-xs font-semibold bg-primary text-white">
-                  <Link href="/auth/college/signin">College Sign In</Link>
-                </Button>
-                <Button asChild variant="secondary" className="w-full justify-center h-10 text-xs font-semibold bg-secondary text-white">
-                  <Link href="/auth/college/signup">Register Cell</Link>
-                </Button>
-              </div>
+
+            <div className="pt-3 border-t border-slate-200/80">
+              <Button
+                asChild
+                variant="outline"
+                className="w-full justify-center h-10 text-xs font-semibold border-slate-300 text-slate-800"
+              >
+                <Link href="/auth/signin">Student Sign In</Link>
+              </Button>
             </div>
           </div>
         )}
       </header>
+
+
+
 
       {/* 2. Expanded Hero Section (Fills Viewport Naturally) */}
       <section className="relative min-h-[calc(100vh-5rem)] flex flex-col justify-between py-10 md:py-16 overflow-hidden">
@@ -326,7 +303,7 @@ export default function HomePage() {
                       <span><strong>Readiness Tracking:</strong> Objective mastery metrics indicating your real preparation readiness against drive benchmarks.</span>
                     </li>
                   </ul>
-            
+
                 </CardContent>
               </Card>
             </div>
@@ -509,79 +486,87 @@ export default function HomePage() {
       </section>
 
       {/* 7. Professional SaaS Footer */}
-      <footer className="mt-auto border-t border-border bg-card py-16 text-text-secondary text-xs sm:text-sm">
+
+
+      <footer className="mt-auto border-t border-slate-800/80 bg-gradient-to-b from-[#0a0f1d] via-[#060913] to-[#03050a] py-16 text-slate-300 text-xs sm:text-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 pb-12 border-b border-border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800/80">
+
             {/* Brand Column */}
             <div className="col-span-2 md:col-span-1 space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-primary-gradient flex items-center justify-center text-white font-bold text-base shadow-sm">
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-base shadow-sm shadow-cyan-500/20">
                   UP
                 </div>
-                <span className="font-heading font-bold text-xl text-text-primary">
+                <span className="font-heading font-bold text-xl text-slate-100">
                   UrPlaced
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                 Enterprise Multi-College Placement Preparation &amp; Management SaaS platform.
               </p>
-              <div className="flex items-center gap-2 text-xs text-text-secondary pt-1">
-                <Lock className="h-4 w-4 text-secondary" />
+
+              <div className="flex items-center gap-2 text-xs text-slate-400 pt-1">
+                <Lock className="h-4 w-4 text-cyan-400" />
                 <span>Strict Tenant Data Isolation</span>
               </div>
             </div>
 
             {/* Platform Column */}
             <div className="space-y-3">
-              <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
+              <div className="font-bold text-slate-100 uppercase tracking-wider text-xs font-mono">
                 College Platform
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/college/signin?next=/dashboard" className="hover:text-primary transition-colors">Placement Command Center</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/students" className="hover:text-primary transition-colors">Student Roster Management</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/companies" className="hover:text-primary transition-colors">Company Directory</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/drives" className="hover:text-primary transition-colors">Recruitment Drives</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/questions" className="hover:text-primary transition-colors">QuestionBank Sentinel</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard" className="hover:text-cyan-400 transition-colors">Placement Command Center</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/students" className="hover:text-cyan-400 transition-colors">Student Roster Management</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/companies" className="hover:text-cyan-400 transition-colors">Company Directory</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/drives" className="hover:text-cyan-400 transition-colors">Recruitment Drives</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/questions" className="hover:text-cyan-400 transition-colors">QuestionBank Sentinel</Link></li>
               </ul>
             </div>
 
             {/* Preparation Column */}
             <div className="space-y-3">
-              <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
+              <div className="font-bold text-slate-100 uppercase tracking-wider text-xs font-mono">
                 Student Preparation
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/signin?next=/dashboard/student/assessments" className="hover:text-primary transition-colors">Assessment Engine</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/student/mistakes" className="hover:text-primary transition-colors">Mistake Bank</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/training" className="hover:text-primary transition-colors">Targeted Interventions</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/memory" className="hover:text-primary transition-colors">Placement Memory</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/student/assessments" className="hover:text-cyan-400 transition-colors">Assessment Engine</Link></li>
+                <li><Link href="/auth/signin?next=/dashboard/student/mistakes" className="hover:text-cyan-400 transition-colors">Mistake Bank</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/training" className="hover:text-cyan-400 transition-colors">Targeted Interventions</Link></li>
+                <li><Link href="/auth/college/signin?next=/dashboard/memory" className="hover:text-cyan-400 transition-colors">Placement Memory</Link></li>
               </ul>
             </div>
 
-            {/* Security & Access Column */}
+            {/* Portals & Access Column */}
             <div className="space-y-3">
-              <div className="font-bold text-text-primary uppercase tracking-wider text-xs font-mono">
+              <div className="font-bold text-slate-100 uppercase tracking-wider text-xs font-mono">
                 Portals &amp; Access
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/signup" className="hover:text-primary transition-colors">Student Registration</Link></li>
-                <li><Link href="/auth/signin" className="hover:text-primary transition-colors">Student Sign In</Link></li>
-                <li><Link href="/auth/college/signup" className="hover:text-primary transition-colors">Register College / Cell</Link></li>
-                <li><Link href="/auth/college/signin" className="hover:text-primary transition-colors">College Portal Sign In</Link></li>
+                <li><Link href="/auth/signup" className="hover:text-cyan-400 transition-colors">Student Registration</Link></li>
+                <li><Link href="/auth/signin" className="hover:text-cyan-400 transition-colors">Student Sign In</Link></li>
+                <li><Link href="/auth/college/signup" className="hover:text-cyan-400 transition-colors">Register College / Cell</Link></li>
+                <li><Link href="/auth/college/signin" className="hover:text-cyan-400 transition-colors">College Portal Sign In</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-secondary">
-            <div>
+          {/* Copyright & Technical Info */}
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <div className="text-center sm:text-left">
               &copy; {new Date().getFullYear()} UrPlaced. Multi-College Placement Preparation &amp; Management Platform. All rights reserved.
             </div>
-            <div className="font-mono">
-              PostgreSQL RLS &bull; Multi-Tenant &bull; Enterprise V1.0
+            <div className="font-mono text-center">
+              <span className="text-cyan-400/80">PostgreSQL RLS</span>
+              {" "}&bull; Multi-Tenant &bull; Enterprise V1.0
             </div>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
