@@ -101,7 +101,7 @@ export default async function StudentDashboardPage() {
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-text-secondary">
-            {profile.activeMembership?.tenants?.name || "Campus Placement Portal"} &bull; Logged in as {profile.email}
+            &bull; {profile.activeMembership?.tenants?.name || "Campus Placement Portal"} 
           </p>
         </div>
 

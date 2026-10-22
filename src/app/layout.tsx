@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { fontHeading, fontBody, fontMono } from "@/lib/fonts";
-// @ts-expect-error Next.js handles CSS side-effect imports at build time.
 import "@/styles/globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthContextProvider } from "@/lib/auth/auth-context-provider";

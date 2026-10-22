@@ -417,6 +417,10 @@ export interface Database {
           full_name: string;
           is_platform_admin: boolean;
           avatar_url: string | null;
+          phone: string | null;
+          location: string | null;
+          bio: string | null;
+          preferences: Record<string, any> | null;
           created_at: string;
           updated_at: string;
         };
@@ -426,6 +430,10 @@ export interface Database {
           full_name?: string;
           is_platform_admin?: boolean;
           avatar_url?: string | null;
+          phone?: string | null;
+          location?: string | null;
+          bio?: string | null;
+          preferences?: Record<string, any> | null;
           created_at?: string;
           updated_at?: string;
         };

@@ -31,7 +31,6 @@ export default function HomePage() {
   <div className="min-h-screen bg-[linear-gradient(135deg,#E0EAFE_0%,#D9DDF9_45%,#C5CEDB_100%)] text-text-primary flex flex-col selection:bg-primary/20">
   
       {/* 1. Global Public Navigation Header */}
-
       <header className="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-10 rounded-[2rem] md:rounded-full border-2 border-slate-400/70 bg-gradient-to-r from-orange-50/95 via-white/95 to-sky-50/95 shadow-[0_10px_35px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all">
         <div className="relative w-full px-5 sm:px-8 lg:px-10 h-20 flex items-center justify-between">
 

@@ -99,7 +99,7 @@ export default async function DashboardPage() {
             )}
           </div>
           <p className="text-xs text-text-secondary">
-            {activeTenant ? activeTenant.name : "Institutional Workspace"} &bull; Logged in as {profile.email}
+            &bull; {activeTenant ? activeTenant.name : "Institutional Workspace"} 
           </p>
         </div>
 

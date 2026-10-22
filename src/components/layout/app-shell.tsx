@@ -10,11 +10,13 @@ import {
   LogOut,
   Building,
   User,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import {
   getAuthorizedNavigation,
   getRoleDefaultDashboard,
@@ -69,15 +71,20 @@ export function AppShell({ children }: AppShellProps) {
             {roleDisplayNames[role] || "Workspace"}
           </span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle navigation menu"
-          aria-expanded={mobileMenuOpen}
-        >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-2.5">
+          {auth.isAuthenticated && (
+            <UserAccountMenu size="sm" />
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </header>
 
       {/* Mobile Drawer Backdrop */}
@@ -190,47 +197,6 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* User Identity & Active College Section */}
         <div className="border-t border-border bg-card p-3 space-y-2">
-          {/* Authenticated User Info */}
-          {auth.isAuthenticated && (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-surface border border-border/70">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                  {auth.fullName ? auth.fullName.charAt(0).toUpperCase() : <User className="h-3.5 w-3.5" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold text-text-primary truncate leading-tight">
-                    {auth.fullName || auth.email}
-                  </div>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5 text-secondary border-secondary/40 font-mono">
-                    {auth.accountCategory === "COLLEGE"
-                      ? `College / Cell • ${roleDisplayNames[role] || "Placement Head"}`
-                      : "Student"}
-                  </Badge>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={auth.signOut}
-                title="Sign Out"
-                className="h-7 w-7 text-text-secondary hover:text-text-primary"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
-
-          {/* Multiple College Switcher Link */}
-          {auth.availableTenants.length > 1 && (
-            <Link
-              href="/dashboard/select-tenant"
-              className="flex items-center justify-center gap-1.5 py-1 text-[11px] font-medium text-primary hover:underline"
-            >
-              <Building className="h-3 w-3" />
-              <span>Switch College ({auth.availableTenants.length})</span>
-            </Link>
-          )}
-
           {/* Tenant Isolation Badge */}
           <div className="flex items-center gap-2 text-[10px] text-text-secondary px-1 pt-1">
             <ShieldCheck className="h-3.5 w-3.5 text-secondary shrink-0" />
@@ -239,10 +205,55 @@ export function AppShell({ children }: AppShellProps) {
             </span>
           </div>
         </div>
+
+        
       </aside>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Desktop Application Header */}
+        <header className="hidden md:flex items-center justify-between h-16 px-6 lg:px-10 bg-card/85 backdrop-blur-sm border-b border-border sticky top-0 z-30">
+          <div className="flex items-center gap-3 min-w-0">
+            {auth.accountCategory === "COLLEGE" ? (
+              <div className="flex items-center gap-2 text-sm text-text-secondary truncate">
+                <Building className="h-4 w-4 text-primary shrink-0" />
+                <span className="font-semibold text-text-primary truncate">
+                  {auth.tenant?.name || "College Placement Cell"}
+                </span>
+                <span className="text-border">&bull;</span>
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-secondary border-secondary/40 font-mono">
+                  {roleDisplayNames[role] || "Placement Head"}
+                </Badge>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-text-secondary">
+                <GraduationCap className="h-4 w-4 text-secondary shrink-0" />
+                <span className="font-semibold text-text-primary">Student Workspace</span>
+                <span className="text-border">&bull;</span>
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-primary border-primary/30 font-mono">
+                  Placement Preparation
+                </Badge>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4">
+            {auth.availableTenants.length > 1 && (
+              <Link
+                href="/dashboard/select-tenant"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-surface rounded-lg border border-border/80 transition-colors"
+              >
+                <Building className="h-3.5 w-3.5" />
+                <span>Switch College ({auth.availableTenants.length})</span>
+              </Link>
+            )}
+
+            {auth.isAuthenticated && (
+              <UserAccountMenu size="default" />
+            )}
+          </div>
+        </header>
+
         <main className="flex-1 py-8 px-4 sm:px-6 lg:px-10 max-w-7xl w-full mx-auto">
           {children}
         </main>

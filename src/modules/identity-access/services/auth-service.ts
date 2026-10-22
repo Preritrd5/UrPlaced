@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserMemberships, MembershipRecord } from "@/modules/tenancy/services/membership-service";
 import type { UserRole } from "@/modules/identity-access/services/policy-engine";
+import { AvatarStorageService } from "@/modules/identity-access/services/avatar-storage-service";
 
 export interface UserSessionProfile {
   id: string;
@@ -12,6 +13,10 @@ export interface UserSessionProfile {
   institutionName?: string;
   isPlatformAdmin: boolean;
   avatarUrl: string | null;
+  phone?: string | null;
+  location?: string | null;
+  bio?: string | null;
+  preferences?: Record<string, any> | null;
   memberships: MembershipRecord[];
   activeMembership?: MembershipRecord;
   isVerifiedMembership: boolean;
@@ -168,7 +173,14 @@ export async function getCurrentUserProfile(
       accountCategory: resolvedCategory,
       institutionName: activeMembership?.tenants?.name || serverAppMeta.institution_name || "",
       isPlatformAdmin,
-      avatarUrl: profile?.avatar_url || null,
+      avatarUrl: AvatarStorageService.resolveAvatarUrl(
+        profile?.avatar_url || user.user_metadata?.avatar_url,
+        admin
+      ),
+      phone: profile?.phone || user.user_metadata?.phone || null,
+      location: profile?.location || user.user_metadata?.location || null,
+      bio: profile?.bio || user.user_metadata?.bio || null,
+      preferences: profile?.preferences || user.user_metadata?.preferences || null,
       memberships,
       activeMembership,
       isVerifiedMembership,
