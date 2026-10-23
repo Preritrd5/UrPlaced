@@ -17,6 +17,7 @@ import {
   AlertCircle,
   BookOpen,
   BarChart3,
+  Sparkles,
 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { PlacementMetricsService } from "@/modules/placement/services/placement-metrics-service";
@@ -98,9 +99,16 @@ export default async function DashboardPage() {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-text-secondary">
+
+          {/* <p className="text-xs text-text-secondary">
             &bull; {activeTenant ? activeTenant.name : "Institutional Workspace"} 
+          </p> */}
+
+          <p className="text-xs text-text-secondary">
+            <Sparkles className="inline-block h-4 w-4 mr-1 text-teal-600 align-middle" />
+            {activeTenant ? activeTenant.name : "Institutional Workspace"}
           </p>
+
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -313,8 +321,8 @@ export default async function DashboardPage() {
                           drive.status === "REGISTRATION_OPEN"
                             ? "success"
                             : drive.status === "IN_PROGRESS"
-                            ? "default"
-                            : "secondary"
+                              ? "default"
+                              : "secondary"
                         }
                       >
                         {drive.status}

@@ -100,9 +100,18 @@ export default async function StudentDashboardPage() {
               Student Prep
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-text-secondary">
+          {/* <p className="text-xs sm:text-sm text-text-secondary">
             &bull; {profile.activeMembership?.tenants?.name || "Campus Placement Portal"} 
+          </p> */}
+
+          <p className="text-xs sm:text-sm text-text-secondary">
+            <Sparkles
+              className="inline-block h-4 w-4 mr-1 text-teal-600 align-middle"
+              aria-hidden="true"
+            />
+            {profile.activeMembership?.tenants?.name || "Campus Placement Portal"}
           </p>
+
         </div>
 
         <div className="flex items-center gap-3">

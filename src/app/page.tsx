@@ -178,7 +178,7 @@ export default function HomePage() {
             </p>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            {/* <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
 
               <Button
                 asChild
@@ -191,7 +191,7 @@ export default function HomePage() {
                   <span>Student Practice Portal</span>
                 </Link>
               </Button>
-            </div>
+            </div> */}
           </div>
 
           {/* Viewport Anchor: 4 Pillar Proof Card */}
