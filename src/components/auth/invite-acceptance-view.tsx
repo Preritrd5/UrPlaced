@@ -26,6 +26,9 @@ interface InviteState {
 
 export function InviteAcceptanceView({ token }: { token: string }) {
   const router = useRouter();
+  const cleanToken = React.useMemo(() => {
+    return token ? decodeURIComponent(token.trim()).trim() : "";
+  }, [token]);
 
   const [state, setState] = React.useState<InviteState>({
     loading: true,
@@ -42,7 +45,7 @@ export function InviteAcceptanceView({ token }: { token: string }) {
   React.useEffect(() => {
     async function verify() {
       try {
-        const res = await fetch(`/api/auth/invite?token=${encodeURIComponent(token)}`);
+        const res = await fetch(`/api/auth/invite?token=${encodeURIComponent(cleanToken)}`);
         const json = await res.json();
         if (json.valid) {
           setState({
@@ -75,7 +78,7 @@ export function InviteAcceptanceView({ token }: { token: string }) {
       }
     }
     verify();
-  }, [token]);
+  }, [cleanToken]);
 
   const roleTitle =
     state.role === "TRAINER"
@@ -108,7 +111,7 @@ export function InviteAcceptanceView({ token }: { token: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token,
+          token: cleanToken,
           fullName: fullName.trim(),
           password,
         }),
@@ -149,7 +152,7 @@ export function InviteAcceptanceView({ token }: { token: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token,
+          token: cleanToken,
           fullName: fullName.trim() || state.currentUserName,
         }),
       });
@@ -198,7 +201,7 @@ export function InviteAcceptanceView({ token }: { token: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token,
+          token: cleanToken,
         }),
       });
 

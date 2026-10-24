@@ -286,6 +286,43 @@ describe("Staff & Members Secure Invitation & Onboarding Workflow", () => {
       expect(resolved.isValid).toBe(false);
       expect(resolved.error).toContain("revoked");
     });
+
+    it("resolves token with URL-encoding and whitespace padding", async () => {
+      const email = "url.encoded@campus.edu";
+      const created = await createInvitation({
+        tenantId,
+        tenantName: "Sapthagiri NPS University",
+        email,
+        role: "PLACEMENT_STAFF",
+        createdBy: inviterId,
+      });
+
+      // Simulate browser passing URL-encoded token with whitespace
+      const encodedToken = `  ${encodeURIComponent(created.rawToken)}  `;
+      const resolved = await getInvitationByToken(encodedToken);
+      expect(resolved.isValid).toBe(true);
+      expect(resolved.invitation?.email).toBe(email);
+      expect(resolved.tenantName).toBe("Sapthagiri NPS University");
+    });
+
+    it("handles non-UUID tenant identifiers without database syntax crash", async () => {
+      const nonUuidTenantId = "tenant-adminsnpsueduin";
+      const email = "nonuuid.tenant@snpsu.edu.in";
+
+      const created = await createInvitation({
+        tenantId: nonUuidTenantId,
+        tenantName: "Sapthagiri NPS University",
+        email,
+        role: "TRAINER",
+        createdBy: inviterId,
+      });
+
+      expect(created.invitation.tenant_id).toBe(nonUuidTenantId);
+      const resolved = await getInvitationByToken(created.rawToken);
+      expect(resolved.isValid).toBe(true);
+      expect(resolved.invitation?.email).toBe(email);
+      expect(resolved.tenantName).toBe("Sapthagiri NPS University");
+    });
   });
 
   describe("4. Invitation Acceptance & Multi-Tenant Binding", () => {
@@ -407,11 +444,22 @@ describe("Staff & Members Secure Invitation & Onboarding Workflow", () => {
 
   describe("6. Email Adapter Resend Integration & Honest Delivery Reporting", () => {
     it("resolves APP_BASE_URL and trims trailing slashes", () => {
+      const origBase = process.env.APP_BASE_URL;
+      const origNextPublic = process.env.NEXT_PUBLIC_APP_URL;
+      const origAppUrl = process.env.APP_URL;
+
       process.env.APP_BASE_URL = "https://urplaced.campus.edu///";
       expect(EmailAdapter.getAppOrigin()).toBe("https://urplaced.campus.edu");
+
       delete process.env.APP_BASE_URL;
+      delete process.env.NEXT_PUBLIC_APP_URL;
+      delete process.env.APP_URL;
 
       expect(EmailAdapter.getAppOrigin()).toBe("http://localhost:3000");
+
+      if (origBase !== undefined) process.env.APP_BASE_URL = origBase;
+      if (origNextPublic !== undefined) process.env.NEXT_PUBLIC_APP_URL = origNextPublic;
+      if (origAppUrl !== undefined) process.env.APP_URL = origAppUrl;
     });
 
     it("resolves verified sender from RESEND_FROM_EMAIL", () => {

@@ -9,15 +9,16 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const token = request.nextUrl.searchParams.get("token");
+  const rawToken = request.nextUrl.searchParams.get("token");
 
-  if (!token) {
+  if (!rawToken || !rawToken.trim()) {
     return NextResponse.json(
       { valid: false, error: "Missing invitation token." },
       { status: 400 }
     );
   }
 
+  const token = decodeURIComponent(rawToken.trim()).trim();
   const result = await getInvitationByToken(token);
   if (!result.isValid || !result.invitation) {
     return NextResponse.json(
@@ -83,15 +84,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token, fullName, password } = body;
+    const { token: rawToken, fullName, password } = body;
 
-    if (!token) {
+    if (!rawToken || typeof rawToken !== "string" || !rawToken.trim()) {
       return NextResponse.json(
         { success: false, error: "Invitation token is required." },
         { status: 400 }
       );
     }
 
+    const token = decodeURIComponent(rawToken.trim()).trim();
     const { isValid, error, invitation } = await getInvitationByToken(token);
     if (!isValid || !invitation) {
       return NextResponse.json(
@@ -161,21 +163,40 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Verify password using a transient client
-        const supabase = await createClient();
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: invitation.email,
-          password,
-        });
-
-        if (signInError || !signInData.user) {
-          return NextResponse.json(
-            { success: false, error: "Invalid password for this account. Please verify your credentials." },
-            { status: 401 }
-          );
+        // If the user has never signed in before, activate and update their password directly
+        if (!existingUser.last_sign_in_at) {
+          try {
+            await admin.auth.admin.updateUserById(existingUser.id, {
+              password,
+              email_confirm: true,
+              user_metadata: {
+                ...(existingUser.user_metadata || {}),
+                ...(fullName ? { full_name: fullName.trim() } : {}),
+              },
+            });
+            targetUserId = existingUser.id;
+          } catch {
+            // Fall through to regular sign-in verification
+          }
         }
 
-        targetUserId = signInData.user.id;
+        if (!targetUserId) {
+          // Verify password using transient client
+          const supabase = await createClient();
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: invitation.email,
+            password,
+          });
+
+          if (signInError || !signInData.user) {
+            return NextResponse.json(
+              { success: false, error: "Invalid password for this account. Please verify your credentials." },
+              { status: 401 }
+            );
+          }
+
+          targetUserId = signInData.user.id;
+        }
       } else {
         // Case A: New user
         if (!password) {
@@ -192,20 +213,25 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        const institutionName = (invitation as any).tenant_name || "Sapthagiri NPS University";
+
         const { data: newUserData, error: createError } = await admin.auth.admin.createUser({
           email: invitation.email,
           password,
           email_confirm: true,
           user_metadata: {
-            full_name: fullName || "",
+            full_name: fullName ? fullName.trim() : "",
             role: invitation.role,
             account_category: "COLLEGE",
             tenant_id: invitation.tenant_id,
+            institution_name: institutionName,
+            institutionName: institutionName,
           },
           app_metadata: {
             role: invitation.role,
             account_category: "COLLEGE",
             tenant_id: invitation.tenant_id,
+            institution_name: institutionName,
             verified_by_server: true,
           },
         });
@@ -233,17 +259,19 @@ export async function POST(request: NextRequest) {
       rawToken: token,
       userId: targetUserId,
       userEmail: invitation.email,
-      fullName,
+      fullName: fullName ? fullName.trim() : undefined,
     });
 
     return NextResponse.json({
       success: true,
       role: acceptResult.role,
       tenantId: acceptResult.tenantId,
+      email: invitation.email,
     });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to accept invitation.";
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to process invitation acceptance." },
+      { status: 500 }
+    );
   }
 }
-

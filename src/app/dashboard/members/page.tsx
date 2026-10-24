@@ -151,6 +151,7 @@ export default async function TenantMembersPage({
     try {
       const result = await createInvitation({
         tenantId: actionTenantId,
+        tenantName: actionTenantName,
         email,
         role,
         createdBy: sessionProfile.id,
@@ -214,6 +215,7 @@ export default async function TenantMembersPage({
       const result = await resendInvitation({
         invitationId,
         tenantId: actionTenantId,
+        tenantName: actionTenantName,
         actorUserId: sessionProfile.id,
       });
 

@@ -8,7 +8,8 @@ export default async function CollegeInviteTokenPage({
 }: {
   params: Promise<{ token: string }>;
 }) {
-  const { token } = await params;
+  const resolved = await params;
+  const token = decodeURIComponent(resolved?.token || "").trim();
   return (
     <SimpleAuthCard>
       <InviteAcceptanceView token={token} />
