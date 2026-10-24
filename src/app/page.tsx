@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -36,9 +37,11 @@ export default function HomePage() {
 
           {/* Brand - Left Corner */}
           <Link href="/" className="flex items-center gap-3 group shrink-0">
-            <div className="h-11 w-11 rounded-xl bg-primary-gradient flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform">
-              UP
-            </div>
+            <UrPlacedLogo
+              size="lg"
+              priority
+              className="h-11 w-11 group-hover:scale-105 transition-transform"
+            />
             <span className="font-heading font-extrabold text-2xl tracking-tight text-slate-900 leading-none">
               UrPlaced
             </span>
@@ -489,9 +492,7 @@ export default function HomePage() {
             {/* Brand Column */}
             <div className="col-span-2 md:col-span-1 space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-base shadow-sm shadow-cyan-500/20">
-                  UP
-                </div>
+                <UrPlacedLogo size="md" className="h-9 w-9" />
                 <span className="font-heading font-bold text-xl text-slate-100">
                   UrPlaced
                 </span>
@@ -513,11 +514,11 @@ export default function HomePage() {
                 College Platform
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/college/signin?next=/dashboard" className="hover:text-cyan-400 transition-colors">Placement Command Center</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/students" className="hover:text-cyan-400 transition-colors">Student Roster Management</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/companies" className="hover:text-cyan-400 transition-colors">Company Directory</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/drives" className="hover:text-cyan-400 transition-colors">Recruitment Drives</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/questions" className="hover:text-cyan-400 transition-colors">QuestionBank Sentinel</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Placement Command Center</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Student Roster Management</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Company Directory</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Recruitment Drives</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">QuestionBank Sentinel</Link></li>
               </ul>
             </div>
 
@@ -527,23 +528,10 @@ export default function HomePage() {
                 Student Preparation
               </div>
               <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/signin?next=/dashboard/student/assessments" className="hover:text-cyan-400 transition-colors">Assessment Engine</Link></li>
-                <li><Link href="/auth/signin?next=/dashboard/student/mistakes" className="hover:text-cyan-400 transition-colors">Mistake Bank</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/training" className="hover:text-cyan-400 transition-colors">Targeted Interventions</Link></li>
-                <li><Link href="/auth/college/signin?next=/dashboard/memory" className="hover:text-cyan-400 transition-colors">Placement Memory</Link></li>
-              </ul>
-            </div>
-
-            {/* Portals & Access Column */}
-            <div className="space-y-3">
-              <div className="font-bold text-slate-100 uppercase tracking-wider text-xs font-mono">
-                Portals &amp; Access
-              </div>
-              <ul className="space-y-2.5 text-xs sm:text-sm">
-                <li><Link href="/auth/signup" className="hover:text-cyan-400 transition-colors">Student Registration</Link></li>
-                <li><Link href="/auth/signin" className="hover:text-cyan-400 transition-colors">Student Sign In</Link></li>
-                <li><Link href="/auth/college/signup" className="hover:text-cyan-400 transition-colors">Register College / Cell</Link></li>
-                <li><Link href="/auth/college/signin" className="hover:text-cyan-400 transition-colors">College Portal Sign In</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Assessment Engine</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Mistake Bank</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Targeted Interventions</Link></li>
+                <li><Link href="#" className="hover:text-cyan-400 transition-colors">Placement Memory</Link></li>
               </ul>
             </div>
           </div>

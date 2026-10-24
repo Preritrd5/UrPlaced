@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
+import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import {
   getAuthorizedNavigation,
   getRoleDefaultDashboard,
@@ -61,9 +62,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Mobile Header Bar */}
       <header className="md:hidden flex items-center justify-between h-16 px-4 bg-card border-b border-border sticky top-0 z-40">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary-gradient flex items-center justify-center text-white font-bold text-sm shadow-sm">
-            UP
-          </div>
+          <UrPlacedLogo size="sm" className="h-8 w-8" />
           <span className="font-heading font-bold text-lg text-text-primary">
             UrPlaced
           </span>
@@ -106,9 +105,7 @@ export function AppShell({ children }: AppShellProps) {
         {/* Brand Header */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-border">
           <Link href={defaultDashboard} className="flex items-center gap-2.5 min-w-0">
-            <div className="h-9 w-9 rounded-lg bg-primary-gradient flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0">
-              UP
-            </div>
+            <UrPlacedLogo size="md" className="h-9 w-9 shrink-0" />
             <div className="min-w-0 flex-1">
               <span className="font-heading font-bold text-lg tracking-tight text-text-primary block leading-none truncate">
                 UrPlaced

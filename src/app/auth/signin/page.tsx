@@ -3,12 +3,50 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogIn, GraduationCap, Building2, ArrowRight, AlertCircle, ShieldAlert } from "lucide-react";
+import {
+  LogIn,
+  Clock,
+  TrendingUp,
+  Briefcase,
+  ShieldCheck,
+  ShieldAlert,
+  ArrowRight,
+  GraduationCap,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SplitAuthCard, type FeatureHighlight } from "@/components/auth/split-auth-card";
+import { PasswordField } from "@/components/auth/password-field";
+
+const studentSignInFeatures: FeatureHighlight[] = [
+  {
+    icon: Clock,
+    tint: "rose",
+    title: "Timed Full-Length Mock Exams",
+    description: "Company-aligned test patterns, negative marking options, and real-time score tracking.",
+  },
+  {
+    icon: TrendingUp,
+    tint: "cyan",
+    title: "Instant Accuracy & Mistake Analytics",
+    description: "Structured error logging, cognitive classification, and spaced repetition schedules.",
+  },
+  {
+    icon: Briefcase,
+    tint: "amber",
+    title: "Target Drive Recruitment Intelligence",
+    description: "Past campus cutoffs, company-specific syllabus coverage, and candidate debriefs.",
+  },
+  {
+    icon: ShieldCheck,
+    tint: "indigo",
+    title: "Verified Skill & Readiness Credentials",
+    description: "Institutional readiness scores visible directly to verified campus placement coordinators.",
+  },
+];
 
 function StudentSignInContent() {
   const router = useRouter();
@@ -45,7 +83,6 @@ function StudentSignInContent() {
         const metaCategory = appMeta.account_category || userMeta.account_category;
         const metaRole = appMeta.role || userMeta.role;
 
-        // Check authoritative context via /api/auth/context
         let authoritativeCategory = metaCategory;
         try {
           const ctxRes = await fetch("/api/auth/context");
@@ -91,115 +128,128 @@ function StudentSignInContent() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2 text-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--color-primary-subtle)] text-primary text-xs font-semibold">
-          <GraduationCap className="h-4 w-4" />
-          <span>Student Portal</span>
-        </div>
-        <h2 className="text-2xl font-bold font-heading text-text-primary">
-          Student Sign In
-        </h2>
-        <p className="text-xs text-text-secondary">
-          Enter your student credentials to access your personal placement preparation workspace.
-        </p>
-      </div>
-
-      {/* URL alerts */}
-      {searchParams.get("registered") === "true" && (
-        <Alert variant="success">
-          <AlertTitle>Registration Successful</AlertTitle>
-          <AlertDescription>
-            Your student account has been created. Please sign in with your credentials.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {searchParams.get("error") === "verification_failed" && (
-        <Alert variant="warning">
-          <AlertTitle>Verification Notice</AlertTitle>
-          <AlertDescription>
-            The verification code was invalid or has expired. Please try signing in again.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {errorMsg && (
-        <Alert variant="destructive">
-          <AlertTitle className="flex items-center gap-1.5">
-            <ShieldAlert className="h-4 w-4" /> Access Restricted
-          </AlertTitle>
-          <AlertDescription>{errorMsg}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Form */}
-      <form onSubmit={handleSignIn} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="email" required>
-            Student Email
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="student@campus.edu"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isLoading}
-          />
+    <SplitAuthCard
+      badgeText="• Student Member Sign In"
+      subtitle="CAMPUS PLACEMENT PLATFORM"
+      headline="Your Placement Preparation Starts Here"
+      description="Access your real-time mock test roster across company patterns, review instant mistake remediation, and track your campus placement readiness."
+      features={studentSignInFeatures}
+      footerLeft="UrPlaced 2026 Academic Session"
+      footerRight="Student Portal"
+    >
+      <div className="space-y-6">
+        {/* Form Header */}
+        <div className="space-y-1">
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
+            Student Sign In
+          </h2>
+          <p className="text-sm text-slate-500">
+            Enter your registered email address &amp; password.
+          </p>
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" required>
-              Password
+        {/* URL Alerts */}
+        {searchParams.get("registered") === "true" && (
+          <Alert variant="success">
+            <AlertTitle>Registration Successful</AlertTitle>
+            <AlertDescription>
+              Your student account has been created. Please sign in with your credentials.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {searchParams.get("error") === "verification_failed" && (
+          <Alert variant="warning">
+            <AlertTitle>Verification Notice</AlertTitle>
+            <AlertDescription>
+              The verification code was invalid or has expired. Please try signing in again.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {errorMsg && (
+          <Alert variant="destructive">
+            <AlertTitle className="flex items-center gap-1.5">
+              <ShieldAlert className="h-4 w-4" /> Access Restricted
+            </AlertTitle>
+            <AlertDescription>{errorMsg}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Sign In Form */}
+        <form onSubmit={handleSignIn} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+              Registered Email Address
             </Label>
-            <Link
-              href="/auth/forgot-password"
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              Forgot password?
-            </Link>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="e.g. student@university.edu or student@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isLoading}
+              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
           </div>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isLoading}
-          />
-        </div>
 
-        <Button
-          type="submit"
-          variant="primary"
-          className="w-full mt-2"
-          isLoading={isLoading}
-        >
-          <LogIn className="h-4 w-4 mr-2" /> Sign In as Student
-        </Button>
-      </form>
+          <div className="space-y-1">
+            <PasswordField
+              id="password"
+              label="Password"
+              required
+              autoComplete="current-password"
+              placeholder="Enter account password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+            />
+            <div className="flex justify-end pt-0.5">
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          </div>
 
-      {/* Navigation & Portal Switching */}
-      <div className="pt-4 border-t border-border space-y-3 text-center">
-        <p className="text-xs text-text-secondary">
-          Don&apos;t have a Student account yet?{" "}
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
+            isLoading={isLoading}
+          >
+            <LogIn className="h-4 w-4 mr-2" /> Sign In to Student Portal
+          </Button>
+        </form>
+
+        {/* Secondary Account Creation Action */}
+        <div className="pt-2">
           <Link
             href="/auth/signup"
-            className="font-semibold text-primary hover:underline ml-1"
+            className="w-full h-11 rounded-xl bg-[#FFF8EE] hover:bg-[#FFF2DE] border border-[#FDE6C8] text-slate-800 text-sm font-medium transition-all flex items-center justify-center gap-1 shadow-sm"
           >
-            Create an Account
+            <span>New student?</span>
+            <span className="font-bold text-primary">Create Account (Sign Up) &rarr;</span>
           </Link>
-        </p>
+        </div>
 
+        {/* Alternative Role Switcher & Back to Home */}
+        <div className="pt-3 border-t border-slate-100 space-y-2 text-center">
+          <div>
+            <Link
+              href="/"
+              className="text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors inline-block pt-1"
+            >
+              &larr; Back to Home Page
+            </Link>
+          </div>
+        </div>
       </div>
-    </div>
+    </SplitAuthCard>
   );
 }
 
@@ -207,8 +257,8 @@ export default function StudentSignInPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="py-8 text-center text-xs text-text-muted">
-          Loading student sign in...
+        <div className="py-16 text-center text-xs text-text-muted font-mono">
+          Loading student portal sign in...
         </div>
       }
     >

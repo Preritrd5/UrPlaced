@@ -3,12 +3,50 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogIn, Building2, GraduationCap, ArrowRight, AlertCircle, ShieldAlert } from "lucide-react";
+import {
+  LogIn,
+  Building2,
+  Users,
+  Briefcase,
+  GraduationCap,
+  ShieldCheck,
+  ShieldAlert,
+  ArrowRight,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SplitAuthCard, type FeatureHighlight } from "@/components/auth/split-auth-card";
+import { PasswordField } from "@/components/auth/password-field";
+
+const collegeSignInFeatures: FeatureHighlight[] = [
+  {
+    icon: Users,
+    tint: "cyan",
+    title: "Student Directory & Eligibility Roster",
+    description: "Manage verified student profiles, track batch academic performance, and filter drive eligibility.",
+  },
+  {
+    icon: Briefcase,
+    tint: "rose",
+    title: "Recruitment Drive Pipelines",
+    description: "Schedule on-campus and virtual hiring drives, coordinate interview rounds, and log job offers.",
+  },
+  {
+    icon: GraduationCap,
+    tint: "amber",
+    title: "Assessments & Targeted Training",
+    description: "Deploy mock exams, monitor student accuracy trends, and assign faculty coordinators.",
+  },
+  {
+    icon: ShieldCheck,
+    tint: "indigo",
+    title: "Placement Memory & Institutional Analytics",
+    description: "Retain institutional recruitment intelligence, historical packages, and placement audit reports.",
+  },
+];
 
 function CollegeSignInContent() {
   const router = useRouter();
@@ -45,7 +83,6 @@ function CollegeSignInContent() {
         const metaCategory = appMeta.account_category || userMeta.account_category;
         const metaRole = appMeta.role || userMeta.role;
 
-        // Check authoritative context via /api/auth/context
         let authoritativeCategory = metaCategory;
         let authoritativeRole = metaRole;
         try {
@@ -71,16 +108,8 @@ function CollegeSignInContent() {
           setErrorMsg(
             <div className="space-y-2">
               <p>
-                This sign-in portal is exclusively for <strong>College / Cell</strong> staff. Your account is registered as a <strong>Student</strong>.
+                This sign-in portal is exclusively for <strong>Placement Cell</strong> staff and trainers. Your account is registered as a <strong>Student</strong>.
               </p>
-              <div className="pt-1">
-                <Link
-                  href={`/auth/signin?email=${encodeURIComponent(email)}`}
-                  className="inline-flex items-center gap-1 font-semibold text-primary underline hover:text-[var(--color-primary-hover)]"
-                >
-                  Sign In to Student Portal <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
             </div>
           );
           setIsLoading(false);
@@ -101,121 +130,114 @@ function CollegeSignInContent() {
         router.refresh();
       }
     } catch {
-      setErrorMsg("An unexpected error occurred during sign-in. Please try again.");
+      setErrorMsg("An unexpected error occurred during institutional sign-in. Please try again.");
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2 text-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[rgba(46,143,134,0.12)] text-secondary text-xs font-semibold">
-          <Building2 className="h-4 w-4" />
-          <span>Placement Cell Portal</span>
-        </div>
-        <h2 className="text-2xl font-bold font-heading text-text-primary">
-          Placement Cell Sign In
-        </h2>
-        <p className="text-xs text-text-secondary">
-          Enter your institutional credentials to access your placement operations and student tracking workspace.
-        </p>
-      </div>
-
-      {/* URL alerts */}
-      {searchParams.get("registered") === "true" && (
-        <Alert variant="success">
-          <AlertTitle>Registration Successful</AlertTitle>
-          <AlertDescription>
-            Your college workspace has been initialized. Please sign in with your credentials.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {searchParams.get("error") === "verification_failed" && (
-        <Alert variant="warning">
-          <AlertTitle>Verification Notice</AlertTitle>
-          <AlertDescription>
-            The verification code was invalid or has expired. Please try signing in again.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {errorMsg && (
-        <Alert variant="destructive">
-          <AlertTitle className="flex items-center gap-1.5">
-            <ShieldAlert className="h-4 w-4" /> Access Restricted
-          </AlertTitle>
-          <AlertDescription>{errorMsg}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Form */}
-      <form onSubmit={handleSignIn} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="email" required>
-            Institutional Email
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="placement.officer@college.edu"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isLoading}
-          />
+    <SplitAuthCard
+      badgeText="• Institutional Cell Workspace"
+      subtitle="INSTITUTIONAL PLACEMENT SUITE"
+      headline="Placement Management, Connected"
+      description="Coordinate recruitment drives, manage authorized student rosters, verify eligibility cutoffs, and access institutional placement intelligence."
+      features={collegeSignInFeatures}
+      footerLeft="UrPlaced Multi-Tenant V1.0"
+      footerRight="College / Cell Portal"
+    >
+      <div className="space-y-6">
+        {/* Form Header */}
+        <div className="space-y-1">
+          <h2 className="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
+            Sign In to Your Placement Cell Workspace
+          </h2>
+          <p className="text-sm text-slate-500">
+            Institutional access requires verified membership credentials.
+          </p>
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" required>
-              Password
+        {/* URL Alerts */}
+        {searchParams.get("registered") === "true" && (
+          <Alert variant="success">
+            <AlertTitle>Registration Successful</AlertTitle>
+            <AlertDescription>
+              Your College Placement Workspace has been Registered... Please sign in with your credentials...
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {errorMsg && (
+          <Alert variant="destructive">
+            <AlertTitle className="flex items-center gap-1.5">
+              <ShieldAlert className="h-4 w-4" /> Access Restricted
+            </AlertTitle>
+            <AlertDescription>{errorMsg}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSignIn} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+              Institutional Email Address
             </Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="e.g. head.placement@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isLoading}
+              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <PasswordField
+              id="password"
+              label="Password"
+              required
+              autoComplete="current-password"
+              placeholder="Enter institutional password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+            />
+            <div className="flex justify-end pt-0.5">
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
+            isLoading={isLoading}
+          >
+            <LogIn className="h-4 w-4 mr-2" /> Sign In to Placement Cell
+          </Button>
+        </form>
+
+        {/* Alternative Role Switcher & Back to Home */}
+        <div className="pt-3 border-t border-slate-100 space-y-2 text-center">
+          <div>
             <Link
-              href="/auth/forgot-password"
-              className="text-xs font-medium text-primary hover:underline"
+              href="/"
+              className="text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors inline-block pt-1"
             >
-              Forgot password?
+              &larr; Back to Home Page
             </Link>
           </div>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isLoading}
-          />
         </div>
-
-        <Button
-          type="submit"
-          variant="primary"
-          className="w-full mt-2"
-          isLoading={isLoading}
-        >
-          <LogIn className="h-4 w-4 mr-2" /> Sign In to College Workspace
-        </Button>
-      </form>
-
-      {/* Navigation & Portal Switching */}
-      {/* <div className="pt-4 border-t border-border space-y-3 text-center">
-        <p className="text-xs text-text-secondary">
-          Need to register your institution?{" "}
-          <Link
-            href="/auth/college/signup"
-            className="font-semibold text-primary hover:underline ml-1"
-          >
-            Register College / Cell
-          </Link>
-        </p>
-      </div> */}
-
-    </div>
+      </div>
+    </SplitAuthCard>
   );
 }
 
@@ -223,8 +245,8 @@ export default function CollegeSignInPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="py-8 text-center text-xs text-text-muted">
-          Loading college sign in...
+        <div className="py-16 text-center text-xs text-text-muted font-mono">
+          Loading institutional portal sign in...
         </div>
       }
     >
