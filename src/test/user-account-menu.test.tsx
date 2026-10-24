@@ -38,16 +38,16 @@ describe("Global Profile/Avatar Icon & Account Menu System", () => {
 
       // College / Cell internal roles
       expect(formatUserRoleTitle("COLLEGE", "PLACEMENT_HEAD")).toBe(
-        "College / Cell · Placement Head"
+        "College · Placement Head"
       );
       expect(formatUserRoleTitle("COLLEGE", "PLACEMENT_STAFF")).toBe(
-        "College / Cell · Placement Staff"
+        "College · Placement Staff"
       );
       expect(formatUserRoleTitle("COLLEGE", "TRAINER")).toBe(
-        "College / Cell · Trainer"
+        "College · Trainer"
       );
       expect(formatUserRoleTitle("COLLEGE", undefined)).toBe(
-        "College / Cell · Placement Head"
+        "College · Placement Head"
       );
     });
 
@@ -182,7 +182,7 @@ describe("Global Profile/Avatar Icon & Account Menu System", () => {
         expect(screen.getByText("Dr. Ramesh Rao")).toBeInTheDocument();
         expect(screen.getByText("head@rvce.edu")).toBeInTheDocument();
         expect(
-          screen.getByText("College / Cell · Placement Head")
+          screen.getByText("College · Placement Head")
         ).toBeInTheDocument();
         expect(screen.getByText(/RV College of Engineering/)).toBeInTheDocument();
       });

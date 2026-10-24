@@ -420,7 +420,7 @@ export default function MyProfilePage() {
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 font-medium">
-                <Building2 className="h-3.5 w-3.5" /> College / Cell &bull; {roleTitle}
+                <Building2 className="h-3.5 w-3.5" /> Placement Cell &bull; {roleTitle}
               </span>
             )}
           </Badge>

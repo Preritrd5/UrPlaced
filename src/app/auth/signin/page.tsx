@@ -71,16 +71,8 @@ function StudentSignInContent() {
           setErrorMsg(
             <div className="space-y-2">
               <p>
-                This sign-in portal is exclusively for <strong>Students</strong>. Your account is registered under <strong>College / Cell</strong>.
+                This sign-in portal is exclusively for <strong>Students</strong>. Your account is registered under <strong>Placement Cell</strong>.
               </p>
-              <div className="pt-1">
-                <Link
-                  href={`/auth/college/signin?email=${encodeURIComponent(email)}`}
-                  className="inline-flex items-center gap-1 font-semibold text-primary underline hover:text-[var(--color-primary-hover)]"
-                >
-                  Sign In to College Portal <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
             </div>
           );
           setIsLoading(false);

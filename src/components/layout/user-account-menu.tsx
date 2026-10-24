@@ -34,9 +34,9 @@ export interface UserAccountMenuProps {
 /**
  * Returns formatted role display title matching UrPlaced security and portal specification:
  * - Student
- * - College / Cell · Placement Head
- * - College / Cell · Placement Staff
- * - College / Cell · Trainer
+ * - College · Placement Head
+ * - College · Placement Staff
+ * - College · Trainer
  */
 export function formatUserRoleTitle(
   accountCategory: string | null | undefined,
@@ -47,13 +47,13 @@ export function formatUserRoleTitle(
   }
   switch (role) {
     case "PLACEMENT_HEAD":
-      return "College / Cell · Placement Head";
+      return "College · Placement Head";
     case "PLACEMENT_STAFF":
-      return "College / Cell · Placement Staff";
+      return "College · Placement Staff";
     case "TRAINER":
-      return "College / Cell · Trainer";
+      return "College · Trainer";
     default:
-      return "College / Cell · Placement Head";
+      return "College · Placement Head";
   }
 }
 

@@ -112,10 +112,10 @@ function CollegeSignInContent() {
       <div className="space-y-2 text-center">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[rgba(46,143,134,0.12)] text-secondary text-xs font-semibold">
           <Building2 className="h-4 w-4" />
-          <span>College / Cell Portal</span>
+          <span>Placement Cell Portal</span>
         </div>
         <h2 className="text-2xl font-bold font-heading text-text-primary">
-          College / Placement Cell Sign In
+          Placement Cell Sign In
         </h2>
         <p className="text-xs text-text-secondary">
           Enter your institutional credentials to access your placement operations and student tracking workspace.

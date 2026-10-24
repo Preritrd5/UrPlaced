@@ -152,9 +152,6 @@ export default function HomePage() {
         )}
       </header>
 
-
-
-
       {/* 2. Expanded Hero Section (Fills Viewport Naturally) */}
       <section className="relative min-h-[calc(100vh-5rem)] flex flex-col justify-between py-10 md:py-16 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full my-auto">

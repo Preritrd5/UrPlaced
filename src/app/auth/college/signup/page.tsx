@@ -109,7 +109,7 @@ function CollegeSignUpContent() {
       <div className="space-y-2 text-center">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[rgba(46,143,134,0.12)] text-secondary text-xs font-semibold">
           <Building2 className="h-4 w-4" />
-          <span>College / Cell Portal</span>
+          <span>Placement Cell Portal</span>
         </div>
         <h2 className="text-2xl font-bold font-heading text-text-primary">
           Register Your Placement Cell
@@ -222,7 +222,7 @@ function CollegeSignUpContent() {
           className="w-full mt-2"
           isLoading={isLoading}
         >
-          <UserPlus className="h-4 w-4 mr-2" /> Register College / Cell
+          <UserPlus className="h-4 w-4 mr-2" /> Register Placement Cell
         </Button>
       </form>
 

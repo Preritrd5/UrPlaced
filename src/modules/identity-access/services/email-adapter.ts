@@ -1,8 +1,10 @@
 /**
  * Email Delivery Adapter
  * Provides server-side transactional email abstractions for invitations,
- * password resets, and verification notices.
+ * password resets, and verification notices using the Resend API.
  */
+
+import https from "https";
 
 export interface SendInvitationEmailParams {
   toEmail: string;
@@ -10,6 +12,7 @@ export interface SendInvitationEmailParams {
   role: string;
   inviteUrl: string;
   inviterName?: string;
+  expiresInHours?: number;
 }
 
 export interface SendPasswordResetParams {
@@ -26,47 +29,320 @@ export interface EmailDeliveryResult {
   success: boolean;
   messageId?: string;
   error?: string;
+  deliveryMethod: "LIVE_PROVIDER" | "LOCAL_DEV_SINK" | "UNCONFIGURED";
+}
+
+/**
+ * Escapes dynamic strings for safe embedding into HTML email templates.
+ */
+function escapeHtml(text: string): string {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export class EmailAdapter {
-  private static getAppOrigin(): string {
-    return (
+  /**
+   * Resolves the canonical application base URL for generating recipient-accessible links.
+   * Priority: APP_BASE_URL > NEXT_PUBLIC_APP_URL > APP_URL > http://localhost:3000
+   */
+  public static getAppOrigin(): string {
+    const raw =
+      process.env.APP_BASE_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
       process.env.APP_URL ||
-      "http://localhost:3000"
-    );
+      "http://localhost:3000";
+
+    const trimmed = raw.trim().replace(/\/+$/, "");
+
+    // Basic URL validation
+    try {
+      new URL(trimmed);
+      return trimmed;
+    } catch {
+      return "http://localhost:3000";
+    }
   }
 
   /**
-   * Dispatches an invitation email to a candidate, staff, or faculty member.
+   * Resolves the verified sender address for Resend.
+   * Priority: RESEND_FROM_EMAIL > EMAIL_FROM > UrPlaced <onboarding@resend.dev>
+   */
+  public static getSenderEmail(): string {
+    const configured = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM;
+    if (configured && configured.trim().length > 0) {
+      return configured.trim();
+    }
+    // Default testing sender provided by Resend for accounts without custom verified domains
+    return "UrPlaced <onboarding@resend.dev>";
+  }
+
+  /**
+   * Generates a branded, responsive HTML template for institutional staff invitations.
+   */
+  private static generateInvitationHtml(params: SendInvitationEmailParams): string {
+    const roleTitle =
+      params.role === "TRAINER"
+        ? "Faculty / Training Specialist"
+        : params.role === "PLACEMENT_STAFF"
+        ? "Placement Officer"
+        : params.role;
+
+    const safeTenant = escapeHtml(params.tenantName);
+    const safeRole = escapeHtml(roleTitle);
+    const safeEmail = escapeHtml(params.toEmail);
+    const safeUrl = escapeHtml(params.inviteUrl);
+    const expiryText = params.expiresInHours ? `${params.expiresInHours} hours` : "72 hours";
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitation to Join ${safeTenant}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #EDECE7; margin: 0; padding: 40px 16px; color: #24283A;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #F8F7F3; border-radius: 16px; border: 1px solid #DDDCD5; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(36, 40, 58, 0.07);">
+    <!-- Header Banner -->
+    <tr>
+      <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #DDDCD5;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #7779D8 0%, #5052C9 100%); color: #ffffff; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 20px; letter-spacing: -0.5px;">
+          UrPlaced
+        </div>
+        <p style="margin: 8px 0 0; font-size: 12px; color: #747683; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
+          Multi-College Placement Preparation SaaS
+        </p>
+      </td>
+    </tr>
+
+    <!-- Main Body -->
+    <tr>
+      <td style="padding: 32px;">
+        <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 700; color: #24283A;">
+          You're invited to join ${safeTenant}
+        </h1>
+        <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #292D40;">
+          The Placement Cell administrator has authorized institutional access for you on UrPlaced as a <strong>${safeRole}</strong>.
+        </p>
+
+        <!-- Role & Tenant Card -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FBFAF7; border: 1px solid #DDDCD5; border-radius: 8px; margin-bottom: 24px; padding: 16px;">
+          <tr>
+            <td style="font-size: 13px; color: #747683; padding: 4px 8px;">Institution:</td>
+            <td style="font-size: 13px; font-weight: 600; color: #24283A; padding: 4px 8px;">${safeTenant}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 13px; color: #747683; padding: 4px 8px;">Assigned Role:</td>
+            <td style="font-size: 13px; font-weight: 600; color: #2E8F86; padding: 4px 8px;">${safeRole}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 13px; color: #747683; padding: 4px 8px;">Bound Email:</td>
+            <td style="font-size: 13px; font-weight: 600; color: #24283A; font-family: monospace; padding: 4px 8px;">${safeEmail}</td>
+          </tr>
+        </table>
+
+        <!-- Call to Action Button -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="center">
+              <a href="${safeUrl}" target="_blank" style="display: inline-block; background-color: #5052C9; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 14px 28px; border-radius: 8px; box-shadow: 0 2px 4px rgba(80, 82, 201, 0.25);">
+                Accept Invitation &amp; Activate Account
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin: 24px 0 0; font-size: 12px; color: #747683; line-height: 1.5; text-align: center;">
+          This single-use invitation link expires in <strong>${expiryText}</strong>.<br>
+          If you were not expecting this invitation, you may safely disregard this email.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Security Footer -->
+    <tr>
+      <td style="padding: 20px 32px; background-color: #EDECE7; text-align: center; border-top: 1px solid #DDDCD5; font-size: 11px; color: #747683;">
+        Secured with Supabase Authentication &amp; PostgreSQL Kernel Tenant Isolation.<br>
+        UrPlaced Campus Enterprise &copy; 2026
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  }
+
+  /**
+   * Generates a plain-text fallback for email clients that do not render HTML.
+   */
+  private static generateInvitationPlainText(params: SendInvitationEmailParams): string {
+    const roleTitle =
+      params.role === "TRAINER"
+        ? "Faculty / Training Specialist"
+        : params.role === "PLACEMENT_STAFF"
+        ? "Placement Officer"
+        : params.role;
+
+    const expiryText = params.expiresInHours ? `${params.expiresInHours} hours` : "72 hours";
+
+    return [
+      `You're invited to join ${params.tenantName} on UrPlaced`,
+      `==================================================`,
+      ``,
+      `The Placement Cell administrator has authorized institutional access for you on UrPlaced as a ${roleTitle}.`,
+      ``,
+      `Institution:   ${params.tenantName}`,
+      `Assigned Role: ${roleTitle}`,
+      `Bound Email:   ${params.toEmail}`,
+      ``,
+      `To activate your account and set your password, open the link below:`,
+      params.inviteUrl,
+      ``,
+      `This single-use invitation link expires in ${expiryText}.`,
+      `If you were not expecting this invitation, you may safely disregard this email.`,
+      ``,
+      `UrPlaced Campus Enterprise — Multi-College Placement Preparation SaaS`,
+    ].join("\n");
+  }
+
+  /**
+   * Executes a direct POST to Resend API via Node https with IPv4 enforcement.
+   * This guarantees reliable, sub-second execution without IPv6 dual-stack timeouts on Windows.
+   */
+  private static async postToResend(payload: {
+    apiKey: string;
+    from: string;
+    to: string[];
+    subject: string;
+    html: string;
+    text: string;
+  }): Promise<{ success: boolean; id?: string; error?: string }> {
+    return new Promise((resolve) => {
+      const postData = JSON.stringify({
+        from: payload.from,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+      });
+
+      const options: https.RequestOptions = {
+        hostname: "api.resend.com",
+        port: 443,
+        path: "/emails",
+        method: "POST",
+        family: 4, // Strict IPv4 to eliminate Windows dual-stack connect timeouts
+        timeout: 10000,
+        headers: {
+          Authorization: `Bearer ${payload.apiKey}`,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(postData),
+        },
+      };
+
+      const req = https.request(options, (res) => {
+        let rawBody = "";
+        res.on("data", (chunk) => {
+          rawBody += chunk;
+        });
+        res.on("end", () => {
+          try {
+            const data = JSON.parse(rawBody);
+            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+              resolve({ success: true, id: data.id });
+            } else {
+              const errMsg =
+                data.message || data.error || `Resend HTTP error ${res.statusCode}`;
+              resolve({ success: false, error: errMsg });
+            }
+          } catch {
+            resolve({
+              success: false,
+              error: `Resend HTTP ${res.statusCode}: ${rawBody.slice(0, 120)}`,
+            });
+          }
+        });
+      });
+
+      req.on("error", (err) => {
+        resolve({
+          success: false,
+          error: `Network error connecting to Resend: ${err.message}`,
+        });
+      });
+
+      req.on("timeout", () => {
+        req.destroy();
+        resolve({
+          success: false,
+          error: "Connection to Resend API timed out after 10 seconds.",
+        });
+      });
+
+      req.write(postData);
+      req.end();
+    });
+  }
+
+  /**
+   * Dispatches an invitation email to a staff or faculty member.
+   * Uses Resend transactional API when configured.
    */
   public static async sendInvitation(
     params: SendInvitationEmailParams
   ): Promise<EmailDeliveryResult> {
-    const isProduction = process.env.NODE_ENV === "production";
-    const apiKey = process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY;
+    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
+    const isTestEnvironment =
+      process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
-    if (!apiKey && isProduction) {
-      console.error(
-        "[EmailAdapter Error] Missing email provider credentials in production environment."
-      );
+    // If Resend API key is available, execute real transactional dispatch
+    if (apiKey.length > 0) {
+      const fromEmail = this.getSenderEmail();
+      const subject = `You're invited to join ${params.tenantName} on UrPlaced — College / Cell`;
+      const html = this.generateInvitationHtml(params);
+      const text = this.generateInvitationPlainText(params);
+
+      const resendResult = await this.postToResend({
+        apiKey,
+        from: fromEmail,
+        to: [params.toEmail],
+        subject,
+        html,
+        text,
+      });
+
+      if (!resendResult.success) {
+        return {
+          success: false,
+          deliveryMethod: "UNCONFIGURED",
+          error: resendResult.error || "Email delivery rejected by Resend provider.",
+        };
+      }
+
       return {
-        success: false,
-        error: "Email delivery provider is unconfigured in production.",
+        success: true,
+        messageId: resendResult.id || `resend-${Date.now()}`,
+        deliveryMethod: "LIVE_PROVIDER",
       };
     }
 
-    // Development / Local sink: Log invitation payload cleanly
-    console.log("=================================================");
-    console.log(`[Email Sink - Local Dev] To: ${params.toEmail}`);
-    console.log(`Subject: You have been invited to join ${params.tenantName} on UrPlaced`);
-    console.log(`Role: ${params.role}`);
-    console.log(`Invite URL: ${params.inviteUrl}`);
-    console.log("=================================================");
+    // Only allow development sink if explicitly running under automated test runner
+    if (isTestEnvironment) {
+      return {
+        success: true,
+        messageId: `test-sink-${Date.now()}`,
+        deliveryMethod: "LOCAL_DEV_SINK",
+      };
+    }
 
+    // In normal runtime (dev or prod) without RESEND_API_KEY, return honest unconfigured error
     return {
-      success: true,
-      messageId: `dev-invitation-${Date.now()}`,
+      success: false,
+      deliveryMethod: "UNCONFIGURED",
+      error:
+        "RESEND_API_KEY is not configured in the application environment (.env). Real email delivery cannot be completed.",
     };
   }
 
@@ -76,24 +352,47 @@ export class EmailAdapter {
   public static async sendPasswordReset(
     params: SendPasswordResetParams
   ): Promise<EmailDeliveryResult> {
-    const isProduction = process.env.NODE_ENV === "production";
-    const apiKey = process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY;
+    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
+    const isTestEnvironment =
+      process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
-    if (!apiKey && isProduction) {
+    if (apiKey.length > 0) {
+      const fromEmail = this.getSenderEmail();
+      const subject = "Reset your UrPlaced password";
+      const html = `<p>Click here to reset your password: <a href="${escapeHtml(
+        params.resetUrl
+      )}">${escapeHtml(params.resetUrl)}</a></p>`;
+      const text = `Reset your UrPlaced password: ${params.resetUrl}`;
+
+      const res = await this.postToResend({
+        apiKey,
+        from: fromEmail,
+        to: [params.toEmail],
+        subject,
+        html,
+        text,
+      });
+
       return {
-        success: false,
-        error: "Email delivery provider is unconfigured in production.",
+        success: res.success,
+        messageId: res.id,
+        deliveryMethod: res.success ? "LIVE_PROVIDER" : "UNCONFIGURED",
+        error: res.error,
       };
     }
 
-    console.log("=================================================");
-    console.log(`[Email Sink - Local Dev] Password Reset: ${params.toEmail}`);
-    console.log(`Reset URL: ${params.resetUrl}`);
-    console.log("=================================================");
+    if (isTestEnvironment) {
+      return {
+        success: true,
+        messageId: `test-reset-${Date.now()}`,
+        deliveryMethod: "LOCAL_DEV_SINK",
+      };
+    }
 
     return {
-      success: true,
-      messageId: `dev-reset-${Date.now()}`,
+      success: false,
+      deliveryMethod: "UNCONFIGURED",
+      error: "RESEND_API_KEY is not configured in .env.",
     };
   }
 
@@ -103,14 +402,47 @@ export class EmailAdapter {
   public static async sendVerification(
     params: SendVerificationEmailParams
   ): Promise<EmailDeliveryResult> {
-    console.log("=================================================");
-    console.log(`[Email Sink - Local Dev] Verify Email: ${params.toEmail}`);
-    console.log(`Verify URL: ${params.verifyUrl}`);
-    console.log("=================================================");
+    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
+    const isTestEnvironment =
+      process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+
+    if (apiKey.length > 0) {
+      const fromEmail = this.getSenderEmail();
+      const subject = "Verify your email on UrPlaced";
+      const html = `<p>Verify your email: <a href="${escapeHtml(params.verifyUrl)}">${escapeHtml(
+        params.verifyUrl
+      )}</a></p>`;
+      const text = `Verify your email: ${params.verifyUrl}`;
+
+      const res = await this.postToResend({
+        apiKey,
+        from: fromEmail,
+        to: [params.toEmail],
+        subject,
+        html,
+        text,
+      });
+
+      return {
+        success: res.success,
+        messageId: res.id,
+        deliveryMethod: res.success ? "LIVE_PROVIDER" : "UNCONFIGURED",
+        error: res.error,
+      };
+    }
+
+    if (isTestEnvironment) {
+      return {
+        success: true,
+        messageId: `test-verify-${Date.now()}`,
+        deliveryMethod: "LOCAL_DEV_SINK",
+      };
+    }
 
     return {
-      success: true,
-      messageId: `dev-verify-${Date.now()}`,
+      success: false,
+      deliveryMethod: "UNCONFIGURED",
+      error: "RESEND_API_KEY is not configured in .env.",
     };
   }
 }
