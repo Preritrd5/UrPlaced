@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
+import { FloatingAIChatbot } from "@/components/ai/floating-ai-chatbot";
 import {
   getAuthorizedNavigation,
   getRoleDefaultDashboard,
@@ -261,6 +262,9 @@ export function AppShell({ children }: AppShellProps) {
           </p>
         </footer>
       </div>
+
+      {/* Floating Draggable AI Chatbot */}
+      {auth.isAuthenticated && <FloatingAIChatbot />}
     </div>
   );
 }

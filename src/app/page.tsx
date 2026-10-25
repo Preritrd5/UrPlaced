@@ -29,8 +29,8 @@ export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   return (
-  <div className="min-h-screen bg-[linear-gradient(135deg,#E0EAFE_0%,#D9DDF9_45%,#C5CEDB_100%)] text-text-primary flex flex-col selection:bg-primary/20">
-  
+    <div className="min-h-screen bg-[linear-gradient(135deg,#E0EAFE_0%,#D9DDF9_45%,#C5CEDB_100%)] text-text-primary flex flex-col selection:bg-primary/20">
+
       {/* 1. Global Public Navigation Header */}
       <header className="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-10 rounded-[2rem] md:rounded-full border-2 border-slate-400/70 bg-gradient-to-r from-orange-50/95 via-white/95 to-sky-50/95 shadow-[0_10px_35px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all">
         <div className="relative w-full px-5 sm:px-8 lg:px-10 h-20 flex items-center justify-between">
@@ -59,19 +59,20 @@ export default function HomePage() {
               href="#students"
               className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 hover:text-primary hover:bg-slate-900/5 transition-colors whitespace-nowrap"
             >
-              For Students
-            </a>
-            <a
-              href="#colleges"
-              className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 hover:text-primary hover:bg-slate-900/5 transition-colors whitespace-nowrap"
-            >
-              For Colleges
+              For Students & Colleges
             </a>
             <a
               href="#how-it-works"
               className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 hover:text-primary hover:bg-slate-900/5 transition-colors whitespace-nowrap"
             >
               How It Works
+            </a>
+            <a
+              href="#features"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              Features
             </a>
           </nav>
 
@@ -124,15 +125,9 @@ export default function HomePage() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
               >
-                For Students
+                For Students and Colleges
               </a>
-              <a
-                href="#colleges"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                For Colleges
-              </a>
+
               <a
                 href="#how-it-works"
                 onClick={() => setMobileMenuOpen(false)}
@@ -140,6 +135,14 @@ export default function HomePage() {
               >
                 How It Works
               </a>
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                Features
+              </a>
+
             </div>
 
             <div className="pt-3 border-t border-slate-200/80">
@@ -416,7 +419,7 @@ export default function HomePage() {
       </section>
 
       {/* 5. Platform Core Pillars & Real Benefits */}
-      <section className="py-20 md:py-28 bg-surface border-t border-border">
+      <section id="features" className="py-20 md:py-28 bg-surface border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
             <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-secondary font-mono">
