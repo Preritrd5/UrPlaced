@@ -14,6 +14,7 @@ import {
 } from "@/components/questions/question-type-badge";
 import { AnswerKeyReviewModal } from "@/components/questions/answer-key-review-modal";
 import { DuplicateAlertModal } from "@/components/questions/duplicate-alert-modal";
+import { AIGenerateQuestionModal } from "@/components/questions/ai-generate-question-modal";
 import {
   Plus,
   Upload,
@@ -27,6 +28,7 @@ import {
   ArrowRight,
   Send,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
@@ -71,6 +73,7 @@ export default function QuestionsDashboardPage() {
 
   // Duplicate Modal State
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   // Load Banks
   useEffect(() => {
@@ -171,6 +174,16 @@ export default function QuestionsDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAiModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-[#5052C9] border-[#5052C9]/30 hover:bg-[#5052C9]/10"
+          >
+            <Sparkles className="w-4 h-4 text-[#5052C9]" />
+            AI Generate
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -435,6 +448,14 @@ export default function QuestionsDashboardPage() {
       <DuplicateAlertModal
         isOpen={duplicateModalOpen}
         onClose={() => setDuplicateModalOpen(false)}
+      />
+
+      {/* AI Question Intelligence Generator Modal */}
+      <AIGenerateQuestionModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        banks={banks}
+        onGeneratedSuccess={loadQuestions}
       />
     </div>
   );

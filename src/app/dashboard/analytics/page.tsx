@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
+import { AIPlacementIntelligenceCard } from "@/components/analytics/ai-placement-intelligence-card";
 
 interface AnalyticsData {
   placement: {
@@ -173,6 +174,9 @@ export default function AnalyticsDashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* AI Placement Intelligence Advisor Card */}
+      <AIPlacementIntelligenceCard />
 
       {/* High-Level Placement Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

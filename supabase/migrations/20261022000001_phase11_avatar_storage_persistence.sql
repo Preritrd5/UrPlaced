@@ -20,7 +20,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- 2. Storage Objects RLS Policies
 -- Enable RLS on storage.objects (default in Supabase, ensured here)
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- 2.1 Allow public read access to avatar images
 DO $$

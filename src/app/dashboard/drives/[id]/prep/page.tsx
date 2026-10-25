@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { AIDriveFitEvaluationCard } from "@/components/drives/ai-drivefit-evaluation-card";
 
 interface PrepPageProps {
   params: Promise<{ id: string }>;
@@ -211,6 +212,13 @@ export default function DriveStudentPrepPage({ params }: PrepPageProps) {
           <AlertDescription className="text-text-primary">{actionSuccess}</AlertDescription>
         </Alert>
       )}
+
+      {/* AI DriveFit Evaluation & Readiness Roadmap */}
+      <AIDriveFitEvaluationCard
+        driveId={driveId}
+        companyName={drive.company?.name || "Company"}
+        driveTitle={drive.title}
+      />
 
       {/* 1. Confirmed vs Unconfirmed Recruitment Rounds */}
       <Card>

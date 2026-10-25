@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { RequirementCategory, EvidenceLevel, ScopeLevel } from "@/types/database";
+import { GeminiClient } from "@/modules/ai/gemini-client";
 
 export interface ExtractedRequirementProposal {
   category: RequirementCategory;
@@ -70,12 +71,12 @@ export class AIExtractionService {
   }
 
   /**
-   * Calls Gemini Provider using standard fetch with structured output schema
+   * Calls Gemini Provider using the shared GeminiClient
    */
   private static async callGeminiProvider(
     text: string,
     context: { companyName: string; roleTitle?: string; driveTitle?: string },
-    apiKey: string
+    _apiKey?: string
   ): Promise<ExtractionResult> {
     const prompt = `You are a recruitment intelligence data parser for UrPlaced SaaS.
 Analyze the following source text for ${context.companyName} (${context.roleTitle || "General Role"}).
@@ -109,44 +110,21 @@ SOURCE TEXT:
 ${text.slice(0, 15000)}
 `;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const result = await GeminiClient.generate({
+      prompt,
+      systemInstruction: "You are an expert recruitment intelligence analyst. Ground every proposal strictly in the provided text.",
+      temperature: 0.1,
+      responseMimeType: "application/json",
+      feature: "DRIVEFIT",
+    });
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1, // Low temperature for deterministic extraction
-          },
-        }),
-      }
-    );
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      throw new Error(`Gemini API returned status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!candidateText) {
-      throw new Error("Empty response from AI provider.");
-    }
-
-    const parsedJson = JSON.parse(candidateText);
+    const parsedJson = JSON.parse(result.text);
     const validated = ExtractionResponseSchema.parse(parsedJson);
 
     return {
       provider: "GEMINI",
       isAIPowered: true,
-      notes: "Extracted via Gemini 1.5 Flash with structured grounding. Awaiting human verification.",
+      notes: `Extracted via Gemini (${result.model}) with structured grounding. Awaiting human verification.`,
       proposals: validated.proposals as ExtractedRequirementProposal[],
     };
   }

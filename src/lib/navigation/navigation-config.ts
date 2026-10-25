@@ -80,6 +80,16 @@ export const MASTER_NAVIGATION: {
     accountCategory: "STUDENT",
     items: [
       {
+        id: "student-tutor",
+        name: "AI Study Tutor",
+        href: "/dashboard/student/tutor",
+        icon: GraduationCap,
+        requiredPermission: Permissions.AI_STUDY_TUTOR_USE,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "AI",
+      },
+      {
         id: "student-assessments",
         name: "Assessments & Practice",
         href: "/dashboard/student/assessments",

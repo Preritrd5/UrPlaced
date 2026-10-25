@@ -102,6 +102,13 @@ export const Permissions = {
   ANALYTICS_EXPORT: "analytics.export",
   TRAINING_SESSIONS_MANAGE: "training.sessions.manage",
   TRAINING_SESSIONS_ATTEND: "training.sessions.attend",
+
+  // Phase 12 — AI Intelligence Layer
+  AI_STUDY_TUTOR_USE: "ai.study_tutor.use",
+  AI_QUESTIONS_GENERATE: "ai.questions.generate",
+  AI_MISTAKE_MASTERY_USE: "ai.mistake_mastery.use",
+  AI_DRIVEFIT_EVALUATE: "ai.drivefit.evaluate",
+  AI_PLACEMENT_INTEL_READ: "ai.placement_intel.read",
 } as const;
 
 export type PermissionIdentifier =
@@ -149,6 +156,11 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.ANALYTICS_READ_COHORT,
     Permissions.ANALYTICS_EXPORT,
     Permissions.TRAINING_SESSIONS_MANAGE,
+    Permissions.AI_STUDY_TUTOR_USE,
+    Permissions.AI_QUESTIONS_GENERATE,
+    Permissions.AI_MISTAKE_MASTERY_USE,
+    Permissions.AI_DRIVEFIT_EVALUATE,
+    Permissions.AI_PLACEMENT_INTEL_READ,
   ],
   PLACEMENT_HEAD: [
     Permissions.STAFF_MANAGE,
@@ -207,6 +219,11 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.ANALYTICS_READ_COHORT,
     Permissions.ANALYTICS_EXPORT,
     Permissions.TRAINING_SESSIONS_MANAGE,
+    Permissions.AI_STUDY_TUTOR_USE,
+    Permissions.AI_QUESTIONS_GENERATE,
+    Permissions.AI_MISTAKE_MASTERY_USE,
+    Permissions.AI_DRIVEFIT_EVALUATE,
+    Permissions.AI_PLACEMENT_INTEL_READ,
   ],
   PLACEMENT_STAFF: [
     Permissions.STAFF_INVITE,
@@ -255,6 +272,11 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.ANALYTICS_READ_COHORT,
     Permissions.ANALYTICS_EXPORT,
     Permissions.TRAINING_SESSIONS_MANAGE,
+    Permissions.AI_STUDY_TUTOR_USE,
+    Permissions.AI_QUESTIONS_GENERATE,
+    Permissions.AI_MISTAKE_MASTERY_USE,
+    Permissions.AI_DRIVEFIT_EVALUATE,
+    Permissions.AI_PLACEMENT_INTEL_READ,
   ],
   TRAINER: [
     Permissions.DASHBOARD_READ,
@@ -280,6 +302,11 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.PLACEMENT_MEMORY_READ,
     Permissions.ANALYTICS_READ_COHORT,
     Permissions.TRAINING_SESSIONS_MANAGE,
+    Permissions.AI_STUDY_TUTOR_USE,
+    Permissions.AI_QUESTIONS_GENERATE,
+    Permissions.AI_MISTAKE_MASTERY_USE,
+    Permissions.AI_DRIVEFIT_EVALUATE,
+    Permissions.AI_PLACEMENT_INTEL_READ,
   ],
   STUDENT: [
     Permissions.DASHBOARD_READ,
@@ -300,6 +327,9 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.PLACEMENT_MEMORY_READ,
     Permissions.ANALYTICS_READ_OWN,
     Permissions.TRAINING_SESSIONS_ATTEND,
+    Permissions.AI_STUDY_TUTOR_USE,
+    Permissions.AI_MISTAKE_MASTERY_USE,
+    Permissions.AI_DRIVEFIT_EVALUATE,
   ],
 };
 

@@ -24,9 +24,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AIMistakeAnalysisModal } from "@/components/mistakes/ai-mistake-analysis-modal";
 
 export default function StudentMistakesPage() {
   const [loading, setLoading] = useState(true);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [targets, setTargets] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<{
     dueTodayCount: number;
@@ -178,6 +180,16 @@ export default function StudentMistakesPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAiModalOpen(true)}
+            className="flex items-center gap-1.5 border-[#5052C9]/30 text-[#5052C9] hover:bg-[#5052C9]/10"
+          >
+            <Sparkles className="h-4 w-4 text-[#5052C9]" />
+            <span>AI Gap Analysis</span>
+          </Button>
+
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard/student/mastery" className="flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-primary" />
@@ -560,6 +572,11 @@ export default function StudentMistakesPage() {
           </Card>
         </div>
       )}
+      {/* AI Gap Analysis Modal */}
+      <AIMistakeAnalysisModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+      />
     </div>
   );
 }
