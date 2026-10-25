@@ -470,11 +470,35 @@ describe("Staff & Members Secure Invitation & Onboarding Workflow", () => {
       expect(EmailAdapter.getSenderEmail()).toBe("UrPlaced <onboarding@resend.dev>");
     });
 
-    it("returns explicit unconfigured error when RESEND_API_KEY is missing outside test runner", async () => {
+    it("sanitizes Gmail SMTP credentials and detects configuration", () => {
+      const origUser = process.env.GMAIL_USER;
+      const origPass = process.env.GMAIL_APP_PASSWORD;
+
+      process.env.GMAIL_USER = '=" test.sender@gmail.com "';
+      process.env.GMAIL_APP_PASSWORD = '=" abcd efgh ijkl mnop "';
+
+      const config = EmailAdapter.getGmailConfig();
+      expect(config.user).toBe("test.sender@gmail.com");
+      expect(config.pass).toBe("abcdefghijklmnop");
+      expect(config.isConfigured).toBe(true);
+
+      if (origUser !== undefined) process.env.GMAIL_USER = origUser;
+      else delete process.env.GMAIL_USER;
+      if (origPass !== undefined) process.env.GMAIL_APP_PASSWORD = origPass;
+      else delete process.env.GMAIL_APP_PASSWORD;
+    });
+
+    it("returns explicit unconfigured error when credentials are missing outside test runner", async () => {
       const origVitest = process.env.VITEST;
       const origNodeEnv = process.env.NODE_ENV;
+      const origGmailUser = process.env.GMAIL_USER;
+      const origGmailPass = process.env.GMAIL_APP_PASSWORD;
+      const origResendKey = process.env.RESEND_API_KEY;
+
       delete process.env.VITEST;
       (process.env as any).NODE_ENV = "production";
+      delete process.env.GMAIL_USER;
+      delete process.env.GMAIL_APP_PASSWORD;
       delete process.env.RESEND_API_KEY;
       delete process.env.EMAIL_API_KEY;
 
@@ -487,13 +511,100 @@ describe("Staff & Members Secure Invitation & Onboarding Workflow", () => {
 
       expect(result.success).toBe(false);
       expect(result.deliveryMethod).toBe("UNCONFIGURED");
-      expect(result.error).toContain("RESEND_API_KEY is not configured");
+      expect(result.error).toContain("Gmail SMTP credentials");
 
       process.env.VITEST = origVitest;
       (process.env as any).NODE_ENV = origNodeEnv;
+      if (origGmailUser !== undefined) process.env.GMAIL_USER = origGmailUser;
+      if (origGmailPass !== undefined) process.env.GMAIL_APP_PASSWORD = origGmailPass;
+      if (origResendKey !== undefined) process.env.RESEND_API_KEY = origResendKey;
     });
 
-    it("reports LOCAL_DEV_SINK only when running in test runner without API key", async () => {
+    it("dispatches invitation via Gmail SMTP when configured", async () => {
+      const origUser = process.env.GMAIL_USER;
+      const origPass = process.env.GMAIL_APP_PASSWORD;
+
+      process.env.GMAIL_USER = "campus.admin@gmail.com";
+      process.env.GMAIL_APP_PASSWORD = "abcd efgh ijkl mnop";
+
+      const mockSendMail = vi.fn().mockResolvedValue({
+        messageId: "<test-smtp-msg-123@gmail.com>",
+        accepted: ["officer.new@campus.edu"],
+      });
+
+      const spy = vi.spyOn(EmailAdapter, "createGmailTransporter").mockReturnValue({
+        sendMail: mockSendMail,
+      } as any);
+
+      const result = await EmailAdapter.sendInvitation({
+        toEmail: "officer.new@campus.edu",
+        tenantName: "Sapthagiri NPS University",
+        role: "PLACEMENT_STAFF",
+        inviteUrl: "https://urplaced.vercel.app/auth/college/invite/test-token",
+      });
+
+      expect(spy).toHaveBeenCalledWith("campus.admin@gmail.com", "abcdefghijklmnop");
+      expect(mockSendMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: "UrPlaced <campus.admin@gmail.com>",
+          to: "officer.new@campus.edu",
+          subject: expect.stringContaining("Sapthagiri NPS University"),
+          html: expect.stringContaining("Accept Invitation &amp; Activate Account"),
+        })
+      );
+      expect(result.success).toBe(true);
+      expect(result.deliveryMethod).toBe("GMAIL_SMTP");
+      expect(result.messageId).toBe("<test-smtp-msg-123@gmail.com>");
+
+      spy.mockRestore();
+      if (origUser !== undefined) process.env.GMAIL_USER = origUser;
+      else delete process.env.GMAIL_USER;
+      if (origPass !== undefined) process.env.GMAIL_APP_PASSWORD = origPass;
+      else delete process.env.GMAIL_APP_PASSWORD;
+    });
+
+    it("handles Gmail SMTP transmission errors without silently falling back", async () => {
+      const origUser = process.env.GMAIL_USER;
+      const origPass = process.env.GMAIL_APP_PASSWORD;
+      const origResend = process.env.RESEND_API_KEY;
+
+      process.env.GMAIL_USER = "campus.admin@gmail.com";
+      process.env.GMAIL_APP_PASSWORD = "abcd efgh ijkl mnop";
+      process.env.RESEND_API_KEY = "re_test_key_123";
+
+      const mockSendMail = vi.fn().mockRejectedValue(new Error("535 Invalid credentials"));
+
+      const spy = vi.spyOn(EmailAdapter, "createGmailTransporter").mockReturnValue({
+        sendMail: mockSendMail,
+      } as any);
+
+      const result = await EmailAdapter.sendInvitation({
+        toEmail: "officer.rejected@campus.edu",
+        tenantName: "Sapthagiri NPS University",
+        role: "TRAINER",
+        inviteUrl: "https://urplaced.vercel.app/auth/college/invite/test-token-2",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.deliveryMethod).toBe("GMAIL_SMTP");
+      expect(result.error).toContain("535 Invalid credentials");
+
+      spy.mockRestore();
+      if (origUser !== undefined) process.env.GMAIL_USER = origUser;
+      else delete process.env.GMAIL_USER;
+      if (origPass !== undefined) process.env.GMAIL_APP_PASSWORD = origPass;
+      else delete process.env.GMAIL_APP_PASSWORD;
+      if (origResend !== undefined) process.env.RESEND_API_KEY = origResend;
+      else delete process.env.RESEND_API_KEY;
+    });
+
+    it("reports LOCAL_DEV_SINK only when running in test runner without credentials", async () => {
+      const origGmailUser = process.env.GMAIL_USER;
+      const origGmailPass = process.env.GMAIL_APP_PASSWORD;
+      const origResendKey = process.env.RESEND_API_KEY;
+
+      delete process.env.GMAIL_USER;
+      delete process.env.GMAIL_APP_PASSWORD;
       delete process.env.RESEND_API_KEY;
       delete process.env.EMAIL_API_KEY;
 
@@ -507,6 +618,10 @@ describe("Staff & Members Secure Invitation & Onboarding Workflow", () => {
       expect(result.success).toBe(true);
       expect(result.deliveryMethod).toBe("LOCAL_DEV_SINK");
       expect(result.messageId).toContain("test-sink-");
+
+      if (origGmailUser !== undefined) process.env.GMAIL_USER = origGmailUser;
+      if (origGmailPass !== undefined) process.env.GMAIL_APP_PASSWORD = origGmailPass;
+      if (origResendKey !== undefined) process.env.RESEND_API_KEY = origResendKey;
     });
   });
 

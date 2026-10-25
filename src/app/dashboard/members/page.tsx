@@ -169,7 +169,7 @@ export default async function TenantMembersPage({
 
       if (!deliveryResult.success) {
         redirectUrl = `/dashboard/members?error=${encodeURIComponent(
-          deliveryResult.error || "Email delivery failed via Resend."
+          deliveryResult.error || "Email delivery submission failed via Gmail SMTP."
         )}`;
       } else {
         revalidatePath("/dashboard/members");
@@ -230,7 +230,7 @@ export default async function TenantMembersPage({
 
       if (!deliveryResult.success) {
         redirectUrl = `/dashboard/members?error=${encodeURIComponent(
-          deliveryResult.error || "Email resend delivery failed via Resend."
+          deliveryResult.error || "Email resend delivery failed via Gmail SMTP."
         )}`;
       } else {
         revalidatePath("/dashboard/members");
@@ -353,10 +353,14 @@ export default async function TenantMembersPage({
               <CheckCircle2 className="h-5 w-5" />{" "}
               {query.resent === "true"
                 ? "Invitation Email Resent Successfully"
-                : "Invitation Email Queued Successfully"}
+                : "Invitation Email Submitted Successfully"}
             </CardTitle>
             <CardDescription className="text-xs text-text-secondary">
-              The transactional invitation email was accepted by Resend and queued for delivery.
+              {query.deliveryMethod === "GMAIL_SMTP"
+                ? `Invitation email submitted successfully to ${query.sentEmail} via Gmail SMTP.`
+                : query.deliveryMethod === "LIVE_PROVIDER"
+                ? `Invitation email queued successfully for ${query.sentEmail} via Resend.`
+                : `Invitation recorded. Dispatched via development email sink.`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 pt-1">
@@ -383,17 +387,31 @@ export default async function TenantMembersPage({
                   {activeMembership.tenants?.name || "College Workspace"}
                 </span>
               </div>
+              <div>
+                <span className="text-text-muted block text-[11px] uppercase font-mono tracking-wider">
+                  Delivery Transport
+                </span>
+                <span className="font-mono text-[11px] font-semibold text-secondary">
+                  {query.deliveryMethod === "GMAIL_SMTP"
+                    ? "Gmail SMTP (smtp.gmail.com:465 TLS)"
+                    : query.deliveryMethod === "LIVE_PROVIDER"
+                    ? "Resend Transactional API"
+                    : "Development Email Sink"}
+                </span>
+              </div>
               {query.messageId && (
-                <div>
+                <div className="sm:col-span-2">
                   <span className="text-text-muted block text-[11px] uppercase font-mono tracking-wider">
-                    Provider Message ID
+                    SMTP Message ID / Reference
                   </span>
                   <span className="font-mono text-[11px] text-text-secondary">{query.messageId}</span>
                 </div>
               )}
             </div>
             <p className="text-xs text-text-muted">
-              The recipient will receive an email containing a secure single-use activation link to set their password and activate their account.
+              {query.deliveryMethod === "GMAIL_SMTP"
+                ? "Gmail SMTP accepted the email for transmission. The recipient can open their secure single-use activation link to set their password and activate their account. (Note: SMTP acceptance confirms transmission to Gmail; inbox placement depends on destination mail filtering)."
+                : "The recipient will receive an email containing a secure single-use activation link to set their password and activate their account."}
             </p>
           </CardContent>
         </Card>
@@ -419,7 +437,7 @@ export default async function TenantMembersPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 text-xs text-text-muted">
-            The invitation record has been preserved in the system. You can verify your Resend credentials in <code className="font-mono text-[11px]">.env</code> and use the Resend action below to retry.
+            The invitation record has been safely preserved in the system. Check your Gmail SMTP credentials (<code className="font-mono text-[11px]">GMAIL_USER</code> and <code className="font-mono text-[11px]">GMAIL_APP_PASSWORD</code>) in environment variables and use the Resend action below to retry.
           </CardContent>
         </Card>
       )}

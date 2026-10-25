@@ -1,10 +1,12 @@
 /**
  * Email Delivery Adapter
  * Provides server-side transactional email abstractions for invitations,
- * password resets, and verification notices using the Resend API.
+ * password resets, and verification notices using Gmail SMTP (via Nodemailer)
+ * with backward-compatible Resend transactional fallback.
  */
 
 import https from "https";
+import nodemailer from "nodemailer";
 
 export interface SendInvitationEmailParams {
   toEmail: string;
@@ -29,7 +31,7 @@ export interface EmailDeliveryResult {
   success: boolean;
   messageId?: string;
   error?: string;
-  deliveryMethod: "LIVE_PROVIDER" | "LOCAL_DEV_SINK" | "UNCONFIGURED";
+  deliveryMethod: "GMAIL_SMTP" | "LIVE_PROVIDER" | "LOCAL_DEV_SINK" | "UNCONFIGURED";
 }
 
 /**
@@ -68,7 +70,77 @@ export class EmailAdapter {
   }
 
   /**
-   * Resolves the verified sender address for Resend.
+   * Safely resolves and sanitizes Gmail SMTP credentials from process.env.
+   * Strips any unintentional leading equals signs, quotes, or internal whitespace.
+   * NEVER prints or logs secret credentials.
+   */
+  public static getGmailConfig(): { user: string; pass: string; isConfigured: boolean } {
+    const rawUser = process.env.GMAIL_USER || "";
+    const rawPass = process.env.GMAIL_APP_PASSWORD || "";
+
+    const user = rawUser.replace(/^=+/, "").replace(/['"]/g, "").trim();
+    const pass = rawPass.replace(/^=+/, "").replace(/['"]/g, "").replace(/\s+/g, "").trim();
+
+    return {
+      user,
+      pass,
+      isConfigured: user.length > 0 && pass.length > 0,
+    };
+  }
+
+  /**
+   * Creates a Nodemailer transporter configured for Google's official SMTP:
+   * Host: smtp.gmail.com, Port: 465, Secure TLS: true.
+   */
+  public static createGmailTransporter(user: string, pass: string) {
+    return nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // TLS on port 465
+      auth: {
+        user,
+        pass,
+      },
+    });
+  }
+
+  /**
+   * Sends transactional email using Gmail SMTP via Nodemailer.
+   */
+  private static async sendViaGmailSmtp(payload: {
+    user: string;
+    pass: string;
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+    text: string;
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      const transporter = this.createGmailTransporter(payload.user, payload.pass);
+      const info = await transporter.sendMail({
+        from: payload.from,
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+      });
+
+      return {
+        success: true,
+        messageId: info.messageId,
+      };
+    } catch (err: unknown) {
+      const rawMessage = err instanceof Error ? err.message : String(err);
+      return {
+        success: false,
+        error: `Gmail SMTP transmission error: ${rawMessage}`,
+      };
+    }
+  }
+
+  /**
+   * Resolves the verified sender address for Resend fallback.
    * Priority: RESEND_FROM_EMAIL > EMAIL_FROM > UrPlaced <onboarding@resend.dev>
    */
   public static getSenderEmail(): string {
@@ -76,12 +148,12 @@ export class EmailAdapter {
     if (configured && configured.trim().length > 0) {
       return configured.trim();
     }
-    // Default testing sender provided by Resend for accounts without custom verified domains
     return "UrPlaced <onboarding@resend.dev>";
   }
 
   /**
    * Generates a branded, responsive HTML template for institutional staff invitations.
+   * Strictly matches the UrPlaced design system (Outfit, Inter, #5052C9, #2E8F86, #EDECE7).
    */
   private static generateInvitationHtml(params: SendInvitationEmailParams): string {
     const roleTitle =
@@ -209,7 +281,6 @@ export class EmailAdapter {
 
   /**
    * Executes a direct POST to Resend API via Node https with IPv4 enforcement.
-   * This guarantees reliable, sub-second execution without IPv6 dual-stack timeouts on Windows.
    */
   private static async postToResend(payload: {
     apiKey: string;
@@ -288,16 +359,53 @@ export class EmailAdapter {
 
   /**
    * Dispatches an invitation email to a staff or faculty member.
-   * Uses Resend transactional API when configured.
+   * Priority:
+   * 1. Real Gmail SMTP delivery via Nodemailer if GMAIL_USER and GMAIL_APP_PASSWORD are configured.
+   * 2. Resend transactional API if RESEND_API_KEY is configured and Gmail is absent.
+   * 3. Local test sink strictly in automated test runner (NODE_ENV === "test" || VITEST).
    */
   public static async sendInvitation(
     params: SendInvitationEmailParams
   ): Promise<EmailDeliveryResult> {
-    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
+    const gmailConfig = this.getGmailConfig();
     const isTestEnvironment =
       process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
-    // If Resend API key is available, execute real transactional dispatch
+    // 1. Primary: Real Gmail SMTP Delivery
+    if (gmailConfig.isConfigured) {
+      const fromAddress = `UrPlaced <${gmailConfig.user}>`;
+      const subject = `You're invited to join ${params.tenantName} on UrPlaced — College / Cell`;
+      const html = this.generateInvitationHtml(params);
+      const text = this.generateInvitationPlainText(params);
+
+      const smtpResult = await this.sendViaGmailSmtp({
+        user: gmailConfig.user,
+        pass: gmailConfig.pass,
+        from: fromAddress,
+        to: params.toEmail,
+        subject,
+        html,
+        text,
+      });
+
+      if (!smtpResult.success) {
+        // Enforce prompt rule: Do not silently fall back to Resend if Gmail SMTP fails
+        return {
+          success: false,
+          deliveryMethod: "GMAIL_SMTP",
+          error: smtpResult.error || "Email delivery rejected by Gmail SMTP server.",
+        };
+      }
+
+      return {
+        success: true,
+        messageId: smtpResult.messageId || `gmail-${Date.now()}`,
+        deliveryMethod: "GMAIL_SMTP",
+      };
+    }
+
+    // 2. Secondary: Resend API if configured and Gmail is not configured
+    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
     if (apiKey.length > 0) {
       const fromEmail = this.getSenderEmail();
       const subject = `You're invited to join ${params.tenantName} on UrPlaced — College / Cell`;
@@ -316,7 +424,7 @@ export class EmailAdapter {
       if (!resendResult.success) {
         return {
           success: false,
-          deliveryMethod: "UNCONFIGURED",
+          deliveryMethod: "LIVE_PROVIDER",
           error: resendResult.error || "Email delivery rejected by Resend provider.",
         };
       }
@@ -328,7 +436,7 @@ export class EmailAdapter {
       };
     }
 
-    // Only allow development sink if explicitly running under automated test runner
+    // 3. Automated test runner sink
     if (isTestEnvironment) {
       return {
         success: true,
@@ -337,12 +445,12 @@ export class EmailAdapter {
       };
     }
 
-    // In normal runtime (dev or prod) without RESEND_API_KEY, return honest unconfigured error
+    // 4. Honest unconfigured error
     return {
       success: false,
       deliveryMethod: "UNCONFIGURED",
       error:
-        "RESEND_API_KEY is not configured in the application environment (.env). Real email delivery cannot be completed.",
+        "Gmail SMTP credentials (GMAIL_USER, GMAIL_APP_PASSWORD) are not configured in environment variables. Real email delivery cannot be completed.",
     };
   }
 
@@ -352,10 +460,37 @@ export class EmailAdapter {
   public static async sendPasswordReset(
     params: SendPasswordResetParams
   ): Promise<EmailDeliveryResult> {
-    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
+    const gmailConfig = this.getGmailConfig();
     const isTestEnvironment =
       process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
+    if (gmailConfig.isConfigured) {
+      const fromAddress = `UrPlaced <${gmailConfig.user}>`;
+      const subject = "Reset your UrPlaced password";
+      const html = `<p>Click here to reset your password: <a href="${escapeHtml(
+        params.resetUrl
+      )}">${escapeHtml(params.resetUrl)}</a></p>`;
+      const text = `Reset your UrPlaced password: ${params.resetUrl}`;
+
+      const res = await this.sendViaGmailSmtp({
+        user: gmailConfig.user,
+        pass: gmailConfig.pass,
+        from: fromAddress,
+        to: params.toEmail,
+        subject,
+        html,
+        text,
+      });
+
+      return {
+        success: res.success,
+        messageId: res.messageId,
+        deliveryMethod: "GMAIL_SMTP",
+        error: res.error,
+      };
+    }
+
+    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
     if (apiKey.length > 0) {
       const fromEmail = this.getSenderEmail();
       const subject = "Reset your UrPlaced password";
@@ -392,7 +527,7 @@ export class EmailAdapter {
     return {
       success: false,
       deliveryMethod: "UNCONFIGURED",
-      error: "RESEND_API_KEY is not configured in .env.",
+      error: "Email delivery credentials are not configured in environment variables.",
     };
   }
 
@@ -402,10 +537,37 @@ export class EmailAdapter {
   public static async sendVerification(
     params: SendVerificationEmailParams
   ): Promise<EmailDeliveryResult> {
-    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
+    const gmailConfig = this.getGmailConfig();
     const isTestEnvironment =
       process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
+    if (gmailConfig.isConfigured) {
+      const fromAddress = `UrPlaced <${gmailConfig.user}>`;
+      const subject = "Verify your email on UrPlaced";
+      const html = `<p>Verify your email: <a href="${escapeHtml(params.verifyUrl)}">${escapeHtml(
+        params.verifyUrl
+      )}</a></p>`;
+      const text = `Verify your email: ${params.verifyUrl}`;
+
+      const res = await this.sendViaGmailSmtp({
+        user: gmailConfig.user,
+        pass: gmailConfig.pass,
+        from: fromAddress,
+        to: params.toEmail,
+        subject,
+        html,
+        text,
+      });
+
+      return {
+        success: res.success,
+        messageId: res.messageId,
+        deliveryMethod: "GMAIL_SMTP",
+        error: res.error,
+      };
+    }
+
+    const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
     if (apiKey.length > 0) {
       const fromEmail = this.getSenderEmail();
       const subject = "Verify your email on UrPlaced";
@@ -442,7 +604,7 @@ export class EmailAdapter {
     return {
       success: false,
       deliveryMethod: "UNCONFIGURED",
-      error: "RESEND_API_KEY is not configured in .env.",
+      error: "Email delivery credentials are not configured in environment variables.",
     };
   }
 }
