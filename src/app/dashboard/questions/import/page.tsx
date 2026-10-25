@@ -19,6 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { ProfileSkeleton } from "@/components/ui/page-skeletons";
 
 export default function QuestionImportPage() {
   const router = useRouter();
@@ -129,12 +130,12 @@ export default function QuestionImportPage() {
     }
   };
 
-  if (isLoadingAuth || !canManageQuestions) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoadingAuth) {
+    return <ProfileSkeleton />;
+  }
+
+  if (!canManageQuestions) {
+    return null;
   }
 
   return (
@@ -261,6 +262,7 @@ export default function QuestionImportPage() {
                 <Button
                   type="submit"
                   disabled={loading || !file}
+                  isLoading={loading}
                   className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
                 >
                   {loading ? "Validating..." : "Analyze & Preview CSV"}
@@ -394,10 +396,11 @@ export default function QuestionImportPage() {
             <Button
               type="button"
               disabled={loading || previewResult.validRows === 0}
+              isLoading={loading}
               onClick={handleCommit}
               className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center gap-1.5"
             >
-              <Send className="w-3.5 h-3.5" />
+              {!loading && <Send className="w-3.5 h-3.5" />}
               {loading
                 ? "Committing..."
                 : `Commit ${previewResult.validRows} Valid Questions (Pending Review)`}

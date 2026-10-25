@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { QuestionForm } from "@/components/questions/question-form";
 import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { ProfileSkeleton } from "@/components/ui/page-skeletons";
 
 export default function NewQuestionPage() {
   const router = useRouter();
@@ -23,12 +24,12 @@ export default function NewQuestionPage() {
     }
   }, [role, canManageQuestions, isLoadingAuth, router]);
 
-  if (isLoadingAuth || !canManageQuestions) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoadingAuth) {
+    return <ProfileSkeleton />;
+  }
+
+  if (!canManageQuestions) {
+    return null;
   }
 
   return (

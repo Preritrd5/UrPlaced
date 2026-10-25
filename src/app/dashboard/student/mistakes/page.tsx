@@ -23,6 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StudentMistakesPage() {
   const [loading, setLoading] = useState(true);
@@ -344,7 +345,22 @@ export default function StudentMistakesPage() {
       {/* Target Directory List */}
       <div className="space-y-4">
         {loading ? (
-          <div className="py-12 text-center text-text-muted">Loading mistake bank items...</div>
+          <div className="space-y-3" role="status" aria-busy="true">
+            <span className="sr-only">Loading mistake bank items...</span>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="p-4 rounded-xl border border-border bg-card shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-48 rounded" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+                <Skeleton className="h-3.5 w-3/4 rounded" />
+                <div className="flex items-center gap-3 pt-1">
+                  <Skeleton className="h-3 w-28 rounded" />
+                  <Skeleton className="h-3 w-24 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : targets.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>

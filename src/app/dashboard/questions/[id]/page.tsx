@@ -27,6 +27,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
 
 export default function QuestionDetailPage({
   params,
@@ -112,12 +113,12 @@ export default function QuestionDetailPage({
     }
   };
 
-  if (loading || isLoadingAuth || !canManageQuestions) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (loading || isLoadingAuth) {
+    return <DetailViewSkeleton />;
+  }
+
+  if (!canManageQuestions) {
+    return null;
   }
 
   if (error || !question) {

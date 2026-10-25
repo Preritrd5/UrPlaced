@@ -43,6 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { ProfileSkeleton } from "@/components/ui/page-skeletons";
 
 interface ProfileData {
   id: string;
@@ -351,12 +352,7 @@ export default function MyProfilePage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-3">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        <p className="text-xs text-text-secondary font-mono">Loading profile data...</p>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!profile) {

@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
 
 interface AnalyticsData {
   placement: {
@@ -120,12 +121,12 @@ export default function AnalyticsDashboardPage() {
     }
   }
 
-  if (isLoadingAuth || !canViewAnalytics) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoadingAuth || loading) {
+    return <AnalyticsSkeleton />;
+  }
+
+  if (!canViewAnalytics) {
+    return null;
   }
 
   return (

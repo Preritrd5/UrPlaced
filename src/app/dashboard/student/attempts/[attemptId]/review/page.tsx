@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
 
 export default function AttemptReviewPage({
   params,
@@ -52,12 +53,7 @@ export default function AttemptReviewPage({
   }
 
   if (loading) {
-    return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3">
-        <Clock className="h-8 w-8 text-primary animate-pulse" />
-        <p className="text-xs text-text-muted">Loading candidate performance report...</p>
-      </div>
-    );
+    return <DetailViewSkeleton />;
   }
 
   if (error || !reviewData) {

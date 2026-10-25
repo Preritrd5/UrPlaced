@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { ProfileSkeleton } from "@/components/ui/page-skeletons";
 
 function NewDriveForm() {
   const router = useRouter();
@@ -109,12 +110,12 @@ function NewDriveForm() {
     }
   }
 
-  if (isLoadingAuth || !canManageDrives) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoadingAuth) {
+    return <ProfileSkeleton />;
+  }
+
+  if (!canManageDrives) {
+    return null;
   }
 
   return (
@@ -322,8 +323,8 @@ function NewDriveForm() {
               <Button asChild variant="outline" size="sm">
                 <Link href="/dashboard/drives">Cancel</Link>
               </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={isLoading}>
-                <Save className="h-4 w-4 mr-1.5" />
+              <Button type="submit" variant="primary" size="sm" disabled={isLoading} isLoading={isLoading}>
+                {!isLoading && <Save className="h-4 w-4 mr-1.5" />}
                 {isLoading ? "Creating Draft Drive..." : "Create Draft Drive"}
               </Button>
             </div>
@@ -336,13 +337,7 @@ function NewDriveForm() {
 
 export default function NewDrivePage() {
   return (
-    <React.Suspense
-      fallback={
-        <div className="max-w-3xl mx-auto py-12 text-center text-xs text-text-muted">
-          Loading drive form...
-        </div>
-      }
-    >
+    <React.Suspense fallback={<ProfileSkeleton />}>
       <NewDriveForm />
     </React.Suspense>
   );

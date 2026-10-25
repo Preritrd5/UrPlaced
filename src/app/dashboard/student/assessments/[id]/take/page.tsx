@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AssessmentTakeSkeleton } from "@/components/ui/page-skeletons";
 
 export default function AssessmentTakingPage({
   params,
@@ -236,13 +237,7 @@ export default function AssessmentTakingPage({
   }
 
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-3">
-        <Clock className="h-8 w-8 text-primary animate-pulse" />
-        <h2 className="text-base font-semibold text-text-primary">Initializing Secure Workspace...</h2>
-        <p className="text-xs text-text-muted">Synchronizing server timer & question sets.</p>
-      </div>
-    );
+    return <AssessmentTakeSkeleton />;
   }
 
   if (error || !workspace) {

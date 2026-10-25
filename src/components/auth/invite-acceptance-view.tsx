@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface InviteState {
   loading: boolean;
@@ -228,11 +229,27 @@ export function InviteAcceptanceView({ token }: { token: string }) {
 
   if (state.loading) {
     return (
-      <div className="py-12 text-center space-y-3">
-        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" />
-        <p className="text-xs text-text-secondary font-mono">
-          Verifying institutional invitation token...
-        </p>
+      <div className="space-y-6" role="status" aria-busy="true">
+        <span className="sr-only">Verifying institutional invitation token...</span>
+        <div className="space-y-2 text-center">
+          <Skeleton className="h-10 w-10 rounded-full mx-auto" />
+          <Skeleton className="h-6 w-48 rounded mx-auto" />
+          <Skeleton className="h-3.5 w-64 rounded mx-auto" />
+        </div>
+        <div className="p-4 rounded-xl border border-border bg-input space-y-3">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-3.5 w-20 rounded" />
+            <Skeleton className="h-3.5 w-40 rounded" />
+          </div>
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-3.5 w-24 rounded" />
+            <Skeleton className="h-3.5 w-32 rounded" />
+          </div>
+        </div>
+        <div className="space-y-3 pt-2">
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </div>
       </div>
     );
   }
@@ -384,7 +401,13 @@ export function InviteAcceptanceView({ token }: { token: string }) {
             className="w-full mt-2"
             isLoading={isSubmitting}
           >
-            <LogIn className="h-4 w-4 mr-2" /> Sign In &amp; Accept Appointment
+            {isSubmitting ? (
+              "Signing in & joining..."
+            ) : (
+              <>
+                <LogIn className="h-4 w-4 mr-2" /> Sign In &amp; Accept Appointment
+              </>
+            )}
           </Button>
         </form>
       ) : (
@@ -440,7 +463,13 @@ export function InviteAcceptanceView({ token }: { token: string }) {
             className="w-full mt-2"
             isLoading={isSubmitting}
           >
-            <UserCheck className="h-4 w-4 mr-2" /> Activate Account &amp; Join College
+            {isSubmitting ? (
+              "Activating Account & Joining College..."
+            ) : (
+              <>
+                <UserCheck className="h-4 w-4 mr-2" /> Activate Account &amp; Join College
+              </>
+            )}
           </Button>
         </form>
       )}

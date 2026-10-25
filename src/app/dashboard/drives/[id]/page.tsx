@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
 import { DriveIntelligenceTab } from "@/components/drives/drive-intelligence-tab";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
@@ -273,13 +274,12 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
     }
   }
 
-  if (isLoading || isLoadingAuth || !isStaff) {
-    return (
-      <div className="p-12 text-center text-text-muted space-y-2">
-        <Briefcase className="h-8 w-8 mx-auto animate-pulse text-primary" />
-        <p className="text-xs">Loading recruitment drive command center...</p>
-      </div>
-    );
+  if (isLoading || isLoadingAuth) {
+    return <DetailViewSkeleton />;
+  }
+
+  if (!isStaff) {
+    return null;
   }
 
   if (!drive) {

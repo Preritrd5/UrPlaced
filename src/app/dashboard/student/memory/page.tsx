@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 export default function StudentPlacementMemoryPage() {
   const [records, setRecords] = useState<any[]>([]);
@@ -233,7 +234,11 @@ export default function StudentPlacementMemoryPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-[#292D40] py-4">Loading recruitment patterns...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" role="status" aria-busy="true">
+              <span className="sr-only">Loading recruitment patterns...</span>
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           ) : records.length === 0 ? (
             <div className="text-center py-6 text-[#292D40] text-sm">
               No historical recruitment patterns currently published.
@@ -280,7 +285,11 @@ export default function StudentPlacementMemoryPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-[#292D40] py-4">Loading debriefs...</p>
+            <div className="space-y-4" role="status" aria-busy="true">
+              <span className="sr-only">Loading debriefs...</span>
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           ) : reports.length === 0 ? (
             <div className="text-center py-6 text-[#292D40] text-sm">
               No moderated candidate debriefs published yet.

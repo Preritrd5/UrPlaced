@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
 
 export default function StudentAnalyticsPage() {
   const [data, setData] = useState<any | null>(null);
@@ -40,6 +41,10 @@ export default function StudentAnalyticsPage() {
 
   const summary = data?.summary;
   const attempts = data?.recentAttempts || [];
+
+  if (loading) {
+    return <AnalyticsSkeleton />;
+  }
 
   return (
     <div className="space-y-8 p-6 max-w-6xl mx-auto">

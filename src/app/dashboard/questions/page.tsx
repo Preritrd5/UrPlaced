@@ -29,6 +29,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { TableSkeleton } from "@/components/ui/page-skeletons";
 
 export default function QuestionsDashboardPage() {
   const router = useRouter();
@@ -141,12 +142,19 @@ export default function QuestionsDashboardPage() {
   ).length;
   const publishedCount = questions.filter((q) => q.lifecycle_status === "PUBLISHED").length;
 
-  if (isLoadingAuth || !canManageQuestions) {
+  if (isLoadingAuth || (loading && questions.length === 0)) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+      <TableSkeleton
+        title="Question Bank Sentinel"
+        subtitle="Curated collection of verified technical, aptitude, and verbal questions with multi-version tracking and leak protection."
+        columns={5}
+        rows={7}
+      />
     );
+  }
+
+  if (!canManageQuestions) {
+    return null;
   }
 
   return (

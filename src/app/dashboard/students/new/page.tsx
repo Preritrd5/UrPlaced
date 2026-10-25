@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { ProfileSkeleton } from "@/components/ui/page-skeletons";
 
 export default function NewStudentPage() {
   const router = useRouter();
@@ -101,12 +102,12 @@ export default function NewStudentPage() {
     }
   }
 
-  if (isLoadingAuth || !canManageStudents) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoadingAuth) {
+    return <ProfileSkeleton />;
+  }
+
+  if (!canManageStudents) {
+    return null;
   }
 
   return (
@@ -343,8 +344,8 @@ export default function NewStudentPage() {
               <Button asChild variant="outline" size="sm">
                 <Link href="/dashboard/students">Cancel</Link>
               </Button>
-              <Button type="submit" variant="primary" size="sm" disabled={isLoading}>
-                <Save className="h-4 w-4 mr-1.5" />
+              <Button type="submit" variant="primary" size="sm" disabled={isLoading} isLoading={isLoading}>
+                {!isLoading && <Save className="h-4 w-4 mr-1.5" />}
                 {isLoading ? "Saving Student..." : "Create Student Record"}
               </Button>
             </div>

@@ -109,7 +109,13 @@ export default function ResetPasswordPage() {
             className="w-full mt-2"
             isLoading={isLoading}
           >
-            <KeyRound className="h-4 w-4 mr-2" /> Update Password &amp; Continue
+            {isLoading ? (
+              "Updating Password..."
+            ) : (
+              <>
+                <KeyRound className="h-4 w-4 mr-2" /> Update Password &amp; Continue
+              </>
+            )}
           </Button>
         </form>
       </div>

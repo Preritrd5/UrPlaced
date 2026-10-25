@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
 
 export default function PlacementMistakesAnalyticsPage() {
   const router = useRouter();
@@ -126,12 +127,12 @@ export default function PlacementMistakesAnalyticsPage() {
     }
   }
 
-  if (isLoadingAuth || !canViewCohortMistakes) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoadingAuth || loading) {
+    return <AnalyticsSkeleton />;
+  }
+
+  if (!canViewCohortMistakes) {
+    return null;
   }
 
   return (

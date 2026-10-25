@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { TableSkeleton } from "@/components/ui/page-skeletons";
 
 export default function StaffAssessmentsPage() {
   const router = useRouter();
@@ -226,12 +227,19 @@ export default function StaffAssessmentsPage() {
     return a.status === activeTab;
   });
 
-  if (isLoadingAuth || !canViewAssessments) {
+  if (isLoadingAuth || (loading && assessments.length === 0)) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+      <TableSkeleton
+        title="Assessments & Student Prep"
+        subtitle="Author authoritative assessment activities, schedule availability windows, track participation, and govern result releases."
+        columns={5}
+        rows={6}
+      />
     );
+  }
+
+  if (!canViewAssessments) {
+    return null;
   }
 
   return (

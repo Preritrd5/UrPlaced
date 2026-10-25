@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 export default function StudentMasteryPage() {
   const [loading, setLoading] = useState(true);
@@ -228,7 +229,12 @@ export default function StudentMasteryPage() {
       {/* Skill List Cards */}
       <div className="space-y-4">
         {loading ? (
-          <div className="py-12 text-center text-text-muted">Loading mastery radar...</div>
+          <div className="grid gap-3" role="status" aria-busy="true">
+            <span className="sr-only">Loading skill mastery records...</span>
+            <SkeletonCard className="p-4" />
+            <SkeletonCard className="p-4" />
+            <SkeletonCard className="p-4" />
+          </div>
         ) : filteredSkills.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>

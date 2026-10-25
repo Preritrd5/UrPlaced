@@ -110,6 +110,7 @@ function StudentSignInContent() {
               <p>
                 This sign-in portal is exclusively for <strong>Students</strong>. Your account is registered under <strong>Placement Cell</strong>.
               </p>
+
             </div>
           );
           setIsLoading(false);
@@ -222,7 +223,13 @@ function StudentSignInContent() {
             className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
             isLoading={isLoading}
           >
-            <LogIn className="h-4 w-4 mr-2" /> Sign In to Student Portal
+            {isLoading ? (
+              "Signing in to Student Portal..."
+            ) : (
+              <>
+                <LogIn className="h-4 w-4 mr-2" /> Sign In to Student Portal
+              </>
+            )}
           </Button>
         </form>
 

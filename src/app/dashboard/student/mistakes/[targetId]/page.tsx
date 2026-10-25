@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
 
 export default function MistakeTargetDetailPage({
   params,
@@ -177,8 +178,19 @@ export default function MistakeTargetDetailPage({
     }
   }
 
-  if (loading || !data) {
-    return <div className="py-16 text-center text-text-muted">Loading mistake target details...</div>;
+  if (loading) {
+    return <DetailViewSkeleton />;
+  }
+
+  if (!data) {
+    return (
+      <div className="py-16 text-center text-text-muted space-y-3">
+        <p className="text-sm">Mistake target details could not be found or have been resolved.</p>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/dashboard/student/mistakes">Return to Mistake Bank</Link>
+        </Button>
+      </div>
+    );
   }
 
   const target = data.target;

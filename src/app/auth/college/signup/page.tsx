@@ -261,7 +261,13 @@ function CollegeSignUpContent() {
             className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
             isLoading={isLoading}
           >
-            <Building2 className="h-4 w-4 mr-2" /> Register Placement Cell
+            {isLoading ? (
+              "Registering Placement Cell..."
+            ) : (
+              <>
+                <Building2 className="h-4 w-4 mr-2" /> Register Placement Cell
+              </>
+            )}
           </Button>
         </form>
 

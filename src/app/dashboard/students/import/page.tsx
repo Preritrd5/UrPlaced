@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { ProfileSkeleton } from "@/components/ui/page-skeletons";
 
 export default function StudentImportPage() {
   const router = useRouter();
@@ -115,12 +116,12 @@ export default function StudentImportPage() {
     }
   }
 
-  if (isLoadingAuth || !canManageStudents) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
+  if (isLoadingAuth) {
+    return <ProfileSkeleton />;
+  }
+
+  if (!canManageStudents) {
+    return null;
   }
 
   return (
@@ -214,6 +215,7 @@ export default function StudentImportPage() {
               size="sm"
               onClick={handleValidate}
               disabled={isValidating || !csvContent.trim()}
+              isLoading={isValidating}
             >
               {isValidating ? "Validating Records..." : "Validate & Preview Rows"}
             </Button>
@@ -310,8 +312,9 @@ export default function StudentImportPage() {
                   size="sm"
                   onClick={handleCommit}
                   disabled={isCommitting}
+                  isLoading={isCommitting}
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                  {!isCommitting && <CheckCircle2 className="h-4 w-4 mr-1.5" />}
                   {isCommitting ? "Ingesting Students..." : `Confirm & Commit (${previewResult.validCount})`}
                 </Button>
               </CardHeader>

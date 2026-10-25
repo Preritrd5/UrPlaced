@@ -279,7 +279,13 @@ function StudentSignUpContent() {
             className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
             isLoading={isLoading}
           >
-            <UserPlus className="h-4 w-4 mr-2" /> Create Student Account (Sign Up)
+            {isLoading ? (
+              "Creating Student Account..."
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4 mr-2" /> Create Student Account (Sign Up)
+              </>
+            )}
           </Button>
         </form>
 

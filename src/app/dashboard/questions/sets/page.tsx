@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { TableSkeleton } from "@/components/ui/page-skeletons";
 
 export default function QuestionSetsPage() {
   const router = useRouter();
@@ -198,12 +199,19 @@ export default function QuestionSetsPage() {
     }
   };
 
-  if (isLoadingAuth || !canManageQuestions) {
+  if (isLoadingAuth || (loading && sets.length === 0)) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+      <TableSkeleton
+        title="Question Sets & Blueprints"
+        subtitle="Manage curated assessment question sets, purpose tags, and blueprint balance."
+        columns={4}
+        rows={6}
+      />
     );
+  }
+
+  if (!canManageQuestions) {
+    return null;
   }
 
   return (

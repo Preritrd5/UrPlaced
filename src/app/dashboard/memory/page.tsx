@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { TableSkeleton } from "@/components/ui/page-skeletons";
 
 export default function PlacementMemoryPage() {
   const router = useRouter();
@@ -103,12 +104,19 @@ export default function PlacementMemoryPage() {
     }
   }
 
-  if (isLoadingAuth || !canViewMemory) {
+  if (isLoadingAuth || (loading && records.length === 0 && pendingReports.length === 0)) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+      <TableSkeleton
+        title="Placement Memory & Recruitment Intelligence"
+        subtitle="Manage and moderate company hiring debriefs, interview experiences, and recurring interview questions."
+        columns={4}
+        rows={6}
+      />
     );
+  }
+
+  if (!canViewMemory) {
+    return null;
   }
 
   return (

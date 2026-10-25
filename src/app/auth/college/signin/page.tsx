@@ -221,7 +221,13 @@ function CollegeSignInContent() {
             className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
             isLoading={isLoading}
           >
-            <LogIn className="h-4 w-4 mr-2" /> Sign In to Placement Cell
+            {isLoading ? (
+              "Signing in to Placement Cell..."
+            ) : (
+              <>
+                <LogIn className="h-4 w-4 mr-2" /> Sign In to Placement Cell
+              </>
+            )}
           </Button>
         </form>
 

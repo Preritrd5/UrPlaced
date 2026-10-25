@@ -87,7 +87,13 @@ export default function ForgotPasswordPage() {
               className="w-full mt-2"
               isLoading={isLoading}
             >
-              <Mail className="h-4 w-4 mr-2" /> Send Recovery Instructions
+              {isLoading ? (
+                "Sending Recovery Instructions..."
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" /> Send Recovery Instructions
+                </>
+              )}
             </Button>
 
             <div className="text-center pt-2">

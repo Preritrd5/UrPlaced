@@ -15,6 +15,7 @@ import { EmailAdapter } from "@/modules/identity-access/services/email-adapter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/components/ui/pending-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -483,9 +484,9 @@ export default async function TenantMembersPage({
             </div>
 
             <div className="sm:col-span-3 pt-2">
-              <Button type="submit" variant="secondary">
+              <PendingButton type="submit" variant="secondary" pendingText="Dispatching invitation via SMTP...">
                 <UserPlus className="h-4 w-4 mr-2" /> Dispatch Invitation
-              </Button>
+              </PendingButton>
             </div>
           </form>
         </CardContent>
@@ -548,10 +549,11 @@ export default async function TenantMembersPage({
                           <form action={handleToggleMemberStatus} className="inline-block">
                             <input type="hidden" name="memberId" value={m.id} />
                             <input type="hidden" name="currentStatus" value={m.status} />
-                            <Button
+                            <PendingButton
                               type="submit"
                               variant={m.status === "ACTIVE" ? "ghost" : "outline"}
                               size="sm"
+                              pendingText="Updating..."
                               className={
                                 m.status === "ACTIVE"
                                   ? "text-status-danger hover:bg-[var(--color-danger-subtle)]"
@@ -559,7 +561,7 @@ export default async function TenantMembersPage({
                               }
                             >
                               {m.status === "ACTIVE" ? "Suspend" : "Reactivate"}
-                            </Button>
+                            </PendingButton>
                           </form>
                         )}
                         {m.role === "PLACEMENT_HEAD" && (
@@ -641,25 +643,27 @@ export default async function TenantMembersPage({
                           <div className="flex items-center justify-end gap-2">
                             <form action={handleResendInvitation} className="inline-block">
                               <input type="hidden" name="invitationId" value={inv.id} />
-                              <Button
+                              <PendingButton
                                 type="submit"
                                 variant="ghost"
                                 size="sm"
+                                pendingText="Resending..."
                                 className="text-xs text-primary hover:text-primary-hover h-8"
                               >
                                 <RotateCw className="h-3 w-3 mr-1" /> Resend
-                              </Button>
+                              </PendingButton>
                             </form>
                             <form action={handleRevokeInvitation} className="inline-block">
                               <input type="hidden" name="invitationId" value={inv.id} />
-                              <Button
+                              <PendingButton
                                 type="submit"
                                 variant="ghost"
                                 size="sm"
+                                pendingText="Revoking..."
                                 className="text-xs text-status-danger hover:bg-[var(--color-danger-subtle)] h-8"
                               >
                                 <XCircle className="h-3 w-3 mr-1" /> Revoke
-                              </Button>
+                              </PendingButton>
                             </form>
                           </div>
                         )}
