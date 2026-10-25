@@ -149,9 +149,6 @@ export default function StudentAITutorPage() {
             <h1 className="text-2xl font-bold font-outfit text-[#24283A]">
               AI Placement Study Tutor
             </h1>
-            <Badge variant="outline" className="text-xs bg-[#5052C9]/10 text-[#5052C9] border-[#5052C9]/30">
-              Powered by Gemini
-            </Badge>
           </div>
           <p className="text-sm font-inter text-[#292D40]/80">
             Personalized, step-by-step concept explanations, guided hints, and practice recommendations grounded in real placement topics.

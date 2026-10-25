@@ -536,9 +536,6 @@ export function FloatingAIChatbot() {
                   <h3 className="text-sm font-bold font-outfit text-[#24283A] leading-tight truncate">
                     UrPlaced AI
                   </h3>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-[#5052C9]/10 text-[#5052C9]">
-                    Gemini
-                  </span>
                 </div>
                 <p className="text-[11px] text-[#292D40]/70 truncate leading-none mt-0.5">
                   Your placement &amp; learning assistant
