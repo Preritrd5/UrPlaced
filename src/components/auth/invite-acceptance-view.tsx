@@ -364,6 +364,7 @@ export function InviteAcceptanceView({ token }: { token: string }) {
               type="button"
               onClick={handleSignOut}
               className="text-xs text-text-muted hover:text-text-primary underline"
+              suppressHydrationWarning
             >
               Sign out to switch account
             </button>

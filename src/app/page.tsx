@@ -263,7 +263,7 @@ export default function HomePage() {
               Designed For the Entire Placement Lifecycle
             </h2>
             <h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-text-primary font-heading">
-              One Unified System. Two Purpose-Built Experiences.
+              One Unified System. Two Purpose Built Experiences.
             </h3>
             <p className="text-base sm:text-lg text-text-secondary">
               UrPlaced bridges the gap between individual student preparation and institutional placement cell management.

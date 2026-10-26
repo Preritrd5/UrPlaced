@@ -135,12 +135,38 @@ export async function getCurrentUserProfile(
       resolvedRole = (serverRole || user.user_metadata?.role || "PLACEMENT_HEAD") as UserRole;
       isVerifiedMembership = true;
 
-      const tenantId = serverTenantId || user.user_metadata?.tenant_id || `tenant-${user.id}`;
+      let tenantId = serverTenantId || user.user_metadata?.tenant_id;
       const instName =
         serverInstitutionName ||
         user.user_metadata?.institution_name ||
         user.user_metadata?.institutionName ||
         "Sapthagiri NPS University";
+
+      let matchedTenant: any = null;
+      try {
+        if (tenantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
+          const { data: t } = await admin.from("tenants").select("*").eq("id", tenantId).maybeSingle();
+          matchedTenant = t;
+        }
+        if (!matchedTenant) {
+          const { data: t } = await admin.from("tenants").select("*").eq("name", instName).maybeSingle();
+          matchedTenant = t;
+          if (matchedTenant) tenantId = matchedTenant.id;
+        }
+        if (!matchedTenant) {
+          const { data: anyTenant } = await admin.from("tenants").select("*").limit(1).maybeSingle();
+          if (anyTenant) {
+            matchedTenant = anyTenant;
+            tenantId = anyTenant.id;
+          }
+        }
+      } catch {
+        // Fallback
+      }
+
+      if (!tenantId) {
+        tenantId = `tenant-${user.id}`;
+      }
 
       activeMembership = {
         id: `membership-${user.id}`,
@@ -151,13 +177,27 @@ export async function getCurrentUserProfile(
         permissions: [],
         created_at: user.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        tenants: {
+        tenants: matchedTenant || {
           id: tenantId,
           name: instName,
           slug: "college-workspace",
           status: "ACTIVE",
         },
       };
+
+      // Auto-heal: Ensure membership record exists in DB if tenantId is a valid UUID
+      if (tenantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
+        admin
+          .from("tenant_memberships")
+          .upsert({
+            tenant_id: tenantId,
+            user_id: user.id,
+            role: resolvedRole,
+            status: "ACTIVE",
+            permissions: [],
+          })
+          .catch(() => null);
+      }
     } else {
       resolvedCategory = (serverCategory || (user.user_metadata?.account_category === "COLLEGE" ? "COLLEGE" : "STUDENT"));
       resolvedRole = resolvedCategory === "COLLEGE" ? (serverRole || "PLACEMENT_HEAD") : "STUDENT";

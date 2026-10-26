@@ -109,6 +109,10 @@ export const Permissions = {
   AI_MISTAKE_MASTERY_USE: "ai.mistake_mastery.use",
   AI_DRIVEFIT_EVALUATE: "ai.drivefit.evaluate",
   AI_PLACEMENT_INTEL_READ: "ai.placement_intel.read",
+
+  // Phase 13 — Notifications & Announcements
+  ANNOUNCEMENTS_MANAGE: "announcements.manage",
+  ANNOUNCEMENTS_READ: "announcements.read",
 } as const;
 
 export type PermissionIdentifier =
@@ -161,6 +165,8 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.AI_MISTAKE_MASTERY_USE,
     Permissions.AI_DRIVEFIT_EVALUATE,
     Permissions.AI_PLACEMENT_INTEL_READ,
+    Permissions.ANNOUNCEMENTS_MANAGE,
+    Permissions.ANNOUNCEMENTS_READ,
   ],
   PLACEMENT_HEAD: [
     Permissions.STAFF_MANAGE,
@@ -224,6 +230,8 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.AI_MISTAKE_MASTERY_USE,
     Permissions.AI_DRIVEFIT_EVALUATE,
     Permissions.AI_PLACEMENT_INTEL_READ,
+    Permissions.ANNOUNCEMENTS_MANAGE,
+    Permissions.ANNOUNCEMENTS_READ,
   ],
   PLACEMENT_STAFF: [
     Permissions.STAFF_INVITE,
@@ -277,6 +285,7 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.AI_MISTAKE_MASTERY_USE,
     Permissions.AI_DRIVEFIT_EVALUATE,
     Permissions.AI_PLACEMENT_INTEL_READ,
+    Permissions.ANNOUNCEMENTS_READ,
   ],
   TRAINER: [
     Permissions.DASHBOARD_READ,
@@ -307,6 +316,8 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.AI_MISTAKE_MASTERY_USE,
     Permissions.AI_DRIVEFIT_EVALUATE,
     Permissions.AI_PLACEMENT_INTEL_READ,
+    Permissions.ANNOUNCEMENTS_MANAGE,
+    Permissions.ANNOUNCEMENTS_READ,
   ],
   STUDENT: [
     Permissions.DASHBOARD_READ,

@@ -21,6 +21,7 @@ import {
   Users,
   ShieldCheck,
   FileSpreadsheet,
+  Megaphone,
 } from "lucide-react";
 import {
   Permissions,
@@ -179,6 +180,15 @@ export const MASTER_NAVIGATION: {
         icon: GraduationCap,
         requiredPermission: Permissions.STUDENTS_READ,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
+        accountCategory: "COLLEGE",
+      },
+      {
+        id: "college-announcements",
+        name: "Announcements & Alerts",
+        href: "/dashboard/announcements",
+        icon: Megaphone,
+        requiredPermission: Permissions.ANNOUNCEMENTS_READ,
+        allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF"],
         accountCategory: "COLLEGE",
       },
     ],

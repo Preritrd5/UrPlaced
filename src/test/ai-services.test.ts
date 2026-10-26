@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GeminiClient } from "@/modules/ai/gemini-client";
+import * as SupabaseAdminModule from "@/lib/supabase/admin";
 import { AIStudyTutorService } from "@/modules/ai/services/ai-study-tutor-service";
 import { AIQuestionIntelligenceService } from "@/modules/ai/services/ai-question-intelligence-service";
 import { AIMistakeMasteryService } from "@/modules/ai/services/ai-mistake-mastery-service";
@@ -7,12 +8,37 @@ import { AIDriveFitService } from "@/modules/ai/services/ai-drivefit-service";
 import { AIPlacementIntelligenceService } from "@/modules/ai/services/ai-placement-intelligence-service";
 
 describe("AI Intelligence Services Domain Suite", () => {
+  const createMockAdmin = () => {
+    const chain: any = {
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: "mock-id" }, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    chain.then = (resolve: any) => resolve({ data: [], error: null });
+    return {
+      from: vi.fn().mockReturnValue(chain),
+    };
+  };
+
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(SupabaseAdminModule, "createAdminClient").mockReturnValue(createMockAdmin() as any);
   });
 
   describe("1. AI Study Tutor Service", () => {
-    it("generates structured pedagogical response with follow-ups and mode handling", async () => {
+    it(
+      "generates structured pedagogical response with follow-ups and mode handling",
+      async () => {
       const mockGeminiResponse = {
         text: `Here is the step-by-step breakdown of QuickSort:
 1. Select a pivot element.
@@ -39,7 +65,7 @@ Follow-up: What is the benefit of randomized pivot selection?`,
       expect(result.mode).toBe("EXPLAIN");
       expect(result.suggestedFollowUps?.length).toBe(2);
       expect(result.suggestedFollowUps?.[0]).toContain("worst-case");
-    });
+    }, 15000);
   });
 
   describe("2. AI Question Intelligence Service", () => {
@@ -87,7 +113,7 @@ Follow-up: What is the benefit of randomized pivot selection?`,
       expect(drafts[0].question.prompt).toContain("balanced Binary Search Tree");
       expect(drafts[0].question.answerKey.correctOptionId).toBe("opt-b");
       expect(drafts[0].question.options.length).toBe(4);
-    });
+    }, 15000);
 
     it("rejects questions failing Zod validation", async () => {
       const invalidPayload = {

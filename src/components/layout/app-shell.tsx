@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import { FloatingAIChatbot } from "@/components/ai/floating-ai-chatbot";
 import {
@@ -71,7 +72,10 @@ export function AppShell({ children }: AppShellProps) {
             {roleDisplayNames[role] || "Workspace"}
           </span>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {auth.isAuthenticated && (
+            <NotificationBell size="sm" />
+          )}
           {auth.isAuthenticated && (
             <UserAccountMenu size="sm" />
           )}
@@ -235,7 +239,7 @@ export function AppShell({ children }: AppShellProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {auth.availableTenants.length > 1 && (
               <Link
                 href="/dashboard/select-tenant"
@@ -244,6 +248,10 @@ export function AppShell({ children }: AppShellProps) {
                 <Building className="h-3.5 w-3.5" />
                 <span>Switch College ({auth.availableTenants.length})</span>
               </Link>
+            )}
+
+            {auth.isAuthenticated && (
+              <NotificationBell size="default" />
             )}
 
             {auth.isAuthenticated && (

@@ -1,9 +1,14 @@
 /**
  * Domain Module: Notification Center & Email Adapter
- * Scope: In-app notifications, transactional emails, delivery status, background dispatch.
- * Scheduled for Implementation: Phase 09
+ * Scope: In-app real-time notifications, persistence, delivery status, read management.
  */
+
+export * from "./types";
+export * from "./services/notification-service";
+export * from "./hooks/use-notifications";
+
 export const NotificationsModule = {
   name: "notifications",
-  status: "placeholder",
+  status: "active",
+  version: "1.0.0",
 } as const;

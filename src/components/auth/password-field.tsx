@@ -38,6 +38,7 @@ export const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldPro
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-primary transition-colors p-1"
             aria-label={showPassword ? "Hide password" : "Show password"}
             tabIndex={0}
+            suppressHydrationWarning
           >
             {showPassword ? (
               <EyeOff className="h-4 w-4" aria-hidden="true" />

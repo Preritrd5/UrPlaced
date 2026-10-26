@@ -89,27 +89,36 @@ export async function POST(request: NextRequest) {
       const slug = `${baseSlug || "college"}-${uniqueSuffix}`;
 
       try {
-        const { data: newTenant } = await admin
+        const { data: existingTenant } = await admin
           .from("tenants")
-          .insert({
-            name: institution,
-            slug,
-            status: "ACTIVE",
-            student_seat_limit: 500,
-          })
-          .select()
-          .single();
+          .select("id")
+          .eq("name", institution)
+          .maybeSingle();
 
-        if (newTenant) {
-          provisionedTenantId = newTenant.id;
+        if (existingTenant) {
+          provisionedTenantId = existingTenant.id;
+        } else {
+          const { data: newTenant } = await admin
+            .from("tenants")
+            .insert({
+              name: institution,
+              slug,
+              status: "ACTIVE",
+              student_seat_limit: 500,
+            })
+            .select()
+            .single();
+
+          if (newTenant) {
+            provisionedTenantId = newTenant.id;
+          }
         }
       } catch {
-        // Fallback tenant identifier if table unseeded
-        provisionedTenantId = `tenant-${cleanEmail.replace(/[^a-z0-9]/g, "")}`;
+        provisionedTenantId = crypto.randomUUID();
       }
 
       if (!provisionedTenantId) {
-        provisionedTenantId = `tenant-${cleanEmail.replace(/[^a-z0-9]/g, "")}`;
+        provisionedTenantId = crypto.randomUUID();
       }
     }
 
