@@ -2,7 +2,7 @@
  * Single Student API Route
  * GET /api/placement/students/[id] — Retrieve student details
  * PATCH /api/placement/students/[id] — Update student details
- * DELETE /api/placement/students/[id] — Archive student
+ * DELETE /api/placement/students/[id] — Permanently delete student (requires SRN confirmation)
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -75,19 +75,40 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const ctx = await requireAuthContext(Permissions.STUDENTS_ARCHIVE);
+    const ctx = await requireAuthContext(Permissions.STUDENTS_DELETE);
 
-    const archived = await StudentService.archive(ctx.tenantId, id);
+    // Only Placement Heads or Platform Admins are authorized to perform permanent deletions
+    if (ctx.tenantRole !== "PLACEMENT_HEAD" && !ctx.isPlatformAdmin) {
+      return NextResponse.json(
+        { error: "Permanent deletion of student records is strictly restricted to Placement Heads." },
+        { status: 403 }
+      );
+    }
 
-    await AuditService.log({
-      tenantId: ctx.tenantId,
-      actorId: ctx.userId,
-      action: "STUDENT_ARCHIVED",
-      resourceType: "student",
-      resourceId: id,
-    });
+    let confirmedSrn = "";
+    try {
+      const body = await request.json();
+      confirmedSrn = body?.confirmedSrn || "";
+    } catch {
+      const url = new URL(request.url);
+      confirmedSrn = url.searchParams.get("confirmedSrn") || "";
+    }
 
-    return NextResponse.json({ success: true, student: archived });
+    if (!confirmedSrn || !confirmedSrn.trim()) {
+      return NextResponse.json(
+        { error: "Confirmation enrollment number (SRN) is required to permanently delete a student." },
+        { status: 400 }
+      );
+    }
+
+    const result = await StudentService.deletePermanently(
+      ctx.tenantId,
+      id,
+      confirmedSrn,
+      ctx.userId
+    );
+
+    return NextResponse.json({ success: true, student: result.deletedStudent });
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

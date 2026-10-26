@@ -9,15 +9,16 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { StudentService } from "@/modules/students/services/student-service";
 import { DepartmentService } from "@/modules/academic/services/department-service";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StudentRowActions } from "@/components/students/student-row-actions";
+import { BulkDeleteModal } from "@/components/students/bulk-delete-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ interface StudentsPageProps {
     departmentId?: string;
     graduationYear?: string;
     page?: string;
+    statusView?: string;
   }>;
 }
 
@@ -42,8 +44,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     redirect("/dashboard/student");
   }
 
+  const isPlacementHead = userRole === "PLACEMENT_HEAD" || profile.isPlatformAdmin;
   const canManageStudents =
-    userRole === "PLACEMENT_HEAD" || userRole === "PLACEMENT_STAFF";
+    userRole === "PLACEMENT_HEAD" || userRole === "PLACEMENT_STAFF" || profile.isPlatformAdmin;
 
   const activeTenant = profile.activeMembership?.tenants;
   if (!activeTenant) {
@@ -57,6 +60,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const resolvedParams = await searchParams;
   const search = resolvedParams.search || "";
   const departmentId = resolvedParams.departmentId || "";
+  const statusView = resolvedParams.statusView || "active";
   const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1;
 
   const [studentsResult, departments] = await Promise.all([
@@ -64,6 +68,8 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       tenantId: activeTenant.id,
       search: search || undefined,
       departmentId: departmentId || undefined,
+      archivedOnly: statusView === "archived",
+      includeArchived: statusView === "all",
       page,
       pageSize: 15,
     }),
@@ -85,6 +91,11 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
         {canManageStudents && (
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Feature B: College-Scoped Bulk Deletion (Placement Head only) */}
+            {isPlacementHead && (
+              <BulkDeleteModal collegeName={activeTenant.name} />
+            )}
+
             <Button asChild variant="outline" size="sm">
               <a href="/api/placement/students/export" download>
                 <Download className="h-4 w-4 mr-1.5" /> Export CSV
@@ -135,6 +146,18 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               </select>
             </div>
 
+            <div className="w-full sm:w-44">
+              <select
+                name="statusView"
+                defaultValue={statusView}
+                className="w-full h-9 rounded-lg border border-border bg-input px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+              >
+                <option value="active">Active Directory</option>
+                <option value="archived">Deactivated / Archived</option>
+                <option value="all">All Records</option>
+              </select>
+            </div>
+
             <Button type="submit" variant="outline" size="sm" className="h-9">
               <Filter className="h-3.5 w-3.5 mr-1.5" /> Apply Filter
             </Button>
@@ -146,8 +169,13 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       <Card>
         <CardHeader className="py-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">
-              Roster ({studentsResult.total} Total)
+            <CardTitle className="text-base flex items-center gap-2">
+              <span>Roster ({studentsResult.total} Total)</span>
+              {statusView === "archived" && (
+                <Badge variant="secondary" className="text-[10px]">
+                  Archived View
+                </Badge>
+              )}
             </CardTitle>
             <span className="text-xs text-text-secondary font-mono">
               Page {studentsResult.page} of {studentsResult.totalPages}
@@ -176,17 +204,29 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                     <th className="py-3 px-4">CGPA</th>
                     <th className="py-3 px-4">Backlogs</th>
                     <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {studentsResult.students.map((student) => (
                     <tr key={student.id} className="hover:bg-input/50 transition-colors">
                       <td className="py-3 px-4 font-mono font-medium text-text-primary">
-                        {student.enrollment_number}
+                        <Link
+                          href={`/dashboard/students/${student.id}`}
+                          className="hover:text-primary transition-colors hover:underline"
+                        >
+                          {student.enrollment_number}
+                        </Link>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="font-semibold text-text-primary">{student.full_name}</div>
+                        <div className="font-semibold text-text-primary">
+                          <Link
+                            href={`/dashboard/students/${student.id}`}
+                            className="hover:text-primary transition-colors"
+                          >
+                            {student.full_name}
+                          </Link>
+                        </div>
                         <div className="text-[11px] text-text-muted truncate max-w-[200px]">
                           {student.email}
                         </div>
@@ -210,25 +250,38 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <Badge
-                          variant={
-                            student.academic_status === "ACTIVE"
-                              ? "success"
-                              : student.academic_status === "GRADUATED"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="text-[10px]"
-                        >
-                          {student.academic_status}
-                        </Badge>
+                        {student.is_archived ? (
+                          <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
+                            ARCHIVED
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant={
+                              student.academic_status === "ACTIVE"
+                                ? "success"
+                                : student.academic_status === "GRADUATED"
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="text-[10px]"
+                          >
+                            {student.academic_status}
+                          </Badge>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Button asChild variant="ghost" size="sm" className="h-7 px-2">
-                          <Link href={`/dashboard/students/${student.id}`}>
-                            Details <ExternalLink className="h-3 w-3 ml-1" />
-                          </Link>
-                        </Button>
+                        {/* Feature A: Individual Student Actions Dropdown Menu */}
+                        <StudentRowActions
+                          student={{
+                            id: student.id,
+                            enrollment_number: student.enrollment_number,
+                            full_name: student.full_name,
+                            email: student.email,
+                            is_archived: student.is_archived,
+                            academic_status: student.academic_status,
+                          }}
+                          canDelete={isPlacementHead}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -247,7 +300,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 disabled={studentsResult.page <= 1}
               >
                 <Link
-                  href={`/dashboard/students?search=${search}&departmentId=${departmentId}&page=${studentsResult.page - 1}`}
+                  href={`/dashboard/students?search=${search}&departmentId=${departmentId}&statusView=${statusView}&page=${studentsResult.page - 1}`}
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" /> Previous
                 </Link>
@@ -264,7 +317,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 disabled={studentsResult.page >= studentsResult.totalPages}
               >
                 <Link
-                  href={`/dashboard/students?search=${search}&departmentId=${departmentId}&page=${studentsResult.page + 1}`}
+                  href={`/dashboard/students?search=${search}&departmentId=${departmentId}&statusView=${statusView}&page=${studentsResult.page + 1}`}
                 >
                   Next <ChevronRight className="h-4 w-4 ml-1" />
                 </Link>

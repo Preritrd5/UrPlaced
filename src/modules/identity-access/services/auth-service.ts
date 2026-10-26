@@ -187,16 +187,25 @@ export async function getCurrentUserProfile(
 
       // Auto-heal: Ensure membership record exists in DB if tenantId is a valid UUID
       if (tenantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantId)) {
-        admin
-          .from("tenant_memberships")
-          .upsert({
-            tenant_id: tenantId,
-            user_id: user.id,
-            role: resolvedRole,
-            status: "ACTIVE",
-            permissions: [],
-          })
-          .catch(() => null);
+        try {
+          const { error: syncError } = await admin
+            .from("tenant_memberships")
+            .upsert({
+              tenant_id: tenantId,
+              user_id: user.id,
+              role: resolvedRole,
+              status: "ACTIVE",
+              permissions: [],
+            });
+
+          if (syncError && process.env.NODE_ENV === "development") {
+            console.warn("[AuthService Notice] Auto-heal membership sync notice:", syncError.message);
+          }
+        } catch (syncErr: any) {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("[AuthService Notice] Failed to auto-heal membership:", syncErr?.message || syncErr);
+          }
+        }
       }
     } else {
       resolvedCategory = (serverCategory || (user.user_metadata?.account_category === "COLLEGE" ? "COLLEGE" : "STUDENT"));

@@ -22,6 +22,7 @@ export const Permissions = {
   STUDENTS_EXPORT: "students.export",
   STUDENTS_EDIT: "students.edit",
   STUDENTS_ARCHIVE: "students.archive",
+  STUDENTS_DELETE: "students.delete",
 
   // Academic Structure
   ACADEMIC_YEARS_MANAGE: "academic_years.manage",
@@ -133,6 +134,7 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.TENANT_REACTIVATE,
     Permissions.PLATFORM_HEALTH_READ,
     Permissions.AUDIT_LOG_READ,
+    Permissions.STUDENTS_DELETE,
     Permissions.DASHBOARD_READ,
     Permissions.REPORTS_EXPORT,
     Permissions.INTELLIGENCE_SOURCES_READ,
@@ -182,6 +184,7 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.STUDENTS_EXPORT,
     Permissions.STUDENTS_EDIT,
     Permissions.STUDENTS_ARCHIVE,
+    Permissions.STUDENTS_DELETE,
     Permissions.DRIVES_MANAGE,
     Permissions.DRIVES_PUBLISH,
     Permissions.DRIVES_VIEW_INTERNAL,

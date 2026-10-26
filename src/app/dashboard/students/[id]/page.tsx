@@ -20,6 +20,7 @@ import { OutcomeService } from "@/modules/placement/services/outcome-service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StudentRowActions } from "@/components/students/student-row-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,18 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
               </a>
             </Button>
           )}
+
+          <StudentRowActions
+            student={{
+              id: student.id,
+              enrollment_number: student.enrollment_number,
+              full_name: student.full_name,
+              email: student.email,
+              is_archived: student.is_archived,
+              academic_status: student.academic_status,
+            }}
+            canDelete={role === "PLACEMENT_HEAD" || profile.isPlatformAdmin}
+          />
         </div>
       </div>
 
