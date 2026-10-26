@@ -526,6 +526,7 @@ export interface Database {
           academic_status: AcademicStatus;
           skills: string[];
           resume_url: string | null;
+          claimed_at: string | null;
           is_archived: boolean;
           created_at: string;
           updated_at: string;
@@ -549,6 +550,7 @@ export interface Database {
           academic_status?: AcademicStatus;
           skills?: string[];
           resume_url?: string | null;
+          claimed_at?: string | null;
           is_archived?: boolean;
           created_at?: string;
           updated_at?: string;

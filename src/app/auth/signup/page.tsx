@@ -17,13 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SplitAuthCard, type FeatureHighlight } from "@/components/auth/split-auth-card";
 import { PasswordField } from "@/components/auth/password-field";
 
@@ -51,10 +44,9 @@ const studentSignUpFeatures: FeatureHighlight[] = [
 function StudentSignUpContent() {
   const router = useRouter();
 
+  const [srn, setSrn] = React.useState("");
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [department, setDepartment] = React.useState("");
-  const [graduationYear, setGraduationYear] = React.useState("2026");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
@@ -66,6 +58,12 @@ function StudentSignUpContent() {
     setErrorMsg(null);
 
     // Validation checks
+    const cleanSrn = srn.trim();
+    if (!cleanSrn) {
+      setErrorMsg("Please enter your Student Registration Number (SRN).");
+      return;
+    }
+
     if (!fullName.trim() || fullName.trim().length < 2) {
       setErrorMsg("Please enter your full name (minimum 2 characters).");
       return;
@@ -89,11 +87,12 @@ function StudentSignUpContent() {
     setIsLoading(true);
 
     try {
-      // 1. Call server-side signup API with fixed STUDENT category
+      // 1. Call server-side signup API with SRN and fixed STUDENT category
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          srn: cleanSrn,
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
           password,
@@ -110,7 +109,7 @@ function StudentSignUpContent() {
         return;
       }
 
-      setSuccessMsg("Student account created! Signing you in...");
+      setSuccessMsg("Student account created and linked to roster! Signing you in...");
 
       // 2. Automatically authenticate session in browser client
       const supabase = createClient();
@@ -121,6 +120,13 @@ function StudentSignUpContent() {
         });
 
       if (signInError || !authData.session) {
+        if (signInError?.message?.toLowerCase().includes("email not confirmed")) {
+          setSuccessMsg(
+            "Account registered successfully! Please check your email inbox to verify your address before signing in."
+          );
+          setIsLoading(false);
+          return;
+        }
         router.push(`/auth/signin?registered=true&email=${encodeURIComponent(email)}`);
         return;
       }
@@ -152,7 +158,7 @@ function StudentSignUpContent() {
             Create Student Account
           </h2>
           <p className="text-sm text-slate-500">
-            Enter your academic details and create your portal login password.
+            Enter your official SRN, name, email address, and create your portal password.
           </p>
         </div>
 
@@ -174,6 +180,28 @@ function StudentSignUpContent() {
 
         {/* Sign Up Form */}
         <form onSubmit={handleSignUp} className="space-y-3.5">
+          {/* Student Registration Number (SRN) */}
+          <div className="space-y-1.5">
+            <Label htmlFor="srn" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
+              Student Registration Number (SRN)
+            </Label>
+            <Input
+              id="srn"
+              type="text"
+              placeholder="e.g. 1MS21CS001 or 00123"
+              value={srn}
+              onChange={(e) => setSrn(e.target.value)}
+              required
+              disabled={isLoading}
+              autoCapitalize="characters"
+              spellCheck={false}
+              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono uppercase"
+            />
+            <p className="text-[11px] text-slate-500">
+              Enter your official roll number or registration ID from your campus placement roster.
+            </p>
+          </div>
+
           {/* Full Name */}
           <div className="space-y-1.5">
             <Label htmlFor="fullName" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
@@ -189,45 +217,6 @@ function StudentSignUpContent() {
               disabled={isLoading}
               className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
-          </div>
-
-          {/* Academic Stream & Batch (Paired Fields) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="department" className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-                Department / Stream
-              </Label>
-              <Select value={department} onValueChange={setDepartment} disabled={isLoading}>
-                <SelectTrigger id="department" suppressHydrationWarning className="bg-input border-border/80 rounded-xl h-11 text-sm">
-                  <SelectValue placeholder="Select stream" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cse">Computer Science (CSE)</SelectItem>
-                  <SelectItem value="ise">Information Science (ISE/IT)</SelectItem>
-                  <SelectItem value="ece">Electronics &amp; Comm (ECE)</SelectItem>
-                  <SelectItem value="eee">Electrical Engineering (EEE)</SelectItem>
-                  <SelectItem value="me">Mechanical Engineering (ME)</SelectItem>
-                  <SelectItem value="other">Other Disciplines</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="gradYear" className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-                Graduation Batch
-              </Label>
-              <Select value={graduationYear} onValueChange={setGraduationYear} disabled={isLoading}>
-                <SelectTrigger id="gradYear" suppressHydrationWarning className="bg-input border-border/80 rounded-xl h-11 text-sm">
-                  <SelectValue placeholder="Select batch" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2025">Batch 2025</SelectItem>
-                  <SelectItem value="2026">Batch 2026 (Current)</SelectItem>
-                  <SelectItem value="2027">Batch 2027</SelectItem>
-                  <SelectItem value="2028">Batch 2028</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* Email Address */}

@@ -20,6 +20,29 @@ vi.mock("@/lib/supabase/admin", () => ({
   })),
 }));
 
+// Mock StudentService
+vi.mock("@/modules/students/services/student-service", () => ({
+  StudentService: {
+    normalizeSrn: vi.fn((srn: string) => (srn ? srn.trim() : "")),
+    findEligibleRosterBySrn: vi.fn().mockResolvedValue({
+      status: "FOUND",
+      roster: {
+        id: "mock-student-id",
+        tenant_id: "mock-tenant-id",
+        enrollment_number: "SRN-ALEX-001",
+      },
+      matchesCount: 1,
+    }),
+    claimStudentRosterRecord: vi.fn().mockResolvedValue({
+      success: true,
+      code: "CLAIMED_SUCCESSFULLY",
+      studentId: "mock-student-id",
+      tenantId: "mock-tenant-id",
+      enrollmentNumber: "SRN-ALEX-001",
+    }),
+  },
+}));
+
 import { POST as signUpHandler } from "@/app/api/auth/signup/route";
 import { NextRequest } from "next/server";
 import { getRoleDefaultDashboard } from "@/lib/navigation/navigation-config";
@@ -36,6 +59,7 @@ describe("Separate Student and College Authentication Portals", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          srn: "SRN-ALEX-001",
           fullName: "Alex Student",
           email: `student-${uniqueSuffix}@campus.edu`,
           password: "SecurePassword123!",

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { StudentService } from "@/modules/students/services/student-service";
 import type { TenantRole } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -74,9 +75,78 @@ export async function POST(request: NextRequest) {
     const institution = (institutionName || "Campus Placement Cell").trim();
     const admin = createAdminClient();
 
-    // 3. Provision isolated tenant for College accounts
-    // SECURITY INVARIANT: Public signup NEVER attaches to an existing college tenant.
-    // Every college registration creates its own dedicated, isolated institution record.
+    // 3. SRN Pre-Validation & Roster Association for Student Accounts
+    // SECURITY INVARIANTS:
+    // - Client-supplied college IDs or names are NEVER trusted for student accounts.
+    // - Institutional affiliation (tenant_id) is derived 100% from the verified roster record.
+    // - Unclaimed check, ambiguous match rejection, and status verification occur before account creation.
+    let studentRosterRecord: any = null;
+    let derivedStudentTenantId: string | null = null;
+    let cleanSrn = "";
+
+    if (!isCollegeAccount) {
+      cleanSrn = StudentService.normalizeSrn(body.srn);
+      if (!cleanSrn) {
+        return NextResponse.json(
+          { success: false, error: "Student Registration Number (SRN) is required." },
+          { status: 400 }
+        );
+      }
+
+      const eligibleCheck = await StudentService.findEligibleRosterBySrn(cleanSrn);
+
+      if (eligibleCheck.status === "INVALID_SRN") {
+        return NextResponse.json(
+          { success: false, error: "Please enter a valid Student Registration Number (SRN)." },
+          { status: 400 }
+        );
+      }
+
+      if (eligibleCheck.status === "ALREADY_CLAIMED") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "This Student Registration Number (SRN) has already been claimed by a registered account. Please sign in or contact your campus placement cell.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (eligibleCheck.status === "NOT_FOUND") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Your Student Registration Number (SRN) has not been registered... Please contact your campus placement cell..",
+          },
+          { status: 404 }
+        );
+      }
+
+      if (eligibleCheck.status === "AMBIGUOUS") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "This SRN matches multiple institutional rosters. Registration cannot proceed automatically. Please contact your college placement cell.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (eligibleCheck.status !== "FOUND" || !eligibleCheck.roster) {
+        return NextResponse.json(
+          { success: false, error: "Unable to verify student roster eligibility." },
+          { status: 400 }
+        );
+      }
+
+      studentRosterRecord = eligibleCheck.roster;
+      derivedStudentTenantId = studentRosterRecord.tenant_id;
+    }
+
+    // 4. Provision isolated tenant for College accounts (or use derived tenant for Students)
     let provisionedTenantId: string | null = null;
 
     if (isCollegeAccount) {
@@ -120,9 +190,12 @@ export async function POST(request: NextRequest) {
       if (!provisionedTenantId) {
         provisionedTenantId = crypto.randomUUID();
       }
+    } else {
+      // For student accounts, the tenant is strictly derived from the verified roster
+      provisionedTenantId = derivedStudentTenantId;
     }
 
-    // 4. Create user in Supabase Auth via Admin API
+    // 5. Create user in Supabase Auth via Admin API
     // Sets server-controlled app_metadata (immutable from client) to prevent privilege escalation
     const { data: userData, error: createError } = await admin.auth.admin.createUser({
       email: cleanEmail,
@@ -166,7 +239,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Upsert user profile
+    // 6. Roster Claiming for Student Accounts
+    // Atomically binds the authenticated account to the existing roster record,
+    // establishes tenant_memberships, updates app_metadata, and writes audit trail.
+    if (!isCollegeAccount) {
+      const claimResult = await StudentService.claimStudentRosterRecord({
+        srn: cleanSrn,
+        userId,
+      });
+
+      if (!claimResult.success) {
+        // Rollback created auth user so an unlinked or orphan account is not left behind
+        await admin.auth.admin.deleteUser(userId).catch(() => null);
+
+        const isConflict =
+          claimResult.code === "ALREADY_CLAIMED" ||
+          claimResult.code === "AMBIGUOUS_SRN" ||
+          claimResult.code === "USER_ALREADY_HAS_ROSTER" ||
+          claimResult.code === "CONCURRENT_CLAIM_CONFLICT";
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: claimResult.message || "Failed to link student account with campus roster.",
+          },
+          { status: isConflict ? 409 : 400 }
+        );
+      }
+    }
+
+    // 7. Upsert user profile
     await admin.from("profiles").upsert({
       id: userId,
       email: cleanEmail,
@@ -174,7 +276,8 @@ export async function POST(request: NextRequest) {
       is_platform_admin: false,
     });
 
-    // 6. Establish database membership exclusively for College account in their own isolated tenant
+    // 8. Establish database membership for College accounts in their isolated tenant
+    // (Student memberships were already established atomically during claimStudentRosterRecord)
     if (isCollegeAccount && provisionedTenantId) {
       try {
         await admin.from("tenant_memberships").upsert({
@@ -189,17 +292,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 8. Success response with target destination
+    // 9. Success response with target destination
     const nextUrl = isCollegeAccount ? "/dashboard" : "/dashboard/student";
 
     return NextResponse.json({
       success: true,
-      message: "Account created successfully.",
+      message: isCollegeAccount
+        ? "Account created successfully."
+        : "Student account created and linked to official campus roster successfully.",
       user: {
         id: userId,
         email: cleanEmail,
         fullName: cleanName,
       },
+      tenantId: provisionedTenantId,
       nextUrl,
     });
   } catch (error: any) {

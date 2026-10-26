@@ -185,11 +185,8 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-heading text-text-primary">
-                {metrics.uniquePlacedStudents}
-              </span>
-              <span className="text-xs font-semibold text-secondary flex items-center">
-                <Percent className="h-3 w-3 mr-0.5" /> {metrics.placementPercentage}%
+              <span className="text-2xl font-bold font-heading text-secondary">
+                {metrics.uniquePlacedStudents} %
               </span>
             </div>
             <p className="text-[11px] text-text-muted mt-1">

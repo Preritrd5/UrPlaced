@@ -67,6 +67,46 @@ export interface BulkDeleteExecutionResult {
   message?: string;
 }
 
+export type FindEligibleRosterStatus =
+  | "FOUND"
+  | "NOT_FOUND"
+  | "ALREADY_CLAIMED"
+  | "AMBIGUOUS"
+  | "INVALID_SRN";
+
+export interface FindEligibleRosterResult {
+  status: FindEligibleRosterStatus;
+  roster?: StudentRow;
+  matchesCount: number;
+  message?: string;
+}
+
+export interface ClaimStudentRosterParams {
+  srn: string;
+  userId: string;
+}
+
+export type ClaimStudentRosterCode =
+  | "CLAIMED_SUCCESSFULLY"
+  | "INVALID_SRN"
+  | "INVALID_USER"
+  | "USER_ALREADY_HAS_ROSTER"
+  | "ALREADY_CLAIMED"
+  | "SRN_NOT_FOUND"
+  | "AMBIGUOUS_SRN"
+  | "CONCURRENT_CLAIM_CONFLICT"
+  | "CLAIM_FAILED";
+
+export interface ClaimStudentRosterResult {
+  success: boolean;
+  code: ClaimStudentRosterCode;
+  message: string;
+  studentId?: string;
+  tenantId?: string;
+  enrollmentNumber?: string;
+  student?: StudentRow;
+}
+
 export class StudentService {
   /**
    * List students with filtering, search, sorting, and pagination
@@ -811,6 +851,343 @@ export class StudentService {
       deletedCount,
       protectedCount: retainedCount,
       totalBefore: allStudents.length,
+    };
+  }
+
+  /**
+   * Normalizes an SRN:
+   * - Trims whitespace
+   * - Preserves leading zeros and case formatting
+   * - Never casts to numeric type
+   */
+  static normalizeSrn(srn: string): string {
+    if (!srn || typeof srn !== "string") return "";
+    return srn.trim();
+  }
+
+  /**
+   * Finds an eligible unclaimed roster record for a given SRN.
+   * Enforces:
+   * - Valid non-empty SRN
+   * - Rejects already-claimed records
+   * - Requires active, non-archived status
+   * - Rejects ambiguous SRNs that appear across multiple colleges
+   */
+  static async findEligibleRosterBySrn(
+    srn: string,
+    tenantId?: string
+  ): Promise<FindEligibleRosterResult> {
+    const cleanSrn = StudentService.normalizeSrn(srn);
+    if (!cleanSrn) {
+      return {
+        status: "INVALID_SRN",
+        matchesCount: 0,
+        message: "A valid Student Registration Number (SRN) is required.",
+      };
+    }
+
+    const supabase = createAdminClient();
+
+    // 1. Check if any student record with this SRN is already claimed
+    let claimedQuery = supabase
+      .from("students")
+      .select("id, tenant_id, enrollment_number, user_id")
+      .ilike("enrollment_number", cleanSrn)
+      .not("user_id", "is", null);
+
+    if (tenantId) {
+      claimedQuery = claimedQuery.eq("tenant_id", tenantId);
+    }
+
+    const { data: claimedRecords, error: claimedError } = await claimedQuery;
+    if (claimedError) {
+      throw new Error(`Failed to check claimed roster records: ${claimedError.message}`);
+    }
+
+    if (claimedRecords && claimedRecords.length > 0) {
+      return {
+        status: "ALREADY_CLAIMED",
+        matchesCount: claimedRecords.length,
+        message: "This Student Registration Number (SRN) has already been claimed by a registered account.",
+      };
+    }
+
+    // 2. Query unclaimed, active, non-archived roster records
+    let query = supabase
+      .from("students")
+      .select("*, department:departments(name, code)")
+      .ilike("enrollment_number", cleanSrn)
+      .is("user_id", null)
+      .eq("is_archived", false)
+      .eq("academic_status", "ACTIVE");
+
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
+
+    const { data: matches, error: matchError } = await query;
+    if (matchError) {
+      throw new Error(`Failed to query student roster: ${matchError.message}`);
+    }
+
+    if (!matches || matches.length === 0) {
+      return {
+        status: "NOT_FOUND",
+        matchesCount: 0,
+        message: "No active, eligible student roster record found for the provided SRN.",
+      };
+    }
+
+    if (matches.length > 1) {
+      return {
+        status: "AMBIGUOUS",
+        matchesCount: matches.length,
+        message: "This SRN matches multiple institutional rosters. Please contact your college placement cell.",
+      };
+    }
+
+    return {
+      status: "FOUND",
+      roster: matches[0] as StudentRow,
+      matchesCount: 1,
+      message: "Eligible roster record found.",
+    };
+  }
+
+  /**
+   * Claims an eligible student roster record for an authenticated student user.
+   * - Enforces 1:1 binding (user cannot claim multiple records; record cannot be claimed multiple times)
+   * - Derives tenant_id from authoritative roster record
+   * - Updates public.students with user_id and claimed_at
+   * - Preserves all academic records, name, and email strictly untouched
+   * - Upserts tenant_memberships (role = 'STUDENT', status = 'ACTIVE')
+   * - Updates user app_metadata in Supabase Auth
+   * - Logs secure audit trail
+   */
+  static async claimStudentRosterRecord(
+    params: ClaimStudentRosterParams
+  ): Promise<ClaimStudentRosterResult> {
+    const cleanSrn = StudentService.normalizeSrn(params.srn);
+    if (!cleanSrn) {
+      return {
+        success: false,
+        code: "INVALID_SRN",
+        message: "Student Registration Number (SRN) cannot be empty.",
+      };
+    }
+
+    if (!params.userId) {
+      return {
+        success: false,
+        code: "INVALID_USER",
+        message: "Authenticated user ID is required.",
+      };
+    }
+
+    const supabase = createAdminClient();
+
+    // 1. Enforce 1:1 Account-to-Roster Invariant:
+    // Check if this user account has already claimed another roster record
+    const { data: existingUserClaim } = await supabase
+      .from("students")
+      .select("id, tenant_id, enrollment_number")
+      .eq("user_id", params.userId)
+      .maybeSingle();
+
+    if (existingUserClaim) {
+      return {
+        success: false,
+        code: "USER_ALREADY_HAS_ROSTER",
+        message: `This account is already linked to student record ${existingUserClaim.enrollment_number}.`,
+        studentId: existingUserClaim.id,
+        tenantId: existingUserClaim.tenant_id,
+        enrollmentNumber: existingUserClaim.enrollment_number,
+      };
+    }
+
+    // 2. Try PostgreSQL Transactional Function (claim_student_roster) first if available
+    try {
+      const { data: rpcData, error: rpcError } = await (supabase as any).rpc("claim_student_roster", {
+        p_srn: cleanSrn,
+        p_user_id: params.userId,
+      });
+
+      if (!rpcError && rpcData && rpcData.length > 0) {
+        const result = rpcData[0];
+        if (result.success) {
+          // Sync Auth app_metadata
+          try {
+            await supabase.auth.admin.updateUserById(params.userId, {
+              app_metadata: {
+                tenant_id: result.tenant_id,
+                role: "STUDENT",
+                account_category: "STUDENT",
+              },
+            });
+          } catch {}
+
+          // Record audit log
+          try {
+            await AuditService.log({
+              tenantId: result.tenant_id,
+              actorId: params.userId,
+              action: "STUDENT_ROSTER_CLAIMED",
+              resourceType: "student",
+              resourceId: result.student_id,
+              afterState: {
+                studentId: result.student_id,
+                tenantId: result.tenant_id,
+                enrollmentNumber: result.enrollment_number,
+                claimedBy: params.userId,
+              },
+            });
+          } catch {}
+
+          return {
+            success: true,
+            code: "CLAIMED_SUCCESSFULLY",
+            message: result.message || "Roster record successfully claimed.",
+            studentId: result.student_id,
+            tenantId: result.tenant_id,
+            enrollmentNumber: result.enrollment_number,
+          };
+        } else if (result.code) {
+          return {
+            success: false,
+            code: result.code as ClaimStudentRosterCode,
+            message: result.message || "Unable to claim roster record.",
+            studentId: result.student_id,
+            tenantId: result.tenant_id,
+            enrollmentNumber: result.enrollment_number,
+          };
+        }
+      }
+    } catch {
+      // Fall through to PostgREST transactional sequence if RPC is unavailable
+    }
+
+    // 3. Fallback PostgREST Execution:
+    // Check if this SRN is already claimed by any account
+    const { data: alreadyClaimed } = await supabase
+      .from("students")
+      .select("id, tenant_id, enrollment_number")
+      .ilike("enrollment_number", cleanSrn)
+      .not("user_id", "is", null);
+
+    if (alreadyClaimed && alreadyClaimed.length > 0) {
+      return {
+        success: false,
+        code: "ALREADY_CLAIMED",
+        message: "This Student Registration Number (SRN) has already been claimed by a registered account.",
+      };
+    }
+
+    // 4. Query eligible unclaimed records (active, not archived)
+    const { data: eligibleMatches, error: matchErr } = await supabase
+      .from("students")
+      .select("*")
+      .ilike("enrollment_number", cleanSrn)
+      .is("user_id", null)
+      .eq("is_archived", false)
+      .eq("academic_status", "ACTIVE");
+
+    if (matchErr || !eligibleMatches || eligibleMatches.length === 0) {
+      return {
+        success: false,
+        code: "SRN_NOT_FOUND",
+        message: "No active, eligible student roster record found for the provided SRN.",
+      };
+    }
+
+    if (eligibleMatches.length > 1) {
+      return {
+        success: false,
+        code: "AMBIGUOUS_SRN",
+        message: "This SRN matches multiple institutional rosters. Please contact your college placement cell.",
+      };
+    }
+
+    const targetStudent = eligibleMatches[0];
+    const nowIso = new Date().toISOString();
+
+    // 5. Concurrency-safe atomic claim
+    // Filter by id AND user_id IS NULL to prevent race condition double-claims
+    const { data: updatedRecord, error: updateErr } = await supabase
+      .from("students")
+      .update({
+        user_id: params.userId,
+        claimed_at: nowIso,
+        updated_at: nowIso,
+      })
+      .eq("id", targetStudent.id)
+      .is("user_id", null)
+      .select()
+      .maybeSingle();
+
+    if (updateErr || !updatedRecord) {
+      return {
+        success: false,
+        code: "CONCURRENT_CLAIM_CONFLICT",
+        message: "This student record was claimed concurrently by another request.",
+      };
+    }
+
+    // 6. Establish institutional membership in tenant_memberships
+    try {
+      await supabase.from("tenant_memberships").upsert(
+        {
+          tenant_id: targetStudent.tenant_id,
+          user_id: params.userId,
+          role: "STUDENT",
+          status: "ACTIVE",
+          permissions: [],
+        },
+        { onConflict: "tenant_id,user_id" }
+      );
+    } catch {}
+
+    // 7. Update Auth app_metadata
+    try {
+      await supabase.auth.admin.updateUserById(params.userId, {
+        app_metadata: {
+          tenant_id: targetStudent.tenant_id,
+          role: "STUDENT",
+          account_category: "STUDENT",
+        },
+      });
+    } catch {}
+
+    // 8. Secure Audit Trail
+    try {
+      await AuditService.log({
+        tenantId: targetStudent.tenant_id,
+        actorId: params.userId,
+        action: "STUDENT_ROSTER_CLAIMED",
+        resourceType: "student",
+        resourceId: targetStudent.id,
+        beforeState: {
+          enrollmentNumber: targetStudent.enrollment_number,
+          claimed: false,
+          userId: null,
+        },
+        afterState: {
+          enrollmentNumber: targetStudent.enrollment_number,
+          claimed: true,
+          userId: params.userId,
+          claimedAt: nowIso,
+          tenantId: targetStudent.tenant_id,
+        },
+      });
+    } catch {}
+
+    return {
+      success: true,
+      code: "CLAIMED_SUCCESSFULLY",
+      message: "Roster record successfully claimed and linked to student account.",
+      studentId: updatedRecord.id,
+      tenantId: updatedRecord.tenant_id,
+      enrollmentNumber: updatedRecord.enrollment_number,
+      student: updatedRecord as StudentRow,
     };
   }
 }
