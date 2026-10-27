@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { QuestionType, QuestionDifficulty, BankCategory } from "@/types/database";
 import { QuestionValidator, McqOption } from "@/modules/question-bank/services/question-validator";
-import { Plus, Trash2, AlertCircle, CheckCircle2, Eye, Sparkles } from "lucide-react";
+import { CreateQuestionBankModal } from "@/components/questions/create-question-bank-modal";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Eye, Sparkles, FolderPlus, Loader2 } from "lucide-react";
 
 interface QuestionFormProps {
   initialData?: any;
@@ -18,6 +19,9 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
   const router = useRouter();
   const [banks, setBanks] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState(initialData?.bank_id || "");
+  const [loadingBanks, setLoadingBanks] = useState(true);
+  const [banksError, setBanksError] = useState<string | null>(null);
+  const [createBankModalOpen, setCreateBankModalOpen] = useState(false);
   const [questionType, setQuestionType] = useState<QuestionType>(
     initialData?.question_type || "SINGLE_CHOICE"
   );
@@ -81,23 +85,38 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
   const [showPreview, setShowPreview] = useState(false);
 
   // Load Banks
-  useEffect(() => {
-    async function fetchBanks() {
-      try {
-        const res = await fetch("/api/questions/banks");
-        if (res.ok) {
-          const data = await res.json();
-          setBanks(data);
-          if (data.length > 0 && !selectedBankId) {
-            setSelectedBankId(data[0].id);
-          }
+  const fetchBanks = async () => {
+    setLoadingBanks(true);
+    setBanksError(null);
+    try {
+      const res = await fetch("/api/questions/banks");
+      if (!res.ok) {
+        if (res.status === 403) {
+          throw new Error("You do not have permission to access Question Banks.");
         }
-      } catch (err) {
-        console.error("Failed to load question banks", err);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to load Question Banks.");
       }
+      const data = await res.json();
+      setBanks(data || []);
+      if (data && data.length > 0) {
+        setSelectedBankId((current: string) => {
+          return data.some((b: any) => b.id === current) ? current : data[0].id;
+        });
+      } else {
+        setSelectedBankId("");
+      }
+    } catch (err: any) {
+      console.error("Failed to load question banks", err);
+      setBanksError(err.message || "Failed to load Question Banks.");
+    } finally {
+      setLoadingBanks(false);
     }
+  };
+
+  useEffect(() => {
     fetchBanks();
-  }, [selectedBankId]);
+  }, []);
 
   // Construct answer key
   const buildAnswerKey = () => {
@@ -203,7 +222,8 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
       {statusMessage && (
         <div
           className={`p-4 rounded-md flex items-center gap-3 text-sm font-medium ${
@@ -228,22 +248,81 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {!isEditing && (
-            <div>
-              <label className="block text-xs font-semibold text-text-secondary mb-1">
-                Question Bank *
-              </label>
-              <select
-                value={selectedBankId}
-                onChange={(e) => setSelectedBankId(e.target.value)}
-                className="w-full h-10 px-3 rounded-md bg-input border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                required
-              >
-                {banks.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name} ({b.category})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="question-bank-select"
+                  className="block text-xs font-semibold text-text-secondary"
+                >
+                  Question Bank *
+                </label>
+                {banks.length > 0 && !loadingBanks && !banksError && (
+                  <button
+                    type="button"
+                    onClick={() => setCreateBankModalOpen(true)}
+                    className="text-[11px] font-semibold text-primary hover:text-primary-hover flex items-center gap-1 transition-colors"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" /> + New Bank
+                  </button>
+                )}
+              </div>
+
+              {loadingBanks ? (
+                <div className="h-10 px-3 rounded-md bg-input border border-border text-xs text-text-secondary flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span>Loading Question Banks...</span>
+                </div>
+              ) : banksError ? (
+                <div className="p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>Failed to load Question Banks</span>
+                  </div>
+                  <p className="text-[11px] text-red-600">{banksError}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchBanks}
+                    className="h-7 text-xs px-2 mt-1"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : banks.length === 0 ? (
+                <div className="p-3.5 rounded-xl bg-input/70 border border-dashed border-border text-center space-y-2">
+                  <div className="flex items-center justify-center gap-1.5 text-text-primary text-xs font-semibold">
+                    <FolderPlus className="w-4 h-4 text-primary" />
+                    <span>No Question Banks yet</span>
+                  </div>
+                  <p className="text-[11px] text-text-secondary leading-relaxed">
+                    Create a Question Bank first to organize your questions.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setCreateBankModalOpen(true)}
+                    className="w-full text-xs h-8 bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-1.5 font-semibold"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    + Create Question Bank
+                  </Button>
+                </div>
+              ) : (
+                <select
+                  id="question-bank-select"
+                  value={selectedBankId}
+                  onChange={(e) => setSelectedBankId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md bg-input border border-border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  required
+                >
+                  {banks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.category})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
@@ -666,5 +745,17 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
         </Button>
       </div>
     </form>
-  );
+
+    {/* Create Question Bank Modal */}
+    <CreateQuestionBankModal
+      isOpen={createBankModalOpen}
+      onClose={() => setCreateBankModalOpen(false)}
+      onSuccess={(newBank) => {
+        setBanks((prev) => [newBank, ...prev.filter((b) => b.id !== newBank.id)]);
+        setSelectedBankId(newBank.id);
+        setBanksError(null);
+      }}
+    />
+  </>
+);
 }

@@ -69,6 +69,7 @@ export class ImportService {
       'MULTIPLE_SELECT,"Which of the following sorting algorithms exhibit O(N log N) worst-case time complexity?",MEDIUM,"Quick Sort","Merge Sort","Heap Sort","Bubble Sort","opt_b;opt_c","Merge sort and Heap sort always run in O(N log N) in all cases, whereas standard Quick Sort is O(N^2) worst case.",dsa,"sorting;divide-and-conquer"',
       'NUMERIC,"What is the total number of edges in a complete undirected graph with 6 vertices?",MEDIUM,,,,"15","Formula for complete graph Kn is n*(n-1)/2. For n=6, 6*5/2 = 15.",quantitative-aptitude,"graphs;combinatorics"',
       'SHORT_ANSWER,"Explain the ACID properties in relational database management systems.",MEDIUM,,,,"Atomicity, Consistency, Isolation, Durability guarantee valid state transitions.","A complete answer defines each letter with an example transaction rollback.",dbms,"transactions;acid"',
+      'CODING,"Implement an in-place array reversal algorithm.",EASY,,,,,"[3, 2, 1]","Two pointers swapping towards middle.",dsa,"arrays;two-pointers"',
     ];
 
     return [headers, ...sampleRows].join("\n");
@@ -192,6 +193,12 @@ export class ImportService {
     const colIndex = (col: string) => headers.indexOf(col);
 
     const parsedRows: ParsedCsvRow[] = [];
+    const seenInFile: Array<{
+      questionId: string;
+      versionId: string;
+      prompt: string;
+      fingerprint: string;
+    }> = [];
     let validCount = 0;
     let invalidCount = 0;
     let duplicateCount = 0;
@@ -292,20 +299,34 @@ export class ImportService {
 
       // Fingerprint & Duplicate Detection
       const fingerprint = DuplicateDetector.generateFingerprint(prompt, options);
+      const candidates = [...existingItems, ...seenInFile];
       const dupCheck = DuplicateDetector.detectDuplicates(
         prompt,
         fingerprint,
-        existingItems
+        candidates
       );
 
       const isDuplicate = dupCheck.isExactDuplicate || dupCheck.highestSimilarity >= 0.85;
       if (isDuplicate) {
         duplicateCount++;
+        const targetDesc = dupCheck.matchedQuestionId?.startsWith("row-")
+          ? `earlier ${dupCheck.matchedQuestionId}`
+          : `existing question ${dupCheck.matchedQuestionId}`;
         rowWarnings.push(
           dupCheck.isExactDuplicate
-            ? `Exact duplicate detected of existing question ${dupCheck.matchedQuestionId}`
-            : `High similarity (${Math.round(dupCheck.highestSimilarity * 100)}%) to existing question ${dupCheck.matchedQuestionId}`
+            ? `Exact duplicate detected of ${targetDesc}`
+            : `High similarity (${Math.round(dupCheck.highestSimilarity * 100)}%) to ${targetDesc}`
         );
+      }
+
+      // Add valid or formatted rows to seenInFile for subsequent intra-file duplicate detection
+      if (prompt.length > 0) {
+        seenInFile.push({
+          questionId: `row-${rowNum}`,
+          versionId: `v-row-${rowNum}`,
+          prompt,
+          fingerprint,
+        });
       }
 
       const isValid = rowErrors.length === 0;
@@ -372,6 +393,23 @@ export class ImportService {
     error?: string;
   }> {
     const supabase = await createServerSupabaseClient();
+
+    // 0. Verify Bank Ownership & Tenant Boundary
+    const { data: bankRecord, error: bankErr } = await supabase
+      .from("question_banks")
+      .select("id, tenant_id")
+      .eq("id", bankId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (bankErr || !bankRecord) {
+      return {
+        success: false,
+        committedCount: 0,
+        duplicateAlertCount: 0,
+        error: "Target Question Bank not found or does not belong to your college.",
+      };
+    }
 
     // 1. Create Import Job Record
     const { data: job, error: jobErr } = await supabase

@@ -753,3 +753,91 @@ export async function revokeInvitation(invitationId: string, tenantId?: string):
     }
   }
 }
+
+/**
+ * Deletes an obsolete invitation (e.g. REVOKED, EXPIRED, or PENDING).
+ * Invariant: ACCEPTED invitations cannot be deleted because they serve as
+ * historical onboarding audit records for active tenant memberships.
+ */
+export async function deleteInvitation(
+  invitationId: string,
+  tenantId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const admin = createAdminClient();
+
+  // 1. Fetch current invitation to verify status and tenant ownership
+  let record: InvitationRecord | null = null;
+
+  try {
+    let q = admin.from("invitations").select("*").eq("id", invitationId);
+    if (tenantId && isValidUuid(tenantId)) {
+      q = q.eq("tenant_id", tenantId);
+    }
+    const { data, error } = await q.maybeSingle();
+    if (data && !error) {
+      record = data as InvitationRecord;
+    }
+  } catch {
+    // Database query fallback
+  }
+
+  if (!record) {
+    // Check in-memory / persistent
+    for (const inv of inMemoryInvitations.values()) {
+      if (inv.id === invitationId || inv.token_hash === invitationId) {
+        if (!tenantId || inv.tenant_id === tenantId) {
+          record = inv;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!record && tenantId) {
+    const list = await listPersistentInvitations(tenantId);
+    record = list.find((i) => i.id === invitationId || i.token_hash === invitationId) || null;
+  }
+
+  if (!record) {
+    return { success: false, error: "Invitation not found." };
+  }
+
+  // Cross-tenant protection check
+  if (tenantId && record.tenant_id && record.tenant_id !== tenantId) {
+    return { success: false, error: "Access denied. Invitation belongs to another institution." };
+  }
+
+  // Invariant: ACCEPTED invitations cannot be deleted
+  if (record.status === "ACCEPTED") {
+    return {
+      success: false,
+      error: "Accepted invitations cannot be deleted as they represent audit history for member onboarding.",
+    };
+  }
+
+  // 2. Delete from DB
+  try {
+    let query = admin.from("invitations").delete().eq("id", record.id);
+    if (tenantId && isValidUuid(tenantId)) {
+      query = query.eq("tenant_id", tenantId);
+    }
+    await query;
+  } catch {
+    // Storage fallback
+  }
+
+  // 3. Remove from in-memory cache
+  inMemoryInvitations.delete(record.token_hash);
+  inMemoryInvitations.delete(record.id);
+
+  // 4. Remove from persistent Supabase Storage bucket
+  if (admin && admin.storage && typeof admin.storage.from === "function") {
+    try {
+      await admin.storage.from(INVITATIONS_BUCKET).remove([`${record.token_hash}.json`]);
+    } catch {
+      // Ignore storage remove errors
+    }
+  }
+
+  return { success: true };
+}

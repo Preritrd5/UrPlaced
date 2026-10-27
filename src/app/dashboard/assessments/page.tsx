@@ -17,6 +17,7 @@ import {
   ArrowRight,
   RefreshCw,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 
 export default function StaffAssessmentsPage() {
   const router = useRouter();
@@ -72,6 +74,10 @@ export default function StaffAssessmentsPage() {
     window_end: "",
     max_attempts_override: "",
   });
+
+  // Delete Draft Assessment State
+  const [assessmentToDelete, setAssessmentToDelete] = useState<any | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -222,6 +228,29 @@ export default function StaffAssessmentsPage() {
     }
   }
 
+  async function handleConfirmDeleteAssessment() {
+    if (!assessmentToDelete) return;
+    setDeleteLoading(true);
+
+    try {
+      const res = await fetch(`/api/placement/assessments/${assessmentToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete assessment.");
+      }
+
+      setAssessmentToDelete(null);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || "Failed to delete assessment.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   const filteredAssessments = assessments.filter((a) => {
     if (activeTab === "ALL") return true;
     return a.status === activeTab;
@@ -251,7 +280,6 @@ export default function StaffAssessmentsPage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary font-heading">
               Assessments & Student Prep
             </h1>
-            <Badge variant="secondary">Phase 07</Badge>
           </div>
           <p className="text-sm text-text-secondary mt-1">
             Author authoritative assessment activities, schedule availability windows, track participation, and govern result releases.
@@ -418,14 +446,24 @@ export default function StaffAssessmentsPage() {
 
                 <div className="flex items-center gap-2 pt-2 border-t border-border flex-wrap">
                   {a.status === "DRAFT" && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="text-xs h-8"
-                      onClick={() => handlePublish(a.id)}
-                    >
-                      Publish
-                    </Button>
+                    <>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => handlePublish(a.id)}
+                      >
+                        Publish
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-8 text-status-danger hover:bg-[var(--color-danger-subtle)] hover:text-status-danger"
+                        onClick={() => setAssessmentToDelete(a)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                      </Button>
+                    </>
                   )}
 
                   {a.status === "PUBLISHED" && (
@@ -481,7 +519,15 @@ export default function StaffAssessmentsPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="qset" className="text-xs font-medium">Question Set *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="qset" className="text-xs font-medium">Question Set *</Label>
+                    <Link
+                      href="/dashboard/questions/sets"
+                      className="text-[11px] text-primary hover:underline font-medium"
+                    >
+                      + Manage Question Sets
+                    </Link>
+                  </div>
                   <select
                     id="qset"
                     value={createForm.question_set_id}
@@ -496,6 +542,15 @@ export default function StaffAssessmentsPage() {
                       </option>
                     ))}
                   </select>
+                  {questionSets.length === 0 && (
+                    <p className="text-[11px] text-amber-600 mt-1">
+                      No Question Sets found.{" "}
+                      <Link href="/dashboard/questions/sets" className="underline font-semibold">
+                        Assemble a Question Set
+                      </Link>{" "}
+                      with verified questions before creating an assessment.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -711,6 +766,19 @@ export default function StaffAssessmentsPage() {
           </Card>
         </div>
       )}
+
+      {/* Delete Draft Assessment Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={!!assessmentToDelete}
+        onOpenChange={(open: boolean) => {
+          if (!open) setAssessmentToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteAssessment}
+        title="Delete Draft Assessment"
+        description={`Are you sure you want to delete the draft assessment "${assessmentToDelete?.title}"? This draft blueprint will be permanently removed. This action cannot be undone.`}
+        confirmText="Delete Assessment"
+        isLoading={deleteLoading}
+      />
     </div>
   );
 }

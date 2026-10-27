@@ -269,12 +269,6 @@ export function InviteAcceptanceView({ token }: { token: string }) {
         <p className="text-xs text-text-secondary text-center">
           Please contact your institution placement cell administrator to receive a fresh invitation.
         </p>
-
-        <Button asChild variant="outline" className="w-full">
-          <Link href="/auth/college/signin">
-            Return to College Sign In
-          </Link>
-        </Button>
       </div>
     );
   }

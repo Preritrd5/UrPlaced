@@ -15,6 +15,7 @@ import {
 import { AnswerKeyReviewModal } from "@/components/questions/answer-key-review-modal";
 import { DuplicateAlertModal } from "@/components/questions/duplicate-alert-modal";
 import { AIGenerateQuestionModal } from "@/components/questions/ai-generate-question-modal";
+import { CreateQuestionBankModal } from "@/components/questions/create-question-bank-modal";
 import {
   Plus,
   Upload,
@@ -29,9 +30,12 @@ import {
   Send,
   Loader2,
   Sparkles,
+  FolderPlus,
+  Trash2,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 
 export default function QuestionsDashboardPage() {
   const router = useRouter();
@@ -64,31 +68,54 @@ export default function QuestionsDashboardPage() {
     questionId: string;
     versionId: string;
     currentStatus: any;
+    question?: any;
   }>({
     isOpen: false,
     questionId: "",
     versionId: "",
     currentStatus: "UNREVIEWED",
+    question: null,
   });
 
   // Duplicate Modal State
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [createBankModalOpen, setCreateBankModalOpen] = useState(false);
+  const [loadingBanks, setLoadingBanks] = useState(true);
+  const [banksError, setBanksError] = useState<string | null>(null);
 
   // Load Banks
-  useEffect(() => {
-    async function fetchBanks() {
-      try {
-        const res = await fetch("/api/questions/banks");
-        if (res.ok) {
-          const data = await res.json();
-          setBanks(data);
+  const fetchBanks = async () => {
+    setLoadingBanks(true);
+    setBanksError(null);
+    try {
+      const res = await fetch("/api/questions/banks");
+      if (!res.ok) {
+        if (res.status === 403) {
+          throw new Error("You do not have permission to view Question Banks.");
         }
-      } catch (err) {
-        console.error("Failed to load banks", err);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to load Question Banks.");
+      }
+      const data = await res.json();
+      setBanks(data || []);
+    } catch (err: any) {
+      console.error("Failed to load banks", err);
+      setBanksError(err.message || "Failed to load Question Banks.");
+    } finally {
+      setLoadingBanks(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBanks();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const bId = params.get("bankId");
+      if (bId) {
+        setSelectedBank(bId);
       }
     }
-    fetchBanks();
   }, []);
 
   // Fetch Questions
@@ -135,6 +162,32 @@ export default function QuestionsDashboardPage() {
     }
   };
 
+  // Delete draft question action
+  const [questionToDelete, setQuestionToDelete] = useState<any | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleConfirmDeleteQuestion = async () => {
+    if (!questionToDelete) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/questions/${questionToDelete.id}?action=DELETE`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQuestionToDelete(null);
+        loadQuestions();
+      } else {
+        alert(data.error || "Failed to delete question.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to delete question.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // KPIs
   const totalCount = questions.length;
   const verifiedCount = questions.filter(
@@ -174,6 +227,15 @@ export default function QuestionsDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setCreateBankModalOpen(true)}
+            className="bg-primary hover:bg-primary-hover text-white flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+          >
+            <FolderPlus className="w-4 h-4" />
+            + Create Question Bank
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -343,13 +405,33 @@ export default function QuestionsDashboardPage() {
               <BookOpen className="w-10 h-10 text-text-secondary mx-auto opacity-40" />
               <p className="text-sm font-semibold text-text-primary">No Questions Found</p>
               <p className="text-xs text-text-secondary max-w-sm mx-auto">
-                No questions match your filter criteria or none have been authored yet.
+                {banksError
+                  ? `Note: ${banksError}`
+                  : banks.length === 0 && !loadingBanks
+                  ? "You don't have any Question Banks yet. Create a Question Bank first before authoring questions or importing CSV files."
+                  : "No questions match your filter criteria or none have been authored yet."}
               </p>
-              <Link href="/dashboard/questions/new">
-                <Button size="sm" className="text-xs mt-2">
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Author First Question
-                </Button>
-              </Link>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                {banksError ? (
+                  <Button size="sm" variant="outline" className="text-xs" onClick={fetchBanks}>
+                    Retry Loading Banks
+                  </Button>
+                ) : banks.length === 0 && !loadingBanks ? (
+                  <Button
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setCreateBankModalOpen(true)}
+                  >
+                    <FolderPlus className="w-3.5 h-3.5 mr-1" /> Create First Question Bank
+                  </Button>
+                ) : (
+                  <Link href="/dashboard/questions/new">
+                    <Button size="sm" className="text-xs">
+                      <Plus className="w-3.5 h-3.5 mr-1" /> Author First Question
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -370,6 +452,15 @@ export default function QuestionsDashboardPage() {
                         {cur?.difficulty && <DifficultyBadge difficulty={cur.difficulty} />}
                         <LifecycleStatusBadge status={q.lifecycle_status} />
                         {cur?.review_status && <ReviewStatusBadge status={cur.review_status} />}
+                        {cur?.source_type === "AI_GENERATED" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                            <Sparkles className="w-3 h-3 text-primary" /> AI Generated
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-card text-text-secondary border border-border">
+                            College Authored
+                          </span>
+                        )}
                         <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-card border border-border text-text-secondary">
                           v{cur?.version_number || 1}
                         </span>
@@ -399,6 +490,15 @@ export default function QuestionsDashboardPage() {
                             questionId: q.id,
                             versionId: cur?.id,
                             currentStatus: cur?.review_status || "UNREVIEWED",
+                            question: {
+                              prompt: cur?.prompt,
+                              questionType: q.question_type,
+                              options: cur?.options,
+                              answerKey: cur?.answer_key,
+                              explanation: cur?.explanation,
+                              difficulty: cur?.difficulty,
+                              sourceType: cur?.source_type,
+                            },
                           })
                         }
                         className="text-xs h-8"
@@ -423,6 +523,20 @@ export default function QuestionsDashboardPage() {
                           Details <ArrowRight className="w-3.5 h-3.5" />
                         </Button>
                       </Link>
+
+                      {q.lifecycle_status === "DRAFT" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setQuestionToDelete(q)}
+                          className="h-8 w-8 p-0 text-text-muted hover:text-status-danger hover:bg-[var(--color-danger-subtle)]"
+                          title="Delete draft question"
+                          aria-label="Delete draft question"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -438,6 +552,7 @@ export default function QuestionsDashboardPage() {
         questionId={reviewModalState.questionId}
         versionId={reviewModalState.versionId}
         currentStatus={reviewModalState.currentStatus}
+        question={reviewModalState.question}
         onClose={() =>
           setReviewModalState({ ...reviewModalState, isOpen: false })
         }
@@ -456,6 +571,30 @@ export default function QuestionsDashboardPage() {
         onClose={() => setAiModalOpen(false)}
         banks={banks}
         onGeneratedSuccess={loadQuestions}
+      />
+
+      {/* Create Question Bank Modal */}
+      <CreateQuestionBankModal
+        isOpen={createBankModalOpen}
+        onClose={() => setCreateBankModalOpen(false)}
+        onSuccess={(newBank) => {
+          fetchBanks();
+          setSelectedBank(newBank.id);
+          loadQuestions();
+        }}
+      />
+
+      {/* Delete Draft Question Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={!!questionToDelete}
+        onOpenChange={(open: boolean) => {
+          if (!open) setQuestionToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteQuestion}
+        title="Delete Draft Question"
+        description="Are you sure you want to permanently delete this draft question and its version history? This action cannot be undone."
+        confirmText="Delete Question"
+        isLoading={deleteLoading}
       />
     </div>
   );

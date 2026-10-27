@@ -12,7 +12,8 @@ interface SimpleAuthCardProps {
  */
 export function SimpleAuthCard({ children }: SimpleAuthCardProps) {
   return (
-    <div className="w-full max-w-lg mx-auto py-6">
+    <div className="w-full h-full min-h-[100dvh] flex flex-col justify-center items-center py-6 px-4 overflow-y-auto">
+      <div className="w-full max-w-lg mx-auto">
       {/* Brand Header */}
       <div className="sm:mx-auto sm:w-full text-center mb-8">
         <Link href="/" className="inline-flex items-center gap-2.5 group">
@@ -35,6 +36,7 @@ export function SimpleAuthCard({ children }: SimpleAuthCardProps) {
       <div className="mt-8 text-center text-xs text-text-muted space-y-1">
         <p>Secured with Supabase Authentication &amp; PostgreSQL Row-Level Security.</p>
         <p>Tenant isolation enforced at kernel layer.</p>
+      </div>
       </div>
     </div>
   );

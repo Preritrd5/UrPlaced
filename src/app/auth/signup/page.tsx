@@ -3,45 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  UserPlus,
-  GraduationCap,
-  Award,
-  Lock,
-  BookOpen,
-  ShieldAlert,
-  ArrowRight,
-} from "lucide-react";
+import { UserPlus, User, Mail, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SplitAuthCard, type FeatureHighlight } from "@/components/auth/split-auth-card";
-import { PasswordField } from "@/components/auth/password-field";
+import { AuthSplitLayout, UrPlacedBrandLogo } from "@/components/auth/auth-split-layout";
+import { AuthInput, AuthPasswordInput } from "@/components/auth/auth-input";
 
-const studentSignUpFeatures: FeatureHighlight[] = [
-  {
-    icon: BookOpen,
-    tint: "rose",
-    title: "Official Campus Syllabus Aligned",
-    description: "Full coverage of quantitative aptitude, coding tests, and company-specific recruiter formats.",
-  },
-  {
-    icon: Award,
-    tint: "cyan",
-    title: "DriveFit Candidate Scoring",
-    description: "Qualify for placement drive shortlists with verified skill mastery and automated readiness metrics.",
-  },
-  {
-    icon: Lock,
-    tint: "amber",
-    title: "Encrypted Credentials & Protected Records",
-    description: "Your test attempts, saved mistakes, and progress benchmarks are secured under PostgreSQL RLS.",
-  },
-];
-
-function StudentSignUpContent() {
+export default function StudentSignUpPage() {
   const router = useRouter();
 
   const [srn, setSrn] = React.useState("");
@@ -109,7 +76,7 @@ function StudentSignUpContent() {
         return;
       }
 
-      setSuccessMsg("Student account created and linked to roster! Signing you in...");
+      setSuccessMsg("Student account created and linked to campus roster! Signing in...");
 
       // 2. Automatically authenticate session in browser client
       const supabase = createClient();
@@ -135,186 +102,147 @@ function StudentSignUpContent() {
       router.push("/dashboard/student");
       router.refresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "An unexpected error occurred during registration. Please try again.";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred during registration. Please try again.";
       setErrorMsg(msg);
       setIsLoading(false);
     }
   }
 
   return (
-    <SplitAuthCard
-      badgeText="• Student Account Sign Up"
-      subtitle="STUDENT ONBOARDING (2026)"
-      headline="Join Placement Preparation & Readiness Network"
-      description="Create your student account to access full-length timed mock exams, unlock targeted mistake review, and build verified readiness for recruitment drives."
-      features={studentSignUpFeatures}
-      footerLeft="UrPlaced 2026 Academic Session"
-      footerRight="Student Onboarding"
+    <AuthSplitLayout
+      headlineLines={["Your next", "chapter", "starts here."]}
+      supportingText="Build skills, practice smarter, and get placement ready with UrPlaced."
     >
-      <div className="space-y-5">
-        {/* Form Header */}
-        <div className="space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
+      <div className="flex flex-col justify-center h-full min-h-0 space-y-3 sm:space-y-4">
+        {/* Form Title & Subtitle */}
+        <div className="shrink-0 space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl lg:text-[2.2rem] font-extrabold font-heading text-[#24283A] tracking-tight leading-tight">
             Create Student Account
-          </h2>
-          <p className="text-sm text-slate-500">
+          </h1>
+          <p className="text-xs sm:text-sm text-[#747683]">
             Enter your official SRN, name, email address, and create your portal password.
           </p>
         </div>
 
+        {/* Compact Alert Notification */}
         {errorMsg && (
-          <Alert variant="destructive">
-            <AlertTitle className="flex items-center gap-1.5">
-              <ShieldAlert className="h-4 w-4" /> Registration Failed
-            </AlertTitle>
-            <AlertDescription>{errorMsg}</AlertDescription>
-          </Alert>
+          <div
+            role="alert"
+            className="shrink-0 flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-xs sm:text-sm font-medium"
+          >
+            <ShieldAlert className="h-4 w-4 shrink-0 text-red-600" />
+            <span className="truncate">{errorMsg}</span>
+          </div>
         )}
 
         {successMsg && (
-          <Alert variant="success">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{successMsg}</AlertDescription>
-          </Alert>
+          <div
+            role="status"
+            className="shrink-0 flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-800 text-xs sm:text-sm font-medium"
+          >
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600" />
+            <span className="truncate">{successMsg}</span>
+          </div>
         )}
 
         {/* Sign Up Form */}
-        <form onSubmit={handleSignUp} className="space-y-3.5">
-          {/* Student Registration Number (SRN) */}
-          <div className="space-y-1.5">
-            <Label htmlFor="srn" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-              Student Registration Number (SRN)
-            </Label>
-            <Input
-              id="srn"
-              type="text"
-              placeholder="e.g. 1MS21CS001 or 00123"
-              value={srn}
-              onChange={(e) => setSrn(e.target.value)}
-              required
-              disabled={isLoading}
-              autoCapitalize="characters"
-              spellCheck={false}
-              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono uppercase"
-            />
-            <p className="text-[11px] text-slate-500">
-              Enter your official roll number or registration ID from your campus placement roster.
-            </p>
-          </div>
+        <form onSubmit={handleSignUp} className="space-y-2.5 sm:space-y-3 min-h-0" suppressHydrationWarning>
+          {/* SRN */}
+          <AuthInput
+            id="srn"
+            label="Student Registration Number (SRN)"
+            placeholder="E.g. 1MS21CS001 or 00123"
+            value={srn}
+            onChange={(e) => setSrn(e.target.value)}
+            required
+            disabled={isLoading}
+            autoCapitalize="characters"
+            spellCheck={false}
+            icon={User}
+            helperText="Enter your official roll number or registration ID from your campus placement roster."
+            className="font-mono uppercase"
+          />
 
           {/* Full Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-              Full Name
-            </Label>
-            <Input
-              id="fullName"
-              type="text"
-              placeholder="e.g. Rahul Sharma"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              disabled={isLoading}
-              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          <AuthInput
+            id="fullName"
+            label="Full Name"
+            placeholder="e.g. Rahul Sharma"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            disabled={isLoading}
+            icon={User}
+          />
 
           {/* Email Address */}
-          <div className="space-y-1.5">
-            <Label htmlFor="email" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-              Email Address
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="e.g. rahul.sharma@campus.edu or student@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          <AuthInput
+            id="email"
+            type="email"
+            label="Email Address"
+            placeholder="e.g. rahul.sharma@campus.edu"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+            autoComplete="email"
+            icon={Mail}
+          />
 
-          {/* Paired Password Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <PasswordField
+          {/* Passwords in 2-column grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <AuthPasswordInput
               id="password"
               label="Create Login Password"
-              required
-              autoComplete="new-password"
               placeholder="Min 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
               disabled={isLoading}
+              autoComplete="new-password"
             />
-
-            <PasswordField
+            <AuthPasswordInput
               id="confirmPassword"
               label="Retype Login Password"
-              required
-              autoComplete="new-password"
               placeholder="Retype password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              required
               disabled={isLoading}
+              autoComplete="new-password"
             />
           </div>
 
-          <Button
+          {/* Primary CTA Submit Button */}
+          <button
             type="submit"
-            variant="primary"
-            className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
-            isLoading={isLoading}
+            disabled={isLoading}
+            suppressHydrationWarning
+            className="w-full bg-[#5052C9] hover:bg-[#4345B0] active:bg-[#383A99] text-white font-semibold text-xs sm:text-sm rounded-xl h-11 sm:h-12 shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 mt-1"
           >
-            {isLoading ? (
-              "Creating Student Account..."
-            ) : (
-              <>
-                <UserPlus className="h-4 w-4 mr-2" /> Create Student Account (Sign Up)
-              </>
-            )}
-          </Button>
+            <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+            <span>
+              {isLoading ? "Creating Account..." : "Create Student Account (Sign Up)"}
+            </span>
+          </button>
         </form>
 
-        {/* Secondary Sign In Action */}
-        <div className="pt-2">
-          <Link
-            href="/auth/signin"
-            className="w-full h-11 rounded-xl bg-[#FFF8EE] hover:bg-[#FFF2DE] border border-[#FDE6C8] text-slate-800 text-sm font-medium transition-all flex items-center justify-center gap-1 shadow-sm"
-          >
-            <span>Already have a student account?</span>
-            <span className="font-bold text-primary">Sign In &rarr;</span>
-          </Link>
-        </div>
-
-        {/* Alternative Role Switcher & Back to Home */}
-        <div className="pt-3 border-t border-slate-100 space-y-2 text-center">
-          <div>
+        {/* Footer Navigation */}
+        <div className="shrink-0 pt-1 text-center">
+          <p className="text-xs sm:text-sm text-[#24283A]">
+            Already have a student account?{" "}
             <Link
-              href="/"
-              className="text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors inline-block pt-1"
+              href="/auth/signin"
+              className="text-[#5052C9] font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 rounded"
             >
-              &larr; Back to Home Page
+              Sign In →
             </Link>
-          </div>
+          </p>
         </div>
       </div>
-    </SplitAuthCard>
-  );
-}
-
-export default function StudentSignUpPage() {
-  return (
-    <React.Suspense
-      fallback={
-        <div className="py-16 text-center text-xs text-text-muted font-mono">
-          Loading student registration...
-        </div>
-      }
-    >
-      <StudentSignUpContent />
-    </React.Suspense>
+    </AuthSplitLayout>
   );
 }

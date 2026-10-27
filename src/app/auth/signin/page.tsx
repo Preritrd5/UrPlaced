@@ -3,50 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  LogIn,
-  Clock,
-  TrendingUp,
-  Briefcase,
-  ShieldCheck,
-  ShieldAlert,
-  ArrowRight,
-  GraduationCap,
-} from "lucide-react";
+import { LogIn, Mail, ArrowLeft, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SplitAuthCard, type FeatureHighlight } from "@/components/auth/split-auth-card";
-import { PasswordField } from "@/components/auth/password-field";
-
-const studentSignInFeatures: FeatureHighlight[] = [
-  {
-    icon: Clock,
-    tint: "rose",
-    title: "Timed Full-Length Mock Exams",
-    description: "Company-aligned test patterns, negative marking options, and real-time score tracking.",
-  },
-  {
-    icon: TrendingUp,
-    tint: "cyan",
-    title: "Instant Accuracy & Mistake Analytics",
-    description: "Structured error logging, cognitive classification, and spaced repetition schedules.",
-  },
-  {
-    icon: Briefcase,
-    tint: "amber",
-    title: "Target Drive Recruitment Intelligence",
-    description: "Past campus cutoffs, company-specific syllabus coverage, and candidate debriefs.",
-  },
-  {
-    icon: ShieldCheck,
-    tint: "indigo",
-    title: "Verified Skill & Readiness Credentials",
-    description: "Institutional readiness scores visible directly to verified campus placement coordinators.",
-  },
-];
+import { AuthSplitLayout, UrPlacedBrandLogo } from "@/components/auth/auth-split-layout";
+import { AuthInput, AuthPasswordInput } from "@/components/auth/auth-input";
 
 function StudentSignInContent() {
   const router = useRouter();
@@ -103,160 +63,117 @@ function StudentSignInContent() {
           metaRole === "TRAINER";
 
         if (isCollegeUser) {
-          // Reject cross-category login attempt immediately
           await supabase.auth.signOut();
           setErrorMsg(
-            <div className="space-y-2">
-              <p>
-                This sign-in portal is exclusively for <strong>Students</strong>. Your account is registered under <strong>Placement Cell</strong>.
-              </p>
-
-            </div>
+            <span>
+              This account is registered as a College Placement account. Please use the{" "}
+              <Link href="/auth/college/signin" className="font-bold underline text-primary">
+                College / Cell Sign In portal
+              </Link>
+              .
+            </span>
           );
           setIsLoading(false);
           return;
         }
 
-        // Legitimate student login: destination strictly within student workspace
-        const destination = next.startsWith("/dashboard/student") ? next : "/dashboard/student";
-        router.push(destination);
+        // Student Account Authenticated: Proceed to student workspace
+        router.push(next);
         router.refresh();
       }
     } catch {
-      setErrorMsg("An unexpected error occurred during sign-in. Please try again.");
+      setErrorMsg("An unexpected connection error occurred. Please try again.");
       setIsLoading(false);
     }
   }
 
   return (
-    <SplitAuthCard
-      badgeText="• Student Member Sign In"
-      subtitle="CAMPUS PLACEMENT PLATFORM"
-      headline="Your Placement Preparation Starts Here"
-      description="Access your real-time mock test roster across company patterns, review instant mistake remediation, and track your campus placement readiness."
-      features={studentSignInFeatures}
-      footerLeft="UrPlaced 2026 Academic Session"
-      footerRight="Student Portal"
+    <AuthSplitLayout
+      headlineLines={["Welcome", "Back!"]}
+      supportingText="Access your preparation, assessments, and placement journey with UrPlaced."
     >
-      <div className="space-y-6">
-        {/* Form Header */}
-        <div className="space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
+      <div className="flex flex-col justify-center h-full min-h-0 space-y-4 sm:space-y-6">
+        {/* Form Title & Subtitle */}
+        <div className="shrink-0 space-y-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-[2.2rem] font-extrabold font-heading text-[#24283A] tracking-tight leading-tight">
             Student Sign In
-          </h2>
-          <p className="text-sm text-slate-500">
+          </h1>
+          <p className="text-xs sm:text-sm text-[#747683]">
             Enter your registered email address &amp; password.
           </p>
         </div>
 
-        {/* URL Alerts */}
-        {searchParams.get("registered") === "true" && (
-          <Alert variant="success">
-            <AlertTitle>Registration Successful</AlertTitle>
-            <AlertDescription>
-              Your student account has been created. Please sign in with your credentials.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {searchParams.get("error") === "verification_failed" && (
-          <Alert variant="warning">
-            <AlertTitle>Verification Notice</AlertTitle>
-            <AlertDescription>
-              The verification code was invalid or has expired. Please try signing in again.
-            </AlertDescription>
-          </Alert>
-        )}
-
+        {/* Compact Alert Notification */}
         {errorMsg && (
-          <Alert variant="destructive">
-            <AlertTitle className="flex items-center gap-1.5">
-              <ShieldAlert className="h-4 w-4" /> Access Restricted
-            </AlertTitle>
-            <AlertDescription>{errorMsg}</AlertDescription>
-          </Alert>
+          <div
+            role="alert"
+            className="shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-xs sm:text-sm font-medium"
+          >
+            <ShieldAlert className="h-4 w-4 shrink-0 text-red-600" />
+            <div className="text-xs sm:text-sm">{errorMsg}</div>
+          </div>
         )}
 
         {/* Sign In Form */}
-        <form onSubmit={handleSignIn} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-              Registered Email Address
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="e.g. student@university.edu or student@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+        <form onSubmit={handleSignIn} className="space-y-3.5 sm:space-y-4 min-h-0" suppressHydrationWarning>
+          {/* Registered Email */}
+          <AuthInput
+            id="email"
+            type="email"
+            label="Registered Email Address"
+            placeholder="e.g. student@university.edu or student@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+            autoComplete="email"
+            icon={Mail}
+          />
 
-          <div className="space-y-1">
-            <PasswordField
+          {/* Password with inline Forgot Password Link */}
+          <div>
+            <AuthPasswordInput
               id="password"
               label="Password"
-              required
-              autoComplete="current-password"
               placeholder="Enter account password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
               disabled={isLoading}
+              autoComplete="current-password"
             />
-            <div className="flex justify-end pt-0.5">
+            <div className="text-right pt-1.5">
               <Link
                 href="/auth/forgot-password"
-                className="text-xs font-semibold text-primary hover:underline"
+                className="text-xs sm:text-sm font-semibold text-[#5052C9] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 rounded"
               >
                 Forgot password?
               </Link>
             </div>
           </div>
 
-          <Button
+          {/* Primary CTA Sign In Button */}
+          <button
             type="submit"
-            variant="primary"
-            className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
-            isLoading={isLoading}
+            disabled={isLoading}
+            suppressHydrationWarning
+            className="w-full bg-[#5052C9] hover:bg-[#4345B0] active:bg-[#383A99] text-white font-semibold text-xs sm:text-sm rounded-xl h-11 sm:h-12 shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 mt-2"
           >
-            {isLoading ? (
-              "Signing in to Student Portal..."
-            ) : (
-              <>
-                <LogIn className="h-4 w-4 mr-2" /> Sign In to Student Portal
-              </>
-            )}
-          </Button>
-        </form>
+            <LogIn className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+            <span>{isLoading ? "Signing In..." : "Sign In to Student Portal"}</span>
+          </button>
 
-        {/* Secondary Account Creation Action */}
-        <div className="pt-2">
+          {/* Secondary CTA: Create Account Card Button */}
           <Link
             href="/auth/signup"
-            className="w-full h-11 rounded-xl bg-[#FFF8EE] hover:bg-[#FFF2DE] border border-[#FDE6C8] text-slate-800 text-sm font-medium transition-all flex items-center justify-center gap-1 shadow-sm"
+            className="w-full bg-[#FFF9F2] hover:bg-[#FFF2E2] border border-[#FDECD4] text-[#24283A] text-xs sm:text-sm font-medium rounded-xl h-11 sm:h-12 flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 shadow-sm"
           >
             <span>New student?</span>
-            <span className="font-bold text-primary">Create Account (Sign Up) &rarr;</span>
+            <span className="text-[#5052C9] font-bold ml-1.5">Create Account (Sign Up) →</span>
           </Link>
-        </div>
-
-        {/* Alternative Role Switcher & Back to Home */}
-        <div className="pt-3 border-t border-slate-100 space-y-2 text-center">
-          <div>
-            <Link
-              href="/"
-              className="text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors inline-block pt-1"
-            >
-              &larr; Back to Home Page
-            </Link>
-          </div>
-        </div>
+        </form>
       </div>
-    </SplitAuthCard>
+    </AuthSplitLayout>
   );
 }
 
@@ -264,7 +181,7 @@ export default function StudentSignInPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="py-16 text-center text-xs text-text-muted font-mono">
+        <div className="h-[100dvh] w-full bg-[#EDECE7] flex items-center justify-center text-xs text-[#292D40]/60">
           Loading student portal sign in...
         </div>
       }
@@ -273,5 +190,3 @@ export default function StudentSignInPage() {
     </React.Suspense>
   );
 }
-
-

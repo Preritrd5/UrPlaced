@@ -212,6 +212,7 @@ export class AssessmentService {
 
   /**
    * Publishes an assessment to make it ready for assignment and student attempts.
+   * Invariant: Requires verified Question Set belonging to the same tenant with at least one question.
    */
   public static async publishAssessment(
     tenantId: string,
@@ -230,10 +231,26 @@ export class AssessmentService {
       return { success: false, error: "Assessment not found." };
     }
 
+    // Verify question set belongs to tenant
+    const { data: qSet, error: qSetErr } = await supabase
+      .from("question_sets")
+      .select("id, is_locked, status")
+      .eq("tenant_id", tenantId)
+      .eq("id", assessment.question_set_id)
+      .single();
+
+    if (qSetErr || !qSet) {
+      return {
+        success: false,
+        error: "Question set not found or does not belong to this institution.",
+      };
+    }
+
     // Verify question set has at least one question
     const { count } = await supabase
       .from("question_set_items")
       .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
       .eq("set_id", assessment.question_set_id);
 
     if (!count || count === 0) {
@@ -241,6 +258,20 @@ export class AssessmentService {
         success: false,
         error: "Cannot publish an assessment with zero questions in its question set.",
       };
+    }
+
+    // Ensure question set is locked and published
+    if (!qSet.is_locked || qSet.status !== "PUBLISHED") {
+      const lockRes = await QuestionSetService.lockAndPublishSet(
+        tenantId,
+        assessment.question_set_id
+      );
+      if (!lockRes.success) {
+        return {
+          success: false,
+          error: `Failed to verify and publish question set: ${lockRes.error}`,
+        };
+      }
     }
 
     const { error: upErr } = await supabase
@@ -284,5 +315,77 @@ export class AssessmentService {
     }
 
     return { success: true, updatedCount: data ? data.length : 0 };
+  }
+
+  /**
+   * Deletes an unassigned draft assessment with zero student attempts.
+   * Published assessments or assessments with student attempt history cannot be deleted.
+   */
+  public static async deleteAssessment(
+    tenantId: string,
+    assessmentId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createServerSupabaseClient();
+
+    // 1. Fetch assessment
+    const { data: assessment, error: fetchErr } = await supabase
+      .from("assessments")
+      .select("id, status, title")
+      .eq("tenant_id", tenantId)
+      .eq("id", assessmentId)
+      .single();
+
+    if (fetchErr || !assessment) {
+      return { success: false, error: "Assessment not found." };
+    }
+
+    // 2. Invariant: Only DRAFT assessments can be permanently removed
+    if (assessment.status !== "DRAFT") {
+      return {
+        success: false,
+        error: "Only draft assessments can be deleted. Published assessments must be archived to preserve student records and compliance history.",
+      };
+    }
+
+    // 3. Invariant: Cannot delete if student attempts exist
+    const { count: attemptCount } = await supabase
+      .from("assessment_attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("assessment_id", assessmentId);
+
+    if (attemptCount && attemptCount > 0) {
+      return {
+        success: false,
+        error: "Cannot delete assessment because student attempts have already been recorded.",
+      };
+    }
+
+    // 4. Invariant: Cannot delete if cohort assignments exist
+    const { count: assignCount } = await supabase
+      .from("assessment_assignments")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("assessment_id", assessmentId);
+
+    if (assignCount && assignCount > 0) {
+      return {
+        success: false,
+        error: "Cannot delete assessment because it is currently assigned to one or more cohorts or students.",
+      };
+    }
+
+    // 5. Delete assessment row
+    const { error: delErr } = await supabase
+      .from("assessments")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("id", assessmentId);
+
+    if (delErr) {
+      return { success: false, error: delErr.message };
+    }
+
+    return { success: true };
   }
 }

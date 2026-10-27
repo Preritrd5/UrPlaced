@@ -20,10 +20,12 @@ import {
   X,
   Send,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 
 export default function QuestionSetsPage() {
   const router = useRouter();
@@ -57,6 +59,11 @@ export default function QuestionSetsPage() {
   const [availableQuestions, setAvailableQuestions] = useState<any[]>([]);
   const [selectedQuestionId, setSelectedQuestionId] = useState("");
   const [points, setPoints] = useState("1.0");
+
+  // Delete Set & Remove Item State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [removingItemId, setRemovingItemId] = useState<string | null>(null);
 
   const loadSets = async () => {
     setLoading(true);
@@ -96,7 +103,13 @@ export default function QuestionSetsPage() {
       const res = await fetch("/api/questions?limit=100");
       if (res.ok) {
         const data = await res.json();
-        setAvailableQuestions(data.questions || []);
+        // Invariant: Question must BOTH have verified answer key AND approved/published lifecycle
+        const eligible = (data.questions || []).filter(
+          (q: any) =>
+            q.current_version?.review_status === "VERIFIED_CORRECT" &&
+            ["APPROVED", "PUBLISHED"].includes(q.lifecycle_status)
+        );
+        setAvailableQuestions(eligible);
       }
     } catch (err) {
       console.error(err);
@@ -165,12 +178,16 @@ export default function QuestionSetsPage() {
         }),
       });
 
+      const data = await res.json();
       if (res.ok) {
         setSelectedQuestionId("");
         loadSetDetail(activeSetId);
+      } else {
+        alert(data.error || "Failed to add question to set.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || "Failed to add question to set.");
     }
   };
 
@@ -196,6 +213,59 @@ export default function QuestionSetsPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleConfirmDeleteSet = async () => {
+    if (!activeSetId) return;
+    setDeleteLoading(true);
+
+    try {
+      const res = await fetch(`/api/questions/sets/${activeSetId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteModalOpen(false);
+        setActiveSetDetail(null);
+        const remainingSets = sets.filter((s) => s.id !== activeSetId);
+        setSets(remainingSets);
+        setActiveSetId(remainingSets.length > 0 ? remainingSets[0].id : null);
+      } else {
+        alert(data.error || "Failed to delete question set.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to delete question set.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleRemoveItem = async (itemId: string) => {
+    if (!activeSetId) return;
+    setRemovingItemId(itemId);
+
+    try {
+      const res = await fetch(`/api/questions/sets/${activeSetId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "REMOVE_ITEM", itemId }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        loadSetDetail(activeSetId);
+        loadAvailableQuestions();
+      } else {
+        alert(data.error || "Failed to remove question from set.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to remove question from set.");
+    } finally {
+      setRemovingItemId(null);
     }
   };
 
@@ -318,16 +388,27 @@ export default function QuestionSetsPage() {
                   </div>
 
                   {!activeSetDetail.set.is_locked && (
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={handleLockAndPublish}
-                      disabled={activeSetDetail.items.length === 0}
-                      className="bg-[#2E8F86] hover:bg-[#267870] text-white text-xs flex items-center gap-1.5"
-                    >
-                      <Lock className="w-3.5 h-3.5" /> Lock & Publish Snapshot
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteModalOpen(true)}
+                        className="text-xs h-8 text-status-danger hover:bg-[var(--color-danger-subtle)] hover:text-status-danger flex items-center gap-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete Set
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={handleLockAndPublish}
+                        disabled={activeSetDetail.items.length === 0}
+                        className="bg-[#2E8F86] hover:bg-[#267870] text-white text-xs flex items-center gap-1.5"
+                      >
+                        <Lock className="w-3.5 h-3.5" /> Lock & Publish Snapshot
+                      </Button>
+                    </div>
                   )}
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -353,42 +434,54 @@ export default function QuestionSetsPage() {
                     <CardTitle className="text-sm font-semibold">Add Question from Repository</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <form onSubmit={handleAddItem} className="flex flex-col md:flex-row gap-3">
-                      <select
-                        value={selectedQuestionId}
-                        onChange={(e) => setSelectedQuestionId(e.target.value)}
-                        className="flex-1 h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
-                        required
-                      >
-                        <option value="">Select a question to add...</option>
-                        {availableQuestions.map((q) => (
-                          <option key={q.id} value={q.id}>
-                            [{q.question_type}] {q.current_version?.prompt?.slice(0, 70)}...
-                          </option>
-                        ))}
-                      </select>
-
-                      <div className="w-24">
-                        <Input
-                          type="number"
-                          step="0.5"
-                          min="0.5"
-                          value={points}
-                          onChange={(e) => setPoints(e.target.value)}
-                          placeholder="Points"
-                          className="h-9 text-xs"
-                          required
-                        />
+                    {availableQuestions.length === 0 ? (
+                      <div className="p-3.5 rounded-md bg-amber-50 text-amber-800 text-xs border border-amber-200 space-y-1">
+                        <p className="font-semibold">No verified questions available to add.</p>
+                        <p>
+                          Only questions with a verified answer key (<span className="font-mono font-semibold">VERIFIED_CORRECT</span>) and an approved or published lifecycle status can be added to Question Sets.{" "}
+                          <Link href="/dashboard/questions" className="font-semibold underline text-[#5052C9]">
+                            Review questions in QuestionBank Sentinel
+                          </Link>
+                        </p>
                       </div>
+                    ) : (
+                      <form onSubmit={handleAddItem} className="flex flex-col md:flex-row gap-3">
+                        <select
+                          value={selectedQuestionId}
+                          onChange={(e) => setSelectedQuestionId(e.target.value)}
+                          className="flex-1 h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
+                          required
+                        >
+                          <option value="">Select a verified question to add...</option>
+                          {availableQuestions.map((q) => (
+                            <option key={q.id} value={q.id}>
+                              [{q.question_type}] {q.current_version?.prompt?.slice(0, 70)}...
+                            </option>
+                          ))}
+                        </select>
 
-                      <Button
-                        type="submit"
-                        disabled={!selectedQuestionId}
-                        className="bg-primary hover:bg-primary-hover text-white text-xs h-9 px-4 shrink-0"
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-1" /> Add
-                      </Button>
-                    </form>
+                        <div className="w-24">
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min="0.5"
+                            value={points}
+                            onChange={(e) => setPoints(e.target.value)}
+                            placeholder="Points"
+                            className="h-9 text-xs"
+                            required
+                          />
+                        </div>
+
+                        <Button
+                          type="submit"
+                          disabled={!selectedQuestionId}
+                          className="bg-primary hover:bg-primary-hover text-white text-xs h-9 px-4 shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Add
+                        </Button>
+                      </form>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -422,9 +515,29 @@ export default function QuestionSetsPage() {
                               </div>
                             </div>
                           </div>
-                          <span className="font-mono font-bold text-primary shrink-0">
-                            {item.points} pts
-                          </span>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="font-mono font-bold text-primary">
+                              {item.points} pts
+                            </span>
+                            {!activeSetDetail.set.is_locked && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveItem(item.id)}
+                                disabled={removingItemId === item.id}
+                                className="h-7 w-7 p-0 text-text-muted hover:text-status-danger hover:bg-[var(--color-danger-subtle)]"
+                                title="Remove question from set"
+                                aria-label={`Remove question #${item.sequence_order || idx + 1} from set`}
+                              >
+                                {removingItemId === item.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -507,6 +620,17 @@ export default function QuestionSetsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={handleConfirmDeleteSet}
+        title="Delete Question Set"
+        description={`Are you sure you want to delete the question set "${activeSetDetail?.set?.name}"? All question associations within this draft set will be permanently removed. This action cannot be undone.`}
+        confirmText="Delete Question Set"
+        isLoading={deleteLoading}
+      />
     </div>
   );
 }

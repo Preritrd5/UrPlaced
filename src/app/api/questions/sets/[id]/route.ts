@@ -66,7 +66,44 @@ export async function POST(
       return NextResponse.json(res);
     }
 
+    if (body.action === "REMOVE_ITEM" && body.itemId) {
+      const res = await QuestionSetService.removeItemFromSet(
+        authContext.tenantId,
+        id,
+        body.itemId
+      );
+
+      if (!res.success) {
+        return NextResponse.json({ error: res.error }, { status: 400 });
+      }
+
+      return NextResponse.json(res);
+    }
+
     return NextResponse.json({ error: "Invalid action or parameters." }, { status: 400 });
+  } catch (err: any) {
+    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const authContext = await requireAuthContext(Permissions.QUESTION_SETS_MANAGE);
+
+    const res = await QuestionSetService.deleteSet(authContext.tenantId, id);
+
+    if (!res.success) {
+      return NextResponse.json({ error: res.error }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true, message: "Question set deleted successfully." });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
       return NextResponse.json({ error: err.message }, { status: 403 });

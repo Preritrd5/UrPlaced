@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
 import { QuestionService } from "@/modules/question-bank/services/question-service";
+import { BankCategory, BankSharingPolicy } from "@/types/database";
+
+const ALLOWED_CATEGORIES: BankCategory[] = [
+  "CODING",
+  "APTITUDE",
+  "TECHNICAL_CORE",
+  "BEHAVIORAL",
+  "GENERAL",
+  "COMPANY_SPECIFIC",
+];
+
+const ALLOWED_SHARING_POLICIES: BankSharingPolicy[] = [
+  "COLLEGE_PRIVATE",
+  "EXPLICITLY_SHARED",
+  "GLOBAL_SHARED",
+];
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,26 +42,49 @@ export async function POST(request: NextRequest) {
     const authContext = await requireAuthContext(Permissions.QUESTIONS_CREATE);
     const body = await request.json();
 
-    if (!body.name || !body.category) {
+    const cleanName = typeof body.name === "string" ? body.name.trim() : "";
+    if (!cleanName) {
       return NextResponse.json(
-        { error: "Name and Category are required." },
+        { error: "Question Bank name is required and cannot be empty." },
         { status: 400 }
       );
     }
+
+    if (cleanName.length > 256) {
+      return NextResponse.json(
+        { error: "Question Bank name cannot exceed 256 characters." },
+        { status: 400 }
+      );
+    }
+
+    if (!body.category || !ALLOWED_CATEGORIES.includes(body.category)) {
+      return NextResponse.json(
+        {
+          error: `Invalid or missing category. Allowed: ${ALLOWED_CATEGORIES.join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const sharingPolicy: BankSharingPolicy =
+      body.sharing_policy && ALLOWED_SHARING_POLICIES.includes(body.sharing_policy)
+        ? body.sharing_policy
+        : "COLLEGE_PRIVATE";
 
     const { data: bank, error } = await QuestionService.createBank(
       authContext.tenantId,
       authContext.userId,
       {
-        name: body.name,
-        description: body.description,
-        category: body.category,
-        sharing_policy: body.sharing_policy,
+        name: cleanName,
+        description: typeof body.description === "string" ? body.description.trim() : undefined,
+        category: body.category as BankCategory,
+        sharing_policy: sharingPolicy,
       }
     );
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const isConflict = error.message?.includes("already exists");
+      return NextResponse.json({ error: error.message }, { status: isConflict ? 409 : 500 });
     }
 
     return NextResponse.json(bank, { status: 201 });

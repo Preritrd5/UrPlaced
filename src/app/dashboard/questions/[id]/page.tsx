@@ -25,9 +25,11 @@ import {
   Code2,
   FileText,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 
 export default function QuestionDetailPage({
   params,
@@ -42,6 +44,8 @@ export default function QuestionDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const canManageQuestions = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
 
@@ -113,6 +117,27 @@ export default function QuestionDetailPage({
     }
   };
 
+  const handleConfirmDeleteQuestion = async () => {
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/questions/${id}?action=DELETE`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteModalOpen(false);
+        router.push("/dashboard/questions");
+      } else {
+        alert(data.error || "Failed to delete question.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to delete question.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   if (loading || isLoadingAuth) {
     return <DetailViewSkeleton />;
   }
@@ -163,7 +188,7 @@ export default function QuestionDetailPage({
               </span>
             </div>
             <p className="text-xs text-text-secondary mt-1">
-              Bank: <span className="font-semibold text-text-primary">{question.bank?.name}</span> ({question.bank?.category})
+              Bank: <span className="font-semibold text-text-primary">{question.bank?.name || "General Question Bank"}</span> {question.bank?.category ? `(${question.bank.category})` : ""}
             </p>
           </div>
         </div>
@@ -201,7 +226,19 @@ export default function QuestionDetailPage({
             <Edit3 className="w-3.5 h-3.5" /> {isEditing ? "Cancel Revision" : "Create Revision"}
           </Button>
 
-          {question.lifecycle_status !== "ARCHIVED" && (
+          {question.lifecycle_status === "DRAFT" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteModalOpen(true)}
+              className="text-xs h-8 text-status-danger hover:bg-[var(--color-danger-subtle)] hover:text-status-danger flex items-center gap-1"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete Question
+            </Button>
+          )}
+
+          {question.lifecycle_status !== "ARCHIVED" && question.lifecycle_status !== "DRAFT" && (
             <Button
               type="button"
               variant="ghost"
@@ -472,6 +509,17 @@ export default function QuestionDetailPage({
         currentStatus={cur?.review_status || "UNREVIEWED"}
         onClose={() => setReviewModalOpen(false)}
         onSuccess={loadQuestion}
+      />
+
+      {/* Delete Draft Question Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        onConfirm={handleConfirmDeleteQuestion}
+        title="Delete Draft Question"
+        description="Are you sure you want to permanently delete this draft question and its version history? This action cannot be undone."
+        confirmText="Delete Question"
+        isLoading={deleteLoading}
       />
     </div>
   );

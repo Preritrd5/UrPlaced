@@ -27,3 +27,26 @@ export async function GET(
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authContext = await requireAuthContext(Permissions.ASSESSMENTS_MANAGE);
+    const { id } = await params;
+
+    const result = await AssessmentService.deleteAssessment(authContext.tenantId, id);
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true, message: "Assessment deleted successfully." });
+  } catch (err: any) {
+    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

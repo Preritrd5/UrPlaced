@@ -50,6 +50,8 @@ export class QuestionSetService {
 
   /**
    * Binds questions to a question set using immutable version IDs.
+   * Invariant: Only reviewed questions with verified answer keys (VERIFIED_CORRECT)
+   * or approved lifecycle status can be added to question sets.
    */
   public static async addItemsToSet(
     tenantId: string,
@@ -78,35 +80,88 @@ export class QuestionSetService {
       };
     }
 
-    let addedCount = 0;
+    // Validate all items before inserting to preserve integrity
+    const itemsToInsert: Array<{
+      tenant_id: string;
+      set_id: string;
+      question_id: string;
+      version_id: string;
+      sequence_order: number;
+      points: number;
+      negative_points: number;
+    }> = [];
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
-      // If version_id not provided, resolve current_version_id
-      let versionId = item.version_id;
-      if (!versionId) {
-        const { data: q } = await supabase
-          .from("questions")
-          .select("current_version_id")
-          .eq("tenant_id", tenantId)
-          .eq("id", item.question_id)
-          .single();
+      const { data: q, error: qErr } = await supabase
+        .from("questions")
+        .select("id, current_version_id, lifecycle_status")
+        .eq("tenant_id", tenantId)
+        .eq("id", item.question_id)
+        .single();
 
-        if (!q?.current_version_id) continue;
-        versionId = q.current_version_id;
+      if (qErr || !q) {
+        return {
+          success: false,
+          addedCount: 0,
+          error: `Question ${item.question_id} not found or does not belong to this institution.`,
+        };
       }
 
+      const versionId = item.version_id || q.current_version_id;
+      if (!versionId) {
+        return {
+          success: false,
+          addedCount: 0,
+          error: `Question ${item.question_id} has no valid version.`,
+        };
+      }
+
+      // Check version review eligibility
+      const { data: ver, error: vErr } = await supabase
+        .from("question_versions")
+        .select("id, review_status")
+        .eq("tenant_id", tenantId)
+        .eq("id", versionId)
+        .single();
+
+      if (vErr || !ver) {
+        return {
+          success: false,
+          addedCount: 0,
+          error: `Question version not found for question ${item.question_id}.`,
+        };
+      }
+
+      const isEligible =
+        ver.review_status === "VERIFIED_CORRECT" &&
+        ["APPROVED", "PUBLISHED"].includes(q.lifecycle_status);
+
+      if (!isEligible) {
+        return {
+          success: false,
+          addedCount: 0,
+          error: `Cannot add question to set: Question ${item.question_id} is not eligible. Questions must have a verified answer key ('VERIFIED_CORRECT') and an approved or published lifecycle status ('APPROVED' or 'PUBLISHED'). Current review status: '${ver.review_status}', lifecycle: '${q.lifecycle_status}'.`,
+        };
+      }
+
+      itemsToInsert.push({
+        tenant_id: tenantId,
+        set_id: setId,
+        question_id: item.question_id,
+        version_id: versionId,
+        sequence_order: item.sequence_order || i + 1,
+        points: item.points || 1.0,
+        negative_points: item.negative_points || 0.0,
+      });
+    }
+
+    let addedCount = 0;
+    for (const row of itemsToInsert) {
       const { error: insErr } = await supabase
         .from("question_set_items")
-        .insert({
-          tenant_id: tenantId,
-          set_id: setId,
-          question_id: item.question_id,
-          version_id: versionId,
-          sequence_order: item.sequence_order || i + 1,
-          points: item.points || 1.0,
-          negative_points: item.negative_points || 0.0,
-        });
+        .insert(row);
 
       if (!insErr) {
         addedCount++;
@@ -118,6 +173,7 @@ export class QuestionSetService {
 
   /**
    * Locks and publishes the question set, creating an immutable snapshot for assessments.
+   * Invariant: Requires at least 1 question, and all questions must have verified answer keys.
    */
   public static async lockAndPublishSet(
     tenantId: string,
@@ -125,17 +181,52 @@ export class QuestionSetService {
   ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createServerSupabaseClient();
 
+    // Verify set exists and belongs to tenant
+    const { data: set, error: setErr } = await supabase
+      .from("question_sets")
+      .select("id, is_locked, status")
+      .eq("tenant_id", tenantId)
+      .eq("id", setId)
+      .single();
+
+    if (setErr || !set) {
+      return { success: false, error: "Question set not found." };
+    }
+
     // Check item count
-    const { count } = await supabase
+    const { data: items, error: itemsErr } = await supabase
       .from("question_set_items")
-      .select("id", { count: "exact", head: true })
+      .select(`
+        id,
+        question_id,
+        version_id,
+        question:questions!inner(id, lifecycle_status),
+        version:question_versions!inner(id, review_status)
+      `)
+      .eq("tenant_id", tenantId)
       .eq("set_id", setId);
 
-    if (!count || count === 0) {
+    if (itemsErr || !items || items.length === 0) {
       return {
         success: false,
         error: "Cannot publish an empty question set. Please add at least one question.",
       };
+    }
+
+    // Verify all items are verified/approved
+    for (const item of items) {
+      const q = item.question as any;
+      const v = item.version as any;
+      const isEligible =
+        v?.review_status === "VERIFIED_CORRECT" &&
+        ["APPROVED", "PUBLISHED"].includes(q?.lifecycle_status);
+
+      if (!isEligible) {
+        return {
+          success: false,
+          error: `Cannot publish question set: Included question ${item.question_id} is not eligible. All questions must have a verified answer key ('VERIFIED_CORRECT') and an approved or published lifecycle status ('APPROVED' or 'PUBLISHED'). Current review status: '${v?.review_status}', lifecycle: '${q?.lifecycle_status}'.`,
+        };
+      }
     }
 
     const { error: upErr } = await supabase
@@ -253,5 +344,117 @@ export class QuestionSetService {
     }
 
     return query;
+  }
+
+  /**
+   * Deletes an unlocked, draft question set and all its item bindings.
+   * Locked snapshots and sets referenced by assessments cannot be deleted.
+   */
+  public static async deleteSet(
+    tenantId: string,
+    setId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createServerSupabaseClient();
+
+    // 1. Check if set exists and belongs to tenant
+    const { data: set, error: setErr } = await supabase
+      .from("question_sets")
+      .select("id, is_locked, status")
+      .eq("tenant_id", tenantId)
+      .eq("id", setId)
+      .single();
+
+    if (setErr || !set) {
+      return { success: false, error: "Question set not found." };
+    }
+
+    // 2. Invariant: Locked or published snapshots cannot be deleted
+    if (set.is_locked || set.status === "PUBLISHED") {
+      return {
+        success: false,
+        error: "Cannot delete a locked or published question set snapshot.",
+      };
+    }
+
+    // 3. Invariant: Sets referenced by assessments cannot be deleted
+    const { count: assessmentCount } = await supabase
+      .from("assessments")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("question_set_id", setId);
+
+    if (assessmentCount && assessmentCount > 0) {
+      return {
+        success: false,
+        error: "Cannot delete question set because it is referenced by one or more assessments.",
+      };
+    }
+
+    // 4. Delete items first
+    const { error: itemsDelErr } = await supabase
+      .from("question_set_items")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("set_id", setId);
+
+    if (itemsDelErr) {
+      return { success: false, error: itemsDelErr.message };
+    }
+
+    // 5. Delete set
+    const { error: setDelErr } = await supabase
+      .from("question_sets")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("id", setId);
+
+    if (setDelErr) {
+      return { success: false, error: setDelErr.message };
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Removes an individual question item from an unlocked draft question set.
+   */
+  public static async removeItemFromSet(
+    tenantId: string,
+    setId: string,
+    itemId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createServerSupabaseClient();
+
+    // Check set lock status
+    const { data: set, error: setErr } = await supabase
+      .from("question_sets")
+      .select("id, is_locked")
+      .eq("tenant_id", tenantId)
+      .eq("id", setId)
+      .single();
+
+    if (setErr || !set) {
+      return { success: false, error: "Question set not found." };
+    }
+
+    if (set.is_locked) {
+      return {
+        success: false,
+        error: "Cannot remove items from a locked question set snapshot.",
+      };
+    }
+
+    const { error: delErr } = await supabase
+      .from("question_set_items")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("set_id", setId)
+      .eq("id", itemId);
+
+    if (delErr) {
+      return { success: false, error: delErr.message };
+    }
+
+    return { success: true };
   }
 }

@@ -432,6 +432,47 @@ describe("Phase 3: Student Signup SRN Integration & Security Suite", () => {
       // Verify rollback: created auth user is deleted to avoid orphan account
       expect(mockDeleteUser).toHaveBeenCalledWith("auth-user-999");
     });
+
+    it("rejects signup with 409 Conflict when user account holds a conflicting role (TRAINER) and rolls back auth user", async () => {
+      mockFindEligibleRosterBySrn.mockResolvedValue({
+        status: "FOUND",
+        matchesCount: 1,
+        roster: {
+          id: "student-roster-101",
+          tenant_id: "college-xyz",
+          enrollment_number: "00123",
+        },
+      });
+
+      mockClaimStudentRosterRecord.mockResolvedValue({
+        success: false,
+        code: "ROLE_CONFLICT",
+        message: "This account already holds an administrative or staff role (TRAINER) and cannot claim a student roster record.",
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          srn: "00123",
+          fullName: "Faculty Trainer",
+          email: "trainer@college.edu",
+          password: "SecurePassword123!",
+          role: "STUDENT",
+          accountCategory: "STUDENT",
+        }),
+      });
+
+      const res = await signUpHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(409);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain("TRAINER");
+
+      // Verify rollback: created auth user is deleted to avoid orphan account
+      expect(mockDeleteUser).toHaveBeenCalledWith("auth-user-999");
+    });
   });
 
   // ============================================================================

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, UserPlus, Users, CheckCircle2, ShieldAlert, Mail, RotateCw, XCircle, Clock } from "lucide-react";
+import { ArrowLeft, UserPlus, Users, CheckCircle2, ShieldAlert, Mail, RotateCw, XCircle, Clock, Trash2 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { listTenantMembers, updateMemberStatus } from "@/modules/tenancy/services/membership-service";
 import {
@@ -8,6 +8,7 @@ import {
   listTenantInvitations,
   resendInvitation,
   revokeInvitation,
+  deleteInvitation,
   normalizeEmail,
   isValidEmail,
 } from "@/modules/identity-access/services/invitation-service";
@@ -50,6 +51,7 @@ export default async function TenantMembersPage({
     messageId?: string;
     resent?: string;
     revoked?: string;
+    deleted?: string;
     error?: string;
   }>;
 }) {
@@ -294,6 +296,45 @@ export default async function TenantMembersPage({
     }
   }
 
+  async function handleDeleteInvitation(formData: FormData) {
+    "use server";
+    const sessionProfile = await getCurrentUserProfile();
+    if (
+      !sessionProfile ||
+      !sessionProfile.isVerifiedMembership ||
+      sessionProfile.activeMembership?.role !== "PLACEMENT_HEAD"
+    ) {
+      redirect("/auth/access-denied");
+    }
+
+    const actionTenantId = sessionProfile.activeMembership.tenant_id;
+    const invitationId = formData.get("invitationId") as string;
+
+    let redirectUrl = "";
+    try {
+      const res = await deleteInvitation(invitationId, actionTenantId);
+      if (!res.success) {
+        redirectUrl = `/dashboard/members?error=${encodeURIComponent(res.error || "Failed to delete invitation.")}`;
+      } else {
+        revalidatePath("/dashboard/members");
+        redirectUrl = `/dashboard/members?deleted=true`;
+      }
+    } catch (err: unknown) {
+      if (
+        err instanceof Error &&
+        (err.message === "NEXT_REDIRECT" || (err as any).digest?.startsWith?.("NEXT_REDIRECT"))
+      ) {
+        throw err;
+      }
+      const msg = err instanceof Error ? err.message : "Failed to delete invitation.";
+      redirectUrl = `/dashboard/members?error=${encodeURIComponent(msg)}`;
+    }
+
+    if (redirectUrl) {
+      redirect(redirectUrl);
+    }
+  }
+
   async function handleToggleMemberStatus(formData: FormData) {
     "use server";
     const sessionProfile = await getCurrentUserProfile();
@@ -423,6 +464,15 @@ export default async function TenantMembersPage({
           <CardContent className="p-4 text-xs text-secondary flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>Invitation has been successfully revoked. The single-use link can no longer be accepted.</span>
+          </CardContent>
+        </Card>
+      )}
+
+      {query.deleted === "true" && (
+        <Card className="border-secondary/40 bg-[rgba(46,143,134,0.06)]">
+          <CardContent className="p-4 text-xs text-secondary flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>Obsolete invitation has been permanently deleted from institutional records.</span>
           </CardContent>
         </Card>
       )}
@@ -667,8 +717,27 @@ export default async function TenantMembersPage({
                             </form>
                           </div>
                         )}
-                        {inv.status !== "PENDING" && (
-                          <span className="text-xs text-text-muted font-mono">—</span>
+                        {(inv.status === "REVOKED" || inv.status === "EXPIRED") && (
+                          <div className="flex items-center justify-end">
+                            <form action={handleDeleteInvitation} className="inline-block">
+                              <input type="hidden" name="invitationId" value={inv.id} />
+                              <PendingButton
+                                type="submit"
+                                variant="ghost"
+                                size="sm"
+                                pendingText="Deleting..."
+                                className="text-xs text-status-danger hover:bg-[var(--color-danger-subtle)] h-8"
+                                title="Delete obsolete invitation"
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" /> Delete
+                              </PendingButton>
+                            </form>
+                          </div>
+                        )}
+                        {inv.status === "ACCEPTED" && (
+                          <span className="inline-flex items-center gap-1 text-xs text-[#2E8F86] font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Accepted
+                          </span>
                         )}
                       </TableCell>
                     </TableRow>

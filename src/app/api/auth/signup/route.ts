@@ -260,7 +260,10 @@ export async function POST(request: NextRequest) {
           claimResult.code === "ALREADY_CLAIMED" ||
           claimResult.code === "AMBIGUOUS_SRN" ||
           claimResult.code === "USER_ALREADY_HAS_ROSTER" ||
-          claimResult.code === "CONCURRENT_CLAIM_CONFLICT";
+          claimResult.code === "CONCURRENT_CLAIM_CONFLICT" ||
+          claimResult.code === "ROLE_CONFLICT" ||
+          claimResult.code === "MEMBERSHIP_SUSPENDED" ||
+          claimResult.code === "TENANT_MISMATCH";
 
         return NextResponse.json(
           {

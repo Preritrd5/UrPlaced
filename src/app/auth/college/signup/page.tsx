@@ -3,51 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Building2,
-  Users,
-  ShieldCheck,
-  Award,
-  ArrowRight,
-  ShieldAlert,
-  Info,
-} from "lucide-react";
+import { Building2, User, Mail, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SplitAuthCard, type FeatureHighlight } from "@/components/auth/split-auth-card";
-import { PasswordField } from "@/components/auth/password-field";
+import { AuthSplitLayout, UrPlacedBrandLogo } from "@/components/auth/auth-split-layout";
+import { AuthInput, AuthPasswordInput } from "@/components/auth/auth-input";
 
-const collegeSignUpFeatures: FeatureHighlight[] = [
-  {
-    icon: Building2,
-    tint: "rose",
-    title: "Dedicated Institutional Tenant",
-    description: "Complete data isolation, custom institutional identity, and strict boundary enforcement under PostgreSQL RLS.",
-  },
-  {
-    icon: ShieldCheck,
-    tint: "indigo",
-    title: "Authorized Placement Head Account",
-    description: "Provisions the verified institutional administrator role authorized to invite staff coordinators and trainers.",
-  },
-  {
-    icon: Users,
-    tint: "cyan",
-    title: "Staff & Coordinator Governance",
-    description: "Granular role-based permissions for placement officers, department liaisons, and faculty training specialists.",
-  },
-  {
-    icon: Award,
-    tint: "amber",
-    title: "Comprehensive Analytics & Placement Memory",
-    description: "Institutional recruitment intelligence, company conversion metrics, and placement audit reports.",
-  },
-];
-
-function CollegeSignUpContent() {
+export default function CollegeSignUpPage() {
   const router = useRouter();
 
   const [fullName, setFullName] = React.useState("");
@@ -99,22 +60,22 @@ function CollegeSignUpContent() {
         body: JSON.stringify({
           fullName: fullName.trim(),
           email: email.trim().toLowerCase(),
+          institution: institutionName.trim(),
           password,
           role: "PLACEMENT_HEAD",
           accountCategory: "COLLEGE",
-          institutionName: institutionName.trim(),
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMsg(data.error || "Failed to create institutional account. Please try again.");
+        setErrorMsg(data.error || "Failed to create college account. Please try again.");
         setIsLoading(false);
         return;
       }
 
-      setSuccessMsg("College workspace initialized! Signing you in...");
+      setSuccessMsg("College workspace provisioned successfully! Signing in...");
 
       // 2. Automatically authenticate session in browser client
       const supabase = createClient();
@@ -125,189 +86,159 @@ function CollegeSignUpContent() {
         });
 
       if (signInError || !authData.session) {
+        if (signInError?.message?.toLowerCase().includes("email not confirmed")) {
+          setSuccessMsg(
+            "College account registered successfully! Please check your institutional email to confirm your address before signing in."
+          );
+          setIsLoading(false);
+          return;
+        }
         router.push(`/auth/college/signin?registered=true&email=${encodeURIComponent(email)}`);
         return;
       }
 
-      // 3. Redirect to College Placement Command Center
+      // 3. Redirect to Placement Command Center
       router.push("/dashboard");
       router.refresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "An unexpected error occurred during institutional registration. Please try again.";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred during institutional registration. Please try again.";
       setErrorMsg(msg);
       setIsLoading(false);
     }
   }
 
   return (
-    <SplitAuthCard
-      badgeText="• Institutional Placement Portal"
-      subtitle="INSTITUTIONAL ONBOARDING"
-      headline="Build Your Campus Placement Workspace"
-      description="Establish an authorized, multi-tenant placement management workspace for your institution. Coordinate drives, staff coordinators, and student readiness."
-      features={collegeSignUpFeatures}
-      footerLeft="UrPlaced Enterprise Edition"
-      footerRight="Institutional Onboarding"
+    <AuthSplitLayout
+      headlineLines={["Partner With", "UrPlaced"]}
+      supportingText="Empower your campus with verified student readiness metrics, AI mock drives, and comprehensive placement memory."
     >
-      <div className="space-y-4">
-        {/* Form Header */}
-        <div className="space-y-1">
-          <h2 className="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">
-            Register Your Placement Cell
-          </h2>
-          <p className="text-sm text-slate-500">
-            Provision a verified placement workspace for your college or university.
+      <div className="flex flex-col justify-center h-full min-h-0 space-y-3 sm:space-y-4">
+        {/* Form Title & Subtitle */}
+        <div className="shrink-0 space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl lg:text-[2.2rem] font-extrabold font-heading text-[#24283A] tracking-tight leading-tight">
+            Register Placement Cell
+          </h1>
+          <p className="text-xs sm:text-sm text-[#747683]">
+            Provision an authorized institutional workspace for your college or university.
           </p>
         </div>
 
+        {/* Compact Alert Notification */}
         {errorMsg && (
-          <Alert variant="destructive">
-            <AlertTitle className="flex items-center gap-1.5">
-              <ShieldAlert className="h-4 w-4" /> Registration Failed
-            </AlertTitle>
-            <AlertDescription>{errorMsg}</AlertDescription>
-          </Alert>
+          <div
+            role="alert"
+            className="shrink-0 flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-xs sm:text-sm font-medium"
+          >
+            <ShieldAlert className="h-4 w-4 shrink-0 text-red-600" />
+            <span className="truncate">{errorMsg}</span>
+          </div>
         )}
 
         {successMsg && (
-          <Alert variant="success">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{successMsg}</AlertDescription>
-          </Alert>
+          <div
+            role="status"
+            className="shrink-0 flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-800 text-xs sm:text-sm font-medium"
+          >
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-600" />
+            <span className="truncate">{successMsg}</span>
+          </div>
         )}
 
         {/* Sign Up Form */}
-        <form onSubmit={handleSignUp} className="space-y-3.5">
-          {/* Full Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="fullName" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-              Authorized Representative Full Name
-            </Label>
-            <Input
-              id="fullName"
-              type="text"
-              placeholder="e.g. Dr. Ramesh Kumar"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              disabled={isLoading}
-              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+        <form onSubmit={handleSignUp} className="space-y-2.5 sm:space-y-3 min-h-0" suppressHydrationWarning>
+          {/* College or University Name */}
+          <AuthInput
+            id="institutionName"
+            label="College or University Name"
+            placeholder="e.g. Bangalore Institute of Technology"
+            value={institutionName}
+            onChange={(e) => setInstitutionName(e.target.value)}
+            required
+            disabled={isLoading}
+            icon={Building2}
+            helperText="Your institution name defines your isolated multi-tenant college placement workspace."
+          />
 
-          {/* Institution Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="institutionName" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-              College / University Name
-            </Label>
-            <Input
-              id="institutionName"
-              type="text"
-              placeholder="e.g. National Institute of Technology, Bangalore"
-              value={institutionName}
-              onChange={(e) => setInstitutionName(e.target.value)}
-              required
-              disabled={isLoading}
-              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          {/* Placement Officer Full Name */}
+          <AuthInput
+            id="fullName"
+            label="Placement Officer Full Name"
+            placeholder="e.g. Dr. Rajesh Kumar"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            disabled={isLoading}
+            icon={User}
+          />
 
-          {/* Email Address */}
-          <div className="space-y-1.5">
-            <Label htmlFor="email" required className="text-xs font-bold uppercase tracking-wider text-slate-700 font-mono">
-              Institutional Email Address
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="e.g. placement.head@nitb.ac.in"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-              className="bg-input border-border/80 rounded-xl h-11 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          {/* Institutional Email Address */}
+          <AuthInput
+            id="email"
+            type="email"
+            label="Institutional Email Address"
+            placeholder="e.g. placement.head@college.edu"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+            autoComplete="email"
+            icon={Mail}
+          />
 
-          {/* Paired Password Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <PasswordField
+          {/* Passwords in 2-column grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <AuthPasswordInput
               id="password"
               label="Create Login Password"
-              required
-              autoComplete="new-password"
               placeholder="Min 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
               disabled={isLoading}
+              autoComplete="new-password"
             />
-
-            <PasswordField
+            <AuthPasswordInput
               id="confirmPassword"
               label="Retype Login Password"
-              required
-              autoComplete="new-password"
               placeholder="Retype password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              required
               disabled={isLoading}
+              autoComplete="new-password"
             />
           </div>
 
-          <Button
+          {/* Primary CTA Submit Button */}
+          <button
             type="submit"
-            variant="primary"
-            className="w-full h-12 rounded-xl text-sm font-bold shadow-md mt-2"
-            isLoading={isLoading}
+            disabled={isLoading}
+            suppressHydrationWarning
+            className="w-full bg-[#5052C9] hover:bg-[#4345B0] active:bg-[#383A99] text-white font-semibold text-xs sm:text-sm rounded-xl h-11 sm:h-12 shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 mt-1"
           >
-            {isLoading ? (
-              "Registering Placement Cell..."
-            ) : (
-              <>
-                <Building2 className="h-4 w-4 mr-2" /> Register Placement Cell
-              </>
-            )}
-          </Button>
+            <Building2 className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+            <span>
+              {isLoading ? "Provisioning..." : "Register College Workspace (Sign Up)"}
+            </span>
+          </button>
         </form>
 
-        {/* Secondary Sign In Action */}
-        <div className="pt-2">
-          <Link
-            href="/auth/college/signin"
-            className="w-full h-11 rounded-xl bg-[#FFF8EE] hover:bg-[#FFF2DE] border border-[#FDE6C8] text-slate-800 text-sm font-medium transition-all flex items-center justify-center gap-1 shadow-sm"
-          >
-            <span>Already registered your institution?</span>
-            <span className="font-bold text-primary">Sign In &rarr;</span>
-          </Link>
-        </div>
-
-        {/* Alternative Role Switcher & Back to Home */}
-        <div className="pt-3 border-t border-slate-100 space-y-2 text-center">
-          <div>
+        {/* Footer Navigation */}
+        <div className="shrink-0 pt-1 text-center">
+          <p className="text-xs sm:text-sm text-[#24283A]">
+            Already have a college account?{" "}
             <Link
-              href="/"
-              className="text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors inline-block pt-1"
+              href="/auth/college/signin"
+              className="text-[#5052C9] font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 rounded"
             >
-              &larr; Back to Home Page
+              Sign In →
             </Link>
-          </div>
+          </p>
         </div>
       </div>
-    </SplitAuthCard>
-  );
-}
-
-export default function CollegeSignUpPage() {
-  return (
-    <React.Suspense
-      fallback={
-        <div className="py-16 text-center text-xs text-text-muted font-mono">
-          Loading institutional registration...
-        </div>
-      }
-    >
-      <CollegeSignUpContent />
-    </React.Suspense>
+    </AuthSplitLayout>
   );
 }

@@ -4,6 +4,7 @@ import { Permissions } from "@/modules/identity-access/services/policy-engine";
 import { AIRateLimiter } from "@/modules/ai/ai-rate-limiter";
 import { AIQuestionIntelligenceService } from "@/modules/ai/services/ai-question-intelligence-service";
 import { GeminiServiceError } from "@/modules/ai/gemini-client";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,35 @@ export async function POST(request: NextRequest) {
     if (!validTypes.includes(questionType)) {
       return NextResponse.json(
         { error: `Invalid question type. Allowed values: ${validTypes.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    if (typeof count === "number" && (count < 1 || count > 5)) {
+      return NextResponse.json(
+        { error: "Batch size must be between 1 and 5 questions per request." },
+        { status: 400 }
+      );
+    }
+
+    if (bankId) {
+      const supabase = await createServerSupabaseClient();
+      const { data: bankRecord, error: bankErr } = await supabase
+        .from("question_banks")
+        .select("id, tenant_id")
+        .eq("id", bankId)
+        .eq("tenant_id", authContext.tenantId)
+        .maybeSingle();
+
+      if (bankErr || !bankRecord) {
+        return NextResponse.json(
+          { error: "Target Question Bank not found or does not belong to your college." },
+          { status: 404 }
+        );
+      }
+    } else if (saveAsDraft) {
+      return NextResponse.json(
+        { error: "Target Question Bank is required to save generated questions." },
         { status: 400 }
       );
     }

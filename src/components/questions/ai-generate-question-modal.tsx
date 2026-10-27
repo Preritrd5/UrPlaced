@@ -1,7 +1,7 @@
 "use strict";
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sparkles,
   X,
@@ -11,9 +11,11 @@ import {
   FileQuestion,
   Save,
   HelpCircle,
+  FolderPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CreateQuestionBankModal } from "@/components/questions/create-question-bank-modal";
 
 interface AIGenerateQuestionModalProps {
   isOpen: boolean;
@@ -28,9 +30,11 @@ export function AIGenerateQuestionModal({
   banks,
   onGeneratedSuccess,
 }: AIGenerateQuestionModalProps) {
+  const [localBanks, setLocalBanks] = useState(banks);
+  const [bankId, setBankId] = useState(banks[0]?.id || "");
+  const [createBankModalOpen, setCreateBankModalOpen] = useState(false);
   const [topic, setTopic] = useState("");
   const [subtopic, setSubtopic] = useState("");
-  const [bankId, setBankId] = useState(banks[0]?.id || "");
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [questionType, setQuestionType] = useState<
     "SINGLE_CHOICE" | "MULTIPLE_SELECT" | "NUMERIC" | "SHORT_ANSWER" | "CODING"
@@ -43,11 +47,23 @@ export function AIGenerateQuestionModal({
   const [generatedDrafts, setGeneratedDrafts] = useState<any[]>([]);
   const [savedCount, setSavedCount] = useState(0);
 
+  useEffect(() => {
+    setLocalBanks(banks);
+    if (banks.length > 0 && !bankId) {
+      setBankId(banks[0].id);
+    }
+  }, [banks, bankId]);
+
   if (!isOpen) return null;
 
   const handleGenerate = async (saveDirectlyAsDraft = false) => {
     if (!topic.trim()) {
       setError("Please specify a topic or subject.");
+      return;
+    }
+
+    if (saveDirectlyAsDraft && !bankId) {
+      setError("Please select or create a target Question Bank before saving questions.");
       return;
     }
 
@@ -124,32 +140,76 @@ export function AIGenerateQuestionModal({
           )}
 
           {savedCount > 0 && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-              <span>
-                Successfully saved {savedCount} question draft(s) as PENDING_REVIEW. You can review them in the Question Bank.
-              </span>
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>
+                  Successfully saved {savedCount} question draft(s) with Draft / Unreviewed status. You can review them in the Question Bank.
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-7 border-emerald-300 text-emerald-900 bg-white hover:bg-emerald-50 shrink-0"
+                onClick={() => {
+                  onClose();
+                  if (typeof window !== "undefined") {
+                    window.location.href = `/dashboard/questions?bankId=${bankId}`;
+                  }
+                }}
+              >
+                Review in Question Bank
+              </Button>
             </div>
           )}
 
           {/* Form Inputs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#24283A] mb-1 font-inter">
-                Target Question Bank
-              </label>
-              <select
-                value={bankId}
-                onChange={(e) => setBankId(e.target.value)}
-                className="w-full p-2.5 text-xs bg-[#FBFAF7] border border-[#DDDCD5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5052C9]/30 text-[#24283A]"
-              >
-                {banks.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name} ({b.category})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {localBanks.length === 0 ? (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#24283A] font-inter">
+                  Target Question Bank *
+                </label>
+                <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center justify-between gap-2">
+                  <span>No banks found. Create one first.</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setCreateBankModalOpen(true)}
+                    className="text-xs h-7 bg-[#5052C9] hover:bg-[#4345B0] text-white flex items-center gap-1 shrink-0"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" /> + Create Bank
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-[#24283A] font-inter">
+                    Target Question Bank *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setCreateBankModalOpen(true)}
+                    className="text-[11px] font-semibold text-[#5052C9] hover:text-[#4345B0] flex items-center gap-1 transition-colors"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" /> + New Bank
+                  </button>
+                </div>
+                <select
+                  value={bankId}
+                  onChange={(e) => setBankId(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-[#FBFAF7] border border-[#DDDCD5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5052C9]/30 text-[#24283A]"
+                >
+                  {localBanks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-[#24283A] mb-1 font-inter">
@@ -354,6 +414,18 @@ export function AIGenerateQuestionModal({
           </div>
         </div>
       </div>
+
+      {/* Create Question Bank Modal */}
+      <CreateQuestionBankModal
+        isOpen={createBankModalOpen}
+        onClose={() => setCreateBankModalOpen(false)}
+        onSuccess={(newBank) => {
+          setLocalBanks((prev) => [newBank, ...prev.filter((b) => b.id !== newBank.id)]);
+          setBankId(newBank.id);
+          setError(null);
+          if (onGeneratedSuccess) onGeneratedSuccess();
+        }}
+      />
     </div>
   );
 }

@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
     );
 
     if (!res.success) {
-      return NextResponse.json({ error: res.error }, { status: 400 });
+      const isNotFound = res.error?.includes("not found");
+      return NextResponse.json({ error: res.error }, { status: isNotFound ? 404 : 400 });
     }
 
     return NextResponse.json(res, { status: 201 });

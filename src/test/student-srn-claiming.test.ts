@@ -962,6 +962,45 @@ describe("Student SRN Normalization, Lookup & Claiming (Phase 2)", () => {
       expect(mockUpdateUserById).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
+
+    it("verifies multi-tenant membership safety: claim_student_roster handles users with multiple memberships across tenants without role masking", async () => {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+
+      // 1. Verify schema definition permits multiple memberships per user across different tenants
+      const schemaPath = path.resolve(
+        process.cwd(),
+        "supabase/migrations/20261018000001_phase03_auth_tenancy_rls.sql"
+      );
+      const schemaSql = await fs.readFile(schemaPath, "utf-8");
+      expect(schemaSql).toContain("CONSTRAINT uq_tenant_user_membership UNIQUE (tenant_id, user_id)");
+      // Verify there is NO single-column UNIQUE (user_id) constraint on tenant_memberships
+      expect(schemaSql).not.toMatch(/CONSTRAINT\s+\w+\s+UNIQUE\s*\(\s*user_id\s*\)/i);
+
+      // 2. Verify hardened procedure in migration 20261027000007 specifically checks for institutional roles
+      const hardeningMigrationPath = path.resolve(
+        process.cwd(),
+        "supabase/migrations/20261027000007_harden_membership_guard_multi_tenant.sql"
+      );
+      const hardeningSql = await fs.readFile(hardeningMigrationPath, "utf-8");
+
+      // Verify specific check for ANY institutional roles across memberships
+      expect(hardeningSql).toContain("tm.role IN ('PLACEMENT_HEAD', 'PLACEMENT_STAFF', 'TRAINER')");
+      expect(hardeningSql).toContain("'ROLE_CONFLICT'");
+
+      // Verify specific check for target tenant membership status
+      expect(hardeningSql).toContain("tm.tenant_id = v_target_student.tenant_id");
+      expect(hardeningSql).toContain("'MEMBERSHIP_SUSPENDED'");
+
+      // Verify specific check for other college memberships
+      expect(hardeningSql).toContain("tm.tenant_id != v_target_student.tenant_id");
+      expect(hardeningSql).toContain("'TENANT_MISMATCH'");
+
+      // Verify security grants and postgres ownership
+      expect(hardeningSql).toContain("SECURITY DEFINER");
+      expect(hardeningSql).toContain("SET search_path = public, pg_temp");
+      expect(hardeningSql).toContain("GRANT EXECUTE ON FUNCTION public.claim_student_roster(TEXT, UUID, TEXT, TEXT) TO service_role;");
+    });
   });
 
   // ============================================================================

@@ -12,62 +12,18 @@ export async function GET(
     const { id } = await params;
     const authContext = await requireAuthContext();
 
-    const supabase = await createServerSupabaseClient();
-    const { data: question, error } = await supabase
-      .from("questions")
-      .select(`
-        id,
-        tenant_id,
-        bank_id,
-        question_type,
-        current_version_id,
-        lifecycle_status,
-        created_at,
-        updated_at,
-        bank:question_banks(id, name, category, sharing_policy),
-        versions:question_versions(
-          id,
-          version_number,
-          prompt,
-          content_format,
-          options,
-          answer_key,
-          explanation,
-          difficulty,
-          skill_id,
-          topic_tags,
-          source_type,
-          source_reference,
-          license_type,
-          review_status,
-          review_notes,
-          fingerprint,
-          change_summary,
-          published_at,
-          created_by,
-          created_at
-        )
-      `)
-      .eq("tenant_id", authContext.tenantId)
-      .eq("id", id)
-      .single();
+    const result = await QuestionService.getQuestionById(
+      authContext.tenantId,
+      authContext.tenantRole,
+      id,
+      authContext.isPlatformAdmin
+    );
 
-    if (error || !question) {
-      return NextResponse.json({ error: "Question not found." }, { status: 404 });
+    if (result.error || !result.data) {
+      return NextResponse.json({ error: result.error || "Question not found." }, { status: 404 });
     }
 
-    let versions = (question.versions || []) as any[];
-    // Role-based sanitization for student
-    if (authContext.tenantRole === "STUDENT") {
-      if (question.lifecycle_status !== "PUBLISHED") {
-        return NextResponse.json({ error: "Access denied." }, { status: 403 });
-      }
-      versions = versions.map((v: any) =>
-        QuestionService.sanitizeForStudent(v, question.question_type)
-      );
-    }
-
-    return NextResponse.json({ ...question, versions });
+    return NextResponse.json(result.data);
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
       return NextResponse.json({ error: err.message }, { status: 403 });
@@ -113,7 +69,22 @@ export async function DELETE(
     const { id } = await params;
     const authContext = await requireAuthContext(Permissions.QUESTIONS_MANAGE);
     const { searchParams } = new URL(request.url);
-    const action = searchParams.get("action") === "WITHDRAW" ? "WITHDRAWN" : "ARCHIVED";
+    const actionParam = searchParams.get("action");
+
+    if (actionParam === "DELETE") {
+      const res = await QuestionService.deleteQuestion(
+        authContext.tenantId,
+        id
+      );
+
+      if (!res.success) {
+        return NextResponse.json({ error: res.error }, { status: 400 });
+      }
+
+      return NextResponse.json({ success: true, deleted: true, message: "Question permanently deleted." });
+    }
+
+    const action = actionParam === "WITHDRAW" ? "WITHDRAWN" : "ARCHIVED";
 
     // Invariant: Non-destructive lifecycle archiving
     const res = await QuestionService.updateLifecycle(
