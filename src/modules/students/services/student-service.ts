@@ -84,12 +84,19 @@ export interface FindEligibleRosterResult {
 export interface ClaimStudentRosterParams {
   srn: string;
   userId: string;
+  fullName?: string;
+  email?: string;
 }
 
 export type ClaimStudentRosterCode =
   | "CLAIMED_SUCCESSFULLY"
   | "INVALID_SRN"
   | "INVALID_USER"
+  | "INVALID_NAME"
+  | "INVALID_EMAIL"
+  | "ROLE_CONFLICT"
+  | "MEMBERSHIP_SUSPENDED"
+  | "TENANT_MISMATCH"
   | "USER_ALREADY_HAS_ROSTER"
   | "ALREADY_CLAIMED"
   | "SRN_NOT_FOUND"
@@ -174,8 +181,10 @@ export class StudentService {
     }
 
     const total = count || 0;
+    const studentsList = (data as any[]) || [];
+
     return {
-      students: (data as any) || [],
+      students: studentsList,
       total,
       page,
       pageSize,
@@ -984,17 +993,53 @@ export class StudentService {
       };
     }
 
+    const cleanFullName = (params.fullName || "").trim();
+    if (!cleanFullName) {
+      return {
+        success: false,
+        code: "INVALID_NAME",
+        message: "Full name is required to claim a student roster record.",
+      };
+    }
+
+    const cleanEmail = (params.email || "").trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      return {
+        success: false,
+        code: "INVALID_EMAIL",
+        message: "A valid email address is required to claim a student roster record.",
+      };
+    }
+
     const supabase = createAdminClient();
 
-    // 1. Enforce 1:1 Account-to-Roster Invariant:
+    // 1. Enforce 1:1 Account-to-Roster Invariant & Separately Guarded Same-Account Retry Path:
     // Check if this user account has already claimed another roster record
     const { data: existingUserClaim } = await supabase
       .from("students")
-      .select("id, tenant_id, enrollment_number")
+      .select("id, tenant_id, enrollment_number, full_name, email")
       .eq("user_id", params.userId)
       .maybeSingle();
 
     if (existingUserClaim) {
+      // If this user already claimed this exact same SRN, confirm the existing association idempotently.
+      // Official roster name, email, and academic data remain strictly authoritative and are never overwritten.
+      if (
+        StudentService.normalizeSrn(existingUserClaim.enrollment_number).toUpperCase() ===
+        cleanSrn.toUpperCase()
+      ) {
+        return {
+          success: true,
+          code: "CLAIMED_SUCCESSFULLY",
+          message: "Roster record already linked to this student account.",
+          studentId: existingUserClaim.id,
+          tenantId: existingUserClaim.tenant_id,
+          enrollmentNumber: existingUserClaim.enrollment_number,
+          student: existingUserClaim as any,
+        };
+      }
+
       return {
         success: false,
         code: "USER_ALREADY_HAS_ROSTER",
@@ -1005,189 +1050,102 @@ export class StudentService {
       };
     }
 
-    // 2. Try PostgreSQL Transactional Function (claim_student_roster) first if available
+    // 2. Canonical PostgreSQL Transactional Procedure (claim_student_roster)
+    // Atomically enforces 1:1 account binding, row-level locking, eligibility verification,
+    // mandatory name/email synchronization, tenant role protection,
+    // and tenant membership creation inside a SINGLE database transaction.
+    // If ANY mandatory step fails, PostgreSQL aborts the transaction and rolls back all changes.
+    // In accordance with critical transaction safety rules, the service fails closed if the RPC
+    // is unavailable or fails, preventing any partial writes across students or tenant_memberships.
     try {
       const { data: rpcData, error: rpcError } = await (supabase as any).rpc("claim_student_roster", {
         p_srn: cleanSrn,
         p_user_id: params.userId,
+        p_full_name: cleanFullName,
+        p_email: cleanEmail,
       });
 
-      if (!rpcError && rpcData && rpcData.length > 0) {
-        const result = rpcData[0];
-        if (result.success) {
-          // Sync Auth app_metadata
-          try {
-            await supabase.auth.admin.updateUserById(params.userId, {
-              app_metadata: {
-                tenant_id: result.tenant_id,
-                role: "STUDENT",
-                account_category: "STUDENT",
-              },
-            });
-          } catch {}
-
-          // Record audit log
-          try {
-            await AuditService.log({
-              tenantId: result.tenant_id,
-              actorId: params.userId,
-              action: "STUDENT_ROSTER_CLAIMED",
-              resourceType: "student",
-              resourceId: result.student_id,
-              afterState: {
-                studentId: result.student_id,
-                tenantId: result.tenant_id,
-                enrollmentNumber: result.enrollment_number,
-                claimedBy: params.userId,
-              },
-            });
-          } catch {}
-
-          return {
-            success: true,
-            code: "CLAIMED_SUCCESSFULLY",
-            message: result.message || "Roster record successfully claimed.",
-            studentId: result.student_id,
-            tenantId: result.tenant_id,
-            enrollmentNumber: result.enrollment_number,
-          };
-        } else if (result.code) {
-          return {
-            success: false,
-            code: result.code as ClaimStudentRosterCode,
-            message: result.message || "Unable to claim roster record.",
-            studentId: result.student_id,
-            tenantId: result.tenant_id,
-            enrollmentNumber: result.enrollment_number,
-          };
-        }
+      if (rpcError) {
+        console.error("[StudentService.claimStudentRosterRecord] Transactional RPC error:", rpcError);
+        return {
+          success: false,
+          code: "CLAIM_FAILED",
+          message:
+            rpcError.message ||
+            "Failed to claim student roster record atomically. Please try again or contact your administrator.",
+        };
       }
-    } catch {
-      // Fall through to PostgREST transactional sequence if RPC is unavailable
-    }
 
-    // 3. Fallback PostgREST Execution:
-    // Check if this SRN is already claimed by any account
-    const { data: alreadyClaimed } = await supabase
-      .from("students")
-      .select("id, tenant_id, enrollment_number")
-      .ilike("enrollment_number", cleanSrn)
-      .not("user_id", "is", null);
+      if (!rpcData || rpcData.length === 0) {
+        return {
+          success: false,
+          code: "CLAIM_FAILED",
+          message: "Empty response from student roster claiming procedure.",
+        };
+      }
 
-    if (alreadyClaimed && alreadyClaimed.length > 0) {
+      const result = rpcData[0];
+      if (result.success) {
+        // Sync Auth app_metadata
+        try {
+          await supabase.auth.admin.updateUserById(params.userId, {
+            app_metadata: {
+              tenant_id: result.tenant_id,
+              role: "STUDENT",
+              account_category: "STUDENT",
+            },
+          });
+        } catch {}
+
+        // Record secure audit log
+        try {
+          await AuditService.log({
+            tenantId: result.tenant_id,
+            actorId: params.userId,
+            action: "STUDENT_ROSTER_CLAIMED",
+            resourceType: "student",
+            resourceId: result.student_id,
+            afterState: {
+              studentId: result.student_id,
+              tenantId: result.tenant_id,
+              enrollmentNumber: result.enrollment_number,
+              claimedBy: params.userId,
+              fullName: cleanFullName,
+              email: cleanEmail,
+            },
+          });
+        } catch {}
+
+        return {
+          success: true,
+          code: "CLAIMED_SUCCESSFULLY",
+          message: result.message || "Roster record successfully claimed and synchronized.",
+          studentId: result.student_id,
+          tenantId: result.tenant_id,
+          enrollmentNumber: result.enrollment_number,
+        };
+      }
+
+      // Propagate explicit failure code from the database transaction:
+      // e.g. ALREADY_CLAIMED, AMBIGUOUS_SRN, SRN_NOT_FOUND, USER_ALREADY_HAS_ROSTER, CONCURRENT_CLAIM_CONFLICT
       return {
         success: false,
-        code: "ALREADY_CLAIMED",
-        message: "This Student Registration Number (SRN) has already been claimed by a registered account.",
+        code: (result.code as ClaimStudentRosterCode) || "CLAIM_FAILED",
+        message: result.message || "Unable to claim roster record.",
+        studentId: result.student_id,
+        tenantId: result.tenant_id,
+        enrollmentNumber: result.enrollment_number,
       };
-    }
-
-    // 4. Query eligible unclaimed records (active, not archived)
-    const { data: eligibleMatches, error: matchErr } = await supabase
-      .from("students")
-      .select("*")
-      .ilike("enrollment_number", cleanSrn)
-      .is("user_id", null)
-      .eq("is_archived", false)
-      .eq("academic_status", "ACTIVE");
-
-    if (matchErr || !eligibleMatches || eligibleMatches.length === 0) {
+    } catch (err: any) {
+      console.error("[StudentService.claimStudentRosterRecord] Transactional RPC execution failed:", err);
+      // Fail closed: Never perform an unsafe multi-step fallback that could leave partial state
       return {
         success: false,
-        code: "SRN_NOT_FOUND",
-        message: "No active, eligible student roster record found for the provided SRN.",
+        code: "CLAIM_FAILED",
+        message:
+          err?.message ||
+          "The student roster claiming service is unavailable. Please try again later or contact support.",
       };
     }
-
-    if (eligibleMatches.length > 1) {
-      return {
-        success: false,
-        code: "AMBIGUOUS_SRN",
-        message: "This SRN matches multiple institutional rosters. Please contact your college placement cell.",
-      };
-    }
-
-    const targetStudent = eligibleMatches[0];
-    const nowIso = new Date().toISOString();
-
-    // 5. Concurrency-safe atomic claim
-    // Filter by id AND user_id IS NULL to prevent race condition double-claims
-    const { data: updatedRecord, error: updateErr } = await supabase
-      .from("students")
-      .update({
-        user_id: params.userId,
-        claimed_at: nowIso,
-        updated_at: nowIso,
-      })
-      .eq("id", targetStudent.id)
-      .is("user_id", null)
-      .select()
-      .maybeSingle();
-
-    if (updateErr || !updatedRecord) {
-      return {
-        success: false,
-        code: "CONCURRENT_CLAIM_CONFLICT",
-        message: "This student record was claimed concurrently by another request.",
-      };
-    }
-
-    // 6. Establish institutional membership in tenant_memberships
-    try {
-      await supabase.from("tenant_memberships").upsert(
-        {
-          tenant_id: targetStudent.tenant_id,
-          user_id: params.userId,
-          role: "STUDENT",
-          status: "ACTIVE",
-          permissions: [],
-        },
-        { onConflict: "tenant_id,user_id" }
-      );
-    } catch {}
-
-    // 7. Update Auth app_metadata
-    try {
-      await supabase.auth.admin.updateUserById(params.userId, {
-        app_metadata: {
-          tenant_id: targetStudent.tenant_id,
-          role: "STUDENT",
-          account_category: "STUDENT",
-        },
-      });
-    } catch {}
-
-    // 8. Secure Audit Trail
-    try {
-      await AuditService.log({
-        tenantId: targetStudent.tenant_id,
-        actorId: params.userId,
-        action: "STUDENT_ROSTER_CLAIMED",
-        resourceType: "student",
-        resourceId: targetStudent.id,
-        beforeState: {
-          enrollmentNumber: targetStudent.enrollment_number,
-          claimed: false,
-          userId: null,
-        },
-        afterState: {
-          enrollmentNumber: targetStudent.enrollment_number,
-          claimed: true,
-          userId: params.userId,
-          claimedAt: nowIso,
-          tenantId: targetStudent.tenant_id,
-        },
-      });
-    } catch {}
-
-    return {
-      success: true,
-      code: "CLAIMED_SUCCESSFULLY",
-      message: "Roster record successfully claimed and linked to student account.",
-      studentId: updatedRecord.id,
-      tenantId: updatedRecord.tenant_id,
-      enrollmentNumber: updatedRecord.enrollment_number,
-      student: updatedRecord as StudentRow,
-    };
   }
 }

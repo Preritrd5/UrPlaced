@@ -321,10 +321,12 @@ describe("Phase 3: Student Signup SRN Integration & Security Suite", () => {
         })
       );
 
-      // Verify claimStudentRosterRecord invoked with clean SRN and created user ID
+      // Verify claimStudentRosterRecord invoked with clean SRN, created user ID, and signup name/email
       expect(mockClaimStudentRosterRecord).toHaveBeenCalledWith({
         srn: "00123",
         userId: "auth-user-999",
+        fullName: "Rahul Signup Name",
+        email: "personal_rahul@gmail.com",
       });
 
       // Verify profile upserted

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StudentService } from "@/modules/students/services/student-service";
 import type { TenantRole } from "@/types/database";
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error:
-              "Your Student Registration Number (SRN) has not been registered... Please contact your campus placement cell..",
+              "Your Student Registration Number (SRN) could not be matched to an active college roster record. Please contact your campus placement cell to be added to the official student list.",
           },
           { status: 404 }
         );
@@ -241,11 +242,14 @@ export async function POST(request: NextRequest) {
 
     // 6. Roster Claiming for Student Accounts
     // Atomically binds the authenticated account to the existing roster record,
+    // synchronizes full_name and email on the roster record from validated signup input,
     // establishes tenant_memberships, updates app_metadata, and writes audit trail.
     if (!isCollegeAccount) {
       const claimResult = await StudentService.claimStudentRosterRecord({
         srn: cleanSrn,
         userId,
+        fullName: cleanName,
+        email: cleanEmail,
       });
 
       if (!claimResult.success) {
@@ -292,7 +296,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 9. Success response with target destination
+    // 9. Invalidate student directory cache to guarantee immediate directory freshness
+    try {
+      revalidatePath("/dashboard/students");
+    } catch {}
+
+    // 10. Success response with target destination
     const nextUrl = isCollegeAccount ? "/dashboard" : "/dashboard/student";
 
     return NextResponse.json({

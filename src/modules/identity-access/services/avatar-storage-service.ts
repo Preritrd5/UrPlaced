@@ -51,9 +51,11 @@ export class AvatarStorageService {
     userId: string;
     fileBuffer: Buffer | Uint8Array;
     mimeType: string;
+    email?: string;
+    fullName?: string;
     admin?: ReturnType<typeof createAdminClient>;
   }): Promise<{ success: boolean; avatarUrl: string; storagePath: string }> {
-    const { userId, fileBuffer, mimeType, admin = createAdminClient() } = params;
+    const { userId, fileBuffer, mimeType, email, fullName, admin = createAdminClient() } = params;
 
     // 1. Validate MIME type
     if (!this.ALLOWED_MIME_TYPES.includes(mimeType)) {
@@ -117,25 +119,53 @@ export class AvatarStorageService {
 
     // Secondary relational store: public.profiles table (if migrated and present in schema cache)
     try {
-      const { error: dbError } = await admin
-        .from("profiles")
-        .upsert({
-          id: userId,
-          avatar_url: publicUrl,
-          updated_at: new Date().toISOString(),
-        });
+      let userEmail = email;
+      let userFullName = fullName;
 
-      if (dbError) {
+      if (!userEmail && typeof admin.auth?.admin?.getUserById === "function") {
+        try {
+          const { data: authUser } = await admin.auth.admin.getUserById(userId);
+          if (authUser?.user?.email) {
+            userEmail = authUser.user.email;
+            userFullName =
+              userFullName ||
+              authUser.user.user_metadata?.full_name ||
+              userEmail.split("@")[0] ||
+              "User";
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const profileRecord: Record<string, any> = {
+        id: userId,
+        avatar_url: publicUrl,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (userEmail) {
+        profileRecord.email = userEmail;
+      }
+      if (userFullName) {
+        profileRecord.full_name = userFullName;
+      }
+
+      const { error: upsertError } = await admin
+        .from("profiles")
+        .upsert(profileRecord);
+
+      if (upsertError) {
         const isMissingTable =
-          dbError.code === "PGRST205" ||
-          dbError.code === "42P01" ||
-          dbError.message?.toLowerCase().includes("schema cache") ||
-          dbError.message?.toLowerCase().includes("does not exist");
+          upsertError.code === "PGRST205" ||
+          upsertError.code === "42P01" ||
+          upsertError.message?.toLowerCase().includes("schema cache") ||
+          upsertError.message?.toLowerCase().includes("does not exist");
 
         if (!isMissingTable) {
           // Hard SQL constraint or connection failure: rollback
           await admin.storage.from(this.BUCKET_NAME).remove([storagePath]);
-          throw new Error(`Database profile update failed: ${dbError.message}. Upload rolled back.`);
+          throw new Error(`Database profile update failed: ${upsertError.message}. Upload rolled back.`);
         } else {
           // Table not yet migrated or schema cache miss: safely rely on user_metadata store
           if (process.env.NODE_ENV === "development") {

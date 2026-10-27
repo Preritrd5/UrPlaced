@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
       userId: profile.id,
       fileBuffer,
       mimeType,
+      email: profile.email,
+      fullName: profile.fullName,
     });
 
     return NextResponse.json({
