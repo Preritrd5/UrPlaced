@@ -30,6 +30,7 @@ import {
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import { toast, confirmDialog } from "@/components/ui/dialog-system";
 
 export default function QuestionDetailPage({
   params,
@@ -91,29 +92,40 @@ export default function QuestionDetailPage({
         method: "POST",
       });
       if (res.ok) {
+        toast.success("Question published successfully.");
         loadQuestion();
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to publish question.");
+        toast.error(err.error || "Failed to publish question.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to publish question.");
     }
   };
 
   const handleArchive = async () => {
-    if (!confirm("Are you sure you want to archive this question? Existing assessment links will be preserved.")) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: "Archive Question",
+      description: "Are you sure you want to archive this question? Existing assessment links will be preserved.",
+      confirmText: "Archive",
+      variant: "warning",
+    });
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`/api/questions/${id}?action=ARCHIVE`, {
         method: "DELETE",
       });
       if (res.ok) {
+        toast.success("Question archived successfully.");
         loadQuestion();
+      } else {
+        toast.error("Failed to archive question.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to archive question.");
     }
   };
 
@@ -126,13 +138,14 @@ export default function QuestionDetailPage({
       const data = await res.json();
       if (res.ok) {
         setDeleteModalOpen(false);
+        toast.success("Question deleted successfully.");
         router.push("/dashboard/questions");
       } else {
-        alert(data.error || "Failed to delete question.");
+        toast.error(data.error || "Failed to delete question.");
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to delete question.");
+      toast.error(err.message || "Failed to delete question.");
     } finally {
       setDeleteLoading(false);
     }
@@ -188,7 +201,11 @@ export default function QuestionDetailPage({
               </span>
             </div>
             <p className="text-xs text-text-secondary mt-1">
-              Bank: <span className="font-semibold text-text-primary">{question.bank?.name || "General Question Bank"}</span> {question.bank?.category ? `(${question.bank.category})` : ""}
+              Bank: <span className="font-semibold text-text-primary">{question.bank?.name || "General Question Bank"}</span>
+              {question.bank?.subject ? (
+                <> • Subject: <span className="font-semibold text-text-primary">{question.bank.subject}</span></>
+              ) : null}
+              {question.bank?.category ? ` (${question.bank.category})` : ""}
             </p>
           </div>
         </div>

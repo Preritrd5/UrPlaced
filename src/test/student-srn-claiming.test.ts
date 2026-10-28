@@ -107,14 +107,18 @@ describe("Student SRN Normalization, Lookup & Claiming (Phase 2)", () => {
     it("detects and flags an already-claimed SRN", async () => {
       mockFrom.mockImplementation((table: string) => {
         if (table === "students") {
-          return {
+          const chainable: any = {
             select: vi.fn().mockReturnThis(),
             ilike: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockImplementation(() => chainable),
+            then: (resolve: any) => resolve({ data: [], error: null }),
             not: vi.fn().mockResolvedValue({
               data: [{ id: "stu-1", user_id: "user-already-linked", enrollment_number: "00123", tenant_id: "tenant-1" }],
               error: null,
             }),
           };
+          return chainable;
         }
         return {};
       });
@@ -490,12 +494,13 @@ describe("Student SRN Normalization, Lookup & Claiming (Phase 2)", () => {
       expect(res.tenantId).toBe("college-tenant-alpha");
       expect(res.enrollmentNumber).toBe("00123");
 
-      // Verify canonical 4-parameter RPC call with validated non-null parameters
+      // Verify canonical transactional RPC call with validated parameters
       expect(mockRpc).toHaveBeenCalledWith("claim_student_roster", {
         p_srn: "00123",
         p_user_id: "user-claim-success-777",
         p_full_name: "Verified Student",
         p_email: "verified@student.com",
+        p_tenant_id: null,
       });
 
       // Verify Auth app_metadata updated
@@ -576,6 +581,7 @@ describe("Student SRN Normalization, Lookup & Claiming (Phase 2)", () => {
         p_user_id: "rpc-user-999",
         p_full_name: "Verified Student",
         p_email: "verified@student.com",
+        p_tenant_id: null,
       });
 
       expect(mockUpdateUserById).toHaveBeenCalledWith("rpc-user-999", {
@@ -632,12 +638,13 @@ describe("Student SRN Normalization, Lookup & Claiming (Phase 2)", () => {
       expect(res.success).toBe(true);
       expect(res.code).toBe("CLAIMED_SUCCESSFULLY");
 
-      // Verify the RPC was invoked with all 4 parameters for a single atomic transaction
+      // Verify the RPC was invoked with transactional parameters for a single atomic transaction
       expect(mockRpc).toHaveBeenCalledWith("claim_student_roster", {
         p_srn: "00123",
         p_user_id: "rpc-user-999",
         p_full_name: "Transactional Student",
         p_email: "transactional@student.com",
+        p_tenant_id: null,
       });
     });
 
@@ -713,12 +720,13 @@ describe("Student SRN Normalization, Lookup & Claiming (Phase 2)", () => {
       expect(res.studentId).toBe(mockRosterStudent.id);
       expect(res.tenantId).toBe(mockRosterStudent.tenant_id);
 
-      // Verify canonical 4-parameter RPC invocation
+      // Verify canonical transactional RPC invocation
       expect(mockRpc).toHaveBeenCalledWith("claim_student_roster", {
         p_srn: "00123",
         p_user_id: newStudentUser,
         p_full_name: signupFullName,
         p_email: signupEmail,
+        p_tenant_id: null,
       });
 
       // Verify official roster full_name and email on mockRosterStudent remain intact

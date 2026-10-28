@@ -86,6 +86,7 @@ export interface ClaimStudentRosterParams {
   userId: string;
   fullName?: string;
   email?: string;
+  tenantId?: string;
 }
 
 export type ClaimStudentRosterCode =
@@ -897,32 +898,79 @@ export class StudentService {
 
     const supabase = createAdminClient();
 
-    // 1. Check if any student record with this SRN is already claimed
-    let claimedQuery = supabase
+    // If tenantId is provided, isolate the query strictly to that college
+    if (tenantId) {
+      // 1. Check if already claimed in this specific college
+      const { data: claimedRecords, error: claimedError } = await supabase
+        .from("students")
+        .select("id, tenant_id, enrollment_number, user_id")
+        .ilike("enrollment_number", cleanSrn)
+        .not("user_id", "is", null)
+        .eq("tenant_id", tenantId);
+
+      if (claimedError) {
+        throw new Error(`Failed to check claimed roster records: ${claimedError.message}`);
+      }
+
+      if (claimedRecords && claimedRecords.length > 0) {
+        return {
+          status: "ALREADY_CLAIMED",
+          matchesCount: claimedRecords.length,
+          message: "This Student Registration Number (SRN) has already been claimed by a registered account.",
+        };
+      }
+
+      // 2. Query unclaimed active record in this specific college
+      const { data: matches, error: matchError } = await supabase
+        .from("students")
+        .select("*, department:departments(name, code)")
+        .ilike("enrollment_number", cleanSrn)
+        .is("user_id", null)
+        .eq("is_archived", false)
+        .eq("academic_status", "ACTIVE")
+        .eq("tenant_id", tenantId);
+
+      if (matchError) {
+        throw new Error(`Failed to query student roster: ${matchError.message}`);
+      }
+
+      if (!matches || matches.length === 0) {
+        return {
+          status: "NOT_FOUND",
+          matchesCount: 0,
+          message: "No active, eligible student roster record found for the provided SRN in the selected college.",
+        };
+      }
+
+      if (matches.length > 1) {
+        return {
+          status: "AMBIGUOUS",
+          matchesCount: matches.length,
+          message: "This SRN matches multiple institutional rosters. Please contact your college placement cell.",
+        };
+      }
+
+      return {
+        status: "FOUND",
+        roster: matches[0] as StudentRow,
+        matchesCount: 1,
+        message: "Eligible roster record found.",
+      };
+    }
+
+    // When tenantId is NOT provided:
+    // Check both claimed and unclaimed records to detect cross-institution collision vs single-tenant match
+    const { data: claimedRecords, error: claimedError } = await supabase
       .from("students")
       .select("id, tenant_id, enrollment_number, user_id")
       .ilike("enrollment_number", cleanSrn)
       .not("user_id", "is", null);
 
-    if (tenantId) {
-      claimedQuery = claimedQuery.eq("tenant_id", tenantId);
-    }
-
-    const { data: claimedRecords, error: claimedError } = await claimedQuery;
     if (claimedError) {
       throw new Error(`Failed to check claimed roster records: ${claimedError.message}`);
     }
 
-    if (claimedRecords && claimedRecords.length > 0) {
-      return {
-        status: "ALREADY_CLAIMED",
-        matchesCount: claimedRecords.length,
-        message: "This Student Registration Number (SRN) has already been claimed by a registered account.",
-      };
-    }
-
-    // 2. Query unclaimed, active, non-archived roster records
-    let query = supabase
+    const { data: matches, error: matchError } = await supabase
       .from("students")
       .select("*, department:departments(name, code)")
       .ilike("enrollment_number", cleanSrn)
@@ -930,13 +978,30 @@ export class StudentService {
       .eq("is_archived", false)
       .eq("academic_status", "ACTIVE");
 
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
-    }
-
-    const { data: matches, error: matchError } = await query;
     if (matchError) {
       throw new Error(`Failed to query student roster: ${matchError.message}`);
+    }
+
+    const claimedTenants = new Set((claimedRecords || []).map((r) => r.tenant_id));
+    const unclaimedTenants = new Set((matches || []).map((r) => r.tenant_id));
+    const allTenants = new Set([...claimedTenants, ...unclaimedTenants]);
+
+    // If SRN matches across multiple distinct colleges, fail closed with AMBIGUOUS
+    if (allTenants.size > 1) {
+      return {
+        status: "AMBIGUOUS",
+        matchesCount: allTenants.size,
+        message: "This SRN matches multiple institutional rosters. Please select your college or contact your placement cell.",
+      };
+    }
+
+    // If already claimed in the single matching college
+    if (claimedRecords && claimedRecords.length > 0) {
+      return {
+        status: "ALREADY_CLAIMED",
+        matchesCount: claimedRecords.length,
+        message: "This Student Registration Number (SRN) has already been claimed by a registered account.",
+      };
     }
 
     if (!matches || matches.length === 0) {
@@ -1029,6 +1094,17 @@ export class StudentService {
         StudentService.normalizeSrn(existingUserClaim.enrollment_number).toUpperCase() ===
         cleanSrn.toUpperCase()
       ) {
+        if (params.tenantId && params.tenantId !== existingUserClaim.tenant_id) {
+          return {
+            success: false,
+            code: "TENANT_MISMATCH",
+            message: "This account is already associated with another college.",
+            studentId: existingUserClaim.id,
+            tenantId: existingUserClaim.tenant_id,
+            enrollmentNumber: existingUserClaim.enrollment_number,
+          };
+        }
+
         return {
           success: true,
           code: "CLAIMED_SUCCESSFULLY",
@@ -1063,6 +1139,7 @@ export class StudentService {
         p_user_id: params.userId,
         p_full_name: cleanFullName,
         p_email: cleanEmail,
+        p_tenant_id: params.tenantId || null,
       });
 
       if (rpcError) {

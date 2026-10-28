@@ -16,9 +16,36 @@ export default function StudentSignUpPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [showCollegeSelect, setShowCollegeSelect] = React.useState(false);
+  const [selectedCollegeId, setSelectedCollegeId] = React.useState("");
+  const [colleges, setColleges] = React.useState<Array<{ id: string; name: string; slug: string }>>([]);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
+
+  const fetchColleges = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/colleges");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.colleges)) {
+        setColleges(data.colleges);
+      }
+    } catch {
+      // Fallback
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const collegeParam = params.get("college") || params.get("tenant") || params.get("institutionId");
+      if (collegeParam) {
+        setSelectedCollegeId(collegeParam);
+        setShowCollegeSelect(true);
+        fetchColleges();
+      }
+    }
+  }, [fetchColleges]);
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
@@ -28,6 +55,11 @@ export default function StudentSignUpPage() {
     const cleanSrn = srn.trim();
     if (!cleanSrn) {
       setErrorMsg("Please enter your Student Registration Number (SRN).");
+      return;
+    }
+
+    if (showCollegeSelect && !selectedCollegeId) {
+      setErrorMsg("Please select your college / institution to continue.");
       return;
     }
 
@@ -65,12 +97,17 @@ export default function StudentSignUpPage() {
           password,
           role: "STUDENT",
           accountCategory: "STUDENT",
+          ...(selectedCollegeId ? { institutionId: selectedCollegeId } : {}),
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
+        if (data.code === "AMBIGUOUS_SRN" || data.requiresInstitutionSelection) {
+          setShowCollegeSelect(true);
+          fetchColleges();
+        }
         setErrorMsg(data.error || "Failed to create student account. Please try again.");
         setIsLoading(false);
         return;
@@ -165,6 +202,36 @@ export default function StudentSignUpPage() {
             helperText="Enter your official roll number or registration ID from your campus placement roster."
             className="font-mono uppercase"
           />
+
+          {/* Conditional College Selection for Disambiguation */}
+          {showCollegeSelect && (
+            <div className="space-y-1">
+              <label
+                htmlFor="institutionId"
+                className="block text-xs font-semibold text-[#24283A]"
+              >
+                Select Your Institution / College
+              </label>
+              <select
+                id="institutionId"
+                value={selectedCollegeId}
+                onChange={(e) => setSelectedCollegeId(e.target.value)}
+                disabled={isLoading}
+                required
+                className="w-full h-11 px-3.5 rounded-xl border border-[#DDDCD5] bg-[#FBFAF7] text-xs sm:text-sm text-[#24283A] focus:outline-none focus:border-[#5052C9] focus:ring-2 focus:ring-[#5052C9]/20 transition-all font-sans"
+              >
+                <option value="">-- Choose your college --</option>
+                {colleges.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-[#747683]">
+                Your registration number matches multiple institutions. Please specify your college.
+              </p>
+            </div>
+          )}
 
           {/* Full Name */}
           <AuthInput

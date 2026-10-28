@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
+import { toast } from "@/components/ui/dialog-system";
 
 export default function PlacementMistakesAnalyticsPage() {
   const router = useRouter();
@@ -117,10 +118,10 @@ export default function PlacementMistakesAnalyticsPage() {
         setResolutionNotes("");
         loadDefects();
         loadCohortSummary();
-        alert("Defect ticket resolved. Affected student records have been updated.");
+        toast.success("Defect ticket resolved. Affected student records have been updated.");
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to resolve defect.");
+        toast.error(err.error || "Failed to resolve defect.");
       }
     } finally {
       setSubmittingResolution(false);

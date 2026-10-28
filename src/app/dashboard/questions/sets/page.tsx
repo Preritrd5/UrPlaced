@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuestionSetPurpose } from "@/types/database";
+import { AutoBuildSetModal } from "@/components/questions/auto-build-set-modal";
+import { BulkAddQuestionsModal } from "@/components/questions/bulk-add-questions-modal";
 import {
   ArrowLeft,
   Plus,
@@ -21,11 +23,13 @@ import {
   Send,
   Loader2,
   Trash2,
+  Wand2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import { toast, confirmDialog } from "@/components/ui/dialog-system";
 
 export default function QuestionSetsPage() {
   const router = useRouter();
@@ -54,6 +58,11 @@ export default function QuestionSetsPage() {
   const [setDescription, setSetDescription] = useState("");
   const [setPurpose, setSetPurpose] = useState<QuestionSetPurpose>("ASSESSMENT");
   const [createLoading, setCreateLoading] = useState(false);
+
+  // Auto-Build and Bulk Add Modals
+  const [autoBuildModalOpen, setAutoBuildModalOpen] = useState(false);
+  const [bulkAddModalOpen, setBulkAddModalOpen] = useState(false);
+  const [banks, setBanks] = useState<any[]>([]);
 
   // Available Questions for Adding
   const [availableQuestions, setAvailableQuestions] = useState<any[]>([]);
@@ -116,9 +125,22 @@ export default function QuestionSetsPage() {
     }
   };
 
+  const loadBanks = async () => {
+    try {
+      const res = await fetch("/api/questions/banks");
+      if (res.ok) {
+        const data = await res.json();
+        setBanks(data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     loadSets();
     loadAvailableQuestions();
+    loadBanks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -181,21 +203,26 @@ export default function QuestionSetsPage() {
       const data = await res.json();
       if (res.ok) {
         setSelectedQuestionId("");
+        toast.success("Question added to set.");
         loadSetDetail(activeSetId);
       } else {
-        alert(data.error || "Failed to add question to set.");
+        toast.error(data.error || "Failed to add question to set.");
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to add question to set.");
+      toast.error(err.message || "Failed to add question to set.");
     }
   };
 
   const handleLockAndPublish = async () => {
     if (!activeSetId) return;
-    if (!confirm("Freeze and publish this question set as an immutable snapshot for assessment execution?")) {
-      return;
-    }
+    const confirmed = await confirmDialog({
+      title: "Freeze & Publish Question Set",
+      description: "Freeze and publish this question set as an immutable snapshot for assessment execution? Once locked, questions cannot be removed.",
+      confirmText: "Freeze & Publish",
+      variant: "primary",
+    });
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/api/questions/sets/${activeSetId}`, {
@@ -206,13 +233,15 @@ export default function QuestionSetsPage() {
 
       const data = await res.json();
       if (res.ok) {
+        toast.success("Question set frozen and published successfully.");
         loadSets();
         loadSetDetail(activeSetId);
       } else {
-        alert(data.error || "Failed to publish set.");
+        toast.error(data.error || "Failed to publish set.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast.error(err.message || "Failed to publish set.");
     }
   };
 
@@ -229,15 +258,16 @@ export default function QuestionSetsPage() {
       if (res.ok) {
         setDeleteModalOpen(false);
         setActiveSetDetail(null);
+        toast.success("Question set deleted successfully.");
         const remainingSets = sets.filter((s) => s.id !== activeSetId);
         setSets(remainingSets);
         setActiveSetId(remainingSets.length > 0 ? remainingSets[0].id : null);
       } else {
-        alert(data.error || "Failed to delete question set.");
+        toast.error(data.error || "Failed to delete question set.");
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to delete question set.");
+      toast.error(err.message || "Failed to delete question set.");
     } finally {
       setDeleteLoading(false);
     }
@@ -256,14 +286,15 @@ export default function QuestionSetsPage() {
 
       const data = await res.json();
       if (res.ok) {
+        toast.success("Question removed from set.");
         loadSetDetail(activeSetId);
         loadAvailableQuestions();
       } else {
-        alert(data.error || "Failed to remove question from set.");
+        toast.error(data.error || "Failed to remove question from set.");
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to remove question from set.");
+      toast.error(err.message || "Failed to remove question from set.");
     } finally {
       setRemovingItemId(null);
     }
@@ -306,13 +337,38 @@ export default function QuestionSetsPage() {
           </div>
         </div>
 
-        <Button
-          onClick={() => setCreateModalOpen(true)}
-          size="sm"
-          className="bg-primary hover:bg-primary-hover text-white flex items-center gap-1.5 text-xs"
-        >
-          <Plus className="w-4 h-4" /> New Question Set
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => setAutoBuildModalOpen(true)}
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/10 font-semibold"
+          >
+            <Wand2 className="w-4 h-4 text-primary" /> Auto-Build Question Set
+          </Button>
+
+          {activeSetDetail?.set && !activeSetDetail.set.is_locked && (
+            <Button
+              type="button"
+              onClick={() => setBulkAddModalOpen(true)}
+              size="sm"
+              variant="outline"
+              className="flex items-center gap-1.5 text-xs text-[#2E8F86] border-[#2E8F86]/40 hover:bg-[#2E8F86]/10 font-semibold"
+            >
+              <Plus className="w-4 h-4 text-[#2E8F86]" /> Bulk Add Questions
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            onClick={() => setCreateModalOpen(true)}
+            size="sm"
+            className="bg-primary hover:bg-primary-hover text-white flex items-center gap-1.5 text-xs"
+          >
+            <Plus className="w-4 h-4" /> New Question Set
+          </Button>
+        </div>
       </div>
 
       {/* Main Grid: Left sets list, Right active set inspector */}
@@ -430,58 +486,88 @@ export default function QuestionSetsPage() {
               {/* Add Question to Set Form (if not locked) */}
               {!activeSetDetail.set.is_locked && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold">Add Question from Repository</CardTitle>
+                  <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-3">
+                    <div>
+                      <CardTitle className="text-sm font-semibold">Assemble Questions</CardTitle>
+                      <p className="text-xs text-text-secondary mt-0.5">
+                        Build with Auto-Build, Bulk Add across banks, or individual addition.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAutoBuildModalOpen(true)}
+                        className="text-xs h-7 text-primary border-primary/30 hover:bg-primary/10 font-semibold flex items-center gap-1"
+                      >
+                        <Wand2 className="w-3.5 h-3.5" /> Auto-Build
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setBulkAddModalOpen(true)}
+                        className="text-xs h-7 text-[#2E8F86] border-[#2E8F86]/30 hover:bg-[#2E8F86]/10 font-semibold flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Bulk Add
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent>
-                    {availableQuestions.length === 0 ? (
-                      <div className="p-3.5 rounded-md bg-amber-50 text-amber-800 text-xs border border-amber-200 space-y-1">
-                        <p className="font-semibold">No verified questions available to add.</p>
-                        <p>
-                          Only questions with a verified answer key (<span className="font-mono font-semibold">VERIFIED_CORRECT</span>) and an approved or published lifecycle status can be added to Question Sets.{" "}
-                          <Link href="/dashboard/questions" className="font-semibold underline text-[#5052C9]">
-                            Review questions in QuestionBank Sentinel
-                          </Link>
-                        </p>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleAddItem} className="flex flex-col md:flex-row gap-3">
-                        <select
-                          value={selectedQuestionId}
-                          onChange={(e) => setSelectedQuestionId(e.target.value)}
-                          className="flex-1 h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
-                          required
-                        >
-                          <option value="">Select a verified question to add...</option>
-                          {availableQuestions.map((q) => (
-                            <option key={q.id} value={q.id}>
-                              [{q.question_type}] {q.current_version?.prompt?.slice(0, 70)}...
-                            </option>
-                          ))}
-                        </select>
-
-                        <div className="w-24">
-                          <Input
-                            type="number"
-                            step="0.5"
-                            min="0.5"
-                            value={points}
-                            onChange={(e) => setPoints(e.target.value)}
-                            placeholder="Points"
-                            className="h-9 text-xs"
-                            required
-                          />
+                  <CardContent className="pt-0">
+                    <div className="border-t border-border pt-3">
+                      <p className="text-xs font-semibold text-text-secondary mb-2">
+                        Quick Add Single Question:
+                      </p>
+                      {availableQuestions.length === 0 ? (
+                        <div className="p-3.5 rounded-md bg-amber-50 text-amber-800 text-xs border border-amber-200 space-y-1">
+                          <p className="font-semibold">No verified questions available to add.</p>
+                          <p>
+                            Only questions with a verified answer key (<span className="font-mono font-semibold">VERIFIED_CORRECT</span>) and an approved or published lifecycle status can be added to Question Sets.{" "}
+                            <Link href="/dashboard/questions" className="font-semibold underline text-[#5052C9]">
+                              Review questions in QuestionBank Sentinel
+                            </Link>
+                          </p>
                         </div>
+                      ) : (
+                        <form onSubmit={handleAddItem} className="flex flex-col md:flex-row gap-3">
+                          <select
+                            value={selectedQuestionId}
+                            onChange={(e) => setSelectedQuestionId(e.target.value)}
+                            className="flex-1 h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
+                            required
+                          >
+                            <option value="">Select a verified question to add...</option>
+                            {availableQuestions.map((q) => (
+                              <option key={q.id} value={q.id}>
+                                [{q.question_type}] {q.current_version?.prompt?.slice(0, 70)}...
+                              </option>
+                            ))}
+                          </select>
 
-                        <Button
-                          type="submit"
-                          disabled={!selectedQuestionId}
-                          className="bg-primary hover:bg-primary-hover text-white text-xs h-9 px-4 shrink-0"
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" /> Add
-                        </Button>
-                      </form>
-                    )}
+                          <div className="w-24">
+                            <Input
+                              type="number"
+                              step="0.5"
+                              min="0.5"
+                              value={points}
+                              onChange={(e) => setPoints(e.target.value)}
+                              placeholder="Points"
+                              className="h-9 text-xs"
+                              required
+                            />
+                          </div>
+
+                          <Button
+                            type="submit"
+                            disabled={!selectedQuestionId}
+                            className="bg-primary hover:bg-primary-hover text-white text-xs h-9 px-4 shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5 mr-1" /> Add
+                          </Button>
+                        </form>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -631,6 +717,35 @@ export default function QuestionSetsPage() {
         confirmText="Delete Question Set"
         isLoading={deleteLoading}
       />
+
+      {/* Auto-Build Question Set Modal */}
+      <AutoBuildSetModal
+        isOpen={autoBuildModalOpen}
+        onClose={() => setAutoBuildModalOpen(false)}
+        onSuccess={(targetSetId) => {
+          loadSets();
+          setActiveSetId(targetSetId);
+          loadSetDetail(targetSetId);
+          loadAvailableQuestions();
+        }}
+        banks={banks}
+        currentSet={activeSetDetail?.set}
+      />
+
+      {/* Bulk Add Questions Modal */}
+      {activeSetDetail?.set && (
+        <BulkAddQuestionsModal
+          isOpen={bulkAddModalOpen}
+          onClose={() => setBulkAddModalOpen(false)}
+          onSuccess={(targetSetId) => {
+            loadSets();
+            loadSetDetail(targetSetId);
+            loadAvailableQuestions();
+          }}
+          targetSet={activeSetDetail.set}
+          banks={banks}
+        />
+      )}
     </div>
   );
 }

@@ -28,6 +28,8 @@ export interface GenerateQuestionsInput {
   tenantId: string;
   userId: string;
   bankId?: string;
+  subject?: string;
+  category?: string;
   topic: string;
   subtopic?: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
@@ -69,8 +71,10 @@ STRICT GENERATION RULES:
 6. Detailed, step-by-step solution logic in explanation.
 7. Return strictly valid JSON adhering to the required schema. Never wrap in markdown backticks.`;
 
+    const subjectLine = input.subject ? `Subject: ${input.subject}` : "";
+    const categoryLine = input.category ? `Category: ${input.category}` : "";
     const userPrompt = `Generate ${count} ${input.difficulty} question(s) of type ${input.questionType}.
-Topic: ${input.topic}
+${subjectLine ? `${subjectLine}\n` : ""}${categoryLine ? `${categoryLine}\n` : ""}Topic: ${input.topic}
 ${input.subtopic ? `Subtopic: ${input.subtopic}` : ""}
 ${input.referenceNotes ? `Reference constraints/syllabus: ${input.referenceNotes}` : ""}
 
@@ -180,6 +184,13 @@ Return format:
           if (insertedQ && !qErr) {
             savedQuestionId = insertedQ.id;
 
+            const resolvedTags = new Set<string>();
+            if (input.topic) resolvedTags.add(input.topic.trim().toLowerCase());
+            if (input.subtopic) resolvedTags.add(input.subtopic.trim().toLowerCase());
+            (q.topicTags || []).forEach((t) => {
+              if (t && typeof t === "string" && t.trim()) resolvedTags.add(t.trim().toLowerCase());
+            });
+
             const { data: insertedV, error: vErr } = await admin
               .from("question_versions")
               .insert({
@@ -192,7 +203,7 @@ Return format:
                 answer_key: q.answerKey,
                 explanation: q.explanation,
                 difficulty: q.difficulty,
-                topic_tags: q.topicTags,
+                topic_tags: Array.from(resolvedTags),
                 source_type: "AI_GENERATED", // Audit provenance
               })
               .select("id")

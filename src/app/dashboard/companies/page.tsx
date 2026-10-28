@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { CompanyService } from "@/modules/companies/services/company-service";
+import { ClientAuthGate } from "@/components/auth/client-auth-gate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ interface CompaniesPageProps {
 
 export default async function CompaniesPage({ searchParams }: CompaniesPageProps) {
   const profile = await getCurrentUserProfile();
-  if (!profile) redirect("/auth/signin");
+  if (!profile) return <ClientAuthGate redirectTo="/auth/college/signin" />;
   if (!profile.isVerifiedMembership) redirect("/auth/access-denied");
 
   const activeTenant = profile.activeMembership?.tenants;

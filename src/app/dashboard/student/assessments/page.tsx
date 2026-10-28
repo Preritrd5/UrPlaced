@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/dialog-system";
 
 export default function StudentAssessmentsPage() {
   const router = useRouter();
@@ -112,13 +113,13 @@ export default function StudentAssessmentsPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Unable to start assessment.");
+        toast.error(data.error || "Unable to start assessment.");
         return;
       }
 
       router.push(`/dashboard/student/assessments/${assessmentId}/take`);
     } catch (err: any) {
-      alert(err.message || "Failed to start assessment.");
+      toast.error(err.message || "Failed to start assessment.");
     } finally {
       setStartingAttemptId(null);
     }
@@ -127,7 +128,7 @@ export default function StudentAssessmentsPage() {
   async function handleSaveBehavioral(e: React.FormEvent) {
     e.preventDefault();
     if (!behavioralPrompt || !behavioralResponse) {
-      alert("Please provide both a prompt and your response.");
+      toast.warning("Please provide both a prompt and your response.");
       return;
     }
 
@@ -152,9 +153,9 @@ export default function StudentAssessmentsPage() {
       setBehavioralResponse("");
       setSelfReflection("");
       loadBehavioralDrafts();
-      alert("Behavioral reflection response saved successfully!");
+      toast.success("Behavioral reflection response saved successfully!");
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to save reflection.");
     } finally {
       setSavingBehavioral(false);
     }

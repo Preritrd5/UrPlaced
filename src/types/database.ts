@@ -1132,6 +1132,7 @@ export interface Database {
           id: string;
           tenant_id: string;
           name: string;
+          subject: string | null;
           description: string | null;
           category: BankCategory;
           sharing_policy: BankSharingPolicy;
@@ -1144,6 +1145,7 @@ export interface Database {
           id?: string;
           tenant_id: string;
           name: string;
+          subject?: string | null;
           description?: string | null;
           category: BankCategory;
           sharing_policy?: BankSharingPolicy;

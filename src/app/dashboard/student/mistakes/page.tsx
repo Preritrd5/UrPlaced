@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AIMistakeAnalysisModal } from "@/components/mistakes/ai-mistake-analysis-modal";
+import { toast } from "@/components/ui/dialog-system";
 
 export default function StudentMistakesPage() {
   const [loading, setLoading] = useState(true);
@@ -113,10 +114,11 @@ export default function StudentMistakesPage() {
         setReschedulingTarget(null);
         setCustomDueDate("");
         setRescheduleNotes("");
+        toast.success("Review target rescheduled successfully.");
         loadMistakes();
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to reschedule target.");
+        toast.error(err.error || "Failed to reschedule target.");
       }
     } finally {
       setSavingReschedule(false);

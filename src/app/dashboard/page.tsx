@@ -1,5 +1,8 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   Users,
@@ -10,8 +13,6 @@ import {
   PlusCircle,
   FileSpreadsheet,
   ArrowUpRight,
-  Percent,
-  CheckCircle2,
   Clock,
   LogOut,
   AlertCircle,
@@ -19,50 +20,29 @@ import {
   BarChart3,
   Sparkles,
 } from "lucide-react";
-import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
-import { PlacementMetricsService } from "@/modules/placement/services/placement-metrics-service";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+export default function DashboardPage() {
+  const auth = useAuthContext();
+  const router = useRouter();
 
-export default async function DashboardPage() {
-  const profile = await getCurrentUserProfile();
-
-  if (!profile) {
-    redirect("/auth/signin");
-  }
-
-  const activeMembership = profile.activeMembership;
-
-  // 1. Strict category redirection: Students are routed to their personal preparation dashboard
-  if (profile.accountCategory === "STUDENT") {
-    redirect("/dashboard/student");
-  }
-
-  // 2. Suspended or revoked college members are redirected to the membership suspended notice
-  if (profile.membershipStatus === "SUSPENDED" || profile.membershipStatus === "REVOKED") {
-    redirect("/auth/membership-suspended");
-  }
-
-  // 3. Trainers are routed to their assigned training operations hub
-  if (profile.role === "TRAINER") {
-    redirect("/dashboard/training");
-  }
-
-  const canManageDrives = ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(profile.role);
-
-  async function handleSignOut() {
-    "use server";
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect("/auth/signin");
-  }
-  const activeTenant = activeMembership?.tenants;
-
-  let metrics = {
+  const [loading, setLoading] = React.useState(true);
+  const [metrics, setMetrics] = React.useState<{
+    totalActiveStudents: number;
+    totalCompanies: number;
+    activeDrivesCount: number;
+    totalApplicationsCount: number;
+    totalOffersExtended: number;
+    uniquePlacedStudents: number;
+    placementPercentage: number;
+    studentsByDepartment: any[];
+    studentsByBatch: any[];
+    recentDrives: any[];
+    recentOffers: any[];
+  }>({
     totalActiveStudents: 0,
     totalCompanies: 0,
     activeDrivesCount: 0,
@@ -70,19 +50,71 @@ export default async function DashboardPage() {
     totalOffersExtended: 0,
     uniquePlacedStudents: 0,
     placementPercentage: 0,
-    studentsByDepartment: [] as any[],
-    studentsByBatch: [] as any[],
-    recentDrives: [] as any[],
-    recentOffers: [] as any[],
-  };
+    studentsByDepartment: [],
+    studentsByBatch: [],
+    recentDrives: [],
+    recentOffers: [],
+  });
 
-  if (activeTenant) {
-    try {
-      metrics = await PlacementMetricsService.getDashboardMetrics(activeTenant.id);
-    } catch {
-      // Handle gracefully if database tables haven't been seeded yet
+  React.useEffect(() => {
+    if (!auth.isLoading) {
+      if (!auth.isAuthenticated) {
+        router.push("/auth/college/signin");
+        return;
+      }
+
+      // 1. Strict category redirection: Students are routed to their personal preparation dashboard
+      if (auth.accountCategory === "STUDENT") {
+        router.push("/dashboard/student");
+        return;
+      }
+
+      // 2. Suspended or revoked college members are redirected to membership suspended notice
+      if (
+        (auth as any).membershipStatus === "SUSPENDED" ||
+        (auth as any).membershipStatus === "REVOKED"
+      ) {
+        router.push("/auth/membership-suspended");
+        return;
+      }
+
+      // 3. Trainers are routed to their assigned training operations hub
+      if (auth.role === "TRAINER") {
+        router.push("/dashboard/training");
+        return;
+      }
+
+      fetch("/api/placement/metrics")
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error("Failed to load metrics");
+        })
+        .then((data) => {
+          setMetrics(data);
+        })
+        .catch(() => {
+          // Graceful fallback
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
+  }, [auth.isLoading, auth.isAuthenticated, auth.accountCategory, auth.role, router]);
+
+  if (auth.isLoading || loading) {
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="h-10 bg-card/60 rounded-xl w-1/3" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-card rounded-xl border border-border" />
+          ))}
+        </div>
+      </div>
+    );
   }
+
+  const canManageDrives = auth.role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(auth.role);
 
   return (
     <div className="space-y-8">
@@ -93,35 +125,30 @@ export default async function DashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary font-heading">
               Placement Command Center
             </h1>
-            {activeMembership && (
-              <Badge variant="secondary">
-                {activeMembership.role}
-              </Badge>
-            )}
+            {auth.role && <Badge variant="secondary">{auth.role}</Badge>}
           </div>
-
-          {/* <p className="text-xs text-text-secondary">
-            &bull; {activeTenant ? activeTenant.name : "Institutional Workspace"} 
-          </p> */}
 
           <p className="text-xs text-text-secondary">
             <Sparkles className="inline-block h-4 w-4 mr-1 text-teal-600 align-middle" />
-            {activeTenant ? activeTenant.name : "Institutional Workspace"}
+            {auth.tenant ? auth.tenant.name : "Institutional Workspace"}
           </p>
-
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {profile.memberships.length > 1 && (
+          {auth.availableTenants.length > 1 && (
             <Button asChild variant="outline" size="sm">
               <Link href="/dashboard/select-tenant">Switch College</Link>
             </Button>
           )}
-          <form action={handleSignOut}>
-            <Button type="submit" variant="ghost" size="sm" className="text-text-secondary">
-              <LogOut className="h-4 w-4 mr-1.5" /> Sign Out
-            </Button>
-          </form>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => auth.signOut()}
+            className="text-text-secondary"
+          >
+            <LogOut className="h-4 w-4 mr-1.5" /> Sign Out
+          </Button>
         </div>
       </div>
 
@@ -255,7 +282,7 @@ export default async function DashboardPage() {
           <Link href="/dashboard/memory">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-secondary" />
-              <span className="font-semibold text-text-primary">Placement Memory & Debriefs</span>
+              <span className="font-semibold text-text-primary">Placement Memory &amp; Debriefs</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75 text-secondary" />
           </Link>
@@ -265,7 +292,7 @@ export default async function DashboardPage() {
           <Link href="/dashboard/training">
             <div className="flex items-center gap-2">
               <GraduationCap className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-text-primary">Training & Workshops</span>
+              <span className="font-semibold text-text-primary">Training &amp; Workshops</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75 text-primary" />
           </Link>

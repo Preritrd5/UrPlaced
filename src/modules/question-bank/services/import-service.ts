@@ -397,7 +397,7 @@ export class ImportService {
     // 0. Verify Bank Ownership & Tenant Boundary
     const { data: bankRecord, error: bankErr } = await supabase
       .from("question_banks")
-      .select("id, tenant_id")
+      .select("id, tenant_id, name, subject, category")
       .eq("id", bankId)
       .eq("tenant_id", tenantId)
       .maybeSingle();

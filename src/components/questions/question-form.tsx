@@ -309,19 +309,29 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
                   </Button>
                 </div>
               ) : (
-                <select
-                  id="question-bank-select"
-                  value={selectedBankId}
-                  onChange={(e) => setSelectedBankId(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md bg-input border border-border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  required
-                >
-                  {banks.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.category})
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    id="question-bank-select"
+                    value={selectedBankId}
+                    onChange={(e) => setSelectedBankId(e.target.value)}
+                    className="w-full h-10 px-3 rounded-md bg-input border border-border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    required
+                  >
+                    {banks.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} — {b.subject || b.category} ({b.category})
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const activeBank = banks.find((b) => b.id === selectedBankId);
+                    return activeBank ? (
+                      <p className="text-[11px] text-text-secondary mt-1">
+                        Authoritative Subject: <span className="font-semibold text-text-primary">{activeBank.subject || activeBank.name}</span>
+                      </p>
+                    ) : null;
+                  })()}
+                </>
               )}
             </div>
           )}

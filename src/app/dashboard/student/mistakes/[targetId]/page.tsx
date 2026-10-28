@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
+import { toast } from "@/components/ui/dialog-system";
 
 export default function MistakeTargetDetailPage({
   params,
@@ -170,8 +171,11 @@ export default function MistakeTargetDetailPage({
       if (res.ok) {
         setShowDefectModal(false);
         setDefectDescription("");
-        alert("Defect report submitted. Placement staff will review it, and your mistake will not unfairly penalize your mastery score.");
+        toast.success("Defect report submitted. Placement staff will review it, and your mistake will not unfairly penalize your mastery score.");
         loadTargetDetail();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || "Failed to submit defect report.");
       }
     } finally {
       setSubmittingDefect(false);

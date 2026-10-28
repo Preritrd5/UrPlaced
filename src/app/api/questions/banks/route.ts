@@ -3,6 +3,7 @@ import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
 import { QuestionService } from "@/modules/question-bank/services/question-service";
 import { BankCategory, BankSharingPolicy } from "@/types/database";
+import { validateSubjectName, normalizeSubjectName } from "@/modules/question-bank/services/subject-constants";
 
 const ALLOWED_CATEGORIES: BankCategory[] = [
   "CODING",
@@ -22,7 +23,14 @@ const ALLOWED_SHARING_POLICIES: BankSharingPolicy[] = [
 export async function GET(request: NextRequest) {
   try {
     const authContext = await requireAuthContext(Permissions.QUESTIONS_CREATE);
-    const { data: banks, error } = await QuestionService.listBanks(authContext.tenantId);
+    const { searchParams } = new URL(request.url);
+    const subject = searchParams.get("subject") || undefined;
+    const category = (searchParams.get("category") as BankCategory) || undefined;
+
+    const { data: banks, error } =
+      subject || category
+        ? await QuestionService.listBanks(authContext.tenantId, { subject, category })
+        : await QuestionService.listBanks(authContext.tenantId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -57,6 +65,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const rawSubject = typeof body.subject === "string" ? body.subject.trim() : "";
+    let cleanSubject = cleanName;
+    if (rawSubject) {
+      const subjectCheck = validateSubjectName(rawSubject);
+      if (!subjectCheck.isValid) {
+        return NextResponse.json({ error: subjectCheck.error }, { status: 400 });
+      }
+      cleanSubject = subjectCheck.normalized || cleanName;
+    } else {
+      cleanSubject = normalizeSubjectName(cleanName);
+    }
+
     if (!body.category || !ALLOWED_CATEGORIES.includes(body.category)) {
       return NextResponse.json(
         {
@@ -76,6 +96,7 @@ export async function POST(request: NextRequest) {
       authContext.userId,
       {
         name: cleanName,
+        subject: cleanSubject,
         description: typeof body.description === "string" ? body.description.trim() : undefined,
         category: body.category as BankCategory,
         sharing_policy: sharingPolicy,

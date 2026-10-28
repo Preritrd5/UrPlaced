@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AssessmentTakeSkeleton } from "@/components/ui/page-skeletons";
+import { toast, alertDialog } from "@/components/ui/dialog-system";
 
 export default function AssessmentTakingPage({
   params,
@@ -127,8 +128,13 @@ export default function AssessmentTakingPage({
   }
 
   async function handleTimeExpired(attemptId: string) {
-    alert("Time limit expired! Your assessment has been automatically submitted.");
     try {
+      await alertDialog({
+        title: "Time Limit Expired",
+        description: "Your allotted assessment duration has expired. Your responses have been automatically submitted for scoring.",
+        confirmText: "View Review",
+        variant: "warning",
+      });
       await fetch(`/api/student/attempts/${attemptId}/submit`, { method: "POST" });
     } finally {
       router.push(`/dashboard/student/attempts/${attemptId}/review`);
@@ -231,7 +237,7 @@ export default function AssessmentTakingPage({
       }
       router.push(`/dashboard/student/attempts/${workspace.attempt.id}/review`);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Submission failed.");
       setSubmitting(false);
     }
   }

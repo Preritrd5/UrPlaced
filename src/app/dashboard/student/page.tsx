@@ -1,7 +1,9 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  GraduationCap,
   Compass,
   AlertCircle,
   Sparkles,
@@ -10,82 +12,94 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
-  Target,
-  BookOpen,
 } from "lucide-react";
-import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
-import { createClient } from "@/lib/supabase/server";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = "force-dynamic";
+export default function StudentDashboardPage() {
+  const auth = useAuthContext();
+  const router = useRouter();
 
-export default async function StudentDashboardPage() {
-  const profile = await getCurrentUserProfile();
+  const [loading, setLoading] = React.useState(true);
+  const [dashboardData, setDashboardData] = React.useState<{
+    metrics: {
+      totalAssignedCount: number;
+      availableAssessmentsCount: number;
+      averageScore: number;
+      totalMistakes: number;
+      pendingReviews: number;
+      masteredMistakes: number;
+    };
+    assignedAssessments: any[];
+    attempts: any[];
+    mistakes: any[];
+  }>({
+    metrics: {
+      totalAssignedCount: 0,
+      availableAssessmentsCount: 0,
+      averageScore: 0,
+      totalMistakes: 0,
+      pendingReviews: 0,
+      masteredMistakes: 0,
+    },
+    assignedAssessments: [],
+    attempts: [],
+    mistakes: [],
+  });
 
-  if (!profile) {
-    redirect("/auth/signin");
-  }
+  React.useEffect(() => {
+    if (!auth.isLoading) {
+      if (!auth.isAuthenticated) {
+        router.push("/auth/signin");
+        return;
+      }
 
-  // College personnel visiting student dashboard are routed to their authorized workspace
-  if (profile.accountCategory === "COLLEGE") {
-    if (profile.role === "TRAINER") {
-      redirect("/dashboard/training");
+      if (auth.accountCategory === "COLLEGE") {
+        if (auth.role === "TRAINER") {
+          router.push("/dashboard/training");
+        } else {
+          router.push("/dashboard");
+        }
+        return;
+      }
+
+      fetch("/api/student/dashboard")
+        .then((res) => {
+          if (res.ok) return res.json();
+          throw new Error("Failed to load student dashboard");
+        })
+        .then((data) => {
+          setDashboardData(data);
+        })
+        .catch(() => {
+          // Graceful fallback
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-    redirect("/dashboard");
-  }
+  }, [auth.isLoading, auth.isAuthenticated, auth.accountCategory, auth.role, router]);
 
-  const supabase = await createClient();
-
-  // 1. Fetch student's attempt statistics
-  const { data: attempts } = await supabase
-    .from("assessment_attempts")
-    .select("id, status, score, max_score, percentage, submitted_at, assessments(title, duration_minutes)")
-    .eq("user_id", profile.id)
-    .order("submitted_at", { ascending: false })
-    .limit(5);
-
-  const completedAttempts = attempts?.filter((a: any) => a.status === "SUBMITTED" || a.status === "GRADED") || [];
-  const inProgressAttempts = attempts?.filter((a: any) => a.status === "IN_PROGRESS") || [];
-
-  // 2. Fetch student's mistake bank summary
-  const { data: mistakes } = await supabase
-    .from("mistake_bank_entries")
-    .select("id, mastery_status, next_review_at")
-    .eq("user_id", profile.id);
-
-  const totalMistakes = mistakes?.length || 0;
-  const pendingReviews =
-    mistakes?.filter(
-      (m: any) =>
-        m.mastery_status !== "MASTERED" &&
-        (!m.next_review_at || new Date(m.next_review_at) <= new Date())
-    ).length || 0;
-  const masteredMistakes =
-    mistakes?.filter((m: any) => m.mastery_status === "MASTERED").length || 0;
-
-  // 3. Fetch active assigned assessments available for this student
-  const tenantId = profile.activeMembership?.tenant_id;
-  let activeAssessmentsCount = 0;
-  if (tenantId) {
-    const { count } = await supabase
-      .from("assessments")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenantId)
-      .eq("status", "PUBLISHED");
-    activeAssessmentsCount = count || 0;
-  }
-
-  // Calculate overall average score
-  let averageScore = 0;
-  if (completedAttempts.length > 0) {
-    const totalPercent = completedAttempts.reduce(
-      (acc: number, cur: any) => acc + (cur.percentage || 0),
-      0
+  if (auth.isLoading || loading) {
+    return (
+      <div className="space-y-8 max-w-7xl mx-auto p-4 sm:p-6 animate-pulse">
+        <div className="h-10 bg-card/60 rounded-xl w-1/3" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-card rounded-xl border border-border" />
+          ))}
+        </div>
+      </div>
     );
-    averageScore = Math.round(totalPercent / completedAttempts.length);
   }
+
+  const { metrics, attempts } = dashboardData;
+  const completedAttempts =
+    attempts.filter((a: any) =>
+      ["SUBMITTED", "SCORED", "RESULT_RELEASED"].includes(a.status)
+    ) || [];
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -94,24 +108,20 @@ export default async function StudentDashboardPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary font-heading">
-              Welcome back, {profile.fullName || "Student"}
+              Welcome back, {auth.fullName || "Student"}
             </h1>
             <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-semibold">
               Student Prep
             </Badge>
           </div>
-          {/* <p className="text-xs sm:text-sm text-text-secondary">
-            &bull; {profile.activeMembership?.tenants?.name || "Campus Placement Portal"} 
-          </p> */}
 
           <p className="text-xs sm:text-sm text-text-secondary">
             <Sparkles
               className="inline-block h-4 w-4 mr-1 text-teal-600 align-middle"
               aria-hidden="true"
             />
-            {profile.activeMembership?.tenants?.name || "Campus Placement Portal"}
+            {auth.tenant?.name || "Campus Placement Portal"}
           </p>
-
         </div>
 
         <div className="flex items-center gap-3">
@@ -124,7 +134,7 @@ export default async function StudentDashboardPage() {
           <Button asChild variant="outline" className="border-border hover:bg-surface">
             <Link href="/dashboard/student/mistakes" className="inline-flex items-center gap-1.5">
               <AlertCircle className="h-4 w-4 text-secondary" />
-              <span>Mistake Bank ({pendingReviews})</span>
+              <span>Mistake Bank ({metrics.pendingReviews})</span>
             </Link>
           </Button>
         </div>
@@ -142,10 +152,12 @@ export default async function StudentDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-heading text-text-primary">
-              {activeAssessmentsCount}
+              {metrics.availableAssessmentsCount}
             </div>
             <p className="text-[11px] text-text-secondary mt-1">
-              Active assessments ready for attempt
+              {metrics.availableAssessmentsCount === 1
+                ? "1 active test ready for attempt"
+                : `${metrics.availableAssessmentsCount} active tests ready for attempt`}
             </p>
           </CardContent>
         </Card>
@@ -163,7 +175,7 @@ export default async function StudentDashboardPage() {
               {completedAttempts.length}
             </div>
             <p className="text-[11px] text-text-secondary mt-1">
-              Avg score: {averageScore}%
+              Avg score: {metrics.averageScore}%
             </p>
           </CardContent>
         </Card>
@@ -178,10 +190,10 @@ export default async function StudentDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-heading text-text-primary">
-              {pendingReviews}
+              {metrics.pendingReviews}
             </div>
             <p className="text-[11px] text-text-secondary mt-1">
-              {totalMistakes} captured &bull; {masteredMistakes} mastered
+              {metrics.totalMistakes} captured &bull; {metrics.masteredMistakes} mastered
             </p>
           </CardContent>
         </Card>
@@ -196,7 +208,9 @@ export default async function StudentDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-heading text-text-primary">
-              {totalMistakes > 0 ? Math.round((masteredMistakes / totalMistakes) * 100) : 100}%
+              {metrics.totalMistakes > 0
+                ? Math.round((metrics.masteredMistakes / metrics.totalMistakes) * 100)
+                : 100}%
             </div>
             <p className="text-[11px] text-text-secondary mt-1">
               Conversion rate to verified mastery
@@ -333,7 +347,7 @@ export default async function StudentDashboardPage() {
                   <div className="flex items-center gap-3 text-xs text-text-secondary">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5 text-secondary" />
-                      {attempt.assessments?.duration_minutes || 60} mins
+                      {attempt.assessments?.time_limit_minutes || 60} mins
                     </span>
                     <span>&bull;</span>
                     <span>
@@ -345,10 +359,10 @@ export default async function StudentDashboardPage() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <div className="text-base font-bold font-heading text-primary">
-                      {attempt.percentage}%
+                      {Math.round(Number(attempt.score_percentage) || 0)}%
                     </div>
                     <div className="text-[11px] text-text-secondary">
-                      {attempt.score} / {attempt.max_score} pts
+                      {attempt.earned_points ?? 0} / {attempt.total_points ?? 0} pts
                     </div>
                   </div>
                   <Button asChild variant="outline" size="sm">

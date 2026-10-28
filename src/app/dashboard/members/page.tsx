@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { UserRole } from "@/modules/identity-access/services/policy-engine";
 import { revalidatePath } from "next/cache";
+import { ClientAuthGate } from "@/components/auth/client-auth-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export default async function TenantMembersPage({
   const profile = await getCurrentUserProfile();
 
   if (!profile) {
-    redirect("/auth/signin");
+    return <ClientAuthGate redirectTo="/auth/college/signin" />;
   }
 
   const activeMembership = profile.activeMembership;

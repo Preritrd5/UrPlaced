@@ -3,6 +3,7 @@ import { fontHeading, fontBody, fontMono } from "@/lib/fonts";
 import "@/styles/globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthContextProvider } from "@/lib/auth/auth-context-provider";
+import { ToastContainer, DialogSystemHost } from "@/components/ui/dialog-system";
 
 export const metadata: Metadata = {
   title: "UrPlaced — Multi-College Placement Preparation & Management SaaS",
@@ -33,6 +34,8 @@ export default function RootLayout({
         <AuthContextProvider>
           <AppShell>{children}</AppShell>
         </AuthContextProvider>
+        <ToastContainer />
+        <DialogSystemHost />
       </body>
     </html>
   );

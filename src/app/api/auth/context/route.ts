@@ -7,9 +7,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const profile = await getCurrentUserProfile();
+    let token: string | undefined;
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+    const profile = await getCurrentUserProfile(undefined, token);
 
     if (!profile) {
       return NextResponse.json({

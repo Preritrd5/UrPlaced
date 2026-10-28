@@ -102,3 +102,12 @@ export {
   DialogTitle,
   DialogDescription,
 };
+
+export {
+  toast,
+  useToast,
+  confirmDialog,
+  promptDialog,
+  alertDialog,
+  useDialog,
+} from "./dialog-system";

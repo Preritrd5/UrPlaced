@@ -319,7 +319,7 @@ export default function QuestionImportPage() {
                   >
                     {banks.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.name} ({b.category})
+                        {b.name} — {b.subject || b.category} ({b.category})
                       </option>
                     ))}
                   </select>

@@ -4,8 +4,9 @@
  * and ensures deny-by-default security across all API routes and server actions.
  */
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { can, Permissions, type PermissionIdentifier, type UserRole } from "@/modules/identity-access/services/policy-engine";
 import { MembershipService } from "@/modules/tenancy/services/membership-service";
 import { TenantService } from "@/modules/tenancy/services/tenant-service";
@@ -22,16 +23,47 @@ export interface AuthenticatedServerContext {
 
 export async function requireAuthContext(
   requiredPermission?: PermissionIdentifier,
-  explicitTenantId?: string
+  explicitTenantId?: string,
+  explicitToken?: string
 ): Promise<AuthenticatedServerContext> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  let token = explicitToken;
+  if (!token) {
+    try {
+      const headerStore = await headers();
+      const authHeader = headerStore.get("authorization");
+      if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+        token = authHeader.substring(7).trim();
+      }
+    } catch {
+      // Outside request context
+    }
+  }
 
-  if (authError || !user) {
-    throw new Error("UNAUTHORIZED");
+  const supabase = await createClient(token);
+  let user: any = null;
+
+  if (token) {
+    try {
+      const adminClient = createAdminClient();
+      const { data, error } = await adminClient.auth.getUser(token);
+      if (!error && data?.user) {
+        user = data.user;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!user) {
+    const {
+      data: { user: clientUser },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !clientUser) {
+      throw new Error("UNAUTHORIZED");
+    }
+    user = clientUser;
   }
 
   // 1. Check if platform admin
@@ -54,8 +86,13 @@ export async function requireAuthContext(
   const isServerVerified = serverAppMeta.verified_by_server === true;
 
   // Resolve active tenant from cookie or explicit override
-  const cookieStore = await cookies();
-  const targetTenantId = explicitTenantId || cookieStore.get("active_tenant_id")?.value;
+  let cookieStore: any;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    // Outside request context
+  }
+  const targetTenantId = explicitTenantId || cookieStore?.get("active_tenant_id")?.value;
 
   let userMemberships: any[] = [];
   try {

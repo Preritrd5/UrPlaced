@@ -28,6 +28,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  toast,
+  confirmDialog,
+} from "@/components/ui/dialog";
 
 export default function StaffAssessmentsPage() {
   const router = useRouter();
@@ -68,6 +78,7 @@ export default function StaffAssessmentsPage() {
 
   // Assign Modal State
   const [assigningAssessment, setAssigningAssessment] = useState<any | null>(null);
+  const [assignScope, setAssignScope] = useState<"COLLEGE_WIDE" | "COHORT">("COLLEGE_WIDE");
   const [assignForm, setAssignForm] = useState({
     cohort_name: "All Eligible Students",
     window_start: "",
@@ -110,7 +121,7 @@ export default function StaffAssessmentsPage() {
   async function handleCreateAssessment(e: React.FormEvent) {
     e.preventDefault();
     if (!createForm.title || !createForm.question_set_id) {
-      alert("Title and Question Set are required.");
+      toast.warning("Title and Question Set are required.");
       return;
     }
 
@@ -140,6 +151,7 @@ export default function StaffAssessmentsPage() {
         throw new Error(data.error || "Failed to create assessment");
       }
 
+      toast.success("Assessment blueprint created successfully.");
       setShowCreateModal(false);
       setCreateForm({
         title: "",
@@ -155,14 +167,21 @@ export default function StaffAssessmentsPage() {
       });
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to create assessment.");
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handlePublish(assessmentId: string) {
-    if (!confirm("Are you sure you want to publish this assessment? Its question set snapshot will be locked.")) return;
+    const confirmed = await confirmDialog({
+      title: "Publish Assessment",
+      description: "Are you sure you want to publish this assessment? Its question set snapshot will be locked.",
+      confirmText: "Publish",
+      variant: "primary",
+    });
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`/api/placement/assessments/${assessmentId}/publish`, {
         method: "POST",
@@ -171,9 +190,10 @@ export default function StaffAssessmentsPage() {
         const data = await res.json();
         throw new Error(data.error || "Failed to publish");
       }
+      toast.success("Assessment published successfully.");
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to publish assessment.");
     }
   }
 
@@ -181,13 +201,23 @@ export default function StaffAssessmentsPage() {
     e.preventDefault();
     if (!assigningAssessment) return;
 
+    const finalCohortName =
+      assignScope === "COLLEGE_WIDE"
+        ? "All Eligible Students"
+        : assignForm.cohort_name.trim();
+
+    if (assignScope === "COHORT" && !finalCohortName) {
+      toast.warning("Please specify a target cohort name (e.g. Computer Science - Batch 2026).");
+      return;
+    }
+
     try {
       setSubmitting(true);
       const res = await fetch(`/api/placement/assessments/${assigningAssessment.id}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cohort_name: assignForm.cohort_name,
+          cohort_name: finalCohortName,
           window_start: assignForm.window_start || null,
           window_end: assignForm.window_end || null,
           max_attempts_override: assignForm.max_attempts_override
@@ -201,18 +231,25 @@ export default function StaffAssessmentsPage() {
         throw new Error(data.error || "Failed to assign assessment");
       }
 
-      alert("Assessment assigned successfully!");
+      toast.success("Assessment assigned successfully!");
       setAssigningAssessment(null);
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to assign assessment.");
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleReleaseResults(assessmentId: string) {
-    if (!confirm("Release results now? Students will immediately see their scores and question breakdowns.")) return;
+    const confirmed = await confirmDialog({
+      title: "Release Assessment Results",
+      description: "Release results now? Students will immediately see their scores and question breakdowns.",
+      confirmText: "Release Results",
+      variant: "primary",
+    });
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`/api/placement/assessments/${assessmentId}/release`, {
         method: "POST",
@@ -221,10 +258,10 @@ export default function StaffAssessmentsPage() {
       if (!res.ok) {
         throw new Error(data.error || "Failed to release results");
       }
-      alert(data.message || "Results released.");
+      toast.success(data.message || "Results released successfully.");
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message || "Failed to release results.");
     }
   }
 
@@ -242,10 +279,11 @@ export default function StaffAssessmentsPage() {
         throw new Error(data.error || "Failed to delete assessment.");
       }
 
+      toast.success("Assessment deleted successfully.");
       setAssessmentToDelete(null);
       loadData();
     } catch (err: any) {
-      alert(err.message || "Failed to delete assessment.");
+      toast.error(err.message || "Failed to delete assessment.");
     } finally {
       setDeleteLoading(false);
     }
@@ -471,9 +509,18 @@ export default function StaffAssessmentsPage() {
                       variant="outline"
                       size="sm"
                       className="text-xs h-8"
-                      onClick={() => setAssigningAssessment(a)}
+                      onClick={() => {
+                        setAssigningAssessment(a);
+                        setAssignScope("COLLEGE_WIDE");
+                        setAssignForm({
+                          cohort_name: "All Eligible Students",
+                          window_start: "",
+                          window_end: "",
+                          max_attempts_override: "",
+                        });
+                      }}
                     >
-                      <Users className="h-3.5 w-3.5 mr-1.5" /> Assign Cohort
+                      <Users className="h-3.5 w-3.5 mr-1.5" /> Assign Assessment
                     </Button>
                   )}
 
@@ -495,277 +542,357 @@ export default function StaffAssessmentsPage() {
       )}
 
       {/* Create Assessment Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">New Assessment Blueprint</CardTitle>
-              <CardDescription className="text-xs">
-                Bind an approved question set, configure server timers, pass marks, and result governance.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateAssessment} className="space-y-4">
-                <div>
-                  <Label htmlFor="title" className="text-xs font-medium">Title *</Label>
-                  <Input
-                    id="title"
-                    value={createForm.title}
-                    onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                    placeholder="e.g. TCS Ninja Diagnostic Assessment 2025"
-                    className="mt-1"
-                    required
-                  />
-                </div>
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="sm:max-w-xl max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+          <DialogHeader className="p-6 pb-4 border-b border-border bg-card shrink-0">
+            <DialogTitle className="text-xl font-bold font-heading text-text-primary">
+              New Assessment Blueprint
+            </DialogTitle>
+            <DialogDescription className="text-xs text-text-secondary mt-1">
+              Bind an approved question set, configure server timers, pass marks, and result governance.
+            </DialogDescription>
+          </DialogHeader>
 
+          <form onSubmit={handleCreateAssessment} noValidate className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <Label htmlFor="title" className="text-xs font-medium text-text-primary">
+                  Title <span className="text-status-danger">*</span>
+                </Label>
+                <Input
+                  id="title"
+                  value={createForm.title}
+                  onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                  placeholder="e.g. TCS Ninja Diagnostic Assessment 2025"
+                  className="mt-1"
+                  required
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="qset" className="text-xs font-medium text-text-primary">
+                    Question Set <span className="text-status-danger">*</span>
+                  </Label>
+                  <Link
+                    href="/dashboard/questions/sets"
+                    className="text-[11px] text-primary hover:underline font-medium"
+                  >
+                    + Manage Question Sets
+                  </Link>
+                </div>
+                <select
+                  id="qset"
+                  value={createForm.question_set_id}
+                  onChange={(e) => setCreateForm({ ...createForm, question_set_id: e.target.value })}
+                  className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-input text-text-primary"
+                  required
+                >
+                  <option value="">-- Select Question Set --</option>
+                  {questionSets.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.purpose}) - {s.is_locked ? "Locked" : "Draft"}
+                    </option>
+                  ))}
+                </select>
+                {questionSets.length === 0 && (
+                  <p className="text-[11px] text-amber-600 mt-1">
+                    No Question Sets found.{" "}
+                    <Link href="/dashboard/questions/sets" className="underline font-semibold">
+                      Assemble a Question Set
+                    </Link>{" "}
+                    with verified questions before creating an assessment.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="qset" className="text-xs font-medium">Question Set *</Label>
-                    <Link
-                      href="/dashboard/questions/sets"
-                      className="text-[11px] text-primary hover:underline font-medium"
-                    >
-                      + Manage Question Sets
-                    </Link>
-                  </div>
+                  <Label htmlFor="purpose" className="text-xs font-medium text-text-primary">Purpose</Label>
                   <select
-                    id="qset"
-                    value={createForm.question_set_id}
-                    onChange={(e) => setCreateForm({ ...createForm, question_set_id: e.target.value })}
+                    id="purpose"
+                    value={createForm.purpose}
+                    onChange={(e) => setCreateForm({ ...createForm, purpose: e.target.value })}
                     className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-input text-text-primary"
-                    required
                   >
-                    <option value="">-- Select Question Set --</option>
-                    {questionSets.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.purpose}) - {s.is_locked ? "Locked" : "Draft"}
-                      </option>
-                    ))}
+                    <option value="ASSESSMENT">Assessment</option>
+                    <option value="PRACTICE">Practice</option>
+                    <option value="DIAGNOSTIC">Diagnostic</option>
+                    <option value="COMPANY_PREP">Company Prep</option>
+                    <option value="INTERVIEW">Interview</option>
                   </select>
-                  {questionSets.length === 0 && (
-                    <p className="text-[11px] text-amber-600 mt-1">
-                      No Question Sets found.{" "}
-                      <Link href="/dashboard/questions/sets" className="underline font-semibold">
-                        Assemble a Question Set
-                      </Link>{" "}
-                      with verified questions before creating an assessment.
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="purpose" className="text-xs font-medium">Purpose</Label>
-                    <select
-                      id="purpose"
-                      value={createForm.purpose}
-                      onChange={(e) => setCreateForm({ ...createForm, purpose: e.target.value })}
-                      className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-input text-text-primary"
-                    >
-                      <option value="ASSESSMENT">Assessment</option>
-                      <option value="PRACTICE">Practice</option>
-                      <option value="DIAGNOSTIC">Diagnostic</option>
-                      <option value="COMPANY_PREP">Company Prep</option>
-                      <option value="INTERVIEW">Interview</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="timeLimit" className="text-xs font-medium">Time Limit (mins)</Label>
-                    <Input
-                      id="timeLimit"
-                      type="number"
-                      value={createForm.time_limit_minutes}
-                      onChange={(e) => setCreateForm({ ...createForm, time_limit_minutes: e.target.value })}
-                      placeholder="e.g. 60 (blank for untimed)"
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="attempts" className="text-xs font-medium">Allowed Attempts</Label>
-                    <Input
-                      id="attempts"
-                      type="number"
-                      min="1"
-                      value={createForm.allowed_attempts}
-                      onChange={(e) => setCreateForm({ ...createForm, allowed_attempts: e.target.value })}
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="passMark" className="text-xs font-medium">Pass Percentage (%)</Label>
-                    <Input
-                      id="passMark"
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={createForm.pass_percentage}
-                      onChange={(e) => setCreateForm({ ...createForm, pass_percentage: e.target.value })}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="reviewPolicy" className="text-xs font-medium">Review Policy</Label>
-                    <select
-                      id="reviewPolicy"
-                      value={createForm.review_policy}
-                      onChange={(e) => setCreateForm({ ...createForm, review_policy: e.target.value })}
-                      className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-input text-text-primary"
-                    >
-                      <option value="IMMEDIATE">Immediate</option>
-                      <option value="AFTER_DEADLINE">After Deadline</option>
-                      <option value="NEVER">Never</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="releasePolicy" className="text-xs font-medium">Release Policy</Label>
-                    <select
-                      id="releasePolicy"
-                      value={createForm.release_policy}
-                      onChange={(e) => setCreateForm({ ...createForm, release_policy: e.target.value })}
-                      className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-input text-text-primary"
-                    >
-                      <option value="IMMEDIATE">Immediate</option>
-                      <option value="AFTER_DEADLINE">After Deadline</option>
-                      <option value="MANUAL_STAFF_RELEASE">Manual Staff Release</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="shuffle"
-                    checked={createForm.shuffle_questions}
-                    onChange={(e) => setCreateForm({ ...createForm, shuffle_questions: e.target.checked })}
-                    className="h-4 w-4 rounded border-border"
-                  />
-                  <Label htmlFor="shuffle" className="text-xs font-medium cursor-pointer">
-                    Shuffle question presentation order for each attempt
-                  </Label>
                 </div>
 
                 <div>
-                  <Label htmlFor="desc" className="text-xs font-medium">Instructions / Description</Label>
-                  <Textarea
-                    id="desc"
-                    value={createForm.description}
-                    onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                    rows={2}
-                    className="mt-1"
-                    placeholder="Provide exam rules, allowed tools, or topic focus..."
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowCreateModal(false)}
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" size="sm" disabled={submitting}>
-                    {submitting ? "Saving..." : "Create Blueprint"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Assign Cohort Modal */}
-      {assigningAssessment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">Schedule & Assign Assessment</CardTitle>
-              <CardDescription className="text-xs">
-                Assign <span className="font-semibold text-text-primary">{assigningAssessment.title}</span> to a cohort with availability windows.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleAssign} className="space-y-4">
-                <div>
-                  <Label htmlFor="cohort" className="text-xs font-medium">Cohort / Target Group</Label>
+                  <Label htmlFor="timeLimit" className="text-xs font-medium text-text-primary">Time Limit (mins)</Label>
                   <Input
-                    id="cohort"
-                    value={assignForm.cohort_name}
-                    onChange={(e) => setAssignForm({ ...assignForm, cohort_name: e.target.value })}
-                    placeholder="e.g. Computer Science - Batch 2025"
+                    id="timeLimit"
+                    type="number"
+                    value={createForm.time_limit_minutes}
+                    onChange={(e) => setCreateForm({ ...createForm, time_limit_minutes: e.target.value })}
+                    placeholder="e.g. 60 (blank for untimed)"
                     className="mt-1"
-                    required
                   />
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="wstart" className="text-xs font-medium">Window Start</Label>
-                    <Input
-                      id="wstart"
-                      type="datetime-local"
-                      value={assignForm.window_start}
-                      onChange={(e) => setAssignForm({ ...assignForm, window_start: e.target.value })}
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="wend" className="text-xs font-medium">Window End</Label>
-                    <Input
-                      id="wend"
-                      type="datetime-local"
-                      value={assignForm.window_end}
-                      onChange={(e) => setAssignForm({ ...assignForm, window_end: e.target.value })}
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="overrideAttempts" className="text-xs font-medium">
-                    Max Attempts Override (Optional)
-                  </Label>
+                  <Label htmlFor="attempts" className="text-xs font-medium text-text-primary">Allowed Attempts</Label>
                   <Input
-                    id="overrideAttempts"
+                    id="attempts"
                     type="number"
                     min="1"
-                    value={assignForm.max_attempts_override}
-                    onChange={(e) => setAssignForm({ ...assignForm, max_attempts_override: e.target.value })}
-                    placeholder={`Default: ${assigningAssessment.allowed_attempts}`}
+                    value={createForm.allowed_attempts}
+                    onChange={(e) => setCreateForm({ ...createForm, allowed_attempts: e.target.value })}
                     className="mt-1"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAssigningAssessment(null)}
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" size="sm" disabled={submitting}>
-                    {submitting ? "Assigning..." : "Confirm Assignment"}
-                  </Button>
+                <div>
+                  <Label htmlFor="passMark" className="text-xs font-medium text-text-primary">Pass Percentage (%)</Label>
+                  <Input
+                    id="passMark"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={createForm.pass_percentage}
+                    onChange={(e) => setCreateForm({ ...createForm, pass_percentage: e.target.value })}
+                    className="mt-1"
+                  />
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="reviewPolicy" className="text-xs font-medium text-text-primary">Review Policy</Label>
+                  <select
+                    id="reviewPolicy"
+                    value={createForm.review_policy}
+                    onChange={(e) => setCreateForm({ ...createForm, review_policy: e.target.value })}
+                    className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-input text-text-primary"
+                  >
+                    <option value="IMMEDIATE">Immediate</option>
+                    <option value="AFTER_DEADLINE">After Deadline</option>
+                    <option value="NEVER">Never</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="releasePolicy" className="text-xs font-medium text-text-primary">Release Policy</Label>
+                  <select
+                    id="releasePolicy"
+                    value={createForm.release_policy}
+                    onChange={(e) => setCreateForm({ ...createForm, release_policy: e.target.value })}
+                    className="w-full mt-1 border border-border rounded-md px-3 py-2 text-sm bg-input text-text-primary"
+                  >
+                    <option value="IMMEDIATE">Immediate</option>
+                    <option value="AFTER_DEADLINE">After Deadline</option>
+                    <option value="MANUAL_STAFF_RELEASE">Manual Staff Release</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="shuffle"
+                  checked={createForm.shuffle_questions}
+                  onChange={(e) => setCreateForm({ ...createForm, shuffle_questions: e.target.checked })}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <Label htmlFor="shuffle" className="text-xs font-medium text-text-primary cursor-pointer">
+                  Shuffle question presentation order for each attempt
+                </Label>
+              </div>
+
+              <div>
+                <Label htmlFor="desc" className="text-xs font-medium text-text-primary">Instructions / Description</Label>
+                <Textarea
+                  id="desc"
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                  rows={2}
+                  className="mt-1"
+                  placeholder="Provide exam rules, allowed tools, or topic focus..."
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="p-4 sm:p-6 sm:py-4 border-t border-border bg-surface/50 flex flex-row justify-end gap-3 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCreateModal(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Blueprint"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Cohort Modal */}
+      <Dialog
+        open={!!assigningAssessment}
+        onOpenChange={(open) => {
+          if (!open) setAssigningAssessment(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+          <DialogHeader className="p-6 pb-4 border-b border-border bg-card shrink-0">
+            <DialogTitle className="text-xl font-bold font-heading text-text-primary">
+              Schedule & Assign Assessment
+            </DialogTitle>
+            <DialogDescription className="text-xs text-text-secondary mt-1">
+              Assign <span className="font-semibold text-text-primary">{assigningAssessment?.title}</span> to a cohort with availability windows.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleAssign} noValidate className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-text-primary">Assignment Scope *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssignScope("COLLEGE_WIDE");
+                      setAssignForm((prev) => ({ ...prev, cohort_name: "All Eligible Students" }));
+                    }}
+                    className={`px-3 py-2 text-xs font-semibold rounded-md border text-left transition-colors ${
+                      assignScope === "COLLEGE_WIDE"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-input text-text-secondary hover:bg-card"
+                    }`}
+                  >
+                    College-Wide
+                    <span className="block text-[10px] font-normal text-text-muted mt-0.5">
+                      All enrolled students in college
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssignScope("COHORT");
+                      setAssignForm((prev) => ({
+                        ...prev,
+                        cohort_name: prev.cohort_name === "All Eligible Students" ? "" : prev.cohort_name,
+                      }));
+                    }}
+                    className={`px-3 py-2 text-xs font-semibold rounded-md border text-left transition-colors ${
+                      assignScope === "COHORT"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-input text-text-secondary hover:bg-card"
+                    }`}
+                  >
+                    Specific Cohort
+                    <span className="block text-[10px] font-normal text-text-muted mt-0.5">
+                      Branch, batch, or degree
+                    </span>
+                  </button>
+                </div>
+
+                {assignScope === "COHORT" ? (
+                  <div className="pt-1">
+                    <Label htmlFor="cohort" className="text-xs font-medium text-text-secondary">
+                      Cohort Target Group *
+                    </Label>
+                    <Input
+                      id="cohort"
+                      value={assignForm.cohort_name}
+                      onChange={(e) => setAssignForm({ ...assignForm, cohort_name: e.target.value })}
+                      placeholder="e.g. Computer Science - Batch 2026"
+                      className="mt-1"
+                      required
+                    />
+                    <p className="text-[11px] text-text-muted mt-1">
+                      Only active students matching this department, degree, or graduation batch will gain access.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-md bg-secondary-accent/10 border border-secondary-accent/20 text-xs text-text-primary">
+                    <span className="font-semibold text-secondary-accent">College-Wide Access:</span>{" "}
+                    All active, enrolled students across every department in this college tenant will be eligible.
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="wstart" className="text-xs font-medium text-text-primary">Window Start</Label>
+                  <Input
+                    id="wstart"
+                    type="datetime-local"
+                    value={assignForm.window_start}
+                    onChange={(e) => setAssignForm({ ...assignForm, window_start: e.target.value })}
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="wend" className="text-xs font-medium text-text-primary">Window End</Label>
+                  <Input
+                    id="wend"
+                    type="datetime-local"
+                    value={assignForm.window_end}
+                    onChange={(e) => setAssignForm({ ...assignForm, window_end: e.target.value })}
+                    className="mt-1 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="overrideAttempts" className="text-xs font-medium text-text-primary">
+                  Max Attempts Override (Optional)
+                </Label>
+                <Input
+                  id="overrideAttempts"
+                  type="number"
+                  min="1"
+                  value={assignForm.max_attempts_override}
+                  onChange={(e) => setAssignForm({ ...assignForm, max_attempts_override: e.target.value })}
+                  placeholder={`Default: ${assigningAssessment?.allowed_attempts}`}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="p-4 sm:p-6 sm:py-4 border-t border-border bg-surface/50 flex flex-row justify-end gap-3 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setAssigningAssessment(null)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Assigning...
+                  </>
+                ) : (
+                  "Confirm Assignment"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Draft Assessment Dialog */}
       <DeleteConfirmationDialog

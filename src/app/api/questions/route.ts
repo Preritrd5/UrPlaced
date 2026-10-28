@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const bankId = searchParams.get("bankId") || undefined;
+    const subject = searchParams.get("subject") || undefined;
+    const topic = searchParams.get("topic") || undefined;
     const questionType = (searchParams.get("questionType") as any) || undefined;
     const difficulty = (searchParams.get("difficulty") as any) || undefined;
     const lifecycleStatus = (searchParams.get("lifecycleStatus") as any) || undefined;
@@ -21,6 +23,8 @@ export async function GET(request: NextRequest) {
       authContext.tenantRole,
       {
         bankId,
+        subject,
+        topic,
         questionType,
         difficulty,
         lifecycleStatus,

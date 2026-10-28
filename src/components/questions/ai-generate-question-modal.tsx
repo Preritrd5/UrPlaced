@@ -20,7 +20,7 @@ import { CreateQuestionBankModal } from "@/components/questions/create-question-
 interface AIGenerateQuestionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  banks: { id: string; name: string; category: string }[];
+  banks: { id: string; name: string; subject?: string; category: string }[];
   onGeneratedSuccess?: () => void;
 }
 
@@ -204,10 +204,18 @@ export function AIGenerateQuestionModal({
                 >
                   {localBanks.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.name} ({b.category})
+                      {b.name} — {b.subject || b.category} ({b.category})
                     </option>
                   ))}
                 </select>
+                {(() => {
+                  const activeB = localBanks.find((b) => b.id === bankId);
+                  return activeB ? (
+                    <p className="text-[11px] text-[#292D40]/70 mt-1 font-inter">
+                      Subject: <span className="font-semibold text-[#24283A]">{activeB.subject || activeB.name}</span>
+                    </p>
+                  ) : null;
+                })()}
               </div>
             )}
 

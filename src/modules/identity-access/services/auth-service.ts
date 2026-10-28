@@ -31,17 +31,35 @@ export interface UserSessionProfile {
  * Client-editable user_metadata is NEVER trusted for role or permission authorization.
  */
 export async function getCurrentUserProfile(
-  selectedTenantId?: string
+  selectedTenantId?: string,
+  explicitToken?: string
 ): Promise<UserSessionProfile | null> {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+    const supabase = await createClient(explicitToken);
+    let user: any = null;
 
-    if (error || !user) {
-      return null;
+    if (explicitToken) {
+      try {
+        const adminClient = createAdminClient();
+        const { data, error } = await adminClient.auth.getUser(explicitToken);
+        if (!error && data?.user) {
+          user = data.user;
+        }
+      } catch {
+        // Fall back to client getUser
+      }
+    }
+
+    if (!user) {
+      const {
+        data: { user: clientUser },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error || !clientUser) {
+        return null;
+      }
+      user = clientUser;
     }
 
     const admin = createAdminClient();

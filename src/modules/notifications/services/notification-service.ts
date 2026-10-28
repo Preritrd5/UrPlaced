@@ -223,6 +223,7 @@ export class NotificationService {
     options: ListNotificationsOptions
   ): Promise<ListNotificationsResult> {
     const { userId, limit = 20, offset = 0, unreadOnly = false } = options;
+    const scopedCollegeId = options.collegeId || options.tenantId;
 
     if (!userId || !UUID_REGEX.test(userId)) {
       throw new NotificationValidationError("Invalid userId provided for notification listing.");
@@ -234,11 +235,17 @@ export class NotificationService {
     const admin = createAdminClient();
 
     // 1. Fetch unread count efficiently
-    const { count: unreadCount, error: countErr } = await admin
+    let countQuery = admin
       .from("notifications")
       .select("*", { count: "exact", head: true })
       .eq("recipient_user_id", userId)
       .is("read_at", null);
+
+    if (scopedCollegeId) {
+      countQuery = countQuery.or(`college_id.eq.${scopedCollegeId},college_id.is.null`);
+    }
+
+    const { count: unreadCount, error: countErr } = await countQuery;
 
     if (countErr) {
       if (this.isTableMissingError(countErr)) {
@@ -251,13 +258,19 @@ export class NotificationService {
     let query = admin
       .from("notifications")
       .select("*", { count: "exact" })
-      .eq("recipient_user_id", userId)
-      .order("created_at", { ascending: false })
-      .range(safeOffset, safeOffset + safeLimit - 1);
+      .eq("recipient_user_id", userId);
+
+    if (scopedCollegeId) {
+      query = query.or(`college_id.eq.${scopedCollegeId},college_id.is.null`);
+    }
 
     if (unreadOnly) {
       query = query.is("read_at", null);
     }
+
+    query = query
+      .order("created_at", { ascending: false })
+      .range(safeOffset, safeOffset + safeLimit - 1);
 
     const { data: rows, count: totalCount, error: listErr } = await query;
 
@@ -278,17 +291,23 @@ export class NotificationService {
   /**
    * Retrieves the authoritative unread count for an authenticated user.
    */
-  static async getUnreadCount(userId: string): Promise<number> {
+  static async getUnreadCount(userId: string, collegeId?: string): Promise<number> {
     if (!userId || !UUID_REGEX.test(userId)) {
       return 0;
     }
 
     const admin = createAdminClient();
-    const { count, error } = await admin
+    let query = admin
       .from("notifications")
       .select("*", { count: "exact", head: true })
       .eq("recipient_user_id", userId)
       .is("read_at", null);
+
+    if (collegeId) {
+      query = query.or(`college_id.eq.${collegeId},college_id.is.null`);
+    }
+
+    const { count, error } = await query;
 
     if (error) {
       if (this.isTableMissingError(error)) {
@@ -301,13 +320,14 @@ export class NotificationService {
   }
 
   /**
-   * Marks a single notification as read, strictly verifying recipient ownership.
+   * Marks a single notification as read, strictly verifying recipient ownership and optional college scope.
    */
   static async markAsRead(params: {
     userId: string;
     notificationId: string;
+    collegeId?: string;
   }): Promise<NotificationRecord | null> {
-    const { userId, notificationId } = params;
+    const { userId, notificationId, collegeId } = params;
 
     if (!userId || !UUID_REGEX.test(userId)) {
       throw new NotificationValidationError("Invalid userId");
@@ -318,16 +338,20 @@ export class NotificationService {
 
     const admin = createAdminClient();
 
-    const { data, error } = await admin
+    let query = admin
       .from("notifications")
       .update({
         read_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", notificationId)
-      .eq("recipient_user_id", userId)
-      .select()
-      .maybeSingle();
+      .eq("recipient_user_id", userId);
+
+    if (collegeId) {
+      query = query.or(`college_id.eq.${collegeId},college_id.is.null`);
+    }
+
+    const { data, error } = await query.select().maybeSingle();
 
     if (error) {
       if (this.isTableMissingError(error)) {
@@ -340,20 +364,29 @@ export class NotificationService {
   }
 
   /**
-   * Marks all unread notifications as read for the authenticated recipient.
+   * Marks all unread notifications as read for the authenticated recipient and optional college scope.
    */
-  static async markAllAsRead(userId: string): Promise<{ success: boolean; count: number }> {
+  static async markAllAsRead(
+    userId: string,
+    collegeId?: string
+  ): Promise<{ success: boolean; count: number }> {
     if (!userId || !UUID_REGEX.test(userId)) {
       throw new NotificationValidationError("Invalid userId");
     }
 
     const admin = createAdminClient();
 
-    const { data: unreadRows, error: findErr } = await admin
+    let findQuery = admin
       .from("notifications")
       .select("id")
       .eq("recipient_user_id", userId)
       .is("read_at", null);
+
+    if (collegeId) {
+      findQuery = findQuery.or(`college_id.eq.${collegeId},college_id.is.null`);
+    }
+
+    const { data: unreadRows, error: findErr } = await findQuery;
 
     if (findErr) {
       if (this.isTableMissingError(findErr)) {
@@ -388,23 +421,30 @@ export class NotificationService {
   }
 
   /**
-   * Deletes a notification belonging to the authenticated recipient.
+   * Deletes a notification belonging to the authenticated recipient and optional college scope.
    */
   static async deleteNotification(params: {
     userId: string;
     notificationId: string;
+    collegeId?: string;
   }): Promise<boolean> {
-    const { userId, notificationId } = params;
+    const { userId, notificationId, collegeId } = params;
 
     if (!userId || !UUID_REGEX.test(userId)) return false;
     if (!notificationId || !UUID_REGEX.test(notificationId)) return false;
 
     const admin = createAdminClient();
-    const { error } = await admin
+    let query = admin
       .from("notifications")
       .delete()
       .eq("id", notificationId)
       .eq("recipient_user_id", userId);
+
+    if (collegeId) {
+      query = query.or(`college_id.eq.${collegeId},college_id.is.null`);
+    }
+
+    const { error } = await query;
 
     return !error;
   }

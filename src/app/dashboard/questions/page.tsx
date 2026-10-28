@@ -16,6 +16,7 @@ import { AnswerKeyReviewModal } from "@/components/questions/answer-key-review-m
 import { DuplicateAlertModal } from "@/components/questions/duplicate-alert-modal";
 import { AIGenerateQuestionModal } from "@/components/questions/ai-generate-question-modal";
 import { CreateQuestionBankModal } from "@/components/questions/create-question-bank-modal";
+import { BulkReviewModal } from "@/components/questions/bulk-review-modal";
 import {
   Plus,
   Upload,
@@ -24,6 +25,7 @@ import {
   Filter,
   ShieldAlert,
   CheckCircle2,
+  CheckCheck,
   Clock,
   BookOpen,
   ArrowRight,
@@ -36,6 +38,7 @@ import {
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
+import { toast } from "@/components/ui/dialog-system";
 
 export default function QuestionsDashboardPage() {
   const router = useRouter();
@@ -58,6 +61,7 @@ export default function QuestionsDashboardPage() {
 
   // Filters
   const [selectedBank, setSelectedBank] = useState<string>("");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -81,6 +85,8 @@ export default function QuestionsDashboardPage() {
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [createBankModalOpen, setCreateBankModalOpen] = useState(false);
+  const [bulkReviewModalOpen, setBulkReviewModalOpen] = useState(false);
+  const [eligibleReviewCount, setEligibleReviewCount] = useState<number>(0);
   const [loadingBanks, setLoadingBanks] = useState(true);
   const [banksError, setBanksError] = useState<string | null>(null);
 
@@ -124,6 +130,7 @@ export default function QuestionsDashboardPage() {
     try {
       const params = new URLSearchParams();
       if (selectedBank) params.set("bankId", selectedBank);
+      if (selectedSubject) params.set("subject", selectedSubject);
       if (selectedType) params.set("questionType", selectedType);
       if (selectedStatus) params.set("lifecycleStatus", selectedStatus);
       if (searchQuery) params.set("search", searchQuery);
@@ -140,10 +147,30 @@ export default function QuestionsDashboardPage() {
     }
   };
 
+  // Fetch Eligible Review Count
+  const fetchEligibleReviewCount = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedBank) params.set("bankId", selectedBank);
+      if (selectedSubject) params.set("subject", selectedSubject);
+      if (selectedType) params.set("questionType", selectedType);
+      if (searchQuery) params.set("search", searchQuery);
+
+      const res = await fetch(`/api/questions/bulk-review?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEligibleReviewCount(data.eligibleCount || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch eligible review count", err);
+    }
+  };
+
   useEffect(() => {
     loadQuestions();
+    fetchEligibleReviewCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBank, selectedType, selectedStatus]);
+  }, [selectedBank, selectedSubject, selectedType, selectedStatus]);
 
   // Publish question action
   const handlePublish = async (questionId: string) => {
@@ -152,13 +179,15 @@ export default function QuestionsDashboardPage() {
         method: "POST",
       });
       if (res.ok) {
+        toast.success("Question published successfully.");
         loadQuestions();
       } else {
         const err = await res.json();
-        alert(err.error || "Cannot publish question.");
+        toast.error(err.error || "Cannot publish question.");
       }
     } catch (err) {
       console.error("Publish error", err);
+      toast.error("Failed to publish question.");
     }
   };
 
@@ -176,13 +205,14 @@ export default function QuestionsDashboardPage() {
       const data = await res.json();
       if (res.ok) {
         setQuestionToDelete(null);
+        toast.success("Question deleted successfully.");
         loadQuestions();
       } else {
-        alert(data.error || "Failed to delete question.");
+        toast.error(data.error || "Failed to delete question.");
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to delete question.");
+      toast.error(err.message || "Failed to delete question.");
     } finally {
       setDeleteLoading(false);
     }
@@ -197,6 +227,9 @@ export default function QuestionsDashboardPage() {
     (q) => q.lifecycle_status === "PENDING_REVIEW" || q.current_version?.review_status === "UNREVIEWED"
   ).length;
   const publishedCount = questions.filter((q) => q.lifecycle_status === "PUBLISHED").length;
+  const distinctSubjects = Array.from(
+    new Set(banks.map((b) => b.subject || b.name).filter(Boolean))
+  ) as string[];
 
   if (isLoadingAuth || (loading && questions.length === 0)) {
     return (
@@ -227,6 +260,22 @@ export default function QuestionsDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBulkReviewModalOpen(true)}
+            disabled={eligibleReviewCount === 0}
+            className="flex items-center gap-1.5 text-xs text-[#2E8F86] border-[#2E8F86]/40 hover:bg-[#2E8F86]/10 disabled:opacity-50"
+            title={
+              eligibleReviewCount > 0
+                ? `Review and accept all ${eligibleReviewCount} eligible unreviewed question(s)`
+                : "No eligible unreviewed questions found in active filter scope"
+            }
+          >
+            <CheckCheck className="w-4 h-4 text-[#2E8F86]" />
+            Accept All ({eligibleReviewCount})
+          </Button>
+
           <Button
             size="sm"
             onClick={() => setCreateBankModalOpen(true)}
@@ -329,7 +378,12 @@ export default function QuestionsDashboardPage() {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadQuestions()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  loadQuestions();
+                  fetchEligibleReviewCount();
+                }
+              }}
               placeholder="Search prompts, keywords, topics..."
               className="pl-9 text-xs"
             />
@@ -337,16 +391,31 @@ export default function QuestionsDashboardPage() {
 
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
             <select
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
+            >
+              <option value="">All Subjects</option>
+              {distinctSubjects.map((sub) => (
+                <option key={sub} value={sub}>
+                  {sub}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={selectedBank}
               onChange={(e) => setSelectedBank(e.target.value)}
               className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
             >
               <option value="">All Question Banks</option>
-              {banks.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
+              {banks
+                .filter((b) => !selectedSubject || (b.subject || b.name) === selectedSubject)
+                .map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} — {b.subject || b.category}
+                  </option>
+                ))}
             </select>
 
             <select
@@ -378,7 +447,10 @@ export default function QuestionsDashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={loadQuestions}
+              onClick={() => {
+                loadQuestions();
+                fetchEligibleReviewCount();
+              }}
               className="text-xs h-9"
             >
               Apply
@@ -452,6 +524,12 @@ export default function QuestionsDashboardPage() {
                         {cur?.difficulty && <DifficultyBadge difficulty={cur.difficulty} />}
                         <LifecycleStatusBadge status={q.lifecycle_status} />
                         {cur?.review_status && <ReviewStatusBadge status={cur.review_status} />}
+                        {q.bank && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-[#2E8F86]/10 text-[#2E8F86] border border-[#2E8F86]/20">
+                            <BookOpen className="w-3 h-3 text-[#2E8F86]" />
+                            {q.bank.subject || q.bank.name}
+                          </span>
+                        )}
                         {cur?.source_type === "AI_GENERATED" ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                             <Sparkles className="w-3 h-3 text-primary" /> AI Generated
@@ -470,9 +548,12 @@ export default function QuestionsDashboardPage() {
                         {cur?.prompt || "No prompt available."}
                       </p>
 
-                      <div className="flex items-center gap-3 text-xs text-text-secondary">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-text-secondary">
+                        {q.bank && (
+                          <span>Bank: <span className="font-medium text-text-primary">{q.bank.name}</span></span>
+                        )}
                         {cur?.topic_tags && cur.topic_tags.length > 0 && (
-                          <span>Tags: {cur.topic_tags.slice(0, 3).join(", ")}</span>
+                          <span>Topics: <span className="font-medium text-text-primary">{cur.topic_tags.join(", ")}</span></span>
                         )}
                         <span>•</span>
                         <span>Created: {new Date(q.created_at).toLocaleDateString()}</span>
@@ -556,7 +637,28 @@ export default function QuestionsDashboardPage() {
         onClose={() =>
           setReviewModalState({ ...reviewModalState, isOpen: false })
         }
-        onSuccess={loadQuestions}
+        onSuccess={() => {
+          loadQuestions();
+          fetchEligibleReviewCount();
+        }}
+      />
+
+      {/* Bulk Review & Accept All Modal */}
+      <BulkReviewModal
+        isOpen={bulkReviewModalOpen}
+        onClose={() => setBulkReviewModalOpen(false)}
+        onSuccess={() => {
+          loadQuestions();
+          fetchEligibleReviewCount();
+        }}
+        filters={{
+          bankId: selectedBank || undefined,
+          bankName: banks.find((b) => b.id === selectedBank)?.name,
+          subject: selectedSubject || undefined,
+          questionType: selectedType || undefined,
+          search: searchQuery || undefined,
+        }}
+        eligibleCount={eligibleReviewCount}
       />
 
       {/* Duplicate Alert Modal */}

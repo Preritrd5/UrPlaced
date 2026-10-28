@@ -45,7 +45,9 @@ function StudentSignInContent() {
 
         let authoritativeCategory = metaCategory;
         try {
-          const ctxRes = await fetch("/api/auth/context");
+          const ctxRes = await fetch("/api/auth/context", {
+            headers: { Authorization: `Bearer ${data.session.access_token}` },
+          });
           if (ctxRes.ok) {
             const ctx = await ctxRes.json();
             if (ctx.authenticated && ctx.accountCategory) {

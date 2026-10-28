@@ -26,6 +26,21 @@ export interface AuthContextValue {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
+const INITIAL_STATE = {
+  authenticated: false,
+  userId: null,
+  email: null,
+  fullName: null,
+  avatarUrl: null,
+  role: null,
+  accountCategory: null,
+  isPlatformAdmin: false,
+  isVerifiedMembership: false,
+  tenant: null,
+  availableTenants: [],
+  permissions: [],
+};
+
 export function AuthContextProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [data, setData] = React.useState<{
@@ -41,24 +56,46 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
     tenant: { id: string; name: string } | null;
     availableTenants: { id: string; name: string; role: string }[];
     permissions: string[];
-  }>({
-    authenticated: false,
-    userId: null,
-    email: null,
-    fullName: null,
-    avatarUrl: null,
-    role: null,
-    accountCategory: null,
-    isPlatformAdmin: false,
-    isVerifiedMembership: false,
-    tenant: null,
-    availableTenants: [],
-    permissions: [],
-  });
+  }>(INITIAL_STATE);
+
+  const fetchSeqRef = React.useRef(0);
+  const activeAbortRef = React.useRef<AbortController | null>(null);
 
   const fetchContext = React.useCallback(async () => {
+    const seq = ++fetchSeqRef.current;
+    if (activeAbortRef.current) {
+      activeAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    activeAbortRef.current = controller;
+
     try {
-      const res = await fetch("/api/auth/context", { cache: "no-store" });
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        if (seq === fetchSeqRef.current) {
+          setData(INITIAL_STATE);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const res = await fetch("/api/auth/context", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      if (seq !== fetchSeqRef.current) {
+        // Discard stale response because a newer fetch or signout was triggered
+        return;
+      }
+
       if (res.ok) {
         const json = await res.json();
         if (json.authenticated) {
@@ -77,26 +114,22 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
             permissions: json.permissions || [],
           });
         } else {
-          setData({
-            authenticated: false,
-            userId: null,
-            email: null,
-            fullName: null,
-            avatarUrl: null,
-            role: null,
-            accountCategory: null,
-            isPlatformAdmin: false,
-            isVerifiedMembership: false,
-            tenant: null,
-            availableTenants: [],
-            permissions: [],
-          });
+          setData(INITIAL_STATE);
         }
+      } else {
+        setData(INITIAL_STATE);
       }
-    } catch {
-      // Fallback safely on error
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        return; // Ignore intentional abort
+      }
+      if (seq === fetchSeqRef.current) {
+        setData(INITIAL_STATE);
+      }
     } finally {
-      setIsLoading(false);
+      if (seq === fetchSeqRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -110,26 +143,20 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
       if (event === "SIGNED_IN" || event === "USER_UPDATED" || event === "TOKEN_REFRESHED") {
         fetchContext();
       } else if (event === "SIGNED_OUT") {
-        setData({
-          authenticated: false,
-          userId: null,
-          email: null,
-          fullName: null,
-          avatarUrl: null,
-          role: null,
-          accountCategory: null,
-          isPlatformAdmin: false,
-          isVerifiedMembership: false,
-          tenant: null,
-          availableTenants: [],
-          permissions: [],
-        });
+        fetchSeqRef.current++;
+        if (activeAbortRef.current) {
+          activeAbortRef.current.abort();
+        }
+        setData(INITIAL_STATE);
         setIsLoading(false);
       }
     });
 
     return () => {
       subscription.unsubscribe();
+      if (activeAbortRef.current) {
+        activeAbortRef.current.abort();
+      }
     };
   }, [fetchContext]);
 
@@ -142,22 +169,14 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
   );
 
   const signOut = React.useCallback(async () => {
+    fetchSeqRef.current++;
+    if (activeAbortRef.current) {
+      activeAbortRef.current.abort();
+    }
     const supabase = createClient();
     await supabase.auth.signOut();
-    setData({
-      authenticated: false,
-      userId: null,
-      email: null,
-      fullName: null,
-      avatarUrl: null,
-      role: null,
-      accountCategory: null,
-      isPlatformAdmin: false,
-      isVerifiedMembership: false,
-      tenant: null,
-      availableTenants: [],
-      permissions: [],
-    });
+    setData(INITIAL_STATE);
+    setIsLoading(false);
     window.location.href = "/auth/signin";
   }, []);
 

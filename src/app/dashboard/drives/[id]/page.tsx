@@ -31,6 +31,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
 import { DriveIntelligenceTab } from "@/components/drives/drive-intelligence-tab";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { promptDialog } from "@/components/ui/dialog-system";
 
 interface DriveDetailPageProps {
   params: Promise<{ id: string }>;
@@ -374,8 +375,15 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
                 variant="ghost"
                 size="sm"
                 className="text-red-600 hover:bg-red-50"
-                onClick={() => {
-                  const reason = prompt("Enter cancellation reason:");
+                onClick={async () => {
+                  const reason = await promptDialog({
+                    title: "Cancel Recruitment Drive",
+                    description: "Please provide a reason for cancelling this recruitment drive. This will be recorded and visible to authorized staff.",
+                    label: "Cancellation Reason",
+                    placeholder: "e.g. Hiring freeze, company postponed drive to next quarter...",
+                    required: true,
+                    confirmText: "Cancel Drive",
+                  });
                   if (reason) handleStatusTransition("CANCELLED", reason);
                 }}
               >

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { DriveService } from "@/modules/recruitment-drives/services/drive-service";
+import { ClientAuthGate } from "@/components/auth/client-auth-gate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ interface DrivesPageProps {
 
 export default async function DrivesPage({ searchParams }: DrivesPageProps) {
   const profile = await getCurrentUserProfile();
-  if (!profile) redirect("/auth/signin");
+  if (!profile) return <ClientAuthGate redirectTo="/auth/college/signin" />;
   if (!profile.isVerifiedMembership) redirect("/auth/access-denied");
 
   const activeTenant = profile.activeMembership?.tenants;

@@ -60,11 +60,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let bankSubject: string | undefined;
+    let bankCategory: string | undefined;
+
     if (bankId) {
       const supabase = await createServerSupabaseClient();
       const { data: bankRecord, error: bankErr } = await supabase
         .from("question_banks")
-        .select("id, tenant_id")
+        .select("id, tenant_id, name, subject, category")
         .eq("id", bankId)
         .eq("tenant_id", authContext.tenantId)
         .maybeSingle();
@@ -75,6 +78,8 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
+      bankSubject = bankRecord.subject || bankRecord.name;
+      bankCategory = bankRecord.category;
     } else if (saveAsDraft) {
       return NextResponse.json(
         { error: "Target Question Bank is required to save generated questions." },
@@ -86,6 +91,8 @@ export async function POST(request: NextRequest) {
       tenantId: authContext.tenantId,
       userId: authContext.userId,
       bankId,
+      subject: bankSubject,
+      category: bankCategory,
       topic: topic.trim(),
       subtopic: typeof subtopic === "string" ? subtopic.trim() : undefined,
       difficulty,

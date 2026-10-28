@@ -4,8 +4,13 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, FolderPlus, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, FolderPlus, Loader2, AlertCircle, BookOpen } from "lucide-react";
 import { BankCategory, BankSharingPolicy } from "@/types/database";
+import {
+  STANDARD_SUBJECTS,
+  getDefaultCategoryForSubject,
+  normalizeSubjectName,
+} from "@/modules/question-bank/services/subject-constants";
 
 interface CreateQuestionBankModalProps {
   isOpen: boolean;
@@ -33,6 +38,8 @@ export function CreateQuestionBankModal({
   onClose,
   onSuccess,
 }: CreateQuestionBankModalProps) {
+  const [subjectMode, setSubjectMode] = useState<string>("");
+  const [customSubject, setCustomSubject] = useState("");
   const [name, setName] = useState("");
   const [category, setCategory] = useState<BankCategory>("CODING");
   const [description, setDescription] = useState("");
@@ -44,6 +51,8 @@ export function CreateQuestionBankModal({
   if (!isOpen) return null;
 
   const resetForm = () => {
+    setSubjectMode("");
+    setCustomSubject("");
     setName("");
     setCategory("CODING");
     setDescription("");
@@ -55,6 +64,32 @@ export function CreateQuestionBankModal({
     if (isSubmitting) return;
     resetForm();
     onClose();
+  };
+
+  const handleSubjectChange = (newSubjectMode: string) => {
+    setSubjectMode(newSubjectMode);
+    if (newSubjectMode && newSubjectMode !== "CUSTOM") {
+      const standard = STANDARD_SUBJECTS.find((s) => s.canonicalName === newSubjectMode);
+      if (standard) {
+        setCategory(standard.defaultCategory);
+        // If current name matches another standard subject or is empty, suggest the new subject as name
+        const isStandardName = STANDARD_SUBJECTS.some((s) => s.canonicalName === name) || !name.trim();
+        if (isStandardName) {
+          setName(standard.canonicalName);
+        }
+      }
+    } else if (newSubjectMode === "CUSTOM") {
+      if (customSubject.trim() && (!name.trim() || STANDARD_SUBJECTS.some((s) => s.canonicalName === name))) {
+        setName(customSubject.trim());
+      }
+    }
+  };
+
+  const handleCustomSubjectChange = (val: string) => {
+    setCustomSubject(val);
+    if (!name.trim() || STANDARD_SUBJECTS.some((s) => s.canonicalName === name)) {
+      setName(val);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,16 +109,24 @@ export function CreateQuestionBankModal({
 
     setIsSubmitting(true);
 
+    const payload: Record<string, any> = {
+      name: cleanName,
+      category,
+      description: description.trim() || undefined,
+      sharing_policy: sharingPolicy,
+    };
+
+    if (subjectMode && subjectMode !== "CUSTOM") {
+      payload.subject = subjectMode;
+    } else if (subjectMode === "CUSTOM" && customSubject.trim()) {
+      payload.subject = normalizeSubjectName(customSubject.trim());
+    }
+
     try {
       const res = await fetch("/api/questions/banks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: cleanName,
-          category,
-          description: description.trim() || undefined,
-          sharing_policy: sharingPolicy,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -110,7 +153,7 @@ export function CreateQuestionBankModal({
       aria-modal="true"
       aria-labelledby="create-bank-modal-title"
     >
-      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
+      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150 my-8">
         {/* Header */}
         <div className="flex items-start justify-between p-5 sm:p-6 border-b border-border bg-card">
           <div className="flex items-center gap-3">
@@ -125,7 +168,7 @@ export function CreateQuestionBankModal({
                 Create Question Bank
               </h2>
               <p className="text-xs text-text-secondary mt-0.5">
-                Establish a repository container for college questions and assessments.
+                Establish a subject-organized repository for college questions and assessments.
               </p>
             </div>
           </div>
@@ -152,7 +195,54 @@ export function CreateQuestionBankModal({
             </div>
           )}
 
-          {/* Name */}
+          {/* Academic Subject */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bank-subject-select" required className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-[#5052C9]" />
+                Academic Subject
+              </Label>
+              <span className="text-[11px] text-text-secondary">Defines syllabus scope</span>
+            </div>
+            <select
+              id="bank-subject-select"
+              value={subjectMode}
+              onChange={(e) => handleSubjectChange(e.target.value)}
+              disabled={isSubmitting}
+              className="w-full h-10 px-3 rounded-xl bg-input border border-border text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-[#5052C9]/20 focus:border-[#5052C9] transition-colors"
+            >
+              <option value="">Select Academic Subject (e.g. Computer Networks, DBMS, DSA)...</option>
+              {STANDARD_SUBJECTS.map((sub) => (
+                <option key={sub.canonicalName} value={sub.canonicalName}>
+                  {sub.canonicalName} ({sub.code})
+                </option>
+              ))}
+              <option value="CUSTOM">+ Other / Custom Academic Subject...</option>
+            </select>
+          </div>
+
+          {/* Custom Subject Input if selected */}
+          {subjectMode === "CUSTOM" && (
+            <div className="space-y-1.5 animate-in fade-in-50">
+              <Label htmlFor="bank-custom-subject" required className="text-xs font-bold text-text-primary">
+                Custom Subject Name
+              </Label>
+              <Input
+                id="bank-custom-subject"
+                type="text"
+                placeholder="e.g. Cloud Computing, Computer Architecture, Machine Learning"
+                value={customSubject}
+                onChange={(e) => handleCustomSubjectChange(e.target.value)}
+                disabled={isSubmitting}
+                required
+                maxLength={128}
+                className="bg-input border-border text-sm rounded-xl h-10 focus-visible:ring-[#5052C9]"
+                autoFocus
+              />
+            </div>
+          )}
+
+          {/* Question Bank Name */}
           <div className="space-y-1.5">
             <Label htmlFor="bank-name" required className="text-xs font-bold text-text-primary">
               Question Bank Name
@@ -160,24 +250,23 @@ export function CreateQuestionBankModal({
             <Input
               id="bank-name"
               type="text"
-              placeholder="e.g. Data Structures & Algorithms, Core Java, Quantitative Aptitude"
+              placeholder="e.g. Computer Networks, DSA - Fall 2026, Core DBMS"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isSubmitting}
               required
               maxLength={256}
               className="bg-input border-border text-sm rounded-xl h-10 focus-visible:ring-[#5052C9]"
-              autoFocus
             />
             <p className="text-[11px] text-text-secondary">
-              A distinctive title identifying the topic or syllabus scope.
+              A distinctive name for this Question Bank container.
             </p>
           </div>
 
           {/* Category */}
           <div className="space-y-1.5">
             <Label htmlFor="bank-category" required className="text-xs font-bold text-text-primary">
-              Subject Category
+              Broad Category
             </Label>
             <select
               id="bank-category"
@@ -205,8 +294,8 @@ export function CreateQuestionBankModal({
             </Label>
             <textarea
               id="bank-description"
-              rows={3}
-              placeholder="e.g. Curated campus placement questions covering binary trees, heaps, dynamic programming, and graphs."
+              rows={2}
+              placeholder="e.g. Curated placement questions covering OSI layers, TCP/IP, routing algorithms, and subnetting."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={isSubmitting}

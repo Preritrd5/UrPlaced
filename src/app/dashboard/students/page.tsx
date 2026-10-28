@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StudentRowActions } from "@/components/students/student-row-actions";
 import { BulkDeleteModal } from "@/components/students/bulk-delete-modal";
+import { ClientAuthGate } from "@/components/auth/client-auth-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ interface StudentsPageProps {
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const profile = await getCurrentUserProfile();
-  if (!profile) redirect("/auth/signin");
+  if (!profile) return <ClientAuthGate redirectTo="/auth/college/signin" />;
   if (!profile.isVerifiedMembership) redirect("/auth/access-denied");
 
   const userRole = profile.activeMembership?.role || "STUDENT";

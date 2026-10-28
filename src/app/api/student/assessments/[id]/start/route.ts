@@ -14,34 +14,23 @@ export async function POST(
     const body = await request.json().catch(() => ({}));
     const supabase = await createClient();
 
-    // 1. Resolve student ID
+    // 1. Resolve student ID (strictly via canonical user_id binding, no email fallback)
     let studentId: string | null = null;
     const { data: student } = await supabase
       .from("students")
-      .select("id")
+      .select("id, is_archived, academic_status")
       .eq("tenant_id", authContext.tenantId)
       .eq("user_id", authContext.userId)
       .maybeSingle();
 
-    if (student) {
+    if (student && !student.is_archived && student.academic_status === "ACTIVE") {
       studentId = student.id;
-    } else {
-      const { data: studentByEmail } = await supabase
-        .from("students")
-        .select("id")
-        .eq("tenant_id", authContext.tenantId)
-        .eq("email", authContext.email)
-        .maybeSingle();
-
-      if (studentByEmail) {
-        studentId = studentByEmail.id;
-      }
     }
 
     if (!studentId) {
       return NextResponse.json(
-        { error: "No student profile linked to this account." },
-        { status: 404 }
+        { error: "No active verified student profile linked to this account." },
+        { status: 403 }
       );
     }
 

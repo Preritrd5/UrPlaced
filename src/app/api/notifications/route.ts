@@ -28,9 +28,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "30", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
     const unreadOnly = searchParams.get("unreadOnly") === "true";
+    const collegeId = searchParams.get("collegeId") || user.app_metadata?.tenant_id || undefined;
 
     const result = await NotificationService.listNotifications({
       userId: user.id,
+      collegeId: collegeId || undefined,
       limit: isNaN(limit) ? 30 : limit,
       offset: isNaN(offset) ? 0 : offset,
       unreadOnly,

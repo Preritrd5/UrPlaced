@@ -73,6 +73,8 @@ export interface CreateNotificationResult {
 
 export interface ListNotificationsOptions {
   userId: string;
+  collegeId?: string;
+  tenantId?: string;
   limit?: number;
   offset?: number;
   unreadOnly?: boolean;

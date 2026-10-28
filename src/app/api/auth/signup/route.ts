@@ -94,7 +94,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const eligibleCheck = await StudentService.findEligibleRosterBySrn(cleanSrn);
+      const requestedInstitutionId =
+        body.institutionId && typeof body.institutionId === "string" && body.institutionId.trim()
+          ? body.institutionId.trim()
+          : undefined;
+
+      const eligibleCheck = await StudentService.findEligibleRosterBySrn(
+        cleanSrn,
+        requestedInstitutionId
+      );
 
       if (eligibleCheck.status === "INVALID_SRN") {
         return NextResponse.json(
@@ -107,6 +115,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
+            code: "ALREADY_CLAIMED",
             error:
               "This Student Registration Number (SRN) has already been claimed by a registered account. Please sign in or contact your campus placement cell.",
           },
@@ -118,8 +127,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error:
-              "Your Student Registration Number (SRN) could not be matched to an active college roster record. Please contact your campus placement cell to be added to the official student list.",
+            code: "NOT_FOUND",
+            error: requestedInstitutionId
+              ? "Your Student Registration Number (SRN) could not be matched to an active roster record in the selected college. Please contact your campus placement cell."
+              : "Your Student Registration Number (SRN) could not be matched to an active college roster record. Please contact your campus placement cell to be added to the official student list.",
           },
           { status: 404 }
         );
@@ -129,8 +140,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
+            code: "AMBIGUOUS_SRN",
+            requiresInstitutionSelection: true,
             error:
-              "This SRN matches multiple institutional rosters. Registration cannot proceed automatically. Please contact your college placement cell.",
+              "This SRN matches multiple institutional rosters. Please select your college to continue.",
           },
           { status: 409 }
         );
@@ -145,6 +158,17 @@ export async function POST(request: NextRequest) {
 
       studentRosterRecord = eligibleCheck.roster;
       derivedStudentTenantId = studentRosterRecord.tenant_id;
+
+      // Invariant: If institution was explicitly requested, ensure it strictly matches derived roster tenant
+      if (requestedInstitutionId && requestedInstitutionId !== derivedStudentTenantId) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Selected college does not match the institutional roster for this SRN.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // 4. Provision isolated tenant for College accounts (or use derived tenant for Students)
@@ -250,6 +274,7 @@ export async function POST(request: NextRequest) {
         userId,
         fullName: cleanName,
         email: cleanEmail,
+        tenantId: derivedStudentTenantId || undefined,
       });
 
       if (!claimResult.success) {

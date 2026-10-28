@@ -11,6 +11,12 @@ import { PlacementMetricsService } from "@/modules/placement/services/placement-
 export async function GET(request: NextRequest) {
   try {
     const ctx = await requireAuthContext(Permissions.DASHBOARD_READ);
+
+    // Institutional boundary guard: Students are strictly forbidden from reading institutional command metrics
+    if (ctx.tenantRole === "STUDENT") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
     const academicYearId = request.nextUrl.searchParams.get("academicYearId") || undefined;
 
     const metrics = await PlacementMetricsService.getDashboardMetrics(ctx.tenantId, academicYearId);

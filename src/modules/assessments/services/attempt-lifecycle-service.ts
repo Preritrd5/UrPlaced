@@ -16,6 +16,10 @@ import {
 } from "@/types/database";
 import { QuestionService } from "@/modules/question-bank/services/question-service";
 import { AssessmentScoringService } from "./assessment-scoring-service";
+import {
+  studentMatchesCohort,
+  StudentCohortProfile,
+} from "./assignment-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export interface StartAttemptResult {
@@ -86,6 +90,41 @@ export class AttemptLifecycleService {
     const supabase = await createServerSupabaseClient();
     const now = new Date();
 
+    // 0. Verify candidate is an active, non-archived student in this college tenant
+    const { data: studentRecord, error: studentErr } = await supabase
+      .from("students")
+      .select(`
+        id,
+        is_archived,
+        academic_status,
+        department_id,
+        graduation_year,
+        degree,
+        department:departments(name, code)
+      `)
+      .eq("tenant_id", tenantId)
+      .eq("id", studentId)
+      .maybeSingle();
+
+    if (studentErr || !studentRecord || studentRecord.is_archived || studentRecord.academic_status !== "ACTIVE") {
+      return {
+        success: false,
+        error: "Student profile not found, inactive, or not authorized for this college.",
+      };
+    }
+
+    const rawDept = (studentRecord as any).department;
+    const dept = Array.isArray(rawDept) ? rawDept[0] : rawDept;
+    const studentProfile: StudentCohortProfile = {
+      id: studentRecord.id,
+      is_archived: studentRecord.is_archived,
+      academic_status: studentRecord.academic_status,
+      department_id: (studentRecord as any).department_id,
+      graduation_year: (studentRecord as any).graduation_year,
+      degree: (studentRecord as any).degree,
+      department: dept,
+    };
+
     // 1. Fetch assessment
     const { data: assessment, error: assErr } = await supabase
       .from("assessments")
@@ -111,28 +150,52 @@ export class AttemptLifecycleService {
       .select("*")
       .eq("tenant_id", tenantId)
       .eq("assessment_id", assessmentId)
+      .eq("status", "ACTIVE")
       .or(`student_id.eq.${studentId},student_id.is.null`);
+
+    if (!assignments || assignments.length === 0) {
+      return {
+        success: false,
+        error: "You are not assigned to this assessment.",
+      };
+    }
+
+    // Filter assignments that this student is actually eligible for:
+    // Either directly assigned to this student, or matching cohort criteria
+    const eligibleAssignments = assignments.filter((item: any) => {
+      if (item.student_id === studentId) {
+        return true;
+      }
+      if (item.student_id == null) {
+        return studentMatchesCohort(studentProfile, item.cohort_name);
+      }
+      return false;
+    });
+
+    if (eligibleAssignments.length === 0) {
+      return {
+        success: false,
+        error: "You are not assigned to this assessment.",
+      };
+    }
+
+    // Direct student assignment takes precedence over cohort-wide
+    const direct = eligibleAssignments.find((a) => a.student_id === studentId);
+    const assignment = direct || eligibleAssignments[0];
+    const matchedAssignmentId = assignment.id;
 
     let maxAllowedAttempts = assessment.allowed_attempts ?? 1;
     let windowStart: Date | null = null;
     let windowEnd: Date | null = null;
-    let matchedAssignmentId: string | null = null;
 
-    if (assignments && assignments.length > 0) {
-      // Direct student assignment takes precedence over cohort-wide
-      const direct = assignments.find((a) => a.student_id === studentId);
-      const assignment = direct || assignments[0];
-      matchedAssignmentId = assignment.id;
-
-      if (assignment.max_attempts_override != null) {
-        maxAllowedAttempts = assignment.max_attempts_override;
-      }
-      if (assignment.window_start) {
-        windowStart = new Date(assignment.window_start);
-      }
-      if (assignment.window_end) {
-        windowEnd = new Date(assignment.window_end);
-      }
+    if (assignment.max_attempts_override != null) {
+      maxAllowedAttempts = assignment.max_attempts_override;
+    }
+    if (assignment.window_start) {
+      windowStart = new Date(assignment.window_start);
+    }
+    if (assignment.window_end) {
+      windowEnd = new Date(assignment.window_end);
     }
 
     if (windowStart && now < windowStart) {
@@ -575,6 +638,7 @@ export class AttemptLifecycleService {
     }
 
     if (!isStaff) {
+      let currentStudentId: string | null = null;
       const { data: student } = await supabase
         .from("students")
         .select("id")
@@ -582,7 +646,11 @@ export class AttemptLifecycleService {
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (student && student.id !== attempt.student_id) {
+      if (student) {
+        currentStudentId = student.id;
+      }
+
+      if (!currentStudentId || currentStudentId !== attempt.student_id) {
         return {
           success: false,
           isReleased: false,

@@ -17,6 +17,7 @@ import {
 } from "@/types/database";
 import { QuestionValidator, McqOption, CodingAnswerKey } from "./question-validator";
 import { DuplicateDetector } from "./duplicate-detector";
+import { normalizeSubjectName } from "./subject-constants";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -47,6 +48,32 @@ export interface UpdateQuestionInput {
   source_reference?: string | null;
   license_type?: QuestionLicenseType;
   change_summary?: string;
+}
+
+export interface BulkAcceptOptions {
+  bankId?: string;
+  subject?: string;
+  topic?: string;
+  questionType?: QuestionType;
+  difficulty?: QuestionDifficulty;
+  search?: string;
+  questionIds?: string[];
+  reviewNotes?: string;
+  limit?: number;
+}
+
+export interface BulkAcceptResult {
+  success: boolean;
+  totalMatched: number;
+  acceptedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  skippedDetails: Array<{
+    questionId: string;
+    promptSnippet: string;
+    reason: string;
+  }>;
+  error?: string;
 }
 
 export class QuestionService {
@@ -441,6 +468,418 @@ export class QuestionService {
   }
 
   /**
+   * Retrieves the count of eligible unreviewed questions matching a given filter scope.
+   */
+  public static async getEligibleReviewCount(
+    tenantId: string,
+    options: {
+      bankId?: string;
+      subject?: string;
+      topic?: string;
+      questionType?: QuestionType;
+      difficulty?: QuestionDifficulty;
+      search?: string;
+    } = {}
+  ): Promise<{ eligibleCount: number; totalCount: number }> {
+    const supabase = await createServerSupabaseClient();
+
+    // 1. Resolve matching bank IDs if subject is provided
+    let matchingBankIds: string[] | undefined;
+    if (options.subject) {
+      const norm = normalizeSubjectName(options.subject);
+      const { data: banks } = await supabase
+        .from("question_banks")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .ilike("subject", `%${norm}%`);
+
+      matchingBankIds = (banks || []).map((b: any) => b.id);
+      if (matchingBankIds.length === 0) {
+        return { eligibleCount: 0, totalCount: 0 };
+      }
+    }
+
+    // 2. Resolve matching question IDs if topic is provided
+    let matchingTopicQIds: string[] | undefined;
+    if (options.topic) {
+      const cleanTopic = options.topic.trim().toLowerCase();
+      const { data: versions } = await supabase
+        .from("question_versions")
+        .select("question_id")
+        .eq("tenant_id", tenantId)
+        .contains("topic_tags", [cleanTopic]);
+
+      matchingTopicQIds = [...new Set((versions || []).map((v: any) => v.question_id))];
+      if (matchingTopicQIds.length === 0) {
+        return { eligibleCount: 0, totalCount: 0 };
+      }
+    }
+
+    let query = supabase
+      .from("questions")
+      .select("id, current_version_id, lifecycle_status")
+      .eq("tenant_id", tenantId)
+      .in("lifecycle_status", ["DRAFT", "PENDING_REVIEW", "APPROVED"]);
+
+    if (options.bankId) {
+      query = query.eq("bank_id", options.bankId);
+    } else if (matchingBankIds) {
+      query = query.in("bank_id", matchingBankIds);
+    }
+    if (matchingTopicQIds) {
+      query = query.in("id", matchingTopicQIds);
+    }
+    if (options.questionType) {
+      query = query.eq("question_type", options.questionType);
+    }
+
+    const { data: questions } = await query;
+    const candidateQuestions = questions || [];
+    if (candidateQuestions.length === 0) {
+      return { eligibleCount: 0, totalCount: 0 };
+    }
+
+    // Fetch versions for candidate questions
+    const versionIds = candidateQuestions
+      .map((q: any) => q.current_version_id)
+      .filter((id: string): id is string => Boolean(id));
+
+    if (versionIds.length === 0) {
+      return { eligibleCount: 0, totalCount: candidateQuestions.length };
+    }
+
+    let vQuery = supabase
+      .from("question_versions")
+      .select("id, difficulty, prompt")
+      .eq("tenant_id", tenantId)
+      .in("id", versionIds)
+      .eq("review_status", "UNREVIEWED");
+
+    if (options.difficulty) {
+      vQuery = vQuery.eq("difficulty", options.difficulty);
+    }
+    if (options.search) {
+      vQuery = vQuery.ilike("prompt", `%${options.search.trim()}%`);
+    }
+
+    const { data: unreviewedVersions } = await vQuery;
+
+    const eligibleCount = (unreviewedVersions || []).length;
+    return {
+      eligibleCount,
+      totalCount: candidateQuestions.length,
+    };
+  }
+
+  /**
+   * Bulk accepts eligible questions matching current filter scope or an explicit ID list.
+   * Promotes valid unreviewed versions to VERIFIED_CORRECT and questions to APPROVED.
+   */
+  public static async bulkAcceptQuestions(
+    tenantId: string,
+    userId: string,
+    options: BulkAcceptOptions = {}
+  ): Promise<BulkAcceptResult> {
+    const supabase = await createServerSupabaseClient();
+
+    // 1. Verify Bank if bankId is explicitly provided
+    if (options.bankId) {
+      const { data: bank, error: bErr } = await supabase
+        .from("question_banks")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("id", options.bankId)
+        .maybeSingle();
+
+      if (bErr || !bank) {
+        return {
+          success: false,
+          totalMatched: 0,
+          acceptedCount: 0,
+          skippedCount: 0,
+          failedCount: 0,
+          skippedDetails: [],
+          error: "Selected Question Bank not found or does not belong to your college.",
+        };
+      }
+    }
+
+    // 2. Resolve matching bank IDs if subject is provided
+    let matchingBankIds: string[] | undefined;
+    if (options.subject) {
+      const norm = normalizeSubjectName(options.subject);
+      const { data: banks } = await supabase
+        .from("question_banks")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .ilike("subject", `%${norm}%`);
+
+      matchingBankIds = (banks || []).map((b: any) => b.id);
+      if (matchingBankIds.length === 0) {
+        return {
+          success: true,
+          totalMatched: 0,
+          acceptedCount: 0,
+          skippedCount: 0,
+          failedCount: 0,
+          skippedDetails: [],
+        };
+      }
+    }
+
+    // 3. Resolve matching question IDs if topic is provided
+    let matchingTopicQIds: string[] | undefined;
+    if (options.topic) {
+      const cleanTopic = options.topic.trim().toLowerCase();
+      const { data: versions } = await supabase
+        .from("question_versions")
+        .select("question_id")
+        .eq("tenant_id", tenantId)
+        .contains("topic_tags", [cleanTopic]);
+
+      matchingTopicQIds = [...new Set((versions || []).map((v: any) => v.question_id))];
+      if (matchingTopicQIds.length === 0) {
+        return {
+          success: true,
+          totalMatched: 0,
+          acceptedCount: 0,
+          skippedCount: 0,
+          failedCount: 0,
+          skippedDetails: [],
+        };
+      }
+    }
+
+    // 4. Build Question Query
+    let query = supabase
+      .from("questions")
+      .select(`
+        id,
+        tenant_id,
+        bank_id,
+        question_type,
+        current_version_id,
+        lifecycle_status
+      `)
+      .eq("tenant_id", tenantId)
+      // Only unarchived/unwithdrawn questions are candidates
+      .in("lifecycle_status", ["DRAFT", "PENDING_REVIEW", "APPROVED"]);
+
+    if (options.questionIds && options.questionIds.length > 0) {
+      query = query.in("id", options.questionIds);
+    }
+    if (options.bankId) {
+      query = query.eq("bank_id", options.bankId);
+    } else if (matchingBankIds) {
+      query = query.in("bank_id", matchingBankIds);
+    }
+    if (matchingTopicQIds) {
+      query = query.in("id", matchingTopicQIds);
+    }
+    if (options.questionType) {
+      query = query.eq("question_type", options.questionType);
+    }
+
+    // Bounded batch limit
+    const batchLimit = Math.min(Math.max(1, options.limit || 250), 500);
+    query = query.limit(batchLimit);
+
+    const { data: questions, error: qErr } = await query;
+    if (qErr) {
+      return {
+        success: false,
+        totalMatched: 0,
+        acceptedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        skippedDetails: [],
+        error: qErr.message,
+      };
+    }
+
+    const candidateQuestions = questions || [];
+    if (candidateQuestions.length === 0) {
+      return {
+        success: true,
+        totalMatched: 0,
+        acceptedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        skippedDetails: [],
+      };
+    }
+
+    // Fetch versions for candidate questions
+    const versionIds = candidateQuestions
+      .map((q: any) => q.current_version_id)
+      .filter((id: string): id is string => Boolean(id));
+
+    if (versionIds.length === 0) {
+      return {
+        success: false,
+        totalMatched: candidateQuestions.length,
+        acceptedCount: 0,
+        skippedCount: 0,
+        failedCount: candidateQuestions.length,
+        skippedDetails: [],
+        error: "No active question versions found for selected candidates.",
+      };
+    }
+
+    const { data: versions, error: vErr } = await supabase
+      .from("question_versions")
+      .select("*")
+      .in("id", versionIds);
+
+    if (vErr) {
+      return {
+        success: false,
+        totalMatched: candidateQuestions.length,
+        acceptedCount: 0,
+        skippedCount: 0,
+        failedCount: candidateQuestions.length,
+        skippedDetails: [],
+        error: vErr.message,
+      };
+    }
+
+    const versionMap = new Map<string, any>();
+    (versions || []).forEach((v: any) => versionMap.set(v.id, v));
+
+    let acceptedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
+    const skippedDetails: Array<{ questionId: string; promptSnippet: string; reason: string }> = [];
+
+    const toAcceptVersionIds: string[] = [];
+    const toAcceptQuestionIds: string[] = [];
+
+    for (const q of candidateQuestions) {
+      const v = q.current_version_id ? versionMap.get(q.current_version_id) : null;
+      const snippet = v?.prompt ? v.prompt.slice(0, 60) : `Question ${q.id.slice(0, 8)}`;
+
+      if (!v) {
+        skippedCount++;
+        skippedDetails.push({
+          questionId: q.id,
+          promptSnippet: snippet,
+          reason: "No current question version found.",
+        });
+        continue;
+      }
+
+      if (options.difficulty && v.difficulty !== options.difficulty) {
+        continue;
+      }
+
+      if (options.search && !v.prompt.toLowerCase().includes(options.search.trim().toLowerCase())) {
+        continue;
+      }
+
+      // Check if already verified
+      if (v.review_status === "VERIFIED_CORRECT") {
+        skippedCount++;
+        skippedDetails.push({
+          questionId: q.id,
+          promptSnippet: snippet,
+          reason: "Answer key is already verified correct.",
+        });
+        continue;
+      }
+
+      // Check if flagged for revision or rejected
+      if (v.review_status === "NEEDS_REVISION" || v.review_status === "REJECTED") {
+        skippedCount++;
+        skippedDetails.push({
+          questionId: q.id,
+          promptSnippet: snippet,
+          reason: `Question version is marked '${v.review_status}'. Requires manual revision.`,
+        });
+        continue;
+      }
+
+      // Structural validation of answer key
+      const validation = QuestionValidator.validate({
+        question_type: q.question_type,
+        prompt: v.prompt,
+        difficulty: v.difficulty,
+        options: v.options,
+        answer_key: v.answer_key,
+        explanation: v.explanation,
+      });
+
+      if (!validation.isValid) {
+        skippedCount++;
+        skippedDetails.push({
+          questionId: q.id,
+          promptSnippet: snippet,
+          reason: `Validation failed: ${validation.errors.join("; ")}`,
+        });
+        continue;
+      }
+
+      toAcceptVersionIds.push(v.id);
+      toAcceptQuestionIds.push(q.id);
+    }
+
+    // Process accepted questions in batch
+    if (toAcceptVersionIds.length > 0) {
+      const now = new Date().toISOString();
+      const notes = options.reviewNotes?.trim() || "Bulk accepted via Placement Head review";
+
+      // Update question_versions
+      const { error: vUpErr } = await supabase
+        .from("question_versions")
+        .update({
+          review_status: "VERIFIED_CORRECT",
+          reviewed_by: userId,
+          review_notes: notes,
+        })
+        .eq("tenant_id", tenantId)
+        .in("id", toAcceptVersionIds);
+
+      if (vUpErr) {
+        failedCount += toAcceptVersionIds.length;
+        return {
+          success: false,
+          totalMatched: candidateQuestions.length,
+          acceptedCount: 0,
+          skippedCount,
+          failedCount,
+          skippedDetails,
+          error: `Failed to update question versions: ${vUpErr.message}`,
+        };
+      }
+
+      // Update questions lifecycle to APPROVED (only if currently DRAFT or PENDING_REVIEW; never downgrade or auto-publish)
+      const { error: qUpErr } = await supabase
+        .from("questions")
+        .update({
+          lifecycle_status: "APPROVED",
+          updated_at: now,
+        })
+        .eq("tenant_id", tenantId)
+        .in("id", toAcceptQuestionIds)
+        .in("lifecycle_status", ["DRAFT", "PENDING_REVIEW"]);
+
+      if (qUpErr) {
+        console.error("Warning: questions lifecycle update error", qUpErr);
+      }
+
+      acceptedCount = toAcceptVersionIds.length;
+    }
+
+    return {
+      success: true,
+      totalMatched: candidateQuestions.length,
+      acceptedCount,
+      skippedCount,
+      failedCount,
+      skippedDetails,
+    };
+  }
+
+  /**
    * Publishes an approved question making it usable in assessments.
    * Invariant: Requires verified answer key!
    */
@@ -662,14 +1101,14 @@ export class QuestionService {
     if (question.bank_id) {
       let bRes = await supabase
         .from("question_banks")
-        .select("id, name, category, sharing_policy")
+        .select("id, name, subject, category, sharing_policy")
         .eq("id", question.bank_id)
         .maybeSingle();
 
       if (!bRes?.data && admin) {
         bRes = await admin
           .from("question_banks")
-          .select("id, name, category, sharing_policy")
+          .select("id, name, subject, category, sharing_policy")
           .eq("id", question.bank_id)
           .maybeSingle();
       }
@@ -780,6 +1219,8 @@ export class QuestionService {
     userRole: string,
     options: {
       bankId?: string;
+      subject?: string;
+      topic?: string;
       questionType?: QuestionType;
       difficulty?: QuestionDifficulty;
       lifecycleStatus?: QuestionLifecycleStatus;
@@ -789,6 +1230,38 @@ export class QuestionService {
     } = {}
   ) {
     const supabase = await createServerSupabaseClient();
+
+    // 1. Resolve matching bank IDs if subject is provided
+    let matchingBankIds: string[] | undefined;
+    if (options.subject) {
+      const norm = normalizeSubjectName(options.subject);
+      const { data: banks } = await supabase
+        .from("question_banks")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .ilike("subject", `%${norm}%`);
+
+      matchingBankIds = (banks || []).map((b: any) => b.id);
+      if (matchingBankIds.length === 0) {
+        return { questions: [], total: 0 };
+      }
+    }
+
+    // 2. Resolve matching question IDs if topic is provided
+    let matchingTopicQIds: string[] | undefined;
+    if (options.topic) {
+      const cleanTopic = options.topic.trim().toLowerCase();
+      const { data: versions } = await supabase
+        .from("question_versions")
+        .select("question_id")
+        .eq("tenant_id", tenantId)
+        .contains("topic_tags", [cleanTopic]);
+
+      matchingTopicQIds = [...new Set((versions || []).map((v: any) => v.question_id))];
+      if (matchingTopicQIds.length === 0) {
+        return { questions: [], total: 0 };
+      }
+    }
 
     let query = supabase
       .from("questions")
@@ -802,6 +1275,12 @@ export class QuestionService {
         lifecycle_status,
         created_at,
         updated_at,
+        bank:question_banks(
+          id,
+          name,
+          subject,
+          category
+        ),
         current_version:question_versions!fk_questions_current_version(
           id,
           version_number,
@@ -835,7 +1314,14 @@ export class QuestionService {
 
     if (options.bankId) {
       query = query.eq("bank_id", options.bankId);
+    } else if (matchingBankIds) {
+      query = query.in("bank_id", matchingBankIds);
     }
+
+    if (matchingTopicQIds) {
+      query = query.in("id", matchingTopicQIds);
+    }
+
     if (options.questionType) {
       query = query.eq("question_type", options.questionType);
     }
@@ -871,13 +1357,29 @@ export class QuestionService {
   /**
    * Question bank container management
    */
-  public static async listBanks(tenantId: string) {
+  public static async listBanks(
+    tenantId: string,
+    options?: {
+      subject?: string;
+      category?: BankCategory;
+    }
+  ) {
     const supabase = await createServerSupabaseClient();
-    return supabase
+    let query = supabase
       .from("question_banks")
       .select("*")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+      .eq("tenant_id", tenantId);
+
+    if (options?.subject) {
+      const norm = normalizeSubjectName(options.subject);
+      query = query.ilike("subject", `%${norm}%`);
+    }
+
+    if (options?.category) {
+      query = query.eq("category", options.category);
+    }
+
+    return query.order("created_at", { ascending: false });
   }
 
   public static async createBank(
@@ -885,6 +1387,7 @@ export class QuestionService {
     userId: string,
     data: {
       name: string;
+      subject?: string;
       description?: string;
       category: BankCategory;
       sharing_policy?: BankSharingPolicy;
@@ -897,6 +1400,8 @@ export class QuestionService {
         error: { message: "Question Bank name is required." },
       };
     }
+
+    const cleanSubject = normalizeSubjectName(data.subject || cleanName);
 
     const supabase = await createServerSupabaseClient();
 
@@ -920,6 +1425,7 @@ export class QuestionService {
       .insert({
         tenant_id: tenantId,
         name: cleanName,
+        subject: cleanSubject,
         description: data.description?.trim() || null,
         category: data.category,
         sharing_policy: data.sharing_policy || "COLLEGE_PRIVATE",

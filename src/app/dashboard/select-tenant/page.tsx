@@ -1,21 +1,34 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Building2, ArrowRight } from "lucide-react";
-import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = "force-dynamic";
+export default function SelectTenantPage() {
+  const auth = useAuthContext();
+  const router = useRouter();
 
-export default async function SelectTenantPage() {
-  const profile = await getCurrentUserProfile();
+  React.useEffect(() => {
+    if (!auth.isLoading && !auth.isAuthenticated) {
+      router.push("/auth/college/signin");
+    }
+  }, [auth.isLoading, auth.isAuthenticated, router]);
 
-  if (!profile) {
-    redirect("/auth/signin");
+  if (auth.isLoading) {
+    return (
+      <div className="space-y-6 max-w-xl mx-auto py-8 animate-pulse">
+        <div className="h-8 bg-card/60 rounded-xl w-1/2 mx-auto" />
+        <div className="h-20 bg-card rounded-xl border border-border" />
+      </div>
+    );
   }
 
-  const activeMemberships = profile.memberships.filter((m) => m.status === "ACTIVE");
+  const activeTenants = auth.availableTenants || [];
 
   return (
     <div className="space-y-6 max-w-xl mx-auto py-8">
@@ -29,7 +42,7 @@ export default async function SelectTenantPage() {
       </div>
 
       <div className="space-y-3">
-        {activeMemberships.map((m) => (
+        {activeTenants.map((m) => (
           <Card key={m.id} className="hover:border-primary/50 transition-colors">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -38,17 +51,16 @@ export default async function SelectTenantPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-sm text-text-primary font-heading">
-                    {m.tenants?.name || "College Workspace"}
+                    {m.name || "College Workspace"}
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-xs text-text-muted">/{m.tenants?.slug}</span>
                     <Badge variant="outline" className="text-[10px] py-0 px-1.5">{m.role}</Badge>
                   </div>
                 </div>
               </div>
 
               <Button asChild variant="primary" size="sm">
-                <Link href={`/dashboard?tenantId=${m.tenant_id}`} className="inline-flex items-center gap-1">
+                <Link href={`/dashboard?tenantId=${m.id}`} className="inline-flex items-center gap-1">
                   Enter <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </Button>

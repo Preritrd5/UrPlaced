@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StudentRowActions } from "@/components/students/student-row-actions";
+import { ClientAuthGate } from "@/components/auth/client-auth-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ interface StudentDetailPageProps {
 export default async function StudentDetailPage({ params }: StudentDetailPageProps) {
   const { id } = await params;
   const profile = await getCurrentUserProfile();
-  if (!profile) redirect("/auth/signin");
+  if (!profile) return <ClientAuthGate redirectTo="/auth/college/signin" />;
 
   const activeTenant = profile.activeMembership?.tenants;
   if (!activeTenant) redirect("/auth/signin");
