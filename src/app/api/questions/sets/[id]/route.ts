@@ -103,7 +103,12 @@ export async function DELETE(
       return NextResponse.json({ error: res.error }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: "Question set deleted successfully." });
+    return NextResponse.json({
+      success: true,
+      deleted: res.deleted,
+      archived: res.archived,
+      message: res.message || "Question set deleted successfully.",
+    });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
       return NextResponse.json({ error: err.message }, { status: 403 });

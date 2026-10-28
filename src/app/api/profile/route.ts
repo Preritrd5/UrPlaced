@@ -89,14 +89,19 @@ export async function GET() {
             admin.from("students").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
             admin.from("recruitment_drives").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
             admin.from("companies").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
-            admin.from("tenant_memberships").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+            admin
+              .from("tenant_memberships")
+              .select("id", { count: "exact", head: true })
+              .eq("tenant_id", tenantId)
+              .eq("status", "ACTIVE")
+              .in("role", ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"]),
           ]);
 
           collegeMetrics = {
             activeStudents: studentsRes.count || 0,
             activeDrives: drivesRes.count || 0,
             partnerCompanies: companiesRes.count || 0,
-            staffMembers: membersRes.count || 1,
+            staffMembers: typeof membersRes.count === "number" && membersRes.count > 0 ? membersRes.count : 1,
           };
         } catch {
           collegeMetrics = {

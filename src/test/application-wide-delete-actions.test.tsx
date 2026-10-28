@@ -216,7 +216,7 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       expect(mockQuestionSetItems.filter((i) => i.set_id === qsetId).length).toBe(0);
     });
 
-    it("rejects deletion of a locked question set snapshot to preserve historical integrity", async () => {
+    it("safely archives a locked question set snapshot to preserve historical integrity", async () => {
       const qsetId = "qset-locked-1";
       mockQuestionSets.push({
         id: qsetId,
@@ -228,12 +228,12 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       });
 
       const res = await QuestionSetService.deleteSet(tenantA, qsetId);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("locked or published");
-      expect(mockQuestionSets.find((s) => s.id === qsetId)).toBeDefined();
+      expect(res.success).toBe(true);
+      expect(res.archived).toBe(true);
+      expect(mockQuestionSets.find((s) => s.id === qsetId)?.status).toBe("ARCHIVED");
     });
 
-    it("rejects deletion of a question set referenced by an existing assessment", async () => {
+    it("safely archives a question set referenced by an existing assessment", async () => {
       const qsetId = "qset-referenced-1";
       mockQuestionSets.push({
         id: qsetId,
@@ -253,9 +253,9 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       });
 
       const res = await QuestionSetService.deleteSet(tenantA, qsetId);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("referenced by one or more assessments");
-      expect(mockQuestionSets.find((s) => s.id === qsetId)).toBeDefined();
+      expect(res.success).toBe(true);
+      expect(res.archived).toBe(true);
+      expect(mockQuestionSets.find((s) => s.id === qsetId)?.status).toBe("ARCHIVED");
     });
 
     it("enforces strict tenant isolation: rejects deleting another institution's question set", async () => {
@@ -420,29 +420,29 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       expect(mockAssessments.find((a) => a.id === assessId)).toBeUndefined();
     });
 
-    it("rejects deletion of a PUBLISHED assessment to protect institutional records", async () => {
-      const assessId = "assess-published";
+    it("successfully deletes an unassigned PUBLISHED assessment with zero attempts", async () => {
+      const assessId = "assess-published-zero-attempts";
       mockAssessments.push({
         id: assessId,
         tenant_id: tenantA,
-        title: "Live Campus Drive Test",
+        title: "Live Campus Drive Test (0 Attempts)",
         status: "PUBLISHED",
         question_set_id: "qset-1",
       });
 
       const res = await AssessmentService.deleteAssessment(tenantA, assessId);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("Only draft assessments can be deleted");
-      expect(mockAssessments.find((a) => a.id === assessId)).toBeDefined();
+      expect(res.success).toBe(true);
+      expect(res.deleted).toBe(true);
+      expect(mockAssessments.find((a) => a.id === assessId)).toBeUndefined();
     });
 
-    it("rejects deletion of an assessment with student attempts recorded", async () => {
+    it("safely archives an assessment when candidate attempts are recorded", async () => {
       const assessId = "assess-with-attempts";
       mockAssessments.push({
         id: assessId,
         tenant_id: tenantA,
         title: "Trial Test with Student Submissions",
-        status: "DRAFT",
+        status: "PUBLISHED",
         question_set_id: "qset-1",
       });
 
@@ -455,9 +455,9 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       });
 
       const res = await AssessmentService.deleteAssessment(tenantA, assessId);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("student attempts have already been recorded");
-      expect(mockAssessments.find((a) => a.id === assessId)).toBeDefined();
+      expect(res.success).toBe(true);
+      expect(res.archived).toBe(true);
+      expect(mockAssessments.find((a) => a.id === assessId)?.status).toBe("ARCHIVED");
     });
 
     it("rejects deletion of an assessment with active cohort assignments", async () => {
@@ -519,7 +519,7 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       expect(mockQuestionVersions.filter((v) => v.question_id === qId).length).toBe(0);
     });
 
-    it("rejects deleting an APPROVED question (directing to Archive/Withdraw instead)", async () => {
+    it("successfully deletes an unreferenced APPROVED question", async () => {
       const qId = "q-approved-1";
       mockQuestions.push({
         id: qId,
@@ -528,17 +528,17 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       });
 
       const res = await QuestionService.deleteQuestion(tenantA, qId);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("Only draft questions can be permanently deleted");
-      expect(mockQuestions.find((q) => q.id === qId)).toBeDefined();
+      expect(res.success).toBe(true);
+      expect(res.deleted).toBe(true);
+      expect(mockQuestions.find((q) => q.id === qId)).toBeUndefined();
     });
 
-    it("rejects deleting a question referenced in Question Sets", async () => {
+    it("safely archives a question referenced in Question Sets", async () => {
       const qId = "q-in-set-1";
       mockQuestions.push({
         id: qId,
         tenant_id: tenantA,
-        lifecycle_status: "DRAFT",
+        lifecycle_status: "APPROVED",
       });
 
       mockQuestionSetItems.push({
@@ -549,9 +549,9 @@ describe("Application-Wide Delete Actions Audit & Verification Suite", () => {
       });
 
       const res = await QuestionService.deleteQuestion(tenantA, qId);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("referenced in one or more question sets");
-      expect(mockQuestions.find((q) => q.id === qId)).toBeDefined();
+      expect(res.success).toBe(true);
+      expect(res.archived).toBe(true);
+      expect(mockQuestions.find((q) => q.id === qId)?.lifecycle_status).toBe("ARCHIVED");
     });
 
     it("successfully deletes an empty Question Bank", async () => {

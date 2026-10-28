@@ -258,10 +258,11 @@ export default function QuestionSetsPage() {
       if (res.ok) {
         setDeleteModalOpen(false);
         setActiveSetDetail(null);
-        toast.success("Question set deleted successfully.");
+        toast.success(data.message || (data.archived ? "Question set safely retired and archived." : "Question set deleted successfully."));
         const remainingSets = sets.filter((s) => s.id !== activeSetId);
         setSets(remainingSets);
         setActiveSetId(remainingSets.length > 0 ? remainingSets[0].id : null);
+        loadSets();
       } else {
         toast.error(data.error || "Failed to delete question set.");
       }
@@ -443,17 +444,20 @@ export default function QuestionSetsPage() {
                     </p>
                   </div>
 
-                  {!activeSetDetail.set.is_locked && (
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {canManageQuestions && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setDeleteModalOpen(true)}
                         className="text-xs h-8 text-status-danger hover:bg-[var(--color-danger-subtle)] hover:text-status-danger flex items-center gap-1.5"
+                        title={activeSetDetail.set.is_locked || activeSetDetail.set.status === "PUBLISHED" ? "Retire Question Set" : "Delete Question Set"}
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Delete Set
+                        <Trash2 className="w-3.5 h-3.5" /> {activeSetDetail.set.is_locked || activeSetDetail.set.status === "PUBLISHED" ? "Retire Set" : "Delete Set"}
                       </Button>
+                    )}
+                    {!activeSetDetail.set.is_locked && (
                       <Button
                         type="button"
                         variant="primary"
@@ -464,8 +468,8 @@ export default function QuestionSetsPage() {
                       >
                         <Lock className="w-3.5 h-3.5" /> Lock & Publish Snapshot
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="flex items-center gap-4 text-xs text-text-secondary border-t border-border pt-3">
@@ -707,14 +711,18 @@ export default function QuestionSetsPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete / Retire Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={deleteModalOpen}
         onOpenChange={setDeleteModalOpen}
         onConfirm={handleConfirmDeleteSet}
-        title="Delete Question Set"
-        description={`Are you sure you want to delete the question set "${activeSetDetail?.set?.name}"? All question associations within this draft set will be permanently removed. This action cannot be undone.`}
-        confirmText="Delete Question Set"
+        title={activeSetDetail?.set?.is_locked || activeSetDetail?.set?.status === "PUBLISHED" ? "Retire Question Set" : "Delete Question Set"}
+        description={
+          activeSetDetail?.set?.is_locked || activeSetDetail?.set?.status === "PUBLISHED"
+            ? `Are you sure you want to retire "${activeSetDetail?.set?.name}"? Published question set snapshots will be archived from active blueprints to protect existing assessments and candidate audit history.`
+            : `Are you sure you want to delete the question set "${activeSetDetail?.set?.name}"? All question associations within this draft set will be permanently removed. This action cannot be undone.`
+        }
+        confirmText={activeSetDetail?.set?.is_locked || activeSetDetail?.set?.status === "PUBLISHED" ? "Retire Question Set" : "Delete Question Set"}
         isLoading={deleteLoading}
       />
 

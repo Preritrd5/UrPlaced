@@ -10,11 +10,13 @@ export async function POST(request: NextRequest) {
 
     let csvContent = "";
     let fileName = "upload.csv";
+    let bankId = "";
 
     const contentType = request.headers.get("content-type") || "";
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       const file = formData.get("file") as File | null;
+      bankId = (formData.get("bankId") as string) || "";
       if (!file) {
         return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
       }
@@ -22,6 +24,7 @@ export async function POST(request: NextRequest) {
       csvContent = await file.text();
     } else {
       const body = await request.json();
+      bankId = body.bankId || "";
       csvContent = body.csvContent || "";
       fileName = body.fileName || fileName;
     }
@@ -31,6 +34,24 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createServerSupabaseClient();
+
+    // Revalidate bank existence & tenant ownership if bankId is supplied
+    if (bankId) {
+      const { data: bankRecord, error: bankErr } = await supabase
+        .from("question_banks")
+        .select("id, tenant_id, name, category")
+        .eq("id", bankId)
+        .eq("tenant_id", authContext.tenantId)
+        .maybeSingle();
+
+      if (bankErr || !bankRecord) {
+        return NextResponse.json(
+          { error: "Target Question Bank not found or does not belong to your college." },
+          { status: 400 }
+        );
+      }
+    }
+
     const { data: existingVersions } = await supabase
       .from("question_versions")
       .select("question_id, id, prompt, fingerprint")
@@ -51,7 +72,10 @@ export async function POST(request: NextRequest) {
       existingItems
     );
 
-    return NextResponse.json(preview);
+    return NextResponse.json({
+      ...preview,
+      bankId: bankId || undefined,
+    });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
       return NextResponse.json({ error: err.message }, { status: 403 });

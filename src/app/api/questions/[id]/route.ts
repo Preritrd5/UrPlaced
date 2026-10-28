@@ -71,7 +71,7 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const actionParam = searchParams.get("action");
 
-    if (actionParam === "DELETE") {
+    if (actionParam === "DELETE" || !actionParam) {
       const res = await QuestionService.deleteQuestion(
         authContext.tenantId,
         id
@@ -81,7 +81,12 @@ export async function DELETE(
         return NextResponse.json({ error: res.error }, { status: 400 });
       }
 
-      return NextResponse.json({ success: true, deleted: true, message: "Question permanently deleted." });
+      return NextResponse.json({
+        success: true,
+        deleted: res.deleted ?? !res.archived,
+        archived: res.archived ?? false,
+        message: res.message || (res.archived ? "Question safely archived." : "Question permanently deleted."),
+      });
     }
 
     const action = actionParam === "WITHDRAW" ? "WITHDRAWN" : "ARCHIVED";

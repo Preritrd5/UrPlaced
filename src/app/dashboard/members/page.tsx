@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, UserPlus, Users, CheckCircle2, ShieldAlert, Mail, RotateCw, XCircle, Clock, Trash2 } from "lucide-react";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
-import { listTenantMembers, updateMemberStatus } from "@/modules/tenancy/services/membership-service";
+import { listTenantMembers, updateMemberStatus, removeTenantMember } from "@/modules/tenancy/services/membership-service";
+import { MemberRowActions } from "./components/member-row-actions";
 import {
   createInvitation,
   listTenantInvitations,
@@ -53,6 +54,7 @@ export default async function TenantMembersPage({
     resent?: string;
     revoked?: string;
     deleted?: string;
+    deletedMember?: string;
     error?: string;
   }>;
 }) {
@@ -361,6 +363,48 @@ export default async function TenantMembersPage({
     });
 
     revalidatePath("/dashboard/members");
+    revalidatePath("/dashboard/profile");
+  }
+
+  async function handleRemoveMember(formData: FormData) {
+    "use server";
+    const sessionProfile = await getCurrentUserProfile();
+    if (
+      !sessionProfile ||
+      !sessionProfile.isVerifiedMembership ||
+      sessionProfile.activeMembership?.role !== "PLACEMENT_HEAD"
+    ) {
+      redirect("/auth/access-denied");
+    }
+
+    const actionTenantId = sessionProfile.activeMembership.tenant_id;
+    const memberId = formData.get("memberId") as string;
+
+    let redirectUrl = "";
+    try {
+      await removeTenantMember({
+        membershipId: memberId,
+        tenantId: actionTenantId,
+        actorUserId: sessionProfile.id,
+        reason: "Removed by Placement Head via dashboard action",
+      });
+      revalidatePath("/dashboard/members");
+      revalidatePath("/dashboard/profile");
+      redirectUrl = "/dashboard/members?deletedMember=true";
+    } catch (err: unknown) {
+      if (
+        err instanceof Error &&
+        (err.message === "NEXT_REDIRECT" || (err as any).digest?.startsWith?.("NEXT_REDIRECT"))
+      ) {
+        throw err;
+      }
+      const msg = err instanceof Error ? err.message : "Failed to remove staff member.";
+      redirectUrl = `/dashboard/members?error=${encodeURIComponent(msg)}`;
+    }
+
+    if (redirectUrl) {
+      redirect(redirectUrl);
+    }
   }
 
   return (
@@ -478,6 +522,15 @@ export default async function TenantMembersPage({
         </Card>
       )}
 
+      {query.deletedMember === "true" && (
+        <Card className="border-secondary/40 bg-[rgba(46,143,134,0.06)]">
+          <CardContent className="p-4 text-xs text-secondary flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>Staff member has been successfully removed from this college workspace.</span>
+          </CardContent>
+        </Card>
+      )}
+
       {query.error && (
         <Card className="border-status-danger/40 bg-[rgba(179,58,58,0.06)]">
           <CardHeader className="pb-2">
@@ -547,7 +600,7 @@ export default async function TenantMembersPage({
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" /> Active Members ({members.length})
+            <Users className="h-4 w-4 text-primary" /> Active Members ({members.filter((m) => m.status === "ACTIVE").length})
           </CardTitle>
           <CardDescription>
             All currently enrolled personnel under this college workspace.
@@ -576,7 +629,7 @@ export default async function TenantMembersPage({
                   members.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell className="font-semibold text-text-primary">
-                        {m.profiles?.full_name || "Unregistered Member"}
+                        {m.profiles?.full_name || (m.role === "PLACEMENT_HEAD" ? "Placement Head" : "Staff Member")}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {m.profiles?.email || "—"}
@@ -596,28 +649,16 @@ export default async function TenantMembersPage({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {m.role !== "PLACEMENT_HEAD" && (
-                          <form action={handleToggleMemberStatus} className="inline-block">
-                            <input type="hidden" name="memberId" value={m.id} />
-                            <input type="hidden" name="currentStatus" value={m.status} />
-                            <PendingButton
-                              type="submit"
-                              variant={m.status === "ACTIVE" ? "ghost" : "outline"}
-                              size="sm"
-                              pendingText="Updating..."
-                              className={
-                                m.status === "ACTIVE"
-                                  ? "text-status-danger hover:bg-[var(--color-danger-subtle)]"
-                                  : ""
-                              }
-                            >
-                              {m.status === "ACTIVE" ? "Suspend" : "Reactivate"}
-                            </PendingButton>
-                          </form>
-                        )}
-                        {m.role === "PLACEMENT_HEAD" && (
-                          <span className="text-xs text-text-muted font-mono">Institutional Admin</span>
-                        )}
+                        <MemberRowActions
+                          memberId={m.id}
+                          userId={m.user_id}
+                          memberName={m.profiles?.full_name || (m.role === "PLACEMENT_HEAD" ? "Placement Head" : "Staff Member")}
+                          memberEmail={m.profiles?.email || ""}
+                          memberRole={m.role}
+                          memberStatus={m.status}
+                          isCurrentSessionUser={m.user_id === profile.id}
+                          institutionName={profile.institutionName || activeMembership.tenants?.name || "College Placement Cell"}
+                        />
                       </TableCell>
                     </TableRow>
                   ))

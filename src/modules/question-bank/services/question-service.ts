@@ -483,17 +483,22 @@ export class QuestionService {
   ): Promise<{ eligibleCount: number; totalCount: number }> {
     const supabase = await createServerSupabaseClient();
 
-    // 1. Resolve matching bank IDs if subject is provided
+    // 1. Resolve matching bank IDs if subject is provided (resilient to schema state)
     let matchingBankIds: string[] | undefined;
     if (options.subject) {
-      const norm = normalizeSubjectName(options.subject);
+      const norm = normalizeSubjectName(options.subject).toLowerCase();
       const { data: banks } = await supabase
         .from("question_banks")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .ilike("subject", `%${norm}%`);
+        .select("id, name, category")
+        .eq("tenant_id", tenantId);
 
-      matchingBankIds = (banks || []).map((b: any) => b.id);
+      matchingBankIds = (banks || [])
+        .filter((b: any) => {
+          const s = (b.subject || b.name || b.category || "").toLowerCase();
+          return s.includes(norm) || (b.name && b.name.toLowerCase().includes(norm));
+        })
+        .map((b: any) => b.id);
+
       if (matchingBankIds.length === 0) {
         return { eligibleCount: 0, totalCount: 0 };
       }
@@ -604,17 +609,22 @@ export class QuestionService {
       }
     }
 
-    // 2. Resolve matching bank IDs if subject is provided
+    // 2. Resolve matching bank IDs if subject is provided (resilient to schema state)
     let matchingBankIds: string[] | undefined;
     if (options.subject) {
-      const norm = normalizeSubjectName(options.subject);
+      const norm = normalizeSubjectName(options.subject).toLowerCase();
       const { data: banks } = await supabase
         .from("question_banks")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .ilike("subject", `%${norm}%`);
+        .select("id, name, category")
+        .eq("tenant_id", tenantId);
 
-      matchingBankIds = (banks || []).map((b: any) => b.id);
+      matchingBankIds = (banks || [])
+        .filter((b: any) => {
+          const s = (b.subject || b.name || b.category || "").toLowerCase();
+          return s.includes(norm) || (b.name && b.name.toLowerCase().includes(norm));
+        })
+        .map((b: any) => b.id);
+
       if (matchingBankIds.length === 0) {
         return {
           success: true,
@@ -970,13 +980,16 @@ export class QuestionService {
   }
 
   /**
-   * Permanently deletes an unreferenced draft question and its versions.
-   * Invariant: Approved and Published questions cannot be deleted to protect historical tests.
+   * Deletes or safely archives a question record.
+   * If the question is unreferenced in question sets or student attempts,
+   * it is safely permanently deleted along with versions and duplicate index entries.
+   * If referenced, it is safely archived (lifecycle_status = 'ARCHIVED') to protect
+   * exam snapshots, student submissions, and audit integrity.
    */
   public static async deleteQuestion(
     tenantId: string,
     questionId: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; deleted?: boolean; archived?: boolean; message?: string }> {
     const supabase = await createServerSupabaseClient();
 
     // 1. Fetch question to verify tenant and lifecycle
@@ -991,29 +1004,59 @@ export class QuestionService {
       return { success: false, error: "Question not found." };
     }
 
-    // 2. Invariant: Only DRAFT questions can be permanently removed
-    if (q.lifecycle_status !== "DRAFT") {
-      return {
-        success: false,
-        error: "Only draft questions can be permanently deleted. Use Archive or Withdraw for approved or published questions to preserve assessment audit integrity.",
-      };
-    }
-
-    // 3. Invariant: Cannot delete if referenced in any Question Set
+    // 2. Check if referenced in any Question Set
     const { count: setRefCount } = await supabase
       .from("question_set_items")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenantId)
       .eq("question_id", questionId);
 
-    if (setRefCount && setRefCount > 0) {
+    // 3. Check if referenced in any candidate attempt responses
+    let attemptRefCount = 0;
+    try {
+      const { count: attCount } = await supabase
+        .from("attempt_responses")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("question_id", questionId);
+      attemptRefCount = attCount || 0;
+    } catch {
+      // Table may not exist or not accessible
+    }
+
+    // Invariant: If question is referenced in question sets or student attempts,
+    // safe non-destructive archiving is required to protect exam snapshots and student history.
+    if ((setRefCount && setRefCount > 0) || attemptRefCount > 0) {
+      const { error: archErr } = await supabase
+        .from("questions")
+        .update({ lifecycle_status: "ARCHIVED", updated_at: new Date().toISOString() })
+        .eq("tenant_id", tenantId)
+        .eq("id", questionId);
+
+      if (archErr) {
+        return { success: false, error: archErr.message };
+      }
+
       return {
-        success: false,
-        error: "Cannot delete question because it is referenced in one or more question sets.",
+        success: true,
+        archived: true,
+        message: "Question is referenced in blueprints or historical assessments and has been safely archived.",
       };
     }
 
-    // 4. Clean up duplicates index if present
+    // If unreferenced, question can be permanently deleted:
+    // 4. Nullify circular FK current_version_id
+    try {
+      await supabase
+        .from("questions")
+        .update({ current_version_id: null })
+        .eq("tenant_id", tenantId)
+        .eq("id", questionId);
+    } catch {
+      // Ignore if column/FK not active
+    }
+
+    // 5. Clean up duplicates index if present
     try {
       await supabase
         .from("question_duplicates")
@@ -1024,7 +1067,7 @@ export class QuestionService {
       // Ignore if table/index not active
     }
 
-    // 5. Delete versions first
+    // 6. Delete versions first
     const { error: vErr } = await supabase
       .from("question_versions")
       .delete()
@@ -1035,7 +1078,7 @@ export class QuestionService {
       return { success: false, error: vErr.message };
     }
 
-    // 6. Delete question row
+    // 7. Delete question row
     const { error: delErr } = await supabase
       .from("questions")
       .delete()
@@ -1046,7 +1089,11 @@ export class QuestionService {
       return { success: false, error: delErr.message };
     }
 
-    return { success: true };
+    return {
+      success: true,
+      deleted: true,
+      message: "Question permanently deleted.",
+    };
   }
 
   /**
@@ -1101,18 +1148,23 @@ export class QuestionService {
     if (question.bank_id) {
       let bRes = await supabase
         .from("question_banks")
-        .select("id, name, subject, category, sharing_policy")
+        .select("id, name, category, sharing_policy")
         .eq("id", question.bank_id)
         .maybeSingle();
 
       if (!bRes?.data && admin) {
         bRes = await admin
           .from("question_banks")
-          .select("id, name, subject, category, sharing_policy")
+          .select("id, name, category, sharing_policy")
           .eq("id", question.bank_id)
           .maybeSingle();
       }
-      bank = bRes?.data || null;
+      if (bRes?.data) {
+        bank = {
+          ...bRes.data,
+          subject: (bRes.data as any).subject || bRes.data.name || bRes.data.category,
+        };
+      }
     }
 
     // 3. Fetch all Versions
@@ -1231,17 +1283,22 @@ export class QuestionService {
   ) {
     const supabase = await createServerSupabaseClient();
 
-    // 1. Resolve matching bank IDs if subject is provided
+    // 1. Resolve matching bank IDs if subject is provided (resilient to schema state)
     let matchingBankIds: string[] | undefined;
     if (options.subject) {
-      const norm = normalizeSubjectName(options.subject);
+      const norm = normalizeSubjectName(options.subject).toLowerCase();
       const { data: banks } = await supabase
         .from("question_banks")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .ilike("subject", `%${norm}%`);
+        .select("id, name, category")
+        .eq("tenant_id", tenantId);
 
-      matchingBankIds = (banks || []).map((b: any) => b.id);
+      matchingBankIds = (banks || [])
+        .filter((b: any) => {
+          const s = (b.subject || b.name || b.category || "").toLowerCase();
+          return s.includes(norm) || (b.name && b.name.toLowerCase().includes(norm));
+        })
+        .map((b: any) => b.id);
+
       if (matchingBankIds.length === 0) {
         return { questions: [], total: 0 };
       }
@@ -1278,7 +1335,6 @@ export class QuestionService {
         bank:question_banks(
           id,
           name,
-          subject,
           category
         ),
         current_version:question_versions!fk_questions_current_version(
@@ -1333,10 +1389,11 @@ export class QuestionService {
     const { data, error, count } = await query;
 
     if (error) {
+      console.error("[QuestionService.getQuestions query error]:", error);
       return { questions: [], total: 0, error: error.message };
     }
 
-    // Role-based sanitization
+    // Role-based sanitization and bank subject enrichment
     const sanitized = (data || []).map((q: any) => {
       let curVer = q.current_version;
       if (Array.isArray(curVer)) curVer = curVer[0];
@@ -1345,8 +1402,16 @@ export class QuestionService {
         curVer = this.sanitizeForStudent(curVer, q.question_type);
       }
 
+      const bank = q.bank
+        ? {
+            ...q.bank,
+            subject: (q.bank as any).subject || q.bank.name || q.bank.category,
+          }
+        : null;
+
       return {
         ...q,
+        bank,
         current_version: curVer,
       };
     });
@@ -1370,16 +1435,29 @@ export class QuestionService {
       .select("*")
       .eq("tenant_id", tenantId);
 
-    if (options?.subject) {
-      const norm = normalizeSubjectName(options.subject);
-      query = query.ilike("subject", `%${norm}%`);
-    }
-
     if (options?.category) {
       query = query.eq("category", options.category);
     }
 
-    return query.order("created_at", { ascending: false });
+    const { data: banks, error } = await query.order("created_at", { ascending: false });
+    if (error) {
+      return { data: null, error };
+    }
+
+    let result = (banks || []).map((b: any) => ({
+      ...b,
+      subject: b.subject || b.name || b.category,
+    }));
+
+    if (options?.subject) {
+      const norm = normalizeSubjectName(options.subject).toLowerCase();
+      result = result.filter((b: any) => {
+        const s = (b.subject || b.name || b.category || "").toLowerCase();
+        return s.includes(norm) || (b.name && b.name.toLowerCase().includes(norm));
+      });
+    }
+
+    return { data: result, error: null };
   }
 
   public static async createBank(
@@ -1420,19 +1498,41 @@ export class QuestionService {
       };
     }
 
-    return supabase
+    const insertPayload: Record<string, any> = {
+      tenant_id: tenantId,
+      name: cleanName,
+      subject: cleanSubject,
+      description: data.description?.trim() || null,
+      category: data.category,
+      sharing_policy: data.sharing_policy || "COLLEGE_PRIVATE",
+      created_by: userId,
+    };
+
+    let result = await supabase
       .from("question_banks")
-      .insert({
-        tenant_id: tenantId,
-        name: cleanName,
-        subject: cleanSubject,
-        description: data.description?.trim() || null,
-        category: data.category,
-        sharing_policy: data.sharing_policy || "COLLEGE_PRIVATE",
-        created_by: userId,
-      })
+      .insert(insertPayload)
       .select("*")
       .single();
+
+    if (
+      result.error &&
+      (result.error.code === "PGRST204" ||
+        result.error.code === "42703" ||
+        result.error.message?.includes("subject"))
+    ) {
+      delete insertPayload.subject;
+      result = await supabase
+        .from("question_banks")
+        .insert(insertPayload)
+        .select("*")
+        .single();
+    }
+
+    if (result.data) {
+      result.data.subject = result.data.subject || cleanSubject || result.data.name;
+    }
+
+    return result;
   }
 
   /**

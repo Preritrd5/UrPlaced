@@ -317,3 +317,7 @@ REVOKE EXECUTE ON FUNCTION public.claim_student_roster(TEXT, UUID, TEXT, TEXT, U
 REVOKE EXECUTE ON FUNCTION public.claim_student_roster(TEXT, UUID, TEXT, TEXT, UUID) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.claim_student_roster(TEXT, UUID, TEXT, TEXT, UUID) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_student_roster(TEXT, UUID, TEXT, TEXT, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.claim_student_roster(TEXT, UUID, TEXT, TEXT, UUID) TO postgres;
+
+-- Notify PostgREST to immediately reload schema cache
+NOTIFY pgrst, 'reload schema';

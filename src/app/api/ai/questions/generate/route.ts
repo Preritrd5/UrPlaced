@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       const supabase = await createServerSupabaseClient();
       const { data: bankRecord, error: bankErr } = await supabase
         .from("question_banks")
-        .select("id, tenant_id, name, subject, category")
+        .select("id, tenant_id, name, category")
         .eq("id", bankId)
         .eq("tenant_id", authContext.tenantId)
         .maybeSingle();
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      bankSubject = bankRecord.subject || bankRecord.name;
+      bankSubject = (bankRecord as any)?.subject || bankRecord.name;
       bankCategory = bankRecord.category;
     } else if (saveAsDraft) {
       return NextResponse.json(

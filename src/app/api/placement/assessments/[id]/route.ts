@@ -42,7 +42,12 @@ export async function DELETE(
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: "Assessment deleted successfully." });
+    return NextResponse.json({
+      success: true,
+      deleted: result.deleted,
+      archived: result.archived,
+      message: result.message || "Assessment deleted successfully.",
+    });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
       return NextResponse.json({ error: err.message }, { status: 403 });

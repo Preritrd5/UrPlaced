@@ -1143,13 +1143,38 @@ export class StudentService {
       });
 
       if (rpcError) {
-        console.error("[StudentService.claimStudentRosterRecord] Transactional RPC error:", rpcError);
+        // Detailed server-side diagnostic logging (distinguishes schema mismatch, permissions, or DB connection)
+        console.error("[StudentService.claimStudentRosterRecord] Database RPC execution error:", {
+          code: rpcError.code,
+          message: rpcError.message,
+          details: rpcError.details,
+          hint: rpcError.hint,
+          requestedParams: {
+            p_srn: cleanSrn,
+            p_user_id: params.userId,
+            p_full_name: cleanFullName,
+            p_email: cleanEmail,
+            p_tenant_id: params.tenantId || null,
+          },
+        });
+
+        // Translate low-level PostgREST schema cache or function mismatch errors into safe user-facing message
+        const isSystemError =
+          rpcError.code === "PGRST202" ||
+          rpcError.code === "42883" ||
+          rpcError.code === "42501" ||
+          rpcError.code === "PGRST200" ||
+          rpcError.message?.includes("schema cache") ||
+          rpcError.message?.includes("function") ||
+          rpcError.message?.includes("does not exist");
+
         return {
           success: false,
           code: "CLAIM_FAILED",
-          message:
-            rpcError.message ||
-            "Failed to claim student roster record atomically. Please try again or contact your administrator.",
+          message: isSystemError
+            ? "The student registration service is temporarily unavailable due to a pending system migration. Please contact your campus placement cell or try again in a few moments."
+            : rpcError.message ||
+              "Failed to claim student roster record atomically. Please try again or contact your administrator.",
         };
       }
 

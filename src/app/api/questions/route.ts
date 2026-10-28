@@ -34,6 +34,13 @@ export async function GET(request: NextRequest) {
       }
     );
 
+    if (result.error) {
+      return NextResponse.json(
+        { error: result.error, questions: [], total: 0 },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(result);
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {

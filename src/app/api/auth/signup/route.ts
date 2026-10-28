@@ -221,7 +221,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Create user in Supabase Auth via Admin API
-    // Sets server-controlled app_metadata (immutable from client) to prevent privilege escalation
+    // Track whether this request actually created a new Auth user for safe compensation
+    let newlyCreatedAuthUserId: string | null = null;
+
     const { data: userData, error: createError } = await admin.auth.admin.createUser({
       email: cleanEmail,
       password,
@@ -239,6 +241,9 @@ export async function POST(request: NextRequest) {
     });
 
     let userId = userData?.user?.id;
+    if (userId) {
+      newlyCreatedAuthUserId = userId;
+    }
 
     if (createError) {
       if (createError.message.includes("already been registered") || createError.message.includes("unique")) {
@@ -278,8 +283,27 @@ export async function POST(request: NextRequest) {
       });
 
       if (!claimResult.success) {
-        // Rollback created auth user so an unlinked or orphan account is not left behind
-        await admin.auth.admin.deleteUser(userId).catch(() => null);
+        // Safe compensation: Only rollback the newly created auth user from THIS request
+        // Never touch pre-existing users, previously claimed records, or unrelated profiles.
+        if (newlyCreatedAuthUserId) {
+          try {
+            const { error: delErr } = await admin.auth.admin.deleteUser(newlyCreatedAuthUserId);
+            if (delErr) {
+              console.error(
+                "[SignUp API Compensation Error] Failed to delete orphaned auth user:",
+                newlyCreatedAuthUserId,
+                delErr
+              );
+            } else {
+              console.info(
+                "[SignUp API Compensation] Successfully rolled back orphaned auth user:",
+                newlyCreatedAuthUserId
+              );
+            }
+          } catch (delCatchErr) {
+            console.error("[SignUp API Compensation Catch]:", delCatchErr);
+          }
+        }
 
         const isConflict =
           claimResult.code === "ALREADY_CLAIMED" ||
@@ -293,6 +317,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
+            code: claimResult.code,
             error: claimResult.message || "Failed to link student account with campus roster.",
           },
           { status: isConflict ? 409 : 400 }

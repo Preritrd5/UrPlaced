@@ -8,11 +8,13 @@ export async function GET(request: NextRequest) {
     const authContext = await requireAuthContext();
     const { searchParams } = new URL(request.url);
     const purpose = (searchParams.get("purpose") as any) || undefined;
+    const status = searchParams.get("status") || undefined;
 
     const { data: sets, error } = await QuestionSetService.listSets(
       authContext.tenantId,
       authContext.tenantRole,
-      purpose
+      purpose,
+      status
     );
 
     if (error) {

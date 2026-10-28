@@ -541,7 +541,8 @@ export class QuestionSetService {
   public static async listSets(
     tenantId: string,
     userRole: string,
-    purpose?: QuestionSetPurpose
+    purpose?: QuestionSetPurpose,
+    status?: string
   ) {
     const supabase = await createServerSupabaseClient();
 
@@ -551,8 +552,12 @@ export class QuestionSetService {
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
 
-    if (userRole === "STUDENT") {
+    if (status) {
+      query = query.eq("status", status);
+    } else if (userRole === "STUDENT") {
       query = query.eq("status", "PUBLISHED");
+    } else {
+      query = query.neq("status", "ARCHIVED");
     }
 
     if (purpose) {
@@ -563,19 +568,21 @@ export class QuestionSetService {
   }
 
   /**
-   * Deletes an unlocked, draft question set and all its item bindings.
-   * Locked snapshots and sets referenced by assessments cannot be deleted.
+   * Deletes or safely archives a question set.
+   * If the question set is an unreferenced draft set, it and its items are permanently deleted.
+   * If the question set is locked/published (such as "Demo Test") or referenced by assessments,
+   * it is safely archived (status = 'ARCHIVED') to protect immutable snapshots and historical assessments.
    */
   public static async deleteSet(
     tenantId: string,
     setId: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; deleted?: boolean; archived?: boolean; message?: string }> {
     const supabase = await createServerSupabaseClient();
 
     // 1. Check if set exists and belongs to tenant
     const { data: set, error: setErr } = await supabase
       .from("question_sets")
-      .select("id, is_locked, status")
+      .select("id, is_locked, status, name")
       .eq("tenant_id", tenantId)
       .eq("id", setId)
       .single();
@@ -584,29 +591,40 @@ export class QuestionSetService {
       return { success: false, error: "Question set not found." };
     }
 
-    // 2. Invariant: Locked or published snapshots cannot be deleted
-    if (set.is_locked || set.status === "PUBLISHED") {
-      return {
-        success: false,
-        error: "Cannot delete a locked or published question set snapshot.",
-      };
-    }
-
-    // 3. Invariant: Sets referenced by assessments cannot be deleted
+    // 2. Check if referenced by assessments
     const { count: assessmentCount } = await supabase
       .from("assessments")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenantId)
       .eq("question_set_id", setId);
 
-    if (assessmentCount && assessmentCount > 0) {
+    const isReferenced = Boolean(assessmentCount && assessmentCount > 0);
+    const isLockedOrPublished = set.is_locked || set.status === "PUBLISHED";
+
+    // Invariant: Locked, published, or assessment-referenced question sets must be safely archived
+    // to preserve immutable snapshots and historical assessment execution integrity.
+    if (isReferenced || isLockedOrPublished) {
+      const { error: archErr } = await supabase
+        .from("question_sets")
+        .update({ status: "ARCHIVED", updated_at: new Date().toISOString() })
+        .eq("tenant_id", tenantId)
+        .eq("id", setId);
+
+      if (archErr) {
+        return { success: false, error: archErr.message };
+      }
+
       return {
-        success: false,
-        error: "Cannot delete question set because it is referenced by one or more assessments.",
+        success: true,
+        archived: true,
+        message: isReferenced
+          ? "Question set is referenced by assessments and has been safely archived from active blueprints."
+          : "Question set snapshot has been safely retired and archived from active blueprints.",
       };
     }
 
-    // 4. Delete items first
+    // 3. Unreferenced draft question set can be permanently deleted:
+    // Delete items first
     const { error: itemsDelErr } = await supabase
       .from("question_set_items")
       .delete()
@@ -617,7 +635,7 @@ export class QuestionSetService {
       return { success: false, error: itemsDelErr.message };
     }
 
-    // 5. Delete set
+    // Delete set
     const { error: setDelErr } = await supabase
       .from("question_sets")
       .delete()
@@ -628,7 +646,11 @@ export class QuestionSetService {
       return { success: false, error: setDelErr.message };
     }
 
-    return { success: true };
+    return {
+      success: true,
+      deleted: true,
+      message: "Question set permanently deleted.",
+    };
   }
 
   /**
@@ -700,7 +722,7 @@ export class QuestionSetService {
     // 1. Fetch Question Banks
     let bankQuery = supabase
       .from("question_banks")
-      .select("id, name, subject, category")
+      .select("id, name, category")
       .eq("tenant_id", tenantId);
 
     if (options.bankId) {
@@ -713,7 +735,12 @@ export class QuestionSetService {
     }
 
     const bankMap = new Map<string, any>();
-    banks.forEach((b: any) => bankMap.set(b.id, b));
+    banks.forEach((b: any) =>
+      bankMap.set(b.id, {
+        ...b,
+        subject: b.subject || b.name || b.category,
+      })
+    );
     const bankIds = banks.map((b: any) => b.id);
 
     // 2. Fetch questions in these banks with APPROVED or PUBLISHED lifecycle
@@ -1372,7 +1399,7 @@ export class QuestionSetService {
     // 1. Fetch Banks
     let bankQuery = supabase
       .from("question_banks")
-      .select("id, name, subject, category")
+      .select("id, name, category")
       .eq("tenant_id", tenantId);
 
     if (options.bankId) {
@@ -1381,7 +1408,12 @@ export class QuestionSetService {
 
     const { data: banks } = await bankQuery;
     const bankMap = new Map<string, any>();
-    (banks || []).forEach((b: any) => bankMap.set(b.id, b));
+    (banks || []).forEach((b: any) =>
+      bankMap.set(b.id, {
+        ...b,
+        subject: b.subject || b.name || b.category,
+      })
+    );
     const bankIds = (banks || []).map((b: any) => b.id);
 
     if (bankIds.length === 0) {

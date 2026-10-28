@@ -85,15 +85,22 @@ export async function getActiveTenantMembership(
 }
 
 /**
- * Lists all members for a tenant.
+ * Lists all institutional staff members for a tenant (PLACEMENT_HEAD, PLACEMENT_STAFF, TRAINER).
+ * Resolves user profiles separately without relying on schema cache foreign-key joins.
  */
-export async function listTenantMembers(tenantId: string): Promise<MembershipRecord[]> {
+export async function listTenantMembers(
+  tenantId: string,
+  options?: { roles?: UserRole[] }
+): Promise<MembershipRecord[]> {
   try {
     const admin = createAdminClient();
-    const { data, error } = await admin
+    const targetRoles = options?.roles || ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"];
+
+    const { data: memberships, error } = await admin
       .from("tenant_memberships")
-      .select("*, profiles(id, email, full_name)")
+      .select("*")
       .eq("tenant_id", tenantId)
+      .in("role", targetRoles)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -108,7 +115,72 @@ export async function listTenantMembers(tenantId: string): Promise<MembershipRec
       throw new Error(`Failed to list tenant members: ${error.message}`);
     }
 
-    return (data || []) as unknown as MembershipRecord[];
+    if (!memberships || memberships.length === 0) {
+      return [];
+    }
+
+    // Extract unique user IDs
+    const userIds = Array.from(new Set(memberships.map((m: any) => m.user_id)));
+
+    // Fetch corresponding profiles in a separate query to avoid schema cache / FK join limitations
+    const profileMap = new Map<string, { id: string; email: string; full_name: string }>();
+
+    try {
+      const { data: profilesData } = await admin
+        .from("profiles")
+        .select("id, email, full_name")
+        .in("id", userIds);
+
+      if (profilesData) {
+        for (const p of profilesData) {
+          profileMap.set(p.id, {
+            id: p.id,
+            email: p.email || "",
+            full_name: p.full_name || "",
+          });
+        }
+      }
+    } catch {
+      // Gracefully continue to auth users fallback
+    }
+
+    // For any user without a complete profile in profiles table, fallback to auth.admin.listUsers()
+    const missingUserIds = userIds.filter((uid) => !profileMap.has(uid) || !profileMap.get(uid)?.email);
+    if (missingUserIds.length > 0) {
+      try {
+        const { data: { users } } = await admin.auth.admin.listUsers();
+        if (users) {
+          for (const u of users) {
+            if (missingUserIds.includes(u.id)) {
+              const existing = profileMap.get(u.id);
+              profileMap.set(u.id, {
+                id: u.id,
+                email: u.email || existing?.email || "",
+                full_name:
+                  u.user_metadata?.full_name ||
+                  u.user_metadata?.name ||
+                  existing?.full_name ||
+                  (u.email ? u.email.split("@")[0] : "Staff Member"),
+              });
+            }
+          }
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
+
+    return memberships.map((m: any) => {
+      const prof = profileMap.get(m.user_id) || {
+        id: m.user_id,
+        email: "",
+        full_name: m.role === "PLACEMENT_HEAD" ? "Placement Head" : "Staff Member",
+      };
+      return {
+        ...m,
+        profiles: prof,
+      } as MembershipRecord;
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     if (
@@ -226,9 +298,111 @@ export async function updateMemberRole(params: {
   });
 }
 
+/**
+ * Permanently removes a member from a college workspace.
+ * Strict invariants:
+ * 1. Actor must be PLACEMENT_HEAD or possess STAFF_MANAGE permission in this college.
+ * 2. Cannot remove the last active PLACEMENT_HEAD of the college.
+ * 3. Scope limited strictly to the specified tenant_id (never affects other college memberships).
+ * 4. Never deletes auth.users or public.profiles.
+ */
+export async function removeTenantMember(params: {
+  membershipId: string;
+  tenantId: string;
+  actorUserId: string;
+  reason?: string;
+}): Promise<void> {
+  const admin = createAdminClient();
+
+  // 1. Authorize actor: actor must have PLACEMENT_HEAD role or STAFF_MANAGE in this tenant
+  const actorMembership = await getActiveTenantMembership(params.actorUserId, params.tenantId);
+  if (!actorMembership || actorMembership.status !== "ACTIVE") {
+    throw new Error("Unauthorized: Active tenant membership required.");
+  }
+
+  const isPlacementHead = actorMembership.role === "PLACEMENT_HEAD";
+  const hasStaffManagePermission =
+    Array.isArray(actorMembership.permissions) &&
+    actorMembership.permissions.includes("STAFF_MANAGE");
+
+  if (!isPlacementHead && !hasStaffManagePermission) {
+    throw new Error("Unauthorized: Only a Placement Head or authorized staff administrator can remove members.");
+  }
+
+  // 2. Fetch target membership ensuring strict tenant boundary
+  const { data: targetMember, error: fetchErr } = await admin
+    .from("tenant_memberships")
+    .select("*")
+    .eq("id", params.membershipId)
+    .eq("tenant_id", params.tenantId)
+    .single();
+
+  if (fetchErr && (fetchErr.code === "PGRST205" || fetchErr.code === "42P01")) {
+    throw new Error("Tenant memberships service unavailable.");
+  }
+
+  if (!targetMember) {
+    throw new Error("Staff member record not found in this college workspace.");
+  }
+
+  // 3. Last Placement Head safeguard:
+  // If target is a PLACEMENT_HEAD, ensure they are not the sole remaining active Placement Head
+  if (targetMember.role === "PLACEMENT_HEAD") {
+    const { count: activeHeadsCount, error: countErr } = await admin
+      .from("tenant_memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", params.tenantId)
+      .eq("role", "PLACEMENT_HEAD")
+      .eq("status", "ACTIVE");
+
+    if (countErr) {
+      throw new Error(`Failed to verify administrator count: ${countErr.message}`);
+    }
+
+    if ((activeHeadsCount ?? 0) <= 1) {
+      throw new Error(
+        "Cannot remove the last active Placement Head. Please assign another Placement Head before removing this administrator."
+      );
+    }
+  }
+
+  // 4. Safely remove: Delete the specific tenant_memberships row
+  // This removes their access to THIS tenant only, without touching auth.users, profiles, or other tenants!
+  const { error: deleteErr } = await admin
+    .from("tenant_memberships")
+    .delete()
+    .eq("id", params.membershipId)
+    .eq("tenant_id", params.tenantId);
+
+  if (deleteErr) {
+    throw new Error(`Failed to remove staff member: ${deleteErr.message}`);
+  }
+
+  // 5. Log audit trail
+  await logAuditEvent({
+    tenantId: params.tenantId,
+    actorId: params.actorUserId,
+    action: "membership.removed",
+    resourceType: "TenantMembership",
+    resourceId: params.membershipId,
+    beforeState: {
+      id: targetMember.id,
+      userId: targetMember.user_id,
+      role: targetMember.role,
+      status: targetMember.status,
+    },
+    afterState: {
+      removed: true,
+      reason: params.reason || "Staff member removed by college administrator",
+    },
+  });
+}
+
 export const MembershipService = {
   listUserMemberships: getUserMemberships,
   getTenantMembers: listTenantMembers,
   updateMemberRole,
+  updateMemberStatus,
+  removeTenantMember,
 };
 

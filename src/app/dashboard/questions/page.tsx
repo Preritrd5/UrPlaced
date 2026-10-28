@@ -139,9 +139,15 @@ export default function QuestionsDashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setQuestions(data.questions || []);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error("Failed to fetch questions", errData);
+        setQuestions([]);
+        toast.error(errData.error || "Failed to load questions from repository.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch questions", err);
+      toast.error(err.message || "Failed to load questions from repository.");
     } finally {
       setLoading(false);
     }
@@ -205,8 +211,9 @@ export default function QuestionsDashboardPage() {
       const data = await res.json();
       if (res.ok) {
         setQuestionToDelete(null);
-        toast.success("Question deleted successfully.");
+        toast.success(data.message || (data.archived ? "Question safely archived." : "Question deleted successfully."));
         loadQuestions();
+        fetchEligibleReviewCount();
       } else {
         toast.error(data.error || "Failed to delete question.");
       }
@@ -605,15 +612,15 @@ export default function QuestionsDashboardPage() {
                         </Button>
                       </Link>
 
-                      {q.lifecycle_status === "DRAFT" && (
+                      {canManageQuestions && q.lifecycle_status !== "ARCHIVED" && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => setQuestionToDelete(q)}
                           className="h-8 w-8 p-0 text-text-muted hover:text-status-danger hover:bg-[var(--color-danger-subtle)]"
-                          title="Delete draft question"
-                          aria-label="Delete draft question"
+                          title="Delete question"
+                          aria-label="Delete question"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -686,15 +693,15 @@ export default function QuestionsDashboardPage() {
         }}
       />
 
-      {/* Delete Draft Question Confirmation Dialog */}
+      {/* Delete Question Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={!!questionToDelete}
         onOpenChange={(open: boolean) => {
           if (!open) setQuestionToDelete(null);
         }}
         onConfirm={handleConfirmDeleteQuestion}
-        title="Delete Draft Question"
-        description="Are you sure you want to permanently delete this draft question and its version history? This action cannot be undone."
+        title="Delete Question"
+        description="Are you sure you want to delete this question? Unreferenced questions will be permanently deleted from the repository. Questions referenced in blueprints or historical assessments will be safely retired to preserve audit integrity."
         confirmText="Delete Question"
         isLoading={deleteLoading}
       />

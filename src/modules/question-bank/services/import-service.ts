@@ -28,6 +28,7 @@ export interface ParsedCsvRow {
   source_reference?: string;
   isValid: boolean;
   isDuplicate: boolean;
+  duplicateSource?: "DATABASE" | "FILE";
   errors: string[];
   warnings: string[];
   fingerprint: string;
@@ -41,6 +42,8 @@ export interface ImportPreviewResult {
   validRows: number;
   invalidRows: number;
   duplicateRows: number;
+  existingDuplicateRows: number;
+  intraFileDuplicateRows: number;
   rows: ParsedCsvRow[];
   generalErrors: string[];
 }
@@ -167,6 +170,8 @@ export class ImportService {
         validRows: 0,
         invalidRows: 0,
         duplicateRows: 0,
+        existingDuplicateRows: 0,
+        intraFileDuplicateRows: 0,
         rows: [],
         generalErrors: ["CSV file is empty or missing headers and data rows."],
       };
@@ -185,6 +190,8 @@ export class ImportService {
         validRows: 0,
         invalidRows: dataRows.length,
         duplicateRows: 0,
+        existingDuplicateRows: 0,
+        intraFileDuplicateRows: 0,
         rows: [],
         generalErrors,
       };
@@ -202,6 +209,8 @@ export class ImportService {
     let validCount = 0;
     let invalidCount = 0;
     let duplicateCount = 0;
+    let existingDuplicateCount = 0;
+    let intraFileDuplicateCount = 0;
 
     for (let r = 0; r < dataRows.length; r++) {
       const row = dataRows[r];
@@ -307,9 +316,19 @@ export class ImportService {
       );
 
       const isDuplicate = dupCheck.isExactDuplicate || dupCheck.highestSimilarity >= 0.85;
+      let duplicateSource: "DATABASE" | "FILE" | undefined;
       if (isDuplicate) {
         duplicateCount++;
-        const targetDesc = dupCheck.matchedQuestionId?.startsWith("row-")
+        const isIntraFile = dupCheck.matchedQuestionId?.startsWith("row-");
+        if (isIntraFile) {
+          intraFileDuplicateCount++;
+          duplicateSource = "FILE";
+        } else {
+          existingDuplicateCount++;
+          duplicateSource = "DATABASE";
+        }
+
+        const targetDesc = isIntraFile
           ? `earlier ${dupCheck.matchedQuestionId}`
           : `existing question ${dupCheck.matchedQuestionId}`;
         rowWarnings.push(
@@ -356,6 +375,7 @@ export class ImportService {
         source_type: "COLLEGE_AUTHORED",
         isValid,
         isDuplicate,
+        duplicateSource,
         errors: rowErrors,
         warnings: rowWarnings,
         fingerprint,
@@ -370,6 +390,8 @@ export class ImportService {
       validRows: validCount,
       invalidRows: invalidCount,
       duplicateRows: duplicateCount,
+      existingDuplicateRows: existingDuplicateCount,
+      intraFileDuplicateRows: intraFileDuplicateCount,
       rows: parsedRows,
       generalErrors,
     };
@@ -397,7 +419,7 @@ export class ImportService {
     // 0. Verify Bank Ownership & Tenant Boundary
     const { data: bankRecord, error: bankErr } = await supabase
       .from("question_banks")
-      .select("id, tenant_id, name, subject, category")
+      .select("id, tenant_id, name, category")
       .eq("id", bankId)
       .eq("tenant_id", tenantId)
       .maybeSingle();
@@ -518,8 +540,11 @@ export class ImportService {
         .update({ current_version_id: vData.id })
         .eq("id", qData.id);
 
-      // Record duplicate candidate if matched
-      if (item.duplicateQuestionId && item.similarityScore) {
+      // Record duplicate candidate if matched with an existing database question (valid UUID)
+      const isUuid = (val?: string) =>
+        Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+      if (item.duplicateQuestionId && item.similarityScore && isUuid(item.duplicateQuestionId)) {
         duplicateAlertCount++;
         await supabase.from("question_duplicate_candidates").insert({
           tenant_id: tenantId,

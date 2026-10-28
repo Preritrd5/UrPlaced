@@ -107,6 +107,7 @@ export default function QuestionImportPage() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("bankId", selectedBankId);
 
     try {
       const res = await fetch("/api/questions/import/preview", {
@@ -395,6 +396,13 @@ export default function QuestionImportPage() {
               <div className="text-2xl font-bold font-mono text-amber-600 mt-1">
                 {previewResult.duplicateRows}
               </div>
+              {(previewResult.existingDuplicateRows > 0 || previewResult.intraFileDuplicateRows > 0) && (
+                <span className="text-[10px] text-text-secondary mt-1 block">
+                  {previewResult.existingDuplicateRows > 0 && `${previewResult.existingDuplicateRows} existing in college`}
+                  {previewResult.existingDuplicateRows > 0 && previewResult.intraFileDuplicateRows > 0 && " • "}
+                  {previewResult.intraFileDuplicateRows > 0 && `${previewResult.intraFileDuplicateRows} in file`}
+                </span>
+              )}
             </Card>
           </div>
 

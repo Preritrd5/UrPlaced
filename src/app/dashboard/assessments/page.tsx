@@ -49,6 +49,7 @@ export default function StaffAssessmentsPage() {
   const [activeTab, setActiveTab] = useState<"ALL" | "PUBLISHED" | "DRAFT" | "ARCHIVED">("ALL");
 
   const canViewAssessments = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
+  const canManageAssessments = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
 
   useEffect(() => {
     if (!isLoadingAuth) {
@@ -279,7 +280,7 @@ export default function StaffAssessmentsPage() {
         throw new Error(data.error || "Failed to delete assessment.");
       }
 
-      toast.success("Assessment deleted successfully.");
+      toast.success(data.message || (data.archived ? "Assessment archived successfully." : "Assessment deleted successfully."));
       setAssessmentToDelete(null);
       loadData();
     } catch (err: any) {
@@ -505,22 +506,48 @@ export default function StaffAssessmentsPage() {
                   )}
 
                   {a.status === "PUBLISHED" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => {
+                          setAssigningAssessment(a);
+                          setAssignScope("COLLEGE_WIDE");
+                          setAssignForm({
+                            cohort_name: "All Eligible Students",
+                            window_start: "",
+                            window_end: "",
+                            max_attempts_override: "",
+                          });
+                        }}
+                      >
+                        <Users className="h-3.5 w-3.5 mr-1.5" /> Assign Assessment
+                      </Button>
+
+                      {canManageAssessments && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-8 text-status-danger hover:bg-[var(--color-danger-subtle)] hover:text-status-danger"
+                          onClick={() => setAssessmentToDelete(a)}
+                          title={(a.attemptCount || 0) > 0 ? "Retire assessment" : "Delete assessment"}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" /> {(a.attemptCount || 0) > 0 ? "Retire" : "Delete"}
+                        </Button>
+                      )}
+                    </>
+                  )}
+
+                  {a.status === "ARCHIVED" && canManageAssessments && (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="text-xs h-8"
-                      onClick={() => {
-                        setAssigningAssessment(a);
-                        setAssignScope("COLLEGE_WIDE");
-                        setAssignForm({
-                          cohort_name: "All Eligible Students",
-                          window_start: "",
-                          window_end: "",
-                          max_attempts_override: "",
-                        });
-                      }}
+                      className="text-xs h-8 text-status-danger hover:bg-[var(--color-danger-subtle)] hover:text-status-danger"
+                      onClick={() => setAssessmentToDelete(a)}
+                      title="Permanently remove assessment"
                     >
-                      <Users className="h-3.5 w-3.5 mr-1.5" /> Assign Assessment
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                     </Button>
                   )}
 
@@ -894,16 +921,28 @@ export default function StaffAssessmentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Draft Assessment Dialog */}
+      {/* Delete / Retire Assessment Dialog */}
       <DeleteConfirmationDialog
         isOpen={!!assessmentToDelete}
         onOpenChange={(open: boolean) => {
           if (!open) setAssessmentToDelete(null);
         }}
         onConfirm={handleConfirmDeleteAssessment}
-        title="Delete Draft Assessment"
-        description={`Are you sure you want to delete the draft assessment "${assessmentToDelete?.title}"? This draft blueprint will be permanently removed. This action cannot be undone.`}
-        confirmText="Delete Assessment"
+        title={
+          (assessmentToDelete?.attemptCount || 0) > 0
+            ? "Retire Assessment"
+            : "Delete Assessment"
+        }
+        description={
+          (assessmentToDelete?.attemptCount || 0) > 0
+            ? `Are you sure you want to retire "${assessmentToDelete?.title}"? Candidate attempts have been recorded; this assessment will be archived to preserve historical performance and compliance data.`
+            : `Are you sure you want to delete the assessment "${assessmentToDelete?.title}"? This assessment blueprint will be permanently removed. This action cannot be undone.`
+        }
+        confirmText={
+          (assessmentToDelete?.attemptCount || 0) > 0
+            ? "Retire Assessment"
+            : "Delete Assessment"
+        }
         isLoading={deleteLoading}
       />
     </div>
