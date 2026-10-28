@@ -3,6 +3,8 @@ import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
 import { QuestionService } from "@/modules/question-bank/services/question-service";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     const authContext = await requireAuthContext();
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest) {
     const difficulty = (searchParams.get("difficulty") as any) || undefined;
     const lifecycleStatus = (searchParams.get("lifecycleStatus") as any) || undefined;
     const search = searchParams.get("search") || undefined;
-    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 50;
+    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!, 10) : 500;
     const offset = searchParams.get("offset") ? parseInt(searchParams.get("offset")!, 10) : 0;
 
     const result = await QuestionService.getQuestions(
@@ -36,12 +38,30 @@ export async function GET(request: NextRequest) {
 
     if (result.error) {
       return NextResponse.json(
-        { error: result.error, questions: [], total: 0 },
+        {
+          error: result.error,
+          questions: [],
+          total: 0,
+          stats: { totalQuestions: 0, verifiedKeys: 0, pendingReview: 0, published: 0, archived: 0 },
+        },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(result);
+    let stats = {
+      totalQuestions: result.total,
+      verifiedKeys: 0,
+      pendingReview: 0,
+      published: 0,
+      archived: 0,
+    };
+    try {
+      stats = await QuestionService.getRepositoryStats(authContext.tenantId);
+    } catch {
+      // Ignore if stats fail
+    }
+
+    return NextResponse.json({ ...result, stats });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
       return NextResponse.json({ error: err.message }, { status: 403 });

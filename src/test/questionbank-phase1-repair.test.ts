@@ -405,6 +405,7 @@ describe("QuestionBank Sentinel & Batch Import Phase 1 Repairs", () => {
       const chain: any = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         range: vi.fn().mockResolvedValue({ data: mockQuestions, error: null, count: 2 }),
       };

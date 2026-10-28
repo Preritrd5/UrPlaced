@@ -90,6 +90,19 @@ export default function QuestionsDashboardPage() {
   const [loadingBanks, setLoadingBanks] = useState(true);
   const [banksError, setBanksError] = useState<string | null>(null);
 
+  // Authoritative Server-Side Repository Stats
+  const [repositoryStats, setRepositoryStats] = useState<{
+    totalQuestions: number;
+    verifiedKeys: number;
+    pendingReview: number;
+    published: number;
+    archived: number;
+  } | null>(null);
+
+  // Delete All Questions Action State
+  const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
+
   // Load Banks
   const fetchBanks = async () => {
     setLoadingBanks(true);
@@ -135,10 +148,15 @@ export default function QuestionsDashboardPage() {
       if (selectedStatus) params.set("lifecycleStatus", selectedStatus);
       if (searchQuery) params.set("search", searchQuery);
 
-      const res = await fetch(`/api/questions?${params.toString()}`);
+      const res = await fetch(`/api/questions?${params.toString()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setQuestions(data.questions || []);
+        if (data.stats) {
+          setRepositoryStats(data.stats);
+        }
       } else {
         const errData = await res.json().catch(() => ({}));
         console.error("Failed to fetch questions", errData);
@@ -225,15 +243,45 @@ export default function QuestionsDashboardPage() {
     }
   };
 
-  // KPIs
-  const totalCount = questions.length;
-  const verifiedCount = questions.filter(
-    (q) => q.current_version?.review_status === "VERIFIED_CORRECT"
-  ).length;
-  const pendingCount = questions.filter(
-    (q) => q.lifecycle_status === "PENDING_REVIEW" || q.current_version?.review_status === "UNREVIEWED"
-  ).length;
-  const publishedCount = questions.filter((q) => q.lifecycle_status === "PUBLISHED").length;
+  const handleConfirmDeleteAllQuestions = async () => {
+    setDeleteAllLoading(true);
+    try {
+      const res = await fetch("/api/questions/bulk-delete", {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeleteAllModalOpen(false);
+        toast.success(data.message || `Successfully removed ${data.deletedCount || 0} question(s).`);
+        loadQuestions();
+        fetchEligibleReviewCount();
+      } else {
+        toast.error(data.error || "Failed to bulk-delete questions.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to bulk-delete questions.");
+    } finally {
+      setDeleteAllLoading(false);
+    }
+  };
+
+  // KPIs: Authoritative server-side repository metrics with local fallback
+  const totalCount = repositoryStats !== null ? repositoryStats.totalQuestions : questions.length;
+  const verifiedCount =
+    repositoryStats !== null
+      ? repositoryStats.verifiedKeys
+      : questions.filter((q) => q.current_version?.review_status === "VERIFIED_CORRECT").length;
+  const pendingCount =
+    repositoryStats !== null
+      ? repositoryStats.pendingReview
+      : questions.filter(
+          (q) => q.lifecycle_status === "PENDING_REVIEW" || q.current_version?.review_status === "UNREVIEWED"
+        ).length;
+  const publishedCount =
+    repositoryStats !== null
+      ? repositoryStats.published
+      : questions.filter((q) => q.lifecycle_status === "PUBLISHED").length;
   const distinctSubjects = Array.from(
     new Set(banks.map((b) => b.subject || b.name).filter(Boolean))
   ) as string[];
@@ -335,6 +383,19 @@ export default function QuestionsDashboardPage() {
               New Question
             </Button>
           </Link>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteAllModalOpen(true)}
+            disabled={totalCount === 0 && questions.length === 0}
+            className="flex items-center gap-1.5 text-xs text-status-danger border-status-danger/30 hover:bg-[var(--color-danger-subtle)] hover:text-status-danger disabled:opacity-50"
+            title="Delete or archive all questions belonging to your college"
+          >
+            <Trash2 className="w-4 h-4 text-status-danger" />
+            Delete All Questions
+          </Button>
         </div>
       </div>
 
@@ -704,6 +765,17 @@ export default function QuestionsDashboardPage() {
         description="Are you sure you want to delete this question? Unreferenced questions will be permanently deleted from the repository. Questions referenced in blueprints or historical assessments will be safely retired to preserve audit integrity."
         confirmText="Delete Question"
         isLoading={deleteLoading}
+      />
+
+      {/* Delete All Questions Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={deleteAllModalOpen}
+        onOpenChange={setDeleteAllModalOpen}
+        onConfirm={handleConfirmDeleteAllQuestions}
+        title="Delete All Questions"
+        description="Are you sure you want to delete all questions for your college workspace? Unreferenced questions will be permanently deleted from the repository. Questions referenced in blueprints, published assessments, or student attempt histories will be safely archived to protect historical records. This operation is irreversible for permanently deleted questions."
+        confirmText="Delete All Questions"
+        isLoading={deleteAllLoading}
       />
     </div>
   );
