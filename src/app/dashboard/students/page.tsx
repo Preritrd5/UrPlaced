@@ -195,7 +195,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[720px] text-left text-xs">
                 <thead className="bg-input text-text-secondary font-mono border-b border-border uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3 px-4">Enrollment ID</th>

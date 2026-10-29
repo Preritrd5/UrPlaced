@@ -65,6 +65,7 @@ function createMockSupabaseClient() {
         if (table === "question_set_items") mockQuestionSetItems = mockQuestionSetItems.filter((r) => !deleteFilter(r));
         if (table === "assessments") mockAssessments = mockAssessments.filter((r) => !deleteFilter(r));
         if (table === "assessment_assignments") mockAssessmentAssignments = mockAssessmentAssignments.filter((r) => !deleteFilter(r));
+        if (table === "assessment_attempts") mockAssessmentAttempts = mockAssessmentAttempts.filter((r) => !deleteFilter(r));
       };
 
       const builder: any = {
@@ -95,6 +96,7 @@ function createMockSupabaseClient() {
           if (table === "questions") targetRows = mockQuestions;
           if (table === "question_sets") targetRows = mockQuestionSets;
           if (table === "assessments") targetRows = mockAssessments;
+          if (table === "assessment_assignments") targetRows = mockAssessmentAssignments;
 
           targetRows.forEach((r) => {
             let match = true;
@@ -304,7 +306,7 @@ describe("UrPlaced Phase 2 — Secure Delete Actions Suite", () => {
       expect(mockAssessments.find((a) => a.id === assessId)).toBeUndefined();
     });
 
-    it("safely archives an assessment when student attempts exist (> 0 attempts)", async () => {
+    it("permanently deletes an assessment, assignments and attempts when candidate attempts exist", async () => {
       const assessId = "assess-with-attempts";
       mockAssessments.push({
         id: assessId,
@@ -317,31 +319,41 @@ describe("UrPlaced Phase 2 — Secure Delete Actions Suite", () => {
         tenant_id: tenantA,
         assessment_id: assessId,
       });
+      mockAssessmentAssignments.push({
+        id: "assign-att-1",
+        tenant_id: tenantA,
+        assessment_id: assessId,
+        status: "ACTIVE",
+      });
 
       const res = await AssessmentService.deleteAssessment(tenantA, assessId);
       expect(res.success).toBe(true);
-      expect(res.archived).toBe(true);
-      expect(mockAssessments.find((a) => a.id === assessId)?.status).toBe("ARCHIVED");
+      expect(res.deleted).toBe(true);
+      expect(mockAssessments.find((a) => a.id === assessId)).toBeUndefined();
+      expect(mockAssessmentAssignments.find((a) => a.assessment_id === assessId)).toBeUndefined();
+      expect(mockAssessmentAttempts.find((a) => a.assessment_id === assessId)).toBeUndefined();
     });
 
-    it("rejects deleting an assessment with active cohort assignments until unassigned", async () => {
+    it("successfully deletes an assessment with active assignments when attempts are zero, cleanly unlinking assignments", async () => {
       const assessId = "assess-assigned";
       mockAssessments.push({
         id: assessId,
         tenant_id: tenantA,
         title: "Active Batch Assessment",
-        status: "DRAFT",
+        status: "PUBLISHED",
       });
       mockAssessmentAssignments.push({
         id: "assign-1",
         tenant_id: tenantA,
         assessment_id: assessId,
+        status: "ACTIVE",
       });
 
       const res = await AssessmentService.deleteAssessment(tenantA, assessId);
-      expect(res.success).toBe(false);
-      expect(res.error).toContain("currently assigned to one or more cohorts");
-      expect(mockAssessments.find((a) => a.id === assessId)).toBeDefined();
+      expect(res.success).toBe(true);
+      expect(res.deleted).toBe(true);
+      expect(mockAssessments.find((a) => a.id === assessId)).toBeUndefined();
+      expect(mockAssessmentAssignments.find((a) => a.assessment_id === assessId)).toBeUndefined();
     });
 
     it("enforces tenant boundary: Tenant B cannot delete Tenant A's assessment", async () => {

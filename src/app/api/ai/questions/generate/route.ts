@@ -53,9 +53,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typeof count === "number" && (count < 1 || count > 5)) {
+    const maxAllowed = process.env.MAX_AI_QUESTIONS_PER_REQUEST
+      ? parseInt(process.env.MAX_AI_QUESTIONS_PER_REQUEST, 10)
+      : 20;
+
+    const parsedCount = typeof count === "number" ? count : parseInt(String(count), 10);
+    if (isNaN(parsedCount) || !Number.isInteger(parsedCount) || parsedCount < 1 || parsedCount > maxAllowed) {
       return NextResponse.json(
-        { error: "Batch size must be between 1 and 5 questions per request." },
+        { error: `Number of questions must be an integer between 1 and ${maxAllowed}.` },
         { status: 400 }
       );
     }
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
       subtopic: typeof subtopic === "string" ? subtopic.trim() : undefined,
       difficulty,
       questionType,
-      count: typeof count === "number" ? count : 1,
+      count: parsedCount,
       referenceNotes: typeof referenceNotes === "string" ? referenceNotes.slice(0, 1000) : undefined,
       saveAsDraft: Boolean(saveAsDraft),
     });

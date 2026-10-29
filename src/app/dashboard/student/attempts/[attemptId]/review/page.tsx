@@ -164,7 +164,7 @@ export default function AttemptReviewPage({
 
           return (
             <Card key={q.questionId} className="p-5 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-bold text-text-muted">
                     Question {idx + 1}
@@ -242,7 +242,7 @@ export default function AttemptReviewPage({
 
                   {!isCorrect && !isManual && (
                     <div className="pt-2 border-t border-primary/10 text-[11px] text-secondary flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5" /> Flagged for Phase 08 Mistake Bank targeted revision drill.
+                      <Sparkles className="h-3.5 w-3.5" /> Flagged for Mistake Bank targeted revision drill.
                     </div>
                   )}
                 </div>

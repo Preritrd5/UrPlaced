@@ -39,13 +39,29 @@ export function AIGenerateQuestionModal({
   const [questionType, setQuestionType] = useState<
     "SINGLE_CHOICE" | "MULTIPLE_SELECT" | "NUMERIC" | "SHORT_ANSWER" | "CODING"
   >("SINGLE_CHOICE");
-  const [count, setCount] = useState(1);
+  const [countInput, setCountInput] = useState("3");
   const [referenceNotes, setReferenceNotes] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedDrafts, setGeneratedDrafts] = useState<any[]>([]);
   const [savedCount, setSavedCount] = useState(0);
+
+  const numericCount = parseInt(countInput, 10);
+  const isCountValid =
+    countInput.trim() !== "" &&
+    !isNaN(numericCount) &&
+    Number.isInteger(Number(countInput)) &&
+    numericCount >= 1 &&
+    numericCount <= 20;
+
+  const countValidationMessage = (() => {
+    if (countInput.trim() === "") return "Please enter question quantity (1-20).";
+    if (isNaN(numericCount) || !Number.isInteger(Number(countInput))) return "Quantity must be a whole number.";
+    if (numericCount < 1) return "Minimum quantity is 1 question.";
+    if (numericCount > 20) return "Maximum quantity is 20 questions per request.";
+    return null;
+  })();
 
   useEffect(() => {
     setLocalBanks(banks);
@@ -59,6 +75,11 @@ export function AIGenerateQuestionModal({
   const handleGenerate = async (saveDirectlyAsDraft = false) => {
     if (!topic.trim()) {
       setError("Please specify a topic or subject.");
+      return;
+    }
+
+    if (!isCountValid) {
+      setError(countValidationMessage || "Please enter a valid question quantity between 1 and 20.");
       return;
     }
 
@@ -81,7 +102,7 @@ export function AIGenerateQuestionModal({
           bankId: bankId || undefined,
           difficulty,
           questionType,
-          count,
+          count: numericCount,
           referenceNotes: referenceNotes.trim() || undefined,
           saveAsDraft: saveDirectlyAsDraft,
         }),
@@ -105,33 +126,34 @@ export function AIGenerateQuestionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#24283A]/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#F8F7F3] border border-[#DDDCD5] rounded-xl shadow-xl w-full max-w-3xl my-8 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-[#24283A]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-[#F8F7F3] border border-[#DDDCD5] rounded-xl shadow-xl w-full max-w-3xl my-4 sm:my-8 overflow-hidden flex flex-col max-h-[92dvh]">
         {/* Header */}
-        <div className="p-6 border-b border-[#DDDCD5] flex items-center justify-between bg-[#FBFAF7]">
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-lg bg-[#5052C9]/10 text-[#5052C9]">
+        <div className="p-4 sm:p-6 border-b border-[#DDDCD5] flex items-center justify-between gap-2 bg-[#FBFAF7] shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <span className="p-2 rounded-lg bg-[#5052C9]/10 text-[#5052C9] shrink-0">
               <Sparkles className="w-5 h-5 text-[#5052C9]" />
             </span>
-            <div>
-              <h2 className="text-xl font-bold font-outfit text-[#24283A]">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-xl font-bold font-outfit text-[#24283A] truncate">
                 AI Question Intelligence Generator
               </h2>
-              <p className="text-xs text-[#292D40]/70 font-inter">
+              <p className="text-xs text-[#292D40]/70 font-inter line-clamp-1 sm:line-clamp-none">
                 Create structured, validated assessment drafts with duplicate detection and quality controls.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-[#292D40]/50 hover:text-[#24283A] p-1.5 rounded-lg hover:bg-[#EDECE7] transition-colors"
+            className="text-[#292D40]/50 hover:text-[#24283A] p-1.5 rounded-lg hover:bg-[#EDECE7] transition-colors shrink-0"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
@@ -371,28 +393,42 @@ export function AIGenerateQuestionModal({
         </div>
 
         {/* Modal Actions */}
-        <div className="p-4 border-t border-[#DDDCD5] bg-[#FBFAF7] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-[#292D40]">Questions to generate:</label>
-            <select
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-              disabled={isLoading}
-              className="p-1.5 text-xs bg-white border border-[#DDDCD5] rounded-md text-[#24283A]"
-            >
-              <option value={1}>1 Question</option>
-              <option value={2}>2 Questions</option>
-              <option value={3}>3 Questions</option>
-            </select>
+        <div className="p-3 sm:p-4 border-t border-[#DDDCD5] bg-[#FBFAF7] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <label htmlFor="ai-question-count-input" className="text-xs font-semibold text-[#24283A] font-inter shrink-0">
+                Number of Questions:
+              </label>
+              <input
+                id="ai-question-count-input"
+                type="number"
+                min={1}
+                max={20}
+                step={1}
+                value={countInput}
+                onChange={(e) => setCountInput(e.target.value)}
+                placeholder="Enter quantity"
+                disabled={isLoading}
+                className={`w-28 p-1.5 text-xs bg-white border rounded-md text-[#24283A] font-inter focus:outline-none focus:ring-2 focus:ring-[#5052C9]/30 ${
+                  !isCountValid ? "border-red-400 focus:ring-red-300" : "border-[#B8B6AC]"
+                }`}
+              />
+              <span className="text-[11px] text-[#292D40]/60 font-mono">(1 - 20)</span>
+            </div>
+            {!isCountValid && countValidationMessage && (
+              <span className="text-[11px] text-red-600 font-inter">
+                {countValidationMessage}
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 justify-end">
             <Button
               variant="outline"
               size="sm"
               onClick={onClose}
               disabled={isLoading}
-              className="text-xs border-[#DDDCD5]"
+              className="text-xs border-[#DDDCD5] flex-1 sm:flex-initial"
             >
               Cancel
             </Button>
@@ -400,8 +436,8 @@ export function AIGenerateQuestionModal({
               variant="outline"
               size="sm"
               onClick={() => handleGenerate(false)}
-              disabled={isLoading || !topic.trim()}
-              className="text-xs border-[#5052C9] text-[#5052C9] hover:bg-[#5052C9]/10"
+              disabled={isLoading || !topic.trim() || !isCountValid}
+              className="text-xs border-[#5052C9] text-[#5052C9] hover:bg-[#5052C9]/10 flex-1 sm:flex-initial"
             >
               {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
               Preview Drafts
@@ -409,8 +445,8 @@ export function AIGenerateQuestionModal({
             <Button
               size="sm"
               onClick={() => handleGenerate(true)}
-              disabled={isLoading || !topic.trim()}
-              className="text-xs bg-[#5052C9] hover:bg-[#4345B0] text-white"
+              disabled={isLoading || !topic.trim() || !isCountValid}
+              className="text-xs bg-[#5052C9] hover:bg-[#4345B0] text-white w-full sm:w-auto"
             >
               {isLoading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />

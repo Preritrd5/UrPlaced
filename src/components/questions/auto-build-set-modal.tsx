@@ -349,19 +349,19 @@ export function AutoBuildSetModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-4xl max-h-[92vh] flex flex-col rounded-xl shadow-2xl border border-[#DDDCD5] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-4xl max-h-[92dvh] flex flex-col rounded-xl shadow-2xl border border-[#DDDCD5] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#DDDCD5] px-6 py-4 bg-[#F8F7F3]">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
+        <div className="flex items-center justify-between border-b border-[#DDDCD5] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#F8F7F3] shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
               <Wand2 className="w-5 h-5 text-primary" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-[#24283A] font-display">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-[#24283A] font-display truncate">
                 Auto-Build Question Set
               </h2>
-              <p className="text-xs text-[#292D40]/70">
+              <p className="text-xs text-[#292D40]/70 truncate">
                 {step === "CONFIG"
                   ? "Configure criteria to automatically compose a balanced, verified question set"
                   : "Review, adjust marks, and confirm your auto-composed question blueprint"}
@@ -371,7 +371,7 @@ export function AutoBuildSetModal({
           <button
             onClick={onClose}
             disabled={committing || loadingPreview}
-            className="text-[#292D40]/60 hover:text-[#24283A] p-1 rounded-md transition-colors disabled:opacity-50"
+            className="text-[#292D40]/60 hover:text-[#24283A] p-1 rounded-md transition-colors disabled:opacity-50 shrink-0"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -912,14 +912,14 @@ export function AutoBuildSetModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-[#DDDCD5] bg-[#F8F7F3]">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-t border-[#DDDCD5] bg-[#F8F7F3] shrink-0">
           {step === "CONFIG" ? (
             <>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7]"
+                className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7] w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -933,7 +933,7 @@ export function AutoBuildSetModal({
                   (availability && !availability.isSatisfiable) ||
                   (useDifficultyDist && easyPercent + mediumPercent + hardPercent !== 100)
                 }
-                className="bg-primary hover:bg-primary-hover text-white flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+                className="bg-primary hover:bg-primary-hover text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm w-full sm:w-auto"
               >
                 {loadingPreview ? (
                   <>
@@ -956,18 +956,18 @@ export function AutoBuildSetModal({
                 size="sm"
                 onClick={() => setStep("CONFIG")}
                 disabled={committing}
-                className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7] flex items-center gap-1"
+                className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7] flex items-center justify-center gap-1 w-full sm:w-auto"
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> Back to Criteria
               </Button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={onClose}
                   disabled={committing}
-                  className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7]"
+                  className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7] w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
@@ -975,7 +975,7 @@ export function AutoBuildSetModal({
                   size="sm"
                   onClick={handleCommitSet}
                   disabled={committing || previewItems.length === 0}
-                  className="bg-[#2E8F86] hover:bg-[#267870] text-white flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+                  className="bg-[#2E8F86] hover:bg-[#267870] text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm w-full sm:w-auto"
                 >
                   {committing ? (
                     <>

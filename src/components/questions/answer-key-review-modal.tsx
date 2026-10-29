@@ -50,12 +50,37 @@ export function AnswerKeyReviewModal({
   const [reviewNotes, setReviewNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchedQuestion, setFetchedQuestion] = useState<QuestionReviewPreview | null>(null);
 
   useEffect(() => {
     setSelectedStatus(currentStatus === "UNREVIEWED" ? "VERIFIED_CORRECT" : currentStatus);
     setReviewNotes("");
     setError(null);
-  }, [currentStatus, isOpen]);
+    setFetchedQuestion(null);
+
+    if (isOpen && questionId && (!question || !question.prompt)) {
+      fetch(`/api/questions/${questionId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            const versions = data.versions || [];
+            const cur = versions.find((v: any) => v.id === data.current_version_id) || versions[0];
+            if (cur) {
+              setFetchedQuestion({
+                prompt: cur.prompt,
+                questionType: data.question_type,
+                options: cur.options,
+                answerKey: cur.answer_key,
+                explanation: cur.explanation,
+                difficulty: cur.difficulty,
+                sourceType: cur.source_type,
+              });
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [currentStatus, isOpen, questionId, question]);
 
   if (!isOpen) return null;
 
@@ -89,34 +114,36 @@ export function AnswerKeyReviewModal({
     }
   };
 
-  const answerKey = question?.answerKey || {};
-  const questionType = question?.questionType;
+  const activeQuestion = question?.prompt ? question : (fetchedQuestion || question);
+  const answerKey = activeQuestion?.answerKey || {};
+  const questionType = activeQuestion?.questionType;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-card w-full max-w-2xl max-h-[90vh] flex flex-col rounded-xl shadow-xl border border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24283A]/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-card w-full max-w-2xl max-h-[92dvh] flex flex-col rounded-xl shadow-xl border border-border">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-text-primary font-display">
+        <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-3.5 sm:py-4 shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+            <h3 className="text-sm sm:text-base font-bold text-text-primary font-heading truncate">
               Review & Verify Answer Key
             </h3>
-            {question?.sourceType === "AI_GENERATED" && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+            {activeQuestion?.sourceType === "AI_GENERATED" && (
+              <span className="hidden xs:inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
                 <Sparkles className="w-3 h-3 text-primary" /> AI Generated
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-text-secondary hover:text-text-primary p-1 rounded transition-colors"
+            className="text-text-secondary hover:text-text-primary p-1 rounded transition-colors shrink-0"
+            aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
           {error && (
             <div className="p-3 rounded-md bg-red-50 text-red-700 text-xs border border-red-200">
               {error}
@@ -124,21 +151,21 @@ export function AnswerKeyReviewModal({
           )}
 
           {/* Question Details Section */}
-          {question && (
+          {activeQuestion && (
             <div className="space-y-4 rounded-lg bg-input/50 border border-border p-4">
               <div className="flex items-center justify-between text-xs text-text-secondary border-b border-border pb-2">
                 <span className="font-semibold text-text-primary">
                   Question Content & Expected Answers
                 </span>
                 <div className="flex items-center gap-2">
-                  {question.questionType && (
+                  {activeQuestion.questionType && (
                     <span className="font-mono px-2 py-0.5 rounded bg-card border border-border">
-                      {question.questionType}
+                      {activeQuestion.questionType}
                     </span>
                   )}
-                  {question.difficulty && (
+                  {activeQuestion.difficulty && (
                     <span className="font-mono px-2 py-0.5 rounded bg-card border border-border">
-                      {question.difficulty}
+                      {activeQuestion.difficulty}
                     </span>
                   )}
                 </div>
@@ -150,27 +177,32 @@ export function AnswerKeyReviewModal({
                   Prompt
                 </label>
                 <div className="mt-1 text-sm text-text-primary font-medium whitespace-pre-wrap bg-card p-3 rounded-md border border-border">
-                  {question.prompt || "No prompt provided."}
+                  {activeQuestion.prompt || "No prompt provided."}
                 </div>
               </div>
 
               {/* Multiple Choice Options */}
               {(questionType === "SINGLE_CHOICE" || questionType === "MULTIPLE_SELECT") &&
-                Array.isArray(question.options) &&
-                question.options.length > 0 && (
+                Array.isArray(activeQuestion.options) &&
+                activeQuestion.options.length > 0 && (
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
                       Options & Answer Key
                     </label>
                     <div className="mt-1.5 space-y-2">
-                      {question.options.map((opt, idx) => {
+                      {activeQuestion.options.map((opt, idx) => {
                         const isSingleCorrect =
                           answerKey.correct_option_id === opt.id ||
-                          answerKey.correct_option_id === opt.id?.toLowerCase();
+                          answerKey.correct_option_id === opt.id?.toLowerCase() ||
+                          answerKey.correctOptionId === opt.id ||
+                          answerKey.correctOptionId === opt.id?.toLowerCase();
                         const isMultiCorrect =
-                          Array.isArray(answerKey.correct_option_ids) &&
-                          (answerKey.correct_option_ids.includes(opt.id) ||
-                            answerKey.correct_option_ids.includes(opt.id?.toLowerCase()));
+                          (Array.isArray(answerKey.correct_option_ids) &&
+                            (answerKey.correct_option_ids.includes(opt.id) ||
+                              answerKey.correct_option_ids.includes(opt.id?.toLowerCase()))) ||
+                          (Array.isArray(answerKey.correctOptionIds) &&
+                            (answerKey.correctOptionIds.includes(opt.id) ||
+                              answerKey.correctOptionIds.includes(opt.id?.toLowerCase())));
                         const isCorrect = isSingleCorrect || isMultiCorrect;
 
                         return (
@@ -302,13 +334,13 @@ export function AnswerKeyReviewModal({
               )}
 
               {/* Explanation */}
-              {question.explanation && (
+              {activeQuestion.explanation && (
                 <div>
                   <label className="text-[11px] font-bold uppercase tracking-wider text-text-secondary">
                     Explanation
                   </label>
-                  <div className="mt-1 text-xs text-text-secondary bg-card p-3 rounded-md border border-border">
-                    {question.explanation}
+                  <div className="mt-1 text-xs text-text-secondary bg-card p-3 rounded-md border border-border leading-relaxed">
+                    {activeQuestion.explanation}
                   </div>
                 </div>
               )}
@@ -321,7 +353,7 @@ export function AnswerKeyReviewModal({
               <label className="block text-xs font-semibold text-text-secondary mb-2">
                 Verification Outcome
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSelectedStatus("VERIFIED_CORRECT")}
@@ -379,8 +411,8 @@ export function AnswerKeyReviewModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-card">
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading} size="sm">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-4 sm:px-6 py-3.5 sm:py-4 border-t border-border bg-card shrink-0">
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading} size="sm" className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button
@@ -388,7 +420,7 @@ export function AnswerKeyReviewModal({
             form="review-verify-form"
             disabled={loading}
             size="sm"
-            className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold"
+            className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold w-full sm:w-auto"
           >
             {loading ? "Submitting..." : "Confirm Review"}
           </Button>

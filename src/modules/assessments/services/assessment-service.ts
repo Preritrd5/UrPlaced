@@ -318,12 +318,9 @@ export class AssessmentService {
   }
 
   /**
-   * Deletes or safely archives an assessment blueprint.
-   * If candidate attempts have already been recorded, non-destructive archiving
-   * (status = 'ARCHIVED') preserves candidate score records, mistake analytics,
-   * and historical audit compliance.
-   * If zero attempts exist (whether DRAFT, PUBLISHED, or ARCHIVED), any unexercised
-   * cohort assignments are cleanly unlinked and the blueprint is permanently deleted.
+   * Permanently deletes an assessment blueprint, revoking all student assignments
+   * and removing any associated attempt records.
+   * Ensures strict tenant isolation and completely wipes the assessment from the college workspace.
    */
   public static async deleteAssessment(
     tenantId: string,
@@ -331,7 +328,7 @@ export class AssessmentService {
   ): Promise<{ success: boolean; error?: string; deleted?: boolean; archived?: boolean; message?: string }> {
     const supabase = await createServerSupabaseClient();
 
-    // 1. Fetch assessment
+    // 1. Fetch assessment to verify existence and tenant isolation
     const { data: assessment, error: fetchErr } = await supabase
       .from("assessments")
       .select("id, status, title")
@@ -343,49 +340,29 @@ export class AssessmentService {
       return { success: false, error: "Assessment not found." };
     }
 
-    // 2. Check if student attempts exist
-    const { count: attemptCount } = await supabase
-      .from("assessment_attempts")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", tenantId)
-      .eq("assessment_id", assessmentId);
-
-    // Invariant: If candidate attempts have been recorded, non-destructive archiving
-    // is strictly required to protect student records, analytics, and institutional compliance history.
-    if (attemptCount && attemptCount > 0) {
-      const { error: archErr } = await supabase
-        .from("assessments")
-        .update({ status: "ARCHIVED", updated_at: new Date().toISOString() })
-        .eq("tenant_id", tenantId)
-        .eq("id", assessmentId);
-
-      if (archErr) {
-        return { success: false, error: archErr.message };
-      }
-
-      return {
-        success: true,
-        archived: true,
-        message: "Assessment has recorded student attempts and has been safely archived to preserve historical performance data.",
-      };
-    }
-
-    // 3. Invariant: Cannot delete if cohort assignments exist
-    const { count: assignCount } = await supabase
+    // 2. Safely clean up unexercised or active cohort/student assignments
+    const { error: assignDelErr } = await supabase
       .from("assessment_assignments")
-      .select("id", { count: "exact", head: true })
+      .delete()
       .eq("tenant_id", tenantId)
       .eq("assessment_id", assessmentId);
 
-    if (assignCount && assignCount > 0) {
-      return {
-        success: false,
-        error: "Cannot delete assessment because it is currently assigned to one or more cohorts or students.",
-      };
+    if (assignDelErr) {
+      return { success: false, error: assignDelErr.message };
     }
 
-    // If zero attempts exist, the unassigned assessment blueprint can be permanently deleted.
-    // 4. Delete assessment row
+    // 3. Clean up any recorded candidate attempts (child tables attempt_responses and mistake_occurrences cascade via FK)
+    const { error: attemptDelErr } = await supabase
+      .from("assessment_attempts")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("assessment_id", assessmentId);
+
+    if (attemptDelErr) {
+      return { success: false, error: attemptDelErr.message };
+    }
+
+    // 4. Delete the assessment blueprint row permanently
     const { error: delErr } = await supabase
       .from("assessments")
       .delete()

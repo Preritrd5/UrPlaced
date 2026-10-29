@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { GeminiClient } from "../gemini-client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DuplicateDetector } from "@/modules/question-bank/services/duplicate-detector";
 
 export const GeneratedOptionSchema = z.object({
   id: z.string(),
@@ -54,9 +55,20 @@ export interface QuestionDraftResult {
 export class AIQuestionIntelligenceService {
   /**
    * Generates strictly validated placement questions using Gemini structured output.
+   * Supports quantities up to 20 by executing bounded sub-batches of up to 5 questions
+   * each, ensuring complete prompt generation, token safety, and accurate persistence.
    */
   public static async generateQuestions(input: GenerateQuestionsInput): Promise<QuestionDraftResult[]> {
-    const count = Math.min(Math.max(1, input.count || 1), 5); // Limit batch to 1-5 for high quality
+    const totalRequested = Math.min(Math.max(1, input.count || 1), 20);
+
+    // Split generation into sub-batches of at most 5 questions to maximize generation depth and avoid token truncation
+    const batchSizes: number[] = [];
+    let remaining = totalRequested;
+    while (remaining > 0) {
+      const currentChunk = Math.min(remaining, 5);
+      batchSizes.push(currentChunk);
+      remaining -= currentChunk;
+    }
 
     const systemInstruction = `You are UrPlaced's AI Question Bank Architect.
 You generate high-caliber, mathematically sound, industry-standard assessment questions for college placement drives and competitive programming.
@@ -71,9 +83,12 @@ STRICT GENERATION RULES:
 6. Detailed, step-by-step solution logic in explanation.
 7. Return strictly valid JSON adhering to the required schema. Never wrap in markdown backticks.`;
 
-    const subjectLine = input.subject ? `Subject: ${input.subject}` : "";
-    const categoryLine = input.category ? `Category: ${input.category}` : "";
-    const userPrompt = `Generate ${count} ${input.difficulty} question(s) of type ${input.questionType}.
+    const allGeneratedQuestions: GeneratedQuestion[] = [];
+
+    for (const batchCount of batchSizes) {
+      const subjectLine = input.subject ? `Subject: ${input.subject}` : "";
+      const categoryLine = input.category ? `Category: ${input.category}` : "";
+      const userPrompt = `Generate ${batchCount} ${input.difficulty} question(s) of type ${input.questionType}.
 ${subjectLine ? `${subjectLine}\n` : ""}${categoryLine ? `${categoryLine}\n` : ""}Topic: ${input.topic}
 ${input.subtopic ? `Subtopic: ${input.subtopic}` : ""}
 ${input.referenceNotes ? `Reference constraints/syllabus: ${input.referenceNotes}` : ""}
@@ -99,72 +114,92 @@ Return format:
   ]
 }`;
 
-    const result = await GeminiClient.generate({
-      prompt: userPrompt,
-      systemInstruction,
-      temperature: 0.2,
-      responseMimeType: "application/json",
-      feature: "QUESTION_INTELLIGENCE",
-      userId: input.userId,
-      tenantId: input.tenantId,
-    });
+      const result = await GeminiClient.generate({
+        prompt: userPrompt,
+        systemInstruction,
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        feature: "QUESTION_INTELLIGENCE",
+        userId: input.userId,
+        tenantId: input.tenantId,
+      });
 
-    let parsedJson: any;
-    try {
-      parsedJson = JSON.parse(result.text);
-    } catch (err: any) {
-      throw new Error(`AI generated non-JSON response: ${err.message}`);
+      let parsedJson: any;
+      try {
+        parsedJson = JSON.parse(result.text);
+      } catch (err: any) {
+        throw new Error(`AI generated non-JSON response: ${err.message}`);
+      }
+
+      const validation = GenerationResponseSchema.safeParse(parsedJson);
+      if (!validation.success) {
+        throw new Error(`Generated questions failed validation: ${validation.error.message}`);
+      }
+
+      allGeneratedQuestions.push(...validation.data.questions);
     }
 
-    const validation = GenerationResponseSchema.safeParse(parsedJson);
-    if (!validation.success) {
-      throw new Error(`Generated questions failed validation: ${validation.error.message}`);
-    }
-
-    const generatedQuestions = validation.data.questions;
     const admin = createAdminClient();
     const results: QuestionDraftResult[] = [];
 
-    for (const q of generatedQuestions) {
+    for (const q of allGeneratedQuestions) {
       // 1. Quality check: if SINGLE_CHOICE, verify correctOptionId matches an option
       if (q.questionType === "SINGLE_CHOICE") {
         const correctId = q.answerKey?.correctOptionId;
         const exists = q.options.some((opt) => opt.id === correctId);
         if (!exists && q.options.length > 0) {
-          // If model misassigned ID, default to first option ID and flag
           q.answerKey.correctOptionId = q.options[0].id;
         }
       }
 
-      // 2. Duplicate detection check against existing question versions in tenant
+      // 2. Generate deterministic content fingerprint
+      const fingerprint = DuplicateDetector.generateFingerprint(q.prompt, q.options);
+
+      // 3. Duplicate detection check against existing question versions in tenant
       let duplicateWarning: QuestionDraftResult["duplicateWarning"] = {
         isPossibleDuplicate: false,
       };
 
       try {
-        const snippet = q.prompt.slice(0, 40).replace(/[^a-zA-Z0-9 ]/g, "").trim();
-        if (snippet.length > 10) {
-          const { data: existing } = await admin
-            .from("question_versions")
-            .select("id, question_id, prompt")
-            .eq("tenant_id", input.tenantId)
-            .ilike("prompt", `%${snippet}%`)
-            .limit(1)
-            .maybeSingle();
+        const { data: exactMatch } = await admin
+          .from("question_versions")
+          .select("id, question_id, prompt")
+          .eq("tenant_id", input.tenantId)
+          .eq("fingerprint", fingerprint)
+          .limit(1)
+          .maybeSingle();
 
-          if (existing) {
-            duplicateWarning = {
-              isPossibleDuplicate: true,
-              matchedQuestionId: existing.question_id,
-              matchedPrompt: existing.prompt,
-            };
+        if (exactMatch) {
+          duplicateWarning = {
+            isPossibleDuplicate: true,
+            matchedQuestionId: exactMatch.question_id,
+            matchedPrompt: exactMatch.prompt,
+          };
+        } else {
+          const snippet = q.prompt.slice(0, 40).replace(/[^a-zA-Z0-9 ]/g, "").trim();
+          if (snippet.length > 10) {
+            const { data: textMatch } = await admin
+              .from("question_versions")
+              .select("id, question_id, prompt")
+              .eq("tenant_id", input.tenantId)
+              .ilike("prompt", `%${snippet}%`)
+              .limit(1)
+              .maybeSingle();
+
+            if (textMatch) {
+              duplicateWarning = {
+                isPossibleDuplicate: true,
+                matchedQuestionId: textMatch.question_id,
+                matchedPrompt: textMatch.prompt,
+              };
+            }
           }
         }
       } catch {
-        // Continue if duplicate check encounters error
+        // Continue if duplicate scan fails
       }
 
-      // 3. Save as Draft if requested and bankId provided
+      // 4. Save as Draft if requested and bankId provided
       let savedQuestionId: string | undefined;
       let savedVersionId: string | undefined;
 
@@ -182,7 +217,7 @@ Return format:
             .single();
 
           if (insertedQ && !qErr) {
-            savedQuestionId = insertedQ.id;
+            const currentQId = insertedQ.id;
 
             const resolvedTags = new Set<string>();
             if (input.topic) resolvedTags.add(input.topic.trim().toLowerCase());
@@ -195,7 +230,7 @@ Return format:
               .from("question_versions")
               .insert({
                 tenant_id: input.tenantId,
-                question_id: savedQuestionId,
+                question_id: currentQId,
                 version_number: 1,
                 prompt: q.prompt,
                 content_format: "MARKDOWN",
@@ -204,22 +239,56 @@ Return format:
                 explanation: q.explanation,
                 difficulty: q.difficulty,
                 topic_tags: Array.from(resolvedTags),
-                source_type: "AI_GENERATED", // Audit provenance
+                source_type: "AI_GENERATED",
+                source_reference: "AI Question Intelligence (Gemini)",
+                license_type: "PROPRIETARY",
+                review_status: "UNREVIEWED",
+                fingerprint,
+                change_summary: "AI Generated initial version",
+                created_by: input.userId,
               })
               .select("id")
               .single();
 
             if (insertedV && !vErr) {
+              savedQuestionId = currentQId;
               savedVersionId = insertedV.id;
+
               // Link current_version_id
               await admin
                 .from("questions")
                 .update({ current_version_id: savedVersionId })
                 .eq("id", savedQuestionId);
+
+              // Record duplicate candidate pair if detected
+              if (duplicateWarning.isPossibleDuplicate && duplicateWarning.matchedQuestionId && duplicateWarning.matchedQuestionId !== savedQuestionId) {
+                try {
+                  await admin.from("question_duplicate_candidates").insert({
+                    tenant_id: input.tenantId,
+                    source_question_id: savedQuestionId,
+                    matched_question_id: duplicateWarning.matchedQuestionId,
+                    similarity_score: 0.95,
+                    detection_method: "TEXT_SIMILARITY",
+                    status: "PENDING_REVIEW",
+                  });
+                } catch {
+                  // Duplicate candidate logging failure is non-fatal
+                }
+              }
+            } else {
+              // Roll back orphaned question container if version insert failed
+              console.error("Failed to insert question_version for AI draft:", vErr?.message);
+              await admin
+                .from("questions")
+                .delete()
+                .eq("id", currentQId)
+                .eq("tenant_id", input.tenantId);
             }
+          } else {
+            console.error("Failed to insert question for AI draft:", qErr?.message);
           }
-        } catch {
-          // If draft insertion fails, still return the generated object to caller
+        } catch (saveErr: any) {
+          console.error("Exception while saving AI question draft:", saveErr?.message);
         }
       }
 
@@ -228,7 +297,7 @@ Return format:
         questionId: savedQuestionId,
         versionId: savedVersionId,
         duplicateWarning,
-        isSavedAsDraft: !!savedQuestionId,
+        isSavedAsDraft: !!(savedQuestionId && savedVersionId),
       });
     }
 

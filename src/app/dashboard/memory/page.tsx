@@ -120,22 +120,22 @@ export default function PlacementMemoryPage() {
   }
 
   return (
-    <div className="space-y-8 p-6 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#DDDCD5] pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#24283A] font-['Outfit']">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#24283A] font-['Outfit']">
             Placement Memory & Recruitment Intelligence
           </h1>
           <p className="text-[#292D40] text-sm mt-1">
             Institutional recruitment archives, pattern comparability, and moderated candidate debriefs.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={activeTab === "RECORDS" ? "primary" : "outline"}
             onClick={() => setActiveTab("RECORDS")}
-            className={activeTab === "RECORDS" ? "bg-[#5052C9] hover:bg-[#4345B0] text-white" : "border-[#DDDCD5] text-[#24283A]"}
+            className={activeTab === "RECORDS" ? "bg-[#5052C9] hover:bg-[#4345B0] text-white w-full sm:w-auto text-xs sm:text-sm" : "border-[#DDDCD5] text-[#24283A] w-full sm:w-auto text-xs sm:text-sm"}
           >
             <Archive className="w-4 h-4 mr-2" />
             Historical Archive
@@ -143,7 +143,7 @@ export default function PlacementMemoryPage() {
           <Button
             variant={activeTab === "MODERATION" ? "primary" : "outline"}
             onClick={() => setActiveTab("MODERATION")}
-            className={activeTab === "MODERATION" ? "bg-[#5052C9] hover:bg-[#4345B0] text-white" : "border-[#DDDCD5] text-[#24283A]"}
+            className={activeTab === "MODERATION" ? "bg-[#5052C9] hover:bg-[#4345B0] text-white w-full sm:w-auto text-xs sm:text-sm" : "border-[#DDDCD5] text-[#24283A] w-full sm:w-auto text-xs sm:text-sm"}
           >
             <ShieldCheck className="w-4 h-4 mr-2" />
             Moderation Queue ({pendingReports.length})
@@ -177,7 +177,7 @@ export default function PlacementMemoryPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
+                <table className="w-full min-w-[580px] text-left text-sm border-collapse">
                   <thead>
                     <tr className="border-b border-[#DDDCD5] text-xs font-semibold uppercase text-[#292D40]">
                       <th className="py-3 px-4">Company</th>
@@ -255,7 +255,7 @@ export default function PlacementMemoryPage() {
                       </p>
                     )}
 
-                    <div className="flex items-center gap-2 pt-2 border-t border-[#DDDCD5]">
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#DDDCD5]">
                       <Button
                         size="sm"
                         onClick={() => handleModerate(rep.id, "APPROVED")}

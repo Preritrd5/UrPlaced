@@ -281,7 +281,7 @@ describe("Phase 3: Bulk Question Import & AI Question Generation Domain Suite", 
       expect(json.error).toContain("Subject or topic is required");
     });
 
-    it("rejects oversized batch count > 5 (400)", async () => {
+    it("rejects oversized batch count > 20 (400)", async () => {
       vi.spyOn(ServerContextModule, "requireAuthContext").mockResolvedValue(
         mockPlacementHeadContext(tenantA)
       );
@@ -292,14 +292,14 @@ describe("Phase 3: Bulk Question Import & AI Question Generation Domain Suite", 
           topic: "Graph Algorithms",
           difficulty: "HARD",
           questionType: "CODING",
-          count: 10, // Oversized
+          count: 25, // Oversized (> 20)
         }),
       });
 
       const res = await generateAiQuestions(req);
       expect(res.status).toBe(400);
       const json = await res.json();
-      expect(json.error).toContain("Batch size must be between 1 and 5");
+      expect(json.error).toContain("Number of questions must be an integer between 1 and 20");
     });
 
     it("rejects target bank if it belongs to another tenant or does not exist (404)", async () => {

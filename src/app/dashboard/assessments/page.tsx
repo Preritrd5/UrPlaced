@@ -280,7 +280,7 @@ export default function StaffAssessmentsPage() {
         throw new Error(data.error || "Failed to delete assessment.");
       }
 
-      toast.success(data.message || (data.archived ? "Assessment archived successfully." : "Assessment deleted successfully."));
+      toast.success(data.message || "Assessment deleted successfully.");
       setAssessmentToDelete(null);
       loadData();
     } catch (err: any) {
@@ -403,12 +403,12 @@ export default function StaffAssessmentsPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex border-b border-border gap-2">
+      <div className="flex border-b border-border gap-2 overflow-x-auto scrollbar-none max-w-full">
         {(["ALL", "PUBLISHED", "DRAFT", "ARCHIVED"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0 ${
               activeTab === tab
                 ? "border-primary text-primary"
                 : "border-transparent text-text-secondary hover:text-text-primary"
@@ -531,9 +531,9 @@ export default function StaffAssessmentsPage() {
                           size="sm"
                           className="text-xs h-8 text-status-danger hover:bg-[var(--color-danger-subtle)] hover:text-status-danger"
                           onClick={() => setAssessmentToDelete(a)}
-                          title={(a.attemptCount || 0) > 0 ? "Retire assessment" : "Delete assessment"}
+                          title="Delete assessment"
                         >
-                          <Trash2 className="h-3.5 w-3.5 mr-1" /> {(a.attemptCount || 0) > 0 ? "Retire" : "Delete"}
+                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                         </Button>
                       )}
                     </>
@@ -921,28 +921,16 @@ export default function StaffAssessmentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete / Retire Assessment Dialog */}
+      {/* Delete Assessment Dialog */}
       <DeleteConfirmationDialog
         isOpen={!!assessmentToDelete}
         onOpenChange={(open: boolean) => {
           if (!open) setAssessmentToDelete(null);
         }}
         onConfirm={handleConfirmDeleteAssessment}
-        title={
-          (assessmentToDelete?.attemptCount || 0) > 0
-            ? "Retire Assessment"
-            : "Delete Assessment"
-        }
-        description={
-          (assessmentToDelete?.attemptCount || 0) > 0
-            ? `Are you sure you want to retire "${assessmentToDelete?.title}"? Candidate attempts have been recorded; this assessment will be archived to preserve historical performance and compliance data.`
-            : `Are you sure you want to delete the assessment "${assessmentToDelete?.title}"? This assessment blueprint will be permanently removed. This action cannot be undone.`
-        }
-        confirmText={
-          (assessmentToDelete?.attemptCount || 0) > 0
-            ? "Retire Assessment"
-            : "Delete Assessment"
-        }
+        title="Delete Assessment"
+        description={`Are you sure you want to delete the assessment "${assessmentToDelete?.title}"? This will permanently delete the assessment blueprint, all candidate attempts, and revoke any student assignments. This action cannot be undone.`}
+        confirmText="Delete Assessment"
         isLoading={deleteLoading}
       />
     </div>

@@ -124,15 +124,15 @@ export default function StudentDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button asChild variant="primary" className="bg-primary text-white shadow-sm">
-            <Link href="/dashboard/student/assessments" className="inline-flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Button asChild variant="primary" className="bg-primary text-white shadow-sm w-full sm:w-auto">
+            <Link href="/dashboard/student/assessments" className="inline-flex items-center justify-center gap-1.5">
               <Compass className="h-4 w-4" />
               <span>Take Assessment</span>
             </Link>
           </Button>
-          <Button asChild variant="outline" className="border-border hover:bg-surface">
-            <Link href="/dashboard/student/mistakes" className="inline-flex items-center gap-1.5">
+          <Button asChild variant="outline" className="border-border hover:bg-surface w-full sm:w-auto">
+            <Link href="/dashboard/student/mistakes" className="inline-flex items-center justify-center gap-1.5">
               <AlertCircle className="h-4 w-4 text-secondary" />
               <span>Mistake Bank ({metrics.pendingReviews})</span>
             </Link>
@@ -338,13 +338,13 @@ export default function StudentDashboardPage() {
             {completedAttempts.map((attempt: any) => (
               <div
                 key={attempt.id}
-                className="flex items-center justify-between p-4 rounded-xl border border-border bg-card shadow-sm hover:border-primary/40 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl border border-border bg-card shadow-sm hover:border-primary/40 transition-colors"
               >
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-text-primary font-heading">
+                <div className="space-y-1 min-w-0">
+                  <h4 className="text-sm font-bold text-text-primary font-heading truncate">
                     {attempt.assessments?.title || "Assessment Attempt"}
                   </h4>
-                  <div className="flex items-center gap-3 text-xs text-text-secondary">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5 text-secondary" />
                       {attempt.assessments?.time_limit_minutes || 60} mins
@@ -356,8 +356,8 @@ export default function StudentDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-border/60">
+                  <div className="text-left sm:text-right">
                     <div className="text-base font-bold font-heading text-primary">
                       {Math.round(Number(attempt.score_percentage) || 0)}%
                     </div>

@@ -524,6 +524,15 @@ export default function QuestionDetailPage({
         questionId={question.id}
         versionId={cur?.id}
         currentStatus={cur?.review_status || "UNREVIEWED"}
+        question={{
+          prompt: cur?.prompt,
+          questionType: question.question_type,
+          options: cur?.options,
+          answerKey: cur?.answer_key,
+          explanation: cur?.explanation,
+          difficulty: cur?.difficulty,
+          sourceType: cur?.source_type,
+        }}
         onClose={() => setReviewModalOpen(false)}
         onSuccess={loadQuestion}
       />

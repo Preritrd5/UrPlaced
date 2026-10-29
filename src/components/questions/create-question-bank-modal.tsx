@@ -148,14 +148,14 @@ export function CreateQuestionBankModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-bank-modal-title"
     >
-      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150 my-8">
+      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150 my-4 sm:my-8 max-h-[92dvh]">
         {/* Header */}
-        <div className="flex items-start justify-between p-5 sm:p-6 border-b border-border bg-card">
+        <div className="flex items-start justify-between p-5 sm:p-6 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[#5052C9]/10 text-[#5052C9] shrink-0">
               <FolderPlus className="w-5 h-5" />
@@ -184,16 +184,17 @@ export function CreateQuestionBankModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
-          {errorMsg && (
-            <div
-              role="alert"
-              className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-xs sm:text-sm flex items-start gap-2"
-            >
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+            {errorMsg && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-700 text-xs sm:text-sm flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
           {/* Academic Subject */}
           <div className="space-y-1.5">
@@ -326,37 +327,38 @@ export function CreateQuestionBankModal({
               {SHARING_OPTIONS.find((s) => s.value === sharingPolicy)?.desc}
             </p>
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="pt-3 border-t border-border flex items-center justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="rounded-xl text-xs sm:text-sm h-10 px-4"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-primary hover:bg-primary-hover text-white rounded-xl text-xs sm:text-sm h-10 px-5 flex items-center gap-2 font-semibold shadow-sm"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Creating Bank...</span>
-                </>
-              ) : (
-                <>
-                  <FolderPlus className="w-4 h-4" />
-                  <span>Create Question Bank</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
+        {/* Actions */}
+        <div className="p-4 sm:p-5 border-t border-border bg-card shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="rounded-xl text-xs sm:text-sm h-10 px-4 w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="bg-primary hover:bg-primary-hover text-white rounded-xl text-xs sm:text-sm h-10 px-5 flex items-center justify-center gap-2 font-semibold shadow-sm w-full sm:w-auto"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Creating Bank...</span>
+              </>
+            ) : (
+              <>
+                <FolderPlus className="w-4 h-4" />
+                <span>Create Question Bank</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
       </div>
     </div>
   );

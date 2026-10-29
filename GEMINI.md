@@ -26,7 +26,9 @@ No additional brand colors may be introduced, chosen, or replaced.
 All interactive and utility states are strictly derived from the base palette:
 
 - **Borders & Dividers:**
-  - Card / Input Border: `#DDDCD5` or `rgba(36, 40, 58, 0.12)`
+  - Card / Input / Container Border: `#B8B6AC` or `rgba(36, 40, 58, 0.26)`
+  - Subtle Border / Divider: `rgba(36, 40, 58, 0.16)` or `#DDDCD5`
+  - Strong Border: `rgba(36, 40, 58, 0.38)` or `#8E8D86`
   - Active / Focus Border: `#5052C9`
 - **Hover & Active States:**
   - Primary Hover: `#4345B0`

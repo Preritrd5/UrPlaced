@@ -51,7 +51,7 @@ export function AIMistakeAnalysisModal({ isOpen, onClose }: AIMistakeAnalysisMod
     <div className="fixed inset-0 z-50 bg-[#24283A]/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-[#F8F7F3] border border-[#DDDCD5] rounded-xl shadow-xl w-full max-w-2xl my-8 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-6 border-b border-[#DDDCD5] flex items-center justify-between bg-[#FBFAF7]">
+        <div className="p-4 sm:p-6 border-b border-[#DDDCD5] flex items-center justify-between bg-[#FBFAF7] shrink-0">
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-lg bg-[#5052C9]/10 text-[#5052C9]">
               <Brain className="w-5 h-5 text-[#5052C9]" />
@@ -213,11 +213,11 @@ export function AIMistakeAnalysisModal({ isOpen, onClose }: AIMistakeAnalysisMod
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#DDDCD5] bg-[#FBFAF7] flex items-center justify-between">
-          <span className="text-[11px] text-[#292D40]/60">
+        <div className="p-3 sm:p-4 border-t border-[#DDDCD5] bg-[#FBFAF7] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
+          <span className="text-[11px] text-[#292D40]/60 text-center sm:text-left">
             Recommendations update dynamically as you complete practice sessions
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             {analysis && (
               <Button
                 variant="outline"

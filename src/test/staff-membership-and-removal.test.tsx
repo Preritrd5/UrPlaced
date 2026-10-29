@@ -39,6 +39,10 @@ vi.mock("@/lib/supabase/admin", () => ({
           data: { users: [...mockUsers] },
           error: null,
         })),
+        deleteUser: vi.fn(async (userId: string) => {
+          mockUsers = mockUsers.filter((u) => u.id !== userId);
+          return { data: { user: null }, error: null };
+        }),
       },
     },
     from: vi.fn((table: string) => {
@@ -96,6 +100,13 @@ vi.mock("@/lib/supabase/admin", () => ({
                 mockMemberships = mockMemberships.filter((m) => {
                   for (const [k, v] of Object.entries(currentFilter)) {
                     if (m[k] !== v) return true;
+                  }
+                  return false;
+                });
+              } else if (table === "profiles") {
+                mockProfiles = mockProfiles.filter((p) => {
+                  for (const [k, v] of Object.entries(currentFilter)) {
+                    if (p[k] !== v) return true;
                   }
                   return false;
                 });
@@ -302,19 +313,50 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       expect(mockAuditLogs[0].action).toBe("membership.removed");
       expect(mockAuditLogs[0].tenantId).toBe(TENANT_A);
       expect(mockAuditLogs[0].actorId).toBe(HEAD_A_ID);
+      expect(mockAuditLogs[0].afterState.authAccountDeleted).toBe(true);
+      expect(mockAuditLogs[0].afterState.profileDeleted).toBe(true);
 
-      // Verify that public.profiles and auth.users were NOT touched
-      expect(mockProfiles.some((p) => p.id === STAFF_A_ID)).toBe(true);
-      expect(mockUsers.some((u) => u.id === STAFF_A_ID)).toBe(true);
+      // Verify that public.profiles and auth.users were permanently deleted
+      expect(mockProfiles.some((p) => p.id === STAFF_A_ID)).toBe(false);
+      expect(mockUsers.some((u) => u.id === STAFF_A_ID)).toBe(false);
     });
 
-    it("prevents removing the last active Placement Head of the college", async () => {
+    it("prevents self-removal when an administrator attempts to remove their own account", async () => {
       await expect(
         removeTenantMember({
           membershipId: "mem-head-a",
           tenantId: TENANT_A,
           actorUserId: HEAD_A_ID,
           reason: "Attempting self-deletion",
+        })
+      ).rejects.toThrow(/You cannot remove your own staff account/);
+
+      // Verify head remains enrolled
+      const membersA = await listTenantMembers(TENANT_A);
+      expect(membersA.some((m) => m.id === "mem-head-a")).toBe(true);
+    });
+
+    it("prevents removing the last active Placement Head of the college", async () => {
+      // Add an authorized staff administrator with STAFF_MANAGE permission
+      const STAFF_ADMIN_ID = "usr-staff-admin";
+      mockUsers.push({ id: STAFF_ADMIN_ID, email: "staffadmin@snpsu.edu.in", user_metadata: { full_name: "Staff Admin" } });
+      mockProfiles.push({ id: STAFF_ADMIN_ID, email: "staffadmin@snpsu.edu.in", full_name: "Staff Admin" });
+      mockMemberships.push({
+        id: "mem-staff-admin",
+        tenant_id: TENANT_A,
+        user_id: STAFF_ADMIN_ID,
+        role: "PLACEMENT_STAFF",
+        status: "ACTIVE",
+        permissions: ["STAFF_MANAGE"],
+        created_at: "2026-01-08T00:00:00Z",
+      });
+
+      await expect(
+        removeTenantMember({
+          membershipId: "mem-head-a",
+          tenantId: TENANT_A,
+          actorUserId: STAFF_ADMIN_ID,
+          reason: "Attempting to delete sole placement head",
         })
       ).rejects.toThrow(/Cannot remove the last active Placement Head/);
 
@@ -378,19 +420,7 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       expect(membersA.some((m) => m.id === "mem-staff-a")).toBe(true);
     });
 
-    it("preserves external memberships if a user belongs to multiple colleges", async () => {
-      // Suppose STAFF_A also has a valid membership in College B
-      mockMemberships.push({
-        id: "mem-staff-a-in-b",
-        tenant_id: TENANT_B,
-        user_id: STAFF_A_ID,
-        role: "PLACEMENT_STAFF",
-        status: "ACTIVE",
-        permissions: [],
-        created_at: "2026-01-15T00:00:00Z",
-      });
-
-      // Remove STAFF_A from College A
+    it("permanently deletes auth user and profile alongside college membership", async () => {
       await removeTenantMember({
         membershipId: "mem-staff-a",
         tenantId: TENANT_A,
@@ -401,9 +431,9 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       const membersA = await listTenantMembers(TENANT_A);
       expect(membersA.some((m) => m.user_id === STAFF_A_ID)).toBe(false);
 
-      // Verify STILL ACTIVE in College B
-      const membersB = await listTenantMembers(TENANT_B);
-      expect(membersB.some((m) => m.user_id === STAFF_A_ID)).toBe(true);
+      // Verify profile and auth user deleted
+      expect(mockProfiles.some((p) => p.id === STAFF_A_ID)).toBe(false);
+      expect(mockUsers.some((u) => u.id === STAFF_A_ID)).toBe(false);
     });
   });
 
@@ -551,10 +581,10 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       fireEvent.click(removeBtn);
 
       // Verify DeleteConfirmationDialog opened with proper title and options
-      expect(screen.getByText("Remove Staff Member")).toBeInTheDocument();
-      expect(screen.getByText(/Are you sure you want to remove/i)).toBeInTheDocument();
+      expect(screen.getByText("Permanently Remove Staff Member")).toBeInTheDocument();
+      expect(screen.getByText(/Are you sure you want to permanently remove/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Cancel/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Remove Member/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Permanently Remove Staff/i })).toBeInTheDocument();
     });
   });
 });

@@ -84,7 +84,7 @@ export function UserAvatar({
   return (
     <div
       className={cn(
-        "rounded-full bg-primary/10 text-primary border border-primary/25 font-heading font-bold flex items-center justify-center shadow-xs select-none transition-colors shrink-0",
+        "rounded-full bg-primary/10 text-primary border border-primary/45 font-heading font-bold flex items-center justify-center shadow-xs select-none transition-colors shrink-0",
         dimensionClass,
         className
       )}

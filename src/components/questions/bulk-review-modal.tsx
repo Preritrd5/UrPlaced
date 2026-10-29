@@ -113,19 +113,19 @@ export function BulkReviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-xl max-h-[90vh] flex flex-col rounded-xl shadow-xl border border-[#DDDCD5] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-xl max-h-[92dvh] flex flex-col rounded-xl shadow-xl border border-[#DDDCD5] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#DDDCD5] px-6 py-4 bg-[#F8F7F3]">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-[#2E8F86]/10 text-[#2E8F86] border border-[#2E8F86]/20">
+        <div className="flex items-center justify-between border-b border-[#DDDCD5] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#F8F7F3] shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+            <div className="p-2 rounded-lg bg-[#2E8F86]/10 text-[#2E8F86] border border-[#2E8F86]/20 shrink-0">
               <CheckCheck className="w-5 h-5 text-[#2E8F86]" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-[#24283A] font-display">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-[#24283A] font-display truncate">
                 Bulk Review & Accept Questions
               </h2>
-              <p className="text-xs text-[#292D40]/70">
+              <p className="text-xs text-[#292D40]/70 truncate">
                 Verify answer keys and approve questions matching active filter scope
               </p>
             </div>
@@ -133,7 +133,7 @@ export function BulkReviewModal({
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="text-[#292D40]/60 hover:text-[#24283A] p-1 rounded-md transition-colors disabled:opacity-50"
+            className="text-[#292D40]/60 hover:text-[#24283A] p-1 rounded-md transition-colors disabled:opacity-50 shrink-0"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -141,7 +141,7 @@ export function BulkReviewModal({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto max-h-[calc(92dvh-130px)]">
           {errorMsg && (
             <div className="p-3 bg-red-50 text-red-800 text-xs rounded-lg border border-red-200 flex items-start gap-2">
               <XCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -310,7 +310,7 @@ export function BulkReviewModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#DDDCD5] bg-[#F8F7F3]">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 px-4 sm:px-6 py-3.5 sm:py-4 border-t border-[#DDDCD5] bg-[#F8F7F3] shrink-0">
           {!result ? (
             <>
               <Button
@@ -318,7 +318,7 @@ export function BulkReviewModal({
                 size="sm"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7]"
+                className="text-xs border-[#DDDCD5] text-[#24283A] hover:bg-[#EDECE7] w-full sm:w-auto"
               >
                 Cancel
               </Button>
@@ -326,7 +326,7 @@ export function BulkReviewModal({
                 size="sm"
                 onClick={handleConfirmAcceptAll}
                 disabled={isSubmitting || eligibleCount === 0}
-                className="bg-[#2E8F86] hover:bg-[#267870] text-white flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+                className="bg-[#2E8F86] hover:bg-[#267870] text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm w-full sm:w-auto"
               >
                 {isSubmitting ? (
                   <>

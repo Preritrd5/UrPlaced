@@ -131,23 +131,23 @@ export default function AnalyticsDashboardPage() {
   }
 
   return (
-    <div className="space-y-8 p-6 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#DDDCD5] pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#24283A] font-['Outfit']">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#24283A] font-['Outfit']">
             Placement & Institutional Analytics
           </h1>
           <p className="text-[#292D40] text-sm mt-1">
             Evidence-based cohort metrics, assessment tracking, and verifiable topic weakness heatmaps.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={() => handleExportCsv("PLACEMENT_OUTCOMES")}
             disabled={exporting}
             variant="outline"
-            className="border-[#DDDCD5] text-[#24283A] hover:bg-[#F8F7F3]"
+            className="border-[#DDDCD5] text-[#24283A] hover:bg-[#F8F7F3] w-full sm:w-auto text-xs sm:text-sm"
           >
             <Download className="w-4 h-4 mr-2 text-[#5052C9]" />
             Export Outcomes CSV
@@ -155,7 +155,7 @@ export default function AnalyticsDashboardPage() {
           <Button
             onClick={() => handleExportCsv("COHORT_SKILL_GAPS")}
             disabled={exporting}
-            className="bg-[#5052C9] hover:bg-[#4345B0] text-white"
+            className="bg-[#5052C9] hover:bg-[#4345B0] text-white w-full sm:w-auto text-xs sm:text-sm"
           >
             <FileSpreadsheet className="w-4 h-4 mr-2" />
             Export Heatmap CSV
@@ -179,7 +179,7 @@ export default function AnalyticsDashboardPage() {
       <AIPlacementIntelligenceCard />
 
       {/* High-Level Placement Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="bg-[#F8F7F3] border-[#DDDCD5]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-[#292D40]">
@@ -376,7 +376,7 @@ export default function AnalyticsDashboardPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
+              <table className="w-full min-w-[580px] text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-[#DDDCD5] text-xs font-semibold uppercase text-[#292D40]">
                     <th className="py-3 px-4">Topic</th>

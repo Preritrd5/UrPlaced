@@ -26,10 +26,10 @@
   --color-secondary-active: #1F615B;
   --color-secondary-subtle: rgba(46, 143, 134, 0.10);
 
-  /* Derived Borders & Dividers */
-  --color-border: #DDDCD5;
-  --color-border-subtle: rgba(36, 40, 58, 0.08);
-  --color-border-strong: rgba(36, 40, 58, 0.20);
+  /* Derived Borders & Dividers — Darker, High-Visibility Design Tokens */
+  --color-border: #B8B6AC;
+  --color-border-subtle: rgba(36, 40, 58, 0.16);
+  --color-border-strong: rgba(36, 40, 58, 0.38);
   --color-border-focus: #5052C9;
 
   /* Derived Muted & Disabled */
@@ -89,6 +89,21 @@ code, kbd, samp, pre {
   outline: none;
   box-shadow: var(--shadow-sm), 0 0 0 3px var(--color-primary-ring);
   border-color: var(--color-primary);
+}
+
+/* ========================================================
+   Application-Wide Darker Border & Outline Consistency
+   Maps any explicit legacy border/divider classes directly to
+   the authoritative darker border token.
+   ======================================================== */
+.border-\[\#DDDCD5\],
+[class*="border-[#DDDCD5]"] {
+  border-color: var(--color-border) !important;
+}
+
+.divide-\[\#DDDCD5\] > :not([hidden]) ~ :not([hidden]),
+[class*="divide-[#DDDCD5]"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--color-border) !important;
 }
 
 /* ========================================================

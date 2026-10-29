@@ -62,17 +62,17 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row">
       {/* Mobile Header Bar */}
-      <header className="md:hidden flex items-center justify-between h-16 px-4 bg-card border-b border-border sticky top-0 z-40">
-        <div className="flex items-center gap-2">
-          <UrPlacedLogo size="sm" className="h-8 w-8" />
-          <span className="font-heading font-bold text-lg text-text-primary">
+      <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-40">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 mr-2">
+          <UrPlacedLogo size="sm" className="h-8 w-8 shrink-0" />
+          <span className="font-heading font-bold text-base sm:text-lg text-text-primary shrink-0">
             UrPlaced
           </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--color-primary-subtle)] text-primary">
+          <span className="hidden xs:inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--color-primary-subtle)] text-primary truncate max-w-[100px]">
             {roleDisplayNames[role] || "Workspace"}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {auth.isAuthenticated && (
             <NotificationBell size="sm" />
           )}
@@ -85,6 +85,7 @@ export function AppShell({ children }: AppShellProps) {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
+            className="h-9 w-9 p-0"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -103,12 +104,12 @@ export function AppShell({ children }: AppShellProps) {
       {/* Sidebar (Desktop persistent, Mobile slide-over) */}
       <aside
         className={cn(
-          "fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-64 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-screen",
+          "fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-64 shrink-0 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-screen",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-border">
+        <div className="h-16 flex items-center justify-between px-5 border-b border-border shrink-0">
           <Link href={defaultDashboard} className="flex items-center gap-2.5 min-w-0">
             <UrPlacedLogo size="md" className="h-9 w-9 shrink-0" />
             <div className="min-w-0 flex-1">
@@ -214,7 +215,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Desktop Application Header */}
-        <header className="hidden md:flex items-center justify-between h-16 px-6 lg:px-10 bg-card/85 backdrop-blur-sm border-b border-border sticky top-0 z-30">
+        <header className="hidden md:flex items-center justify-between h-16 px-6 lg:px-10 bg-card/85 backdrop-blur-sm border-b border-border sticky top-0 z-30 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             {auth.accountCategory === "COLLEGE" ? (
               <div className="flex items-center gap-2 text-sm text-text-secondary truncate">
@@ -223,7 +224,7 @@ export function AppShell({ children }: AppShellProps) {
                   {auth.tenant?.name || "College Placement Cell"}
                 </span>
                 <span className="text-border">&bull;</span>
-                <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-secondary border-secondary/40 font-mono">
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-secondary border-secondary/60 font-mono">
                   {roleDisplayNames[role] || "Placement Head"}
                 </Badge>
               </div>
@@ -232,7 +233,7 @@ export function AppShell({ children }: AppShellProps) {
                 <GraduationCap className="h-4 w-4 text-secondary shrink-0" />
                 <span className="font-semibold text-text-primary">Student Workspace</span>
                 <span className="text-border">&bull;</span>
-                <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-primary border-primary/30 font-mono">
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-primary border-primary/60 font-mono">
                   Placement Preparation
                 </Badge>
               </div>
@@ -243,7 +244,7 @@ export function AppShell({ children }: AppShellProps) {
             {auth.availableTenants.length > 1 && (
               <Link
                 href="/dashboard/select-tenant"
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-surface rounded-lg border border-border/80 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-surface rounded-lg border border-border transition-colors"
               >
                 <Building className="h-3.5 w-3.5" />
                 <span>Switch College ({auth.availableTenants.length})</span>
@@ -260,7 +261,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="flex-1 py-8 px-4 sm:px-6 lg:px-10 max-w-7xl w-full mx-auto">
+        <main className="flex-1 py-4 sm:py-8 px-3.5 sm:px-6 lg:px-10 max-w-7xl w-full mx-auto">
           {children}
         </main>
 

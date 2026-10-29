@@ -408,7 +408,7 @@ export default async function TenantMembersPage({
   }
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="space-y-8 w-full max-w-7xl">
       <div className="flex items-center gap-4">
         <Button asChild variant="outline" size="sm">
           <Link href="/dashboard" className="inline-flex items-center gap-1.5">
@@ -424,7 +424,7 @@ export default async function TenantMembersPage({
           </Badge>
           <span className="text-xs text-text-muted font-mono">Staff &amp; Cohort Access</span>
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-text-primary font-heading">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary font-heading">
           Institutional Member Management
         </h1>
         <p className="text-sm text-text-secondary max-w-2xl">

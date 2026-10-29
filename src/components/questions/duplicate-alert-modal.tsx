@@ -60,16 +60,16 @@ export function DuplicateAlertModal({ isOpen, onClose }: DuplicateAlertModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4">
       <div className="bg-card w-full max-w-3xl rounded-xl shadow-xl border border-border max-h-[85vh] flex flex-col">
-        <div className="flex items-center justify-between p-5 border-b border-border">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-amber-600" />
-            <h3 className="text-base font-bold text-text-primary">
-              QuestionBank Sentinel: Duplicate & Similarity Alerts
+        <div className="flex items-center justify-between gap-2 p-4 sm:p-5 border-b border-border shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+            <h3 className="text-sm sm:text-base font-bold text-text-primary truncate">
+              Sentinel Duplicate & Similarity Alerts
             </h3>
           </div>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary shrink-0 p-1" aria-label="Close modal">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -156,7 +156,7 @@ export function DuplicateAlertModal({ isOpen, onClose }: DuplicateAlertModalProp
           ))}
         </div>
 
-        <div className="p-4 border-t border-border flex justify-end">
+        <div className="p-4 border-t border-border flex justify-end shrink-0">
           <Button variant="outline" size="sm" onClick={onClose}>
             Close
           </Button>

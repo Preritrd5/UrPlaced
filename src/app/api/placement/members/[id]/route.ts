@@ -6,12 +6,15 @@ export const dynamic = "force-dynamic";
 
 /**
  * DELETE /api/placement/members/[id]
- * Securely removes a staff member from the current college workspace.
+ * Securely and permanently removes a staff member:
+ * - Deletes the tenant membership from public.tenant_memberships
+ * - Deletes the user profile from public.profiles
+ * - Deletes the login account from Supabase Auth (auth.users)
  * Strict safeguards:
  * - Only Placement Head or users with STAFF_MANAGE permission in the college can invoke this.
+ * - Prevents self-removal.
  * - Prevents removing the last active Placement Head.
- * - Confined strictly to the current tenant (cannot remove members across colleges).
- * - Never deletes the user's auth account or global profile.
+ * - Confined strictly to the current tenant.
  */
 export async function DELETE(
   request: NextRequest,
@@ -41,7 +44,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Staff member removed successfully.",
+      message: "Staff member account permanently removed.",
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to remove staff member.";

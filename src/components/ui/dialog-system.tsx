@@ -404,7 +404,7 @@ export function ToastContainer() {
     <div
       aria-live="polite"
       aria-atomic="false"
-      className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none p-4 sm:p-0"
+      className="fixed bottom-4 inset-x-3 sm:inset-x-auto sm:right-4 sm:max-w-sm z-[9999] flex flex-col gap-2.5 pointer-events-none"
     >
       {toasts.map((t) => {
         const isError = t.type === "error";
@@ -419,10 +419,10 @@ export function ToastContainer() {
         };
 
         const borderMap = {
-          success: "border-secondary/30 bg-[#F8F7F3] text-text-primary shadow-md",
-          error: "border-status-danger/30 bg-[#FDF8F8] text-text-primary shadow-md",
-          warning: "border-status-warning/30 bg-[#FDFBF7] text-text-primary shadow-md",
-          info: "border-primary/30 bg-[#F8F7F3] text-text-primary shadow-md",
+          success: "border-secondary/50 bg-[#F8F7F3] text-text-primary shadow-md",
+          error: "border-status-danger/50 bg-[#FDF8F8] text-text-primary shadow-md",
+          warning: "border-status-warning/50 bg-[#FDFBF7] text-text-primary shadow-md",
+          info: "border-primary/50 bg-[#F8F7F3] text-text-primary shadow-md",
         };
 
         return (
@@ -546,7 +546,7 @@ export function DialogSystemHost() {
       <DialogPrimitive.Root open={true} onOpenChange={handleOpenChange}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-xl rounded-xl duration-200">
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[90dvh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
             <div className="flex flex-col space-y-3">
               <div
                 className={cn(
@@ -646,7 +646,7 @@ export function DialogSystemHost() {
       <DialogPrimitive.Root open={true} onOpenChange={handleOpenChange}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-xl rounded-xl duration-200">
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[90dvh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <DialogPrimitive.Title className="text-base font-bold text-text-primary font-heading">
@@ -722,7 +722,7 @@ export function DialogSystemHost() {
       <DialogPrimitive.Root open={true} onOpenChange={handleOpenChange}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-md translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-6 shadow-xl rounded-xl duration-200">
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[90dvh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
             <div className="flex flex-col space-y-3">
               <div
                 className={cn(

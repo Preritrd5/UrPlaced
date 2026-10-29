@@ -304,7 +304,7 @@ export default function AssessmentTakingPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto shrink-0">
           {/* Autosave Pill */}
           <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono">
             {autosaveStatus === "SAVING" ? (
@@ -353,8 +353,8 @@ export default function AssessmentTakingPage({
         <div className="lg:col-span-3 space-y-4">
           <Card className="p-6">
             {/* Question Meta Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-border">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-mono font-bold text-text-muted">
                   Question {activeQuestionIndex + 1} of {totalQuestions}
                 </span>
@@ -551,7 +551,7 @@ export default function AssessmentTakingPage({
             </CardHeader>
             <CardContent className="p-0 space-y-4">
               {/* Grid of question buttons */}
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-5 gap-2">
                 {workspace.questions.map((q: any, idx: number) => {
                   const isAnswered = Boolean(
                     answersMap[q.questionId]?.selected_option !== undefined ||

@@ -159,10 +159,10 @@ export function UserAccountMenu({ className, size = "default" }: UserAccountMenu
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="w-72 p-2 bg-card border-border shadow-lg rounded-2xl"
+        className="w-72 max-w-[calc(100vw-1.5rem)] p-2 bg-card border-border shadow-lg rounded-2xl"
       >
         {/* User Identity Header */}
-        <div className="p-2.5 bg-surface/80 rounded-xl border border-border/60 mb-1 space-y-2">
+        <div className="p-2.5 bg-surface/80 rounded-xl border border-border mb-1 space-y-2">
           <div className="flex items-center gap-3">
             <UserAvatar
               src={auth.avatarUrl}
@@ -187,8 +187,8 @@ export function UserAccountMenu({ className, size = "default" }: UserAccountMenu
               className={cn(
                 "text-[10px] font-mono px-2 py-0.5 tracking-tight border",
                 isStudent
-                  ? "bg-[rgba(46,143,134,0.10)] text-secondary border-secondary/30"
-                  : "bg-primary/10 text-primary border-primary/30"
+                  ? "bg-[rgba(46,143,134,0.10)] text-secondary border-secondary/50"
+                  : "bg-primary/10 text-primary border-primary/50"
               )}
             >
               {isStudent ? (

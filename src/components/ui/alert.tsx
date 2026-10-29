@@ -11,13 +11,13 @@ const alertVariants = cva(
         default:
           "bg-card border-border text-text-primary [&>svg]:text-primary",
         info:
-          "bg-[var(--color-info-subtle)] border-primary/20 text-text-primary [&>svg]:text-primary",
+          "bg-[var(--color-info-subtle)] border-primary/50 text-text-primary [&>svg]:text-primary",
         success:
-          "bg-[var(--color-success-subtle)] border-secondary/20 text-text-primary [&>svg]:text-secondary",
+          "bg-[var(--color-success-subtle)] border-secondary/50 text-text-primary [&>svg]:text-secondary",
         warning:
-          "bg-[var(--color-warning-subtle)] border-status-warning/20 text-text-primary [&>svg]:text-status-warning",
+          "bg-[var(--color-warning-subtle)] border-status-warning/50 text-text-primary [&>svg]:text-status-warning",
         destructive:
-          "bg-[var(--color-danger-subtle)] border-status-danger/20 text-text-primary [&>svg]:text-status-danger",
+          "bg-[var(--color-danger-subtle)] border-status-danger/50 text-text-primary [&>svg]:text-status-danger",
       },
     },
     defaultVariants: {

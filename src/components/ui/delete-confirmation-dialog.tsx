@@ -54,7 +54,7 @@ export function DeleteConfirmationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md border border-border bg-card p-6 shadow-xl rounded-xl">
+      <DialogContent className="max-w-md border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl">
         <DialogHeader className="space-y-3">
           <div className="mx-auto sm:mx-0 flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-status-danger">
             <Trash2 className="h-5 w-5" aria-hidden="true" />

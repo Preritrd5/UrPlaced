@@ -8,7 +8,7 @@ const TableContainer = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "relative w-full overflow-auto rounded-xl border border-border bg-card shadow-sm",
+      "relative w-full max-w-full overflow-x-auto rounded-xl border border-border bg-card shadow-sm",
       className
     )}
     {...props}
@@ -22,7 +22,7 @@ const Table = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <table
     ref={ref}
-    className={cn("w-full caption-bottom text-sm", className)}
+    className={cn("w-full caption-bottom text-sm min-w-[540px]", className)}
     {...props}
   />
 ));

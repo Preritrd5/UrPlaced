@@ -304,7 +304,7 @@ export default function QuestionsDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Top Banner & Actions */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text-primary tracking-tight font-display">
             QuestionBank Sentinel
@@ -400,48 +400,48 @@ export default function QuestionsDashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-secondary uppercase">Total Questions</span>
-            <BookOpen className="w-4 h-4 text-primary" />
+            <span className="text-[11px] sm:text-xs font-semibold text-text-secondary uppercase">Total Questions</span>
+            <BookOpen className="w-4 h-4 text-primary shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-text-primary mt-2">{totalCount}</div>
-          <span className="text-xs text-text-secondary">Across college banks</span>
+          <div className="text-xl sm:text-2xl font-bold font-mono text-text-primary mt-1.5 sm:mt-2">{totalCount}</div>
+          <span className="text-[11px] sm:text-xs text-text-secondary truncate block">Across college banks</span>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-secondary uppercase">Verified Keys</span>
-            <CheckCircle2 className="w-4 h-4 text-[#2E8F86]" />
+            <span className="text-[11px] sm:text-xs font-semibold text-text-secondary uppercase">Verified Keys</span>
+            <CheckCircle2 className="w-4 h-4 text-[#2E8F86] shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-[#2E8F86] mt-2">{verifiedCount}</div>
-          <span className="text-xs text-text-secondary">Staff verified</span>
+          <div className="text-xl sm:text-2xl font-bold font-mono text-[#2E8F86] mt-1.5 sm:mt-2">{verifiedCount}</div>
+          <span className="text-[11px] sm:text-xs text-text-secondary truncate block">Staff verified</span>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-secondary uppercase">Pending Review</span>
-            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="text-[11px] sm:text-xs font-semibold text-text-secondary uppercase">Pending Review</span>
+            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-amber-600 mt-2">{pendingCount}</div>
-          <span className="text-xs text-text-secondary">Awaiting answer verification</span>
+          <div className="text-xl sm:text-2xl font-bold font-mono text-amber-600 mt-1.5 sm:mt-2">{pendingCount}</div>
+          <span className="text-[11px] sm:text-xs text-text-secondary truncate block">Awaiting answer verification</span>
         </Card>
 
-        <Card className="p-4">
+        <Card className="p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-text-secondary uppercase">Published</span>
-            <Send className="w-4 h-4 text-primary" />
+            <span className="text-[11px] sm:text-xs font-semibold text-text-secondary uppercase">Published</span>
+            <Send className="w-4 h-4 text-primary shrink-0" />
           </div>
-          <div className="text-2xl font-bold font-mono text-primary mt-2">{publishedCount}</div>
-          <span className="text-xs text-text-secondary">Active for assessments</span>
+          <div className="text-xl sm:text-2xl font-bold font-mono text-primary mt-1.5 sm:mt-2">{publishedCount}</div>
+          <span className="text-[11px] sm:text-xs text-text-secondary truncate block">Active for assessments</span>
         </Card>
       </div>
 
       {/* Filters Bar */}
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="relative flex-1 w-full">
+      <Card className="p-3.5 sm:p-4">
+        <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
+          <div className="relative flex-1 w-full min-w-0">
             <Search className="w-4 h-4 absolute left-3 top-3 text-text-secondary" />
             <Input
               value={searchQuery}
@@ -457,11 +457,11 @@ export default function QuestionsDashboardPage() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto shrink-0">
             <select
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
-              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
+              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none flex-1 sm:flex-initial min-w-[120px]"
             >
               <option value="">All Subjects</option>
               {distinctSubjects.map((sub) => (
@@ -474,7 +474,7 @@ export default function QuestionsDashboardPage() {
             <select
               value={selectedBank}
               onChange={(e) => setSelectedBank(e.target.value)}
-              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
+              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none flex-1 sm:flex-initial min-w-[140px]"
             >
               <option value="">All Question Banks</option>
               {banks
@@ -489,7 +489,7 @@ export default function QuestionsDashboardPage() {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
+              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none flex-1 sm:flex-initial min-w-[120px]"
             >
               <option value="">All Types</option>
               <option value="SINGLE_CHOICE">Single Choice</option>
@@ -502,7 +502,7 @@ export default function QuestionsDashboardPage() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none"
+              className="h-9 px-3 rounded-md bg-input border border-border text-xs focus:outline-none flex-1 sm:flex-initial min-w-[120px]"
             >
               <option value="">All Statuses</option>
               <option value="DRAFT">Draft</option>
@@ -515,11 +515,11 @@ export default function QuestionsDashboardPage() {
             <Button
               variant="outline"
               size="sm"
+              className="text-xs h-9 w-full sm:w-auto font-medium"
               onClick={() => {
                 loadQuestions();
                 fetchEligibleReviewCount();
               }}
-              className="text-xs h-9"
             >
               Apply
             </Button>
@@ -628,7 +628,7 @@ export default function QuestionsDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-border/50">
                       <Button
                         type="button"
                         variant="outline"

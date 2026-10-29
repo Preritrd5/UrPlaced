@@ -185,10 +185,10 @@ export default function StudentAssessmentsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border gap-2">
+      <div className="flex border-b border-border gap-2 overflow-x-auto scrollbar-none max-w-full">
         <button
           onClick={() => setActiveTab("ASSIGNED")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
             activeTab === "ASSIGNED"
               ? "border-primary text-primary"
               : "border-transparent text-text-secondary hover:text-text-primary"
@@ -200,7 +200,7 @@ export default function StudentAssessmentsPage() {
 
         <button
           onClick={() => setActiveTab("PRACTICE")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
             activeTab === "PRACTICE"
               ? "border-primary text-primary"
               : "border-transparent text-text-secondary hover:text-text-primary"
@@ -212,7 +212,7 @@ export default function StudentAssessmentsPage() {
 
         <button
           onClick={() => setActiveTab("BEHAVIORAL")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
             activeTab === "BEHAVIORAL"
               ? "border-primary text-primary"
               : "border-transparent text-text-secondary hover:text-text-primary"

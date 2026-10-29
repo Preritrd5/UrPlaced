@@ -77,12 +77,12 @@ export function AuthSplitLayout({
   accentStroke = true,
 }: AuthSplitLayoutProps) {
   return (
-    <main className="h-screen h-[100dvh] w-full overflow-hidden bg-[#EDECE7] flex flex-col lg:flex-row relative select-none">
+    <main className="min-h-screen min-h-[100dvh] h-auto lg:h-[100dvh] w-full overflow-y-auto lg:overflow-hidden bg-[#EDECE7] flex flex-col lg:flex-row relative select-none">
       {/* =========================================================================
           LEFT SIDE: Form Area (52%–54% width on desktop)
           ========================================================================= */}
-      <section className="w-full lg:w-[53%] xl:w-[54%] h-full flex flex-col justify-between px-6 sm:px-10 lg:px-14 xl:px-20 py-4 sm:py-6 lg:py-8 overflow-hidden z-20">
-        <div className="w-full max-w-[460px] mx-auto h-full flex flex-col justify-between min-h-0">
+      <section className="w-full lg:w-[53%] xl:w-[54%] min-h-full h-auto lg:h-full flex flex-col justify-between px-4 sm:px-10 lg:px-14 xl:px-20 py-4 sm:py-6 lg:py-8 overflow-y-auto lg:overflow-hidden z-20">
+        <div className="w-full max-w-[460px] mx-auto min-h-full h-auto lg:h-full flex flex-col justify-between min-h-0">
           {/* Top navigation row */}
           <div className="shrink-0 flex items-center justify-between">
             <Link

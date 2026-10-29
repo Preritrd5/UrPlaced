@@ -427,7 +427,7 @@ export default function QuestionImportPage() {
               </span>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="w-full min-w-[640px] text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-card/60">
                     <th className="p-3 font-semibold text-text-secondary w-12">#</th>
@@ -482,12 +482,13 @@ export default function QuestionImportPage() {
           </Card>
 
           {/* Action Footer */}
-          <div className="flex items-center justify-between p-4 bg-card rounded-xl border border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-card rounded-xl border border-border">
             <Button
               type="button"
               variant="outline"
               onClick={() => setPreviewResult(null)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel & Pick Another File
             </Button>
@@ -497,7 +498,7 @@ export default function QuestionImportPage() {
               disabled={loading || previewResult.validRows === 0}
               isLoading={loading}
               onClick={handleCommit}
-              className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center gap-1.5"
+              className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold flex items-center justify-center gap-1.5 w-full sm:w-auto"
             >
               {!loading && <Send className="w-3.5 h-3.5" />}
               {loading

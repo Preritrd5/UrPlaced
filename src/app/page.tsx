@@ -36,13 +36,13 @@ export default function HomePage() {
         <div className="relative w-full px-5 sm:px-8 lg:px-10 h-20 flex items-center justify-between">
 
           {/* Brand - Left Corner */}
-          <Link href="/" className="flex items-center gap-3 group shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
             <UrPlacedLogo
               size="lg"
               priority
-              className="h-11 w-11 group-hover:scale-105 transition-transform"
+              className="h-9 w-9 sm:h-11 sm:w-11 group-hover:scale-105 transition-transform"
             />
-            <span className="font-heading font-extrabold text-2xl tracking-tight text-slate-900 leading-none">
+            <span className="font-heading font-extrabold text-xl sm:text-2xl tracking-tight text-slate-900 leading-none">
               UrPlaced
             </span>
           </Link>
@@ -163,15 +163,15 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full my-auto">
           <div className="text-center max-w-4xl mx-auto space-y-8">
             {/* Top Enterprise Badge */}
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-card border border-border text-xs sm:text-sm font-medium text-text-secondary shadow-sm">
-              <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider bg-secondary text-white">
+            <div className="inline-flex flex-wrap items-center justify-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl sm:rounded-full bg-card border border-border text-xs sm:text-sm font-medium text-text-secondary shadow-sm max-w-full text-center">
+              <Badge variant="secondary" className="px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider bg-secondary text-white shrink-0">
                 Multi-College Placement SaaS
               </Badge>
-              <span>Student Preparation &amp; Institutional Placement Management</span>
+              <span className="text-center">Student Preparation &amp; Institutional Placement Management</span>
             </div>
 
             {/* Core Hero Headline */}
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-text-primary font-heading leading-[1.08]">
+            <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-text-primary font-heading leading-[1.12]">
               Your Career Starts Here.
             </h1>
 
@@ -490,10 +490,10 @@ export default function HomePage() {
 
       <footer className="mt-auto border-t border-slate-800/80 bg-gradient-to-b from-[#0a0f1d] via-[#060913] to-[#03050a] py-16 text-slate-300 text-xs sm:text-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800/80">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10 pb-12 border-b border-slate-800/80">
 
             {/* Brand Column */}
-            <div className="col-span-2 md:col-span-1 space-y-4">
+            <div className="col-span-1 sm:col-span-2 md:col-span-1 space-y-4">
               <div className="flex items-center gap-2.5">
                 <UrPlacedLogo size="md" className="h-9 w-9" />
                 <span className="font-heading font-bold text-xl text-slate-100">

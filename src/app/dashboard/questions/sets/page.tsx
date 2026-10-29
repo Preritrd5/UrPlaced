@@ -317,9 +317,9 @@ export default function QuestionSetsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
             href="/dashboard/questions"
@@ -426,7 +426,7 @@ export default function QuestionSetsPage() {
             <>
               {/* Set Info Header Card */}
               <Card>
-                <CardHeader className="flex flex-row items-start justify-between">
+                <CardHeader className="flex flex-col sm:flex-row items-start justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h2 className="text-lg font-bold text-text-primary font-display">

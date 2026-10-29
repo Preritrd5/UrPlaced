@@ -83,7 +83,7 @@ export function MemberRowActions({
         throw new Error(data.error || "Failed to remove staff member.");
       }
 
-      toast.success(`${memberName} has been removed from ${institutionName}.`);
+      toast.success(`${memberName}'s staff account and login credentials have been permanently removed.`);
       setIsDeleteDialogOpen(false);
       router.refresh();
     } catch (err: unknown) {
@@ -138,7 +138,7 @@ export function MemberRowActions({
               disabled={isDeleting || isTogglingStatus}
               onClick={() => setIsDeleteDialogOpen(true)}
               className="h-8 text-xs font-medium text-status-danger hover:bg-red-50 hover:text-red-700 flex items-center gap-1"
-              title="Remove staff member from this college"
+              title="Permanently remove staff member account"
             >
               <Trash2 className="h-3.5 w-3.5" /> Remove
             </Button>
@@ -152,20 +152,19 @@ export function MemberRowActions({
         onClose={() => setIsDeleteDialogOpen(false)}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-        title="Remove Staff Member"
+        title="Permanently Remove Staff Member"
         itemName={memberName}
         description={
           <span className="space-y-1.5 block">
             <span>
-              Are you sure you want to remove <strong>{memberName}</strong> ({memberEmail || "No email"}) from{" "}
-              <strong>{institutionName}</strong>?
+              Are you sure you want to permanently remove <strong>{memberName}</strong> ({memberEmail || "No email"})?
             </span>
-            <span className="block text-text-muted text-[11px] mt-1">
-              This will immediately revoke their access to this college placement cell. Their account and access to any other institutions will remain unaffected.
+            <span className="block text-status-danger text-[12px] font-medium mt-1">
+              Warning: This will permanently delete their login credentials, global user profile, and access to {institutionName}. They will no longer be able to sign in.
             </span>
           </span>
         }
-        confirmLabel="Remove Member"
+        confirmLabel="Permanently Remove Staff"
         isDeleting={isDeleting}
       />
     </>
