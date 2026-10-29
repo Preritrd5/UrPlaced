@@ -471,7 +471,7 @@ export function FloatingAIChatbot() {
             onPointerDown={handlePointerDown}
             aria-label={isOpen ? "Close UrPlaced AI Assistant" : "Open UrPlaced AI Assistant"}
             aria-expanded={isOpen}
-            className={`rounded-full flex items-center justify-center bg-white shadow-[0_8px_30px_rgb(36,40,58,0.18)] hover:shadow-[0_12px_36px_rgb(80,82,201,0.28)] border-2 transition-all p-1.5 focus:outline-none focus:ring-4 focus:ring-[#5052C9]/30 ${
+            className={`rounded-full flex items-center justify-center bg-white dark:bg-[#1B1E2A] shadow-[0_8px_30px_rgb(36,40,58,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_36px_rgb(80,82,201,0.28)] border-2 transition-all p-1.5 focus:outline-none focus:ring-4 focus:ring-[#5052C9]/30 ${
               isOpen
                 ? "border-[#5052C9] ring-2 ring-[#5052C9]/20"
                 : "border-[#5052C9]/40 hover:border-[#5052C9]"
@@ -495,7 +495,7 @@ export function FloatingAIChatbot() {
             {/* Active Glow Indicator */}
             <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2E8F86] opacity-75" />
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[#2E8F86] border-2 border-white" />
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-[#2E8F86] border-2 border-white dark:border-[#1B1E2A]" />
             </span>
           </button>
 
@@ -522,7 +522,7 @@ export function FloatingAIChatbot() {
           {/* Header */}
           <div className="p-3.5 px-4 bg-[#FBFAF7] border-b border-[#DDDCD5] flex items-center justify-between select-none">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-white border border-[#DDDCD5] p-0.5 flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-white dark:bg-[#151821] border border-[#DDDCD5] p-0.5 flex items-center justify-center shrink-0 shadow-sm">
                 <Image
                   src="/assets/urplaced-ai-chatbot.png"
                   alt="UrPlaced AI"
@@ -556,7 +556,7 @@ export function FloatingAIChatbot() {
                 </button>
 
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-[#DDDCD5] rounded-xl shadow-lg p-1 z-10 text-xs text-[#24283A] space-y-0.5">
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-[#222636] border border-[#DDDCD5] rounded-xl shadow-lg p-1 z-10 text-xs text-[#24283A] space-y-0.5">
                     <button
                       onClick={resetConversation}
                       className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-[#F8F7F3] flex items-center gap-2"
@@ -687,7 +687,7 @@ export function FloatingAIChatbot() {
                         <button
                           key={idx}
                           onClick={() => handleSendMessage(sug)}
-                          className="text-xs bg-white hover:bg-[#EDECE7] text-[#24283A] px-3 py-1.5 rounded-xl border border-[#DDDCD5] transition-colors flex items-center gap-1.5 text-left shadow-sm"
+                          className="text-xs bg-white dark:bg-[#151821] hover:bg-[#EDECE7] dark:hover:bg-[#252A3A] text-[#24283A] px-3 py-1.5 rounded-xl border border-[#DDDCD5] transition-colors flex items-center gap-1.5 text-left shadow-sm"
                         >
                           <Sparkles className="w-3 h-3 text-[#5052C9] shrink-0" />
                           <span>{sug}</span>
@@ -718,7 +718,7 @@ export function FloatingAIChatbot() {
 
               {/* Message Composer */}
               <div className="p-3 border-t border-[#DDDCD5] bg-[#FBFAF7]">
-                <div className="flex items-end gap-2 bg-white border border-[#DDDCD5] rounded-xl p-1.5 focus-within:ring-2 focus-within:ring-[#5052C9]/30 focus-within:border-[#5052C9] transition-all">
+                <div className="flex items-end gap-2 bg-white dark:bg-[#151821] border border-[#DDDCD5] rounded-xl p-1.5 focus-within:ring-2 focus-within:ring-[#5052C9]/30 focus-within:border-[#5052C9] transition-all">
                   <textarea
                     ref={textareaRef}
                     value={inputMessage}

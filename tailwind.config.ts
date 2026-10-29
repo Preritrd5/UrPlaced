@@ -19,7 +19,9 @@ const config: Config = {
         card: {
           DEFAULT: "var(--color-card-bg)",
           foreground: "var(--color-primary-text)",
+          elevated: "var(--color-card-elevated)",
         },
+        "hover-surface": "var(--color-hover-surface)",
         input: {
           DEFAULT: "var(--color-input-bg)",
           border: "var(--color-border)",

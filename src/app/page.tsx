@@ -24,15 +24,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(135deg,#E0EAFE_0%,#D9DDF9_45%,#C5CEDB_100%)] text-text-primary flex flex-col selection:bg-primary/20">
+    <div className="min-h-screen bg-[linear-gradient(135deg,#E0EAFE_0%,#D9DDF9_45%,#C5CEDB_100%)] dark:bg-[linear-gradient(135deg,#111318_0%,#181B27_50%,#111318_100%)] text-text-primary flex flex-col selection:bg-primary/20">
 
       {/* 1. Global Public Navigation Header */}
-      <header className="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-10 rounded-[2rem] md:rounded-full border-2 border-slate-400/70 bg-gradient-to-r from-orange-50/95 via-white/95 to-sky-50/95 shadow-[0_10px_35px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all">
+      <header className="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-10 rounded-[2rem] md:rounded-full border-2 border-slate-400/70 dark:border-border bg-gradient-to-r from-orange-50/95 via-white/95 to-sky-50/95 dark:from-[#1B1E2A]/95 dark:via-[#1B1E2A]/95 dark:to-[#1B1E2A]/95 shadow-[0_10px_35px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all">
         <div className="relative w-full px-5 sm:px-8 lg:px-10 h-20 flex items-center justify-between">
 
           {/* Brand - Left Corner */}
@@ -42,7 +43,7 @@ export default function HomePage() {
               priority
               className="h-9 w-9 sm:h-11 sm:w-11 group-hover:scale-105 transition-transform"
             />
-            <span className="font-heading font-extrabold text-xl sm:text-2xl tracking-tight text-slate-900 leading-none">
+            <span className="font-heading font-extrabold text-xl sm:text-2xl tracking-tight text-slate-900 dark:text-text-primary leading-none">
               UrPlaced
             </span>
           </Link>
@@ -76,12 +77,13 @@ export default function HomePage() {
             </a>
           </nav>
 
-          {/* Student Login - Right Corner */}
-          <div className="hidden sm:flex items-center shrink-0">
+          {/* Student Login & Theme Toggle - Right Corner */}
+          <div className="hidden sm:flex items-center gap-3 shrink-0">
+            <ThemeToggle size="default" />
             <Button
               asChild
               variant="outline"
-              className="h-11 px-5 rounded-xl text-sm font-semibold border-slate-300 bg-white/60 hover:border-primary hover:bg-orange-50 text-slate-800 transition-colors"
+              className="h-11 px-5 rounded-xl text-sm font-semibold border-slate-300 dark:border-border bg-white/60 dark:bg-[#1B1E2A] hover:border-primary hover:bg-orange-50 dark:hover:bg-[#252A3A] text-slate-800 dark:text-text-primary transition-colors"
             >
               <Link href="/auth/signin">
                 <GraduationCap className="h-4 w-4 mr-1.5 text-primary" />
@@ -92,13 +94,13 @@ export default function HomePage() {
 
           {/* Mobile Menu Controls */}
           <div className="flex md:hidden items-center gap-2">
-
+            <ThemeToggle size="sm" />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
-              className="h-9 w-9 text-slate-800"
+              className="h-9 w-9 text-slate-800 dark:text-text-primary"
             >
               {mobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -111,19 +113,19 @@ export default function HomePage() {
 
         {/* Mobile Navigation Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200/80 px-4 pt-3 pb-6 space-y-3 bg-white/90 rounded-b-[2rem]">
+          <div className="md:hidden border-t border-slate-200/80 dark:border-border px-4 pt-3 pb-6 space-y-3 bg-white/95 dark:bg-[#1B1E2A]/95 rounded-b-[2rem]">
             <div className="flex flex-col space-y-1">
               <a
                 href="#solutions"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 dark:text-text-secondary hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
               >
                 Platform
               </a>
               <a
                 href="#students"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 dark:text-text-secondary hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
               >
                 For Students and Colleges
               </a>
@@ -131,25 +133,25 @@ export default function HomePage() {
               <a
                 href="#how-it-works"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 dark:text-text-secondary hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
               >
                 How It Works
               </a>
               <a
                 href="#features"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+                className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 dark:text-text-secondary hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
               >
                 Features
               </a>
 
             </div>
 
-            <div className="pt-3 border-t border-slate-200/80">
+            <div className="pt-3 border-t border-slate-200/80 dark:border-border">
               <Button
                 asChild
                 variant="outline"
-                className="w-full justify-center h-10 text-xs font-semibold border-slate-300 text-slate-800"
+                className="w-full justify-center h-10 text-xs font-semibold border-slate-300 dark:border-border text-slate-800 dark:text-text-primary bg-white dark:bg-[#151821]"
               >
                 <Link href="/auth/signin">Student Sign In</Link>
               </Button>

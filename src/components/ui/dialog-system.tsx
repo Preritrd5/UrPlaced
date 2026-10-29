@@ -419,10 +419,10 @@ export function ToastContainer() {
         };
 
         const borderMap = {
-          success: "border-secondary/50 bg-[#F8F7F3] text-text-primary shadow-md",
-          error: "border-status-danger/50 bg-[#FDF8F8] text-text-primary shadow-md",
-          warning: "border-status-warning/50 bg-[#FDFBF7] text-text-primary shadow-md",
-          info: "border-primary/50 bg-[#F8F7F3] text-text-primary shadow-md",
+          success: "border-secondary/50 bg-[#F8F7F3] dark:bg-[#222636] text-text-primary shadow-md",
+          error: "border-status-danger/50 bg-[#FDF8F8] dark:bg-[#222636] text-text-primary shadow-md",
+          warning: "border-status-warning/50 bg-[#FDFBF7] dark:bg-[#222636] text-text-primary shadow-md",
+          info: "border-primary/50 bg-[#F8F7F3] dark:bg-[#222636] text-text-primary shadow-md",
         };
 
         return (

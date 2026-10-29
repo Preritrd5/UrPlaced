@@ -4,14 +4,19 @@
 @tailwind utilities;
 
 :root {
+  /* Browser color-scheme hint */
+  color-scheme: light;
+
   /* ========================================================
-     UrPlaced Strict Design System — Invariant Brand Tokens
+     UrPlaced Strict Design System — Light Mode Base Tokens
      ======================================================== */
   --color-primary: #5052C9;
   --color-secondary-accent: #2E8F86;
   --color-background: #EDECE7;
   --color-card-bg: #F8F7F3;
+  --color-card-elevated: #FFFFFF;
   --color-input-bg: #FBFAF7;
+  --color-hover-surface: #EDECE7;
   --color-primary-text: #24283A;
   --color-secondary-text: #292D40;
   --gradient-primary: linear-gradient(135deg, #7779D8 0%, #5052C9 100%);
@@ -26,7 +31,7 @@
   --color-secondary-active: #1F615B;
   --color-secondary-subtle: rgba(46, 143, 134, 0.10);
 
-  /* Derived Borders & Dividers — Darker, High-Visibility Design Tokens */
+  /* Derived Borders & Dividers — High-Visibility Design Tokens */
   --color-border: #B8B6AC;
   --color-border-subtle: rgba(36, 40, 58, 0.16);
   --color-border-strong: rgba(36, 40, 58, 0.38);
@@ -58,6 +63,63 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* ========================================================
+   UrPlaced Strict Design System — Authoritative Dark Mode Tokens
+   ======================================================== */
+.dark {
+  /* Browser color-scheme hint for native inputs, select & scrollbars */
+  color-scheme: dark;
+
+  /* Core Surfaces (Table 2.1) */
+  --color-background: #111318;
+  --color-card-bg: #1B1E2A;
+  --color-card-elevated: #222636;
+  --color-input-bg: #151821;
+  --color-hover-surface: #252A3A;
+
+  /* Borders & Dividers (Table 2.1) */
+  --color-border: #303548;
+  --color-border-subtle: #252A3A;
+  --color-border-strong: #42485F;
+  --color-border-focus: #9294FF;
+
+  /* Typography Colors (Table 2.3) */
+  --color-primary-text: #F2F1F8;
+  --color-secondary-text: #B9BDCD;
+  --color-text-muted: #8D93A8;
+  --color-text-disabled: rgba(185, 189, 205, 0.38);
+  --color-bg-disabled: rgba(255, 255, 255, 0.05);
+
+  /* Brand & Action Colors (Table 2.2) */
+  --color-primary: #5052C9;
+  --color-primary-hover: #5C5FD0;
+  --color-primary-active: #4345B0;
+  --color-primary-subtle: rgba(80, 82, 201, 0.18);
+  --color-primary-ring: #9294FF;
+
+  --color-secondary-accent: #55B8AB;
+  --color-secondary-hover: #6AC9BC;
+  --color-secondary-active: #44978B;
+  --color-secondary-subtle: rgba(85, 184, 171, 0.18);
+
+  --gradient-primary: linear-gradient(135deg, #6265D8 0%, #5052C9 100%);
+
+  /* Status Colors (Table 2.4) */
+  --color-success: #4CC38A;
+  --color-success-subtle: rgba(76, 195, 138, 0.16);
+  --color-info: #76A9FA;
+  --color-info-subtle: rgba(118, 169, 250, 0.16);
+  --color-warning: #F5BE55;
+  --color-warning-subtle: rgba(245, 190, 85, 0.16);
+  --color-danger: #FF6B78;
+  --color-danger-subtle: rgba(255, 107, 120, 0.16);
+
+  /* Elevation Shadows for Dark Surfaces */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.55), 0 4px 6px -4px rgba(0, 0, 0, 0.40);
+}
+
 /* Base Document Styling */
 html, body {
   background-color: var(--color-background);
@@ -85,6 +147,11 @@ code, kbd, samp, pre {
   color: var(--color-primary-text);
 }
 
+.dark ::selection {
+  background-color: rgba(146, 148, 255, 0.30);
+  color: #F2F1F8;
+}
+
 :focus-visible {
   outline: none;
   box-shadow: var(--shadow-sm), 0 0 0 3px var(--color-primary-ring);
@@ -92,9 +159,7 @@ code, kbd, samp, pre {
 }
 
 /* ========================================================
-   Application-Wide Darker Border & Outline Consistency
-   Maps any explicit legacy border/divider classes directly to
-   the authoritative darker border token.
+   Application-Wide Border & Outline Consistency
    ======================================================== */
 .border-\[\#DDDCD5\],
 [class*="border-[#DDDCD5]"] {
@@ -104,6 +169,84 @@ code, kbd, samp, pre {
 .divide-\[\#DDDCD5\] > :not([hidden]) ~ :not([hidden]),
 [class*="divide-[#DDDCD5]"] > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--color-border) !important;
+}
+
+/* ========================================================
+   Dark Mode Application-Wide Single Source of Truth Mappings
+   Translates legacy arbitrary color classes automatically to
+   the authoritative Dark Mode tokens when `.dark` is active.
+   ======================================================== */
+.dark .bg-\[\#EDECE7\],
+.dark [class*="bg-[#EDECE7]"] {
+  background-color: var(--color-background) !important;
+}
+
+.dark .bg-\[\#F8F7F3\],
+.dark [class*="bg-[#F8F7F3]"] {
+  background-color: var(--color-card-bg) !important;
+}
+
+.dark .bg-\[\#FBFAF7\],
+.dark [class*="bg-[#FBFAF7]"] {
+  background-color: var(--color-input-bg) !important;
+}
+
+.dark .text-\[\#24283A\],
+.dark [class*="text-[#24283A]"] {
+  color: var(--color-primary-text) !important;
+}
+
+.dark .text-\[\#292D40\],
+.dark [class*="text-[#292D40]"] {
+  color: var(--color-secondary-text) !important;
+}
+
+.dark .text-\[\#747683\],
+.dark [class*="text-[#747683]"] {
+  color: var(--color-text-muted) !important;
+}
+
+.dark .border-\[\#DDDCD5\],
+.dark [class*="border-[#DDDCD5]"],
+.dark .border-\[\#B8B6AC\],
+.dark [class*="border-[#B8B6AC]"] {
+  border-color: var(--color-border) !important;
+}
+
+.dark .divide-\[\#DDDCD5\] > :not([hidden]) ~ :not([hidden]),
+.dark [class*="divide-[#DDDCD5]"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--color-border) !important;
+}
+
+/* Elevated Surfaces in Dark Mode: Dialogs, Menus, Popovers (Table 2.1) */
+.dark [role="dialog"],
+.dark [data-radix-popper-content-wrapper] [role="menu"],
+.dark [data-radix-select-content],
+.dark [data-radix-popover-content] {
+  background-color: var(--color-card-elevated) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--color-text-muted) !important;
+}
+
+/* ========================================================
+   Dark Mode Scrollbar Appearance
+   ======================================================== */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #111318;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #303548;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #42485F;
 }
 
 /* ========================================================
@@ -138,6 +281,15 @@ code, kbd, samp, pre {
   pointer-events: none;
 }
 
+.dark .animate-shimmer::after {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-shimmer::after,
   .animate-pulse,
@@ -145,4 +297,3 @@ code, kbd, samp, pre {
     animation: none !important;
   }
 }
-

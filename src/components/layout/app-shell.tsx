@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import { FloatingAIChatbot } from "@/components/ai/floating-ai-chatbot";
 import {
@@ -73,6 +74,7 @@ export function AppShell({ children }: AppShellProps) {
           </span>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <ThemeToggle size="sm" />
           {auth.isAuthenticated && (
             <NotificationBell size="sm" />
           )}
@@ -250,6 +252,8 @@ export function AppShell({ children }: AppShellProps) {
                 <span>Switch College ({auth.availableTenants.length})</span>
               </Link>
             )}
+
+            <ThemeToggle size="default" />
 
             {auth.isAuthenticated && (
               <NotificationBell size="default" />

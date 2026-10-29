@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
 export interface AuthSplitLayoutProps {
@@ -91,6 +92,7 @@ export function AuthSplitLayout({
             >
               <ArrowLeft className="h-4 w-4 stroke-[2.5]" /> {backLabel}
             </Link>
+            <ThemeToggle size="sm" />
           </div>
 
           {/* Form Content */}

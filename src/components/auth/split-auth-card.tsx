@@ -120,7 +120,7 @@ export function SplitAuthCard({
         </aside>
 
         {/* Right Form Panel */}
-        <main className="w-full lg:w-[56%] xl:w-[58%] bg-white p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
+        <main className="w-full lg:w-[56%] xl:w-[58%] bg-white dark:bg-[#1B1E2A] p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
           {children}
         </main>
       </div>

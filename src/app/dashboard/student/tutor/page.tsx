@@ -308,7 +308,7 @@ export default function StudentAITutorPage() {
                 placeholder="Ask your tutor anything (e.g. 'How does dynamic programming work?', 'Give me a hint for binary search')..."
                 rows={2}
                 disabled={isLoading}
-                className="w-full resize-none p-3 text-sm bg-white border border-[#DDDCD5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5052C9]/30 focus:border-[#5052C9] text-[#24283A] placeholder-[#292D40]/40 transition-all font-inter"
+                className="w-full resize-none p-3 text-sm bg-white dark:bg-[#151821] border border-[#DDDCD5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5052C9]/30 focus:border-[#5052C9] text-[#24283A] placeholder-[#292D40]/40 transition-all font-inter"
               />
             </div>
             <Button
