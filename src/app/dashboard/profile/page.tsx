@@ -539,7 +539,7 @@ export default function MyProfilePage() {
 
             {/* Actions & Completion */}
             <div className="flex flex-col items-center sm:items-end gap-3 shrink-0">
-              <Button
+              {/* <Button
                 variant={isEditing ? "outline" : "primary"}
                 size="sm"
                 onClick={() => {
@@ -557,7 +557,7 @@ export default function MyProfilePage() {
                     <Edit3 className="h-3.5 w-3.5" /> Edit Profile
                   </>
                 )}
-              </Button>
+              </Button> */}
 
               {/* Profile Completion Indicator */}
               <div className="text-right">

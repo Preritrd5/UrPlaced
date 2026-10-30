@@ -12,7 +12,6 @@ export async function GET(
     const { id } = await params;
 
     const isStaff = [
-      "SUPER_ADMIN",
       "PLACEMENT_HEAD",
       "PLACEMENT_STAFF",
       "TRAINER",

@@ -152,7 +152,8 @@ function CollegeSignInContent() {
             />
             <div className="text-right pt-1.5">
               <Link
-                href="/auth/forgot-password"
+                // href="/auth/forgot-password"
+                href="/under-development-phasing"
                 className="text-xs sm:text-sm font-semibold text-[#5052C9] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 rounded"
               >
                 Forgot password?

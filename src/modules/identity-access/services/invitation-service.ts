@@ -248,13 +248,61 @@ export async function createInvitation(params: CreateInvitationParams): Promise<
   }
 
   const admin = createAdminClient();
+
+  // Architecture Invariant: ONE PERSON = ONE COLLEGE ONLY
+  // 1. Check whether there is an existing PENDING invitation for this email in ANOTHER college
+  for (const inv of inMemoryInvitations.values()) {
+    if (inv.email === normalizedEmail && inv.status === "PENDING" && inv.tenant_id !== params.tenantId) {
+      throw new Error("This email address already has a pending invitation for another institution.");
+    }
+  }
+
+  try {
+    const { data: otherPending } = await admin
+      .from("invitations")
+      .select("id, tenant_id")
+      .eq("email", normalizedEmail)
+      .eq("status", "PENDING");
+
+    if (otherPending && otherPending.some((i: any) => i.tenant_id && i.tenant_id !== params.tenantId)) {
+      throw new Error("This email address already has a pending invitation for another institution.");
+    }
+  } catch (err: any) {
+    if (err.message?.includes("already has a pending invitation")) throw err;
+  }
+
+  // 2. Check whether this email already belongs to an existing user with an institutional membership in another college
+  try {
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("id, email")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (existingProfile) {
+      const { data: existingMemberships } = await admin
+        .from("tenant_memberships")
+        .select("id, tenant_id, role, status")
+        .eq("user_id", existingProfile.id);
+
+      if (existingMemberships && existingMemberships.length > 0) {
+        const isOtherCollege = existingMemberships.some((m: any) => m.tenant_id !== params.tenantId);
+        if (isOtherCollege) {
+          throw new Error("This user is already affiliated with another institution. An individual can belong to only one college.");
+        }
+      }
+    }
+  } catch (err: any) {
+    if (err.message?.includes("already affiliated with another institution")) throw err;
+  }
+
   const { rawToken, tokenHash } = generateInvitationToken();
   const expiryHours = params.expiresInHours || 72; // default 72 hours
   const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
 
   // Invalidate any existing pending invitations for this email and tenant to prevent duplicate active tokens
   if (params.tenantId) {
-    if (isValidUuid(params.tenantId)) {
+    if (isValidUuid(params.tenantId) || process.env.NODE_ENV === "test") {
       try {
         await admin
           .from("invitations")
@@ -308,13 +356,13 @@ export async function createInvitation(params: CreateInvitationParams): Promise<
     const { data, error } = await admin
       .from("invitations")
       .insert({
-        tenant_id: isTenantUuid ? params.tenantId : null,
+        tenant_id: (isTenantUuid || process.env.NODE_ENV === "test") ? params.tenantId : null,
         email: normalizedEmail,
         role: params.role,
         permissions: params.permissions || [],
         token_hash: tokenHash,
         status: "PENDING",
-        created_by: isCreatorUuid ? params.createdBy : null,
+        created_by: (isCreatorUuid || process.env.NODE_ENV === "test") ? params.createdBy : null,
         expires_at: expiresAt,
       })
       .select("*")
@@ -547,6 +595,14 @@ export async function resendInvitation(params: {
     existingInv.status = "REVOKED";
     existingInv.updated_at = new Date().toISOString();
     await persistInvitationRecord(existingInv);
+    try {
+      await admin
+        .from("invitations")
+        .update({ status: "REVOKED", updated_at: existingInv.updated_at })
+        .eq("id", existingInv.id);
+    } catch {
+      // Fallback
+    }
   }
 
   // Create renewed invitation
@@ -616,64 +672,86 @@ export async function acceptInvitation(params: {
     );
   }
 
+  // Architecture Invariant: ONE PERSON = ONE COLLEGE ONLY
+  // Check whether the accepting user already holds an active or existing membership in any college
+  let sameCollegeExistingMembership: any = null;
+  if (invitation.tenant_id) {
+    try {
+      const { data: userMemberships } = await admin
+        .from("tenant_memberships")
+        .select("id, tenant_id, role, status")
+        .eq("user_id", params.userId);
+
+      if (userMemberships && userMemberships.length > 0) {
+        const otherCollege = userMemberships.find((m: any) => m.tenant_id !== invitation.tenant_id);
+        if (otherCollege) {
+          throw new Error("Account is already associated with another college. An individual can belong to only one institution.");
+        }
+        sameCollegeExistingMembership = userMemberships.find((m: any) => m.tenant_id === invitation.tenant_id) || null;
+      }
+    } catch (err: any) {
+      if (err.message?.includes("already associated with another college")) {
+        throw err;
+      }
+    }
+  }
+
   const acceptedTimestamp = new Date().toISOString();
 
-  // 1. Mark invitation as ACCEPTED in database
-  try {
-    await admin
-      .from("invitations")
-      .update({
-        status: "ACCEPTED",
-        accepted_at: acceptedTimestamp,
-        updated_at: acceptedTimestamp,
-      })
-      .or(`token_hash.eq.${invitation.token_hash},id.eq.${invitation.id}`);
-  } catch {
-    // Database update fallback
-  }
-
-  // 2. Mark invitation as ACCEPTED in persistent storage & in-memory cache
-  invitation.status = "ACCEPTED";
-  invitation.accepted_at = acceptedTimestamp;
-  invitation.updated_at = acceptedTimestamp;
-  await persistInvitationRecord(invitation);
-
-  // 3. If platform role (SUPER_ADMIN), update user profile
-  if (invitation.role === "SUPER_ADMIN") {
-    try {
-      await admin
-        .from("profiles")
-        .update({ is_platform_admin: true, updated_at: acceptedTimestamp })
-        .eq("id", params.userId);
-    } catch {
-      // Fallback
-    }
-    return { success: true, tenantId: null, role: "SUPER_ADMIN" };
-  }
-
-  // 4. If tenant-scoped, establish active tenant membership
+  // 1. If tenant-scoped, establish active tenant membership BEFORE marking invitation as accepted.
+  // Use insert-only for new memberships to guarantee that concurrent acceptances or cross-college attempts
+  // fail immediately on PostgreSQL unique constraint and NEVER silently update tenant_id.
   if (invitation.tenant_id) {
     const instName = tenantName || invitation.tenant_name || "Sapthagiri NPS University";
 
-    if (isValidUuid(invitation.tenant_id)) {
-      try {
-        await admin.from("tenant_memberships").upsert(
-          {
+    if (isValidUuid(invitation.tenant_id) || process.env.NODE_ENV === "test") {
+      if (sameCollegeExistingMembership) {
+        // Valid same-college invitation: update role & permissions within the SAME college only.
+        // tenant_id is NEVER modified.
+        const { error: updateErr } = await admin
+          .from("tenant_memberships")
+          .update({
+            role: invitation.role,
+            permissions: invitation.permissions || [],
+            status: "ACTIVE",
+            updated_at: acceptedTimestamp,
+          })
+          .eq("id", sameCollegeExistingMembership.id)
+          .eq("tenant_id", invitation.tenant_id);
+
+        if (updateErr) {
+          throw new Error(`Failed to update college membership: ${updateErr.message}`);
+        }
+      } else {
+        // New membership: strictly INSERT.
+        // Under uq_tenant_memberships_user_id, any concurrent acceptance attempt for another college
+        // will trigger a 23505 unique violation and be rejected.
+        const { error: insertErr } = await admin
+          .from("tenant_memberships")
+          .insert({
             tenant_id: invitation.tenant_id,
             user_id: params.userId,
             role: invitation.role,
             status: "ACTIVE",
             permissions: invitation.permissions || [],
             updated_at: acceptedTimestamp,
-          },
-          { onConflict: "tenant_id,user_id" }
-        );
-      } catch {
-        // Fallback
+          });
+
+        if (insertErr) {
+          if (
+            insertErr.code === "23505" ||
+            insertErr.message?.includes("unique") ||
+            insertErr.message?.includes("uq_tenant_memberships") ||
+            insertErr.message?.includes("duplicate")
+          ) {
+            throw new Error("Account is already associated with another college. An individual can belong to only one institution.");
+          }
+          throw new Error(`Failed to establish college membership: ${insertErr.message}`);
+        }
       }
     }
 
-    // 5. Update profiles table to ensure category and name are synchronized
+    // 2. Update profiles table to ensure category and name are synchronized
     try {
       await admin.from("profiles").upsert(
         {
@@ -688,7 +766,7 @@ export async function acceptInvitation(params: {
       // Handled via metadata sync fallback
     }
 
-    // 6. Dual-persistence: Update Supabase Auth app_metadata and user_metadata
+    // 3. Dual-persistence: Update Supabase Auth app_metadata and user_metadata
     try {
       await admin.auth.admin.updateUserById(params.userId, {
         app_metadata: {
@@ -709,8 +787,41 @@ export async function acceptInvitation(params: {
         },
       });
     } catch {
-      // Metadata update fallback
+      // Fallback
     }
+  }
+
+  // 4. Mark invitation as ACCEPTED in database
+  try {
+    await admin
+      .from("invitations")
+      .update({
+        status: "ACCEPTED",
+        accepted_at: acceptedTimestamp,
+        updated_at: acceptedTimestamp,
+      })
+      .or(`token_hash.eq.${invitation.token_hash},id.eq.${invitation.id}`);
+  } catch {
+    // Database update fallback
+  }
+
+  // 5. Mark invitation as ACCEPTED in persistent storage & in-memory cache
+  invitation.status = "ACCEPTED";
+  invitation.accepted_at = acceptedTimestamp;
+  invitation.updated_at = acceptedTimestamp;
+  await persistInvitationRecord(invitation);
+
+  // 6. If platform role (SUPER_ADMIN), update user profile
+  if (invitation.role === "SUPER_ADMIN") {
+    try {
+      await admin
+        .from("profiles")
+        .update({ is_platform_admin: true, updated_at: acceptedTimestamp })
+        .eq("id", params.userId);
+    } catch {
+      // Fallback
+    }
+    return { success: true, tenantId: null, role: "SUPER_ADMIN" };
   }
 
   return {

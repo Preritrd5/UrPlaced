@@ -299,13 +299,17 @@ export async function updateMemberRole(params: {
 }
 
 /**
- * Permanently removes a staff member and their account:
+ * Permanently removes an institutional staff member and their user account:
  * 1. Actor must be PLACEMENT_HEAD or possess STAFF_MANAGE permission in this college.
- * 2. Cannot remove the last active PLACEMENT_HEAD of the college.
- * 3. Cannot remove one's own account.
- * 4. Permanently deletes the tenant membership from tenant_memberships.
- * 5. Permanently deletes the user profile from public.profiles.
- * 6. Permanently deletes the login account from Supabase Auth (auth.users).
+ * 2. Target member must belong exclusively to this college workspace.
+ * 3. Cannot remove the last active PLACEMENT_HEAD of the college.
+ * 4. Cannot remove one's own account (self-removal safeguard).
+ * 5. Calls Supabase Auth Admin deleteUser to permanently delete the login account.
+ *    - If Auth deletion fails, aborts immediately without leaving partial deletion.
+ * 6. Database foreign-key ON DELETE CASCADE cleans up tenant_memberships and profiles.
+ *    - Explicit cleanup guarantees clean state across all environments.
+ * 7. Historical college records (drives, assessments, questions, logs) are preserved via ON DELETE SET NULL.
+ * 8. Records comprehensive institutional audit trail.
  */
 export async function removeTenantMember(params: {
   membershipId: string;
@@ -352,7 +356,7 @@ export async function removeTenantMember(params: {
   }
 
   // 4. Last Placement Head safeguard:
-  // If target is a PLACEMENT_HEAD, ensure they are not the sole remaining active Placement Head
+  // If target is a PLACEMENT_HEAD, ensure they are not the sole remaining active Placement Head in this college
   if (targetMember.role === "PLACEMENT_HEAD") {
     const { count: activeHeadsCount, error: countErr } = await admin
       .from("tenant_memberships")
@@ -374,7 +378,32 @@ export async function removeTenantMember(params: {
 
   const targetUserId = targetMember.user_id;
 
-  // 5. Permanently remove tenant membership
+  // 5. Verify single-college ownership: ensure target has no conflicting multi-college memberships
+  if (targetUserId) {
+    const { data: userMemberships } = await admin
+      .from("tenant_memberships")
+      .select("id, tenant_id")
+      .eq("user_id", targetUserId);
+
+    if (userMemberships && userMemberships.length > 1) {
+      const otherCollege = userMemberships.find((m: any) => m.tenant_id !== params.tenantId);
+      if (otherCollege) {
+        throw new Error("Data conflict detected: Account has conflicting multi-college memberships. Please resolve conflicts before removal.");
+      }
+    }
+  }
+
+  // 6. Permanently delete user login account from Supabase Auth
+  // This is the authoritative action: deleting the auth user permanently revokes login capability.
+  if (targetUserId && admin.auth?.admin?.deleteUser) {
+    const { error: authDelErr } = await admin.auth.admin.deleteUser(targetUserId);
+    if (authDelErr) {
+      throw new Error(`Failed to delete staff authentication account: ${authDelErr.message}`);
+    }
+  }
+
+  // 7. Complete database cleanup: remove tenant_membership and profile
+  // (In PostgreSQL, ON DELETE CASCADE handles this; explicit deletion guarantees clean state in all environments)
   const { error: deleteErr } = await admin
     .from("tenant_memberships")
     .delete()
@@ -382,30 +411,18 @@ export async function removeTenantMember(params: {
     .eq("tenant_id", params.tenantId);
 
   if (deleteErr) {
-    throw new Error(`Failed to remove staff member: ${deleteErr.message}`);
+    throw new Error(`Failed to remove staff member membership: ${deleteErr.message}`);
   }
 
-  // 6. Permanently delete global profile from public.profiles
   if (targetUserId) {
-    const { error: profileDelErr } = await admin
-      .from("profiles")
-      .delete()
-      .eq("id", targetUserId);
-
-    if (profileDelErr) {
-      console.warn("[removeTenantMember] Warning deleting profile:", profileDelErr.message);
-    }
-
-    // 7. Permanently delete user login account from Supabase Auth
-    if (admin.auth?.admin?.deleteUser) {
-      const { error: authDelErr } = await admin.auth.admin.deleteUser(targetUserId);
-      if (authDelErr) {
-        console.warn("[removeTenantMember] Warning deleting auth user:", authDelErr.message);
-      }
+    try {
+      await admin.from("profiles").delete().eq("id", targetUserId);
+    } catch {
+      // Ignored if already cascaded
     }
   }
 
-  // 8. Log audit trail
+  // 8. Log institutional audit trail
   await logAuditEvent({
     tenantId: params.tenantId,
     actorId: params.actorUserId,
@@ -422,7 +439,7 @@ export async function removeTenantMember(params: {
       removed: true,
       authAccountDeleted: true,
       profileDeleted: true,
-      reason: params.reason || "Staff member permanently removed by college administrator",
+      reason: params.reason || "Staff member account permanently removed by college administrator",
     },
   });
 }

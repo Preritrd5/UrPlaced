@@ -160,7 +160,7 @@ export function MemberRowActions({
               Are you sure you want to permanently remove <strong>{memberName}</strong> ({memberEmail || "No email"})?
             </span>
             <span className="block text-status-danger text-[12px] font-medium mt-1">
-              Warning: This will permanently delete their login credentials, global user profile, and access to {institutionName}. They will no longer be able to sign in.
+              Warning: This will permanently delete their login credentials, user profile, and access to {institutionName}. They will no longer be able to sign in.
             </span>
           </span>
         }

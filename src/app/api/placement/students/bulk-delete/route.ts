@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const ctx = await requireAuthContext(Permissions.STUDENTS_DELETE);
 
-    if (ctx.tenantRole !== "PLACEMENT_HEAD" && !ctx.isPlatformAdmin) {
+    if (ctx.tenantRole !== "PLACEMENT_HEAD") {
       return NextResponse.json(
         { error: "Bulk deletion of student records is strictly restricted to Placement Heads." },
         { status: 403 }

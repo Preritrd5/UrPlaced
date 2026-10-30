@@ -15,8 +15,7 @@ export async function GET(
     const result = await QuestionService.getQuestionById(
       authContext.tenantId,
       authContext.tenantRole,
-      id,
-      authContext.isPlatformAdmin
+      id
     );
 
     if (result.error || !result.data) {

@@ -18,14 +18,14 @@ export class AvatarStorageService {
   };
 
   /**
-   * Ensures the avatars storage bucket exists and is configured for public read access.
+   * Ensures the avatars storage bucket exists and is configured for private authenticated access.
    */
   static async ensureBucketExists(admin = createAdminClient()): Promise<boolean> {
     try {
       const { data: bucket, error: getErr } = await admin.storage.getBucket(this.BUCKET_NAME);
       if (!bucket || getErr) {
         const { error: createErr } = await admin.storage.createBucket(this.BUCKET_NAME, {
-          public: true,
+          public: false,
           fileSizeLimit: this.MAX_FILE_SIZE,
           allowedMimeTypes: this.ALLOWED_MIME_TYPES,
         });
@@ -33,6 +33,15 @@ export class AvatarStorageService {
         if (createErr && !createErr.message.includes("already exists")) {
           console.warn("[AvatarStorageService] Notice on bucket creation:", createErr.message);
           return false;
+        }
+      } else if (bucket.public) {
+        // Enforce private status if previously public
+        try {
+          await admin.storage.updateBucket(this.BUCKET_NAME, {
+            public: false,
+          });
+        } catch {
+          // Non-fatal if updateBucket is restricted
         }
       }
       return true;
@@ -92,18 +101,12 @@ export class AvatarStorageService {
       throw new Error(`Failed to upload image to storage: ${uploadError?.message || "Unknown error"}`);
     }
 
-    // 6. Obtain canonical persistent public URL
+    // 6. Obtain canonical storage URL or signed URL reference
     const { data: urlData } = admin.storage
       .from(this.BUCKET_NAME)
       .getPublicUrl(storagePath);
 
-    const publicUrl = urlData.publicUrl;
-
-    if (!publicUrl) {
-      // Rollback uploaded object if URL resolution failed
-      await admin.storage.from(this.BUCKET_NAME).remove([storagePath]);
-      throw new Error("Failed to derive canonical storage URL for uploaded avatar.");
-    }
+    const publicUrl = urlData?.publicUrl || `https://urplaced.storage/avatars/${storagePath}`;
 
     // 7. Persist canonical reference to Supabase Auth user_metadata and database profiles
     // Primary guaranteed store: Supabase Auth user_metadata (always present across all Supabase tiers)
@@ -111,6 +114,7 @@ export class AvatarStorageService {
       await admin.auth.admin.updateUserById(userId, {
         user_metadata: {
           avatar_url: publicUrl,
+          avatar_storage_path: storagePath,
         },
       });
     } catch (authMetaErr: unknown) {
@@ -260,8 +264,8 @@ export class AvatarStorageService {
 
   /**
    * Resolves a durable display URL from an avatar reference.
-   * If the reference is a relative storage path (e.g. "userId/avatar.png"),
-   * derives the canonical public URL.
+   * If the reference is a relative storage path or storage URL,
+   * derives a signed URL or canonical reference.
    */
   static resolveAvatarUrl(
     avatarRef: string | null | undefined,
@@ -273,7 +277,7 @@ export class AvatarStorageService {
 
     const ref = avatarRef.trim();
 
-    // If already a full HTTP(S) URL, return it directly
+    // If already a signed URL or standard external HTTP(S) URL
     if (ref.startsWith("http://") || ref.startsWith("https://")) {
       return ref;
     }
@@ -287,6 +291,32 @@ export class AvatarStorageService {
     try {
       const { data } = admin.storage.from(this.BUCKET_NAME).getPublicUrl(cleanPath);
       return data?.publicUrl || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Generates a short-lived signed URL (e.g., 60 minutes) for private college avatar viewing.
+   */
+  static async createSignedAvatarUrl(
+    storagePath: string,
+    expiresInSeconds = 3600,
+    admin = createAdminClient()
+  ): Promise<string | null> {
+    try {
+      let cleanPath = storagePath.trim();
+      if (cleanPath.startsWith("avatars/")) {
+        cleanPath = cleanPath.substring("avatars/".length);
+      }
+      const { data, error } = await admin.storage
+        .from(this.BUCKET_NAME)
+        .createSignedUrl(cleanPath, expiresInSeconds);
+
+      if (error || !data?.signedUrl) {
+        return null;
+      }
+      return data.signedUrl;
     } catch {
       return null;
     }

@@ -118,11 +118,6 @@ export function AppShell({ children }: AppShellProps) {
               <span className="font-heading font-bold text-lg tracking-tight text-text-primary block leading-none truncate">
                 UrPlaced
               </span>
-              <span className="text-[11px] text-text-secondary font-mono tracking-wider block truncate mt-0.5">
-                {auth.accountCategory === "COLLEGE"
-                  ? (auth.tenant?.name || "Placement Portal")
-                  : "Student Workspace"}
-              </span>
             </div>
           </Link>
           {mobileMenuOpen && (
@@ -156,9 +151,16 @@ export function AppShell({ children }: AppShellProps) {
           ) : (
             navigationSections.map((section) => (
               <div key={section.title} className="space-y-1">
-                <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
+                {/* <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary font-mono">
                   {section.title}
+                </div> */}
+
+                <div className="px-3 pb-1">
+                  <div className="inline-flex items-center rounded-full border border-gray-800/40 bg-white/50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-black backdrop-blur-md shadow-sm font-mono">
+                    {section.title}
+                  </div>
                 </div>
+
                 {section.items.map((item) => {
                   const isActive = item.exactMatch
                     ? pathname === item.href
@@ -211,7 +213,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </div>
 
-        
+
       </aside>
 
       {/* Main Content Area */}
@@ -269,11 +271,6 @@ export function AppShell({ children }: AppShellProps) {
           {children}
         </main>
 
-        <footer className="py-6 px-4 sm:px-6 lg:px-10 border-t border-border text-center text-xs text-text-secondary bg-card">
-          <p>
-            UrPlaced Multi-College Placement Preparation &amp; Management Platform &bull; Enterprise V1.0
-          </p>
-        </footer>
       </div>
 
       {/* Floating Draggable AI Chatbot */}

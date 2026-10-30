@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * DELETE /api/placement/members/[id]
- * Securely and permanently removes a staff member:
+ * Permanently removes an institutional staff member and their user account:
  * - Deletes the tenant membership from public.tenant_memberships
  * - Deletes the user profile from public.profiles
  * - Deletes the login account from Supabase Auth (auth.users)

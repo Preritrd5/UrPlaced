@@ -1,0 +1,371 @@
+<USER_REQUEST>
+# UrPlaced — Global Single-College Ownership & Permanent Staff Account Deletion Remediation
+
+## OBJECTIVE
+
+Correct the recent Antigravity implementation and enforce UrPlaced's actual multi-college architecture.
+
+This is a multi-college SaaS platform. Multiple independent colleges use the same UrPlaced application, but **each individual belongs to exactly ONE college only**.
+
+This is the foundational product and data-ownership rule. It must be enforced throughout the database, authentication, registration, invitations, APIs, authorization, and UI.
+
+## 1. FUNDAMENTAL ARCHITECTURE — READ CAREFULLY
+
+UrPlaced supports multiple independent colleges on one platform.
+
+For example:
+
+**Sapthagiri College**
+- Placement Head: Jack
+- Placement Staff: Pop, Alice and Bob
+- Students: Sapthagiri's enrolled students
+- Trainers: Sapthagiri's trainers
+
+**ABC College**
+- Its own Placement Head
+- Its own Placement Staff
+- Its own Trainers
+- Its own Students
+
+**XYZ College**
+- Its own Placement Head
+- Its own Placement Staff
+- Its own Trainers
+- Its own Students
+
+These are independent institutional environments.
+
+### The non-negotiable ownership rule
+
+ONE PERSON = ONE COLLEGE ONLY.
+
+This applies to:
+- PLACEMENT_HEAD
+- PLACEMENT_STAFF
+- TRAINER
+- STUDENT
+
+Jack, Pop, Alice, Bob and Sapthagiri's students belong exclusively to Sapthagiri College.
+
+They must not simultaneously belong to ABC College or XYZ College.
+
+Likewise, ABC College users must not belong to Sapthagiri or XYZ College.
+
+**Important distinction:**
+- Multiple colleges can use one UrPlaced platform.
+- One person cannot have memberships in multiple colleges.
+- Multi-college SaaS does NOT mean multi-college user membership.
+
+Do not interpret this as a configurable restriction or an optional business preference. It represents the real-world college affiliation model.
+
+## 2. INVESTIGATE THE PREVIOUS IMPLEMENTATION
+
+Inspect the latest changes made in:
+
+- `MembershipService`
+- `removeTenantMember`
+- Staff management APIs
+- Staff directory and institutional member management UI
+- Staff email invitation and invitation acceptance services
+- Student registration and college assignment
+- Supabase Auth integration
+- `tenant_memberships` and related tables
+- Existing migrations, constraints, triggers, RLS policies and foreign keys
+- Existing tests and the previous remediation report
+
+The previous implementation reportedly changed staff removal to delete only the `tenant_memberships` row while preserving the global profile and Supabase Auth account.
+
+That implementation does NOT satisfy the confirmed product requirement.
+
+Correct it without unnecessarily reverting unrelated security improvements.
+
+## 3. ENFORCE ONE-COLLEGE OWNERSHIP AT DATABASE LEVEL
+
+Investigate the existing schema and establish a database-enforced invariant:
+
+A single authenticated user ID must belong to no more than one college across the entire application.
+
+Do not rely only on frontend checks or API-level validation.
+
+Requirements:
+
+1. A user assigned to Sapthagiri cannot be assigned to ABC or XYZ.
+2. A Placement Head cannot invite an existing staff account that belongs to another college.
+3. A student cannot be registered or assigned to another college while already belonging to one.
+4. A staff account cannot receive another college membership through a different API, invitation, or administrative workflow.
+5. Concurrent registration or invitation acceptance must not bypass the ownership rule.
+
+Use the correct database constraint for the existing schema. If `tenant_memberships` has one membership row per person, enforce global uniqueness on its user identifier. If the schema represents memberships differently, implement an equally strong database-level ownership constraint.
+
+Do not blindly add a constraint without inspecting existing data and relationships.
+
+### Existing data audit
+
+Before creating or applying a constraint:
+
+- Find user IDs associated with multiple distinct colleges.
+- Find duplicate or conflicting membership records.
+- Check pending invitations that assign the same email to different colleges.
+- Identify any inconsistent roles or account categories.
+
+These are invalid legacy records under the confirmed architecture.
+
+Do not automatically select a college, move a user, or delete another college's membership just to make a migration pass.
+
+Produce a conflict report and safely block the relevant migration or destructive operation until conflicts are explicitly resolved.
+
+## 4. PRESERVE THE EXISTING STAFF EMAIL INVITATION WORKFLOW
+
+The existing workflow is already part of UrPlaced. Preserve it.
+
+Expected workflow:
+
+1. Sapthagiri's Placement Head sends a staff invitation to an email address.
+2. The invitation is associated with Sapthagiri and the selected staff role.
+3. The invitee receives the email.
+4. The invitee enters the required details.
+5. The account and college membership are created for Sapthagiri.
+6. The staff member signs in and enters the Sapthagiri portal.
+
+Do not introduce another manual verification or unnecessary onboarding workflow.
+
+Add ownership validation to the existing process:
+
+- Normalize and validate the invited email.
+- Check whether the email already belongs to an existing account.
+- Check the account's current college membership before accepting or creating an invitation.
+- Reject an invitation that would assign an existing person to another college.
+- Prevent simultaneous pending invitations for the same email across different colleges.
+- Ensure invitation acceptance cannot create multiple college memberships.
+- Keep valid same-college invitation behavior working.
+
+Do not disclose another college's private information when rejecting a conflicting invitation.
+
+Preserve the existing invitation email design, token handling, expiration behavior, and UI unless a specific security correction requires a change.
+
+## 5. CORRECT STAFF ACCOUNT REMOVAL — PERMANENT DELETION
+
+When Sapthagiri's authorized Placement Head removes Pop, Alice or Bob from Sapthagiri:
+
+**The staff member's account must be permanently deleted.**
+
+This includes:
+- Supabase Auth user account.
+- Associated global profile, according to the actual schema and foreign-key behavior.
+- Sapthagiri's tenant membership.
+- Other user-specific authentication or account records that must be cleaned up.
+
+After successful deletion, that person must no longer be able to log in to UrPlaced.
+
+### Required authorization sequence
+
+Before deletion:
+
+1. Authenticate the requesting Placement Head.
+2. Derive the college ID from trusted server-side authorization context.
+3. Verify the requesting user has the required permission.
+4. Verify that the target staff account belongs exclusively to that college.
+5. Verify the target role is eligible for this removal operation.
+6. Verify self-removal and last active Placement Head safeguards.
+7. Check that the account is not associated with conflicting multi-college legacy data.
+8. Only then perform permanent account deletion using the server-side Supabase Admin capability.
+
+Do not trust a college ID, user ID, role, or permission supplied by the browser without server-side verification.
+
+### Supabase Auth and PostgreSQL cascading behavior
+
+The earlier bug occurred because deleting a user's global Auth record triggered PostgreSQL `ON DELETE CASCADE` on:
+
+`tenant_memberships.user_id REFERENCES auth.users(id)`
+
+When an account incorrectly had two college memberships, deleting the Auth user also deleted the other college's membership.
+
+The corrected architecture prevents this invalid state in the first place.
+
+Before calling Supabase Auth deletion:
+
+- Verify the user has exactly one college ownership.
+- Verify that it is the requesting college.
+- Verify the database constraint prevents another college membership from being created concurrently.
+
+When the Auth user is successfully deleted, allow the intended foreign-key cleanup to occur.
+
+Do not independently delete records before Auth deletion in a way that leaves a partially deleted or reusable account.
+
+If Auth deletion fails, report failure and preserve the existing account and membership state. Do not show a successful removal message.
+
+Inspect actual FK dependencies before modifying cleanup behavior.
+
+### Preserve historical institutional data
+
+Permanent account deletion must not accidentally erase college-owned operational history.
+
+Inspect all user-related foreign keys and determine which records should:
+- Be retained as institutional history.
+- Preserve their original college ownership.
+- Set nullable user references to NULL where appropriate.
+- Be deleted only when they are genuinely account-specific and deletion is authorized.
+
+Do not cascade-delete unrelated drives, applications, assessments, offers, placement records, reports, or other college data.
+
+After deletion, ensure future sign-in is impossible and server-side requests from an existing or stale session cannot continue using the removed account's college permissions.
+
+## 6. STRICT COLLEGE DATA ISOLATION
+
+Every college must operate independently.
+
+Example:
+
+Sapthagiri's Placement Head:
+- Can view Sapthagiri's Placement Staff.
+- Can view Sapthagiri's Trainers.
+- Can view Sapthagiri's Students.
+- Can manage only Sapthagiri's institutional users and records.
+
+ABC College's Placement Head:
+- Can view ABC's own people.
+- Can manage only ABC's own institutional users and records.
+- Cannot view Sapthagiri's staff directory.
+- Cannot remove Sapthagiri's staff.
+- Cannot access Sapthagiri's student or placement data.
+
+Apply this rule across:
+
+- Frontend pages and components.
+- Server actions.
+- API route handlers.
+- Supabase queries.
+- RLS policies.
+- Storage access.
+- Search and filtering.
+- Exports and reports.
+- AI context retrieval.
+- Any other tenant-scoped functionality.
+
+Never use a browser-supplied tenant ID as the sole authorization boundary.
+
+## 7. STUDENT OWNERSHIP
+
+Students also belong to exactly one college.
+
+For example, a Sapthagiri student must not simultaneously have an ABC or XYZ college membership.
+
+Preserve the existing student registration, login, activation and placement-preparation workflows.
+
+Apply the same global college-ownership validation to student registration and assignment.
+
+Do not accidentally apply the staff permanent-deletion workflow to student removal. Student account deletion behavior is outside this specific staff-removal correction unless an existing approved workflow already defines it.
+
+## 8. SECURITY AND DATA INTEGRITY
+
+Review and preserve:
+
+- Server-controlled role and membership data.
+- Zero-trust treatment of client-editable `user_metadata`.
+- Server-side use of trusted account and tenant context.
+- RLS tenant isolation.
+- Service-role key isolation.
+- Authorization checks on every destructive API.
+- Protection against IDOR and cross-tenant enumeration.
+- Safe concurrent invitation acceptance and account creation.
+- Appropriate audit logging without exposing secrets.
+
+Never expose service-role credentials to client code.
+
+Do not weaken existing security policies to make tests pass.
+
+## 9. REQUIRED TEST SCENARIOS
+
+Add or update automated tests for all the following:
+
+**Global ownership**
+1. Sapthagiri user cannot receive an ABC membership.
+2. ABC user cannot receive an XYZ membership.
+3. A Placement Head cannot assign a staff member to a second college.
+4. A student cannot be assigned to a second college.
+5. Database constraints reject conflicting membership creation.
+6. Concurrent requests cannot bypass ownership validation.
+
+**Staff invitation**
+7. Valid Sapthagiri staff invitation works.
+8. Invitation acceptance creates membership in the inviting college only.
+9. Existing Sapthagiri staff email cannot be invited by ABC.
+10. Conflicting pending invitations cannot be created across colleges.
+11. Existing same-college invitation behavior remains intact.
+
+**Staff removal**
+12. Sapthagiri Placement Head removes Sapthagiri staff: Auth account is permanently deleted.
+13. The corresponding profile and membership are cleaned up according to the real schema.
+14. Removed staff cannot sign in again.
+15. Removed staff cannot continue making authorized college requests using an existing session.
+16. ABC Placement Head cannot delete Sapthagiri staff.
+17. A failed Auth deletion does not leave a partially removed account.
+18. Self-removal and last Placement Head safeguards remain effective.
+19. Historical college placement and recruitment records remain intact.
+
+**Tenant isolation**
+20. ABC cannot list Sapthagiri staff.
+21. ABC cannot access Sapthagiri student records.
+22. ABC cannot modify Sapthagiri data by changing request parameters.
+23. Sapthagiri and ABC operate independently with their own members and records.
+
+Do not rely exclusively on mocked unit tests for database ownership and Auth deletion behavior. Where the local test environment supports it, verify the relevant database constraints, RLS behavior, foreign-key cascades and Supabase Auth deletion integration.
+
+## 10. IMPLEMENTATION BOUNDARIES
+
+- Inspect the current code before changing it.
+- Preserve unrelated working features and existing UI customizations.
+- Do not rebuild the application.
+- Do not introduce recruiter registration or login.
+- Do not change the product's theme or design system.
+- Do not redesign the existing staff invitation process.
+- Do not delete or overwrite unrelated local work.
+- Preserve `.env` secrets and never print them in reports.
+- Create local migrations only when necessary.
+- Do not apply migrations to the remote Supabase project.
+- Do not modify production data.
+- Do not deploy to Vercel.
+- Do not push, merge or commit to Git unless explicitly authorized.
+
+Run relevant tests, TypeScript checks, ESLint and production build. Clearly distinguish new failures from pre-existing issues.
+
+## 11. FINAL VERIFICATION REPORT
+
+Create:
+
+`docs/audit/UrPlaced_Global_College_Ownership_and_Staff_Deletion_Remediation_Report.md`
+
+Include:
+
+1. Root cause of the previous implementation.
+2. Final one-person/one-college architecture.
+3. Database constraints and migration details.
+4. Legacy conflicting data findings.
+5. Staff invitation workflow verification.
+6. Permanent Supabase Auth deletion implementation.
+7. Foreign-key and historical-data impact analysis.
+8. Cross-college isolation verification.
+9. Tests executed and actual results.
+10. TypeScript, lint and production build results.
+11. Files changed.
+12. Outstanding risks or items requiring manual action.
+13. Confirmation that no remote database changes or production deployment occurred.
+
+## FINAL ACCEPTANCE CONDITION
+
+The remediation is complete only when all these statements are true:
+
+- Many colleges can independently use UrPlaced.
+- Every individual belongs to exactly one college.
+- Placement Heads, Placement Staff, Trainers and Students cannot belong to multiple colleges.
+- No college can view or manage another college's users or data.
+- The existing email-based staff invitation workflow still works.
+- An authorized Placement Head can permanently delete their own college's staff account, including its Supabase Auth identity.
+- The removed staff member cannot log in again.
+- No unrelated institutional or historical data is accidentally deleted.
+
+**Do not begin Phase 1 or any other new product implementation. Complete this remediation, verify it, and provide the report first.**
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-30T07:48:54+05:30.
+</ADDITIONAL_METADATA>

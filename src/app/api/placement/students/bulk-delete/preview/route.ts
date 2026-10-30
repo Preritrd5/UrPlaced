@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const ctx = await requireAuthContext(Permissions.STUDENTS_DELETE);
 
-    if (ctx.tenantRole !== "PLACEMENT_HEAD" && !ctx.isPlatformAdmin) {
+    if (ctx.tenantRole !== "PLACEMENT_HEAD") {
       return NextResponse.json(
         { error: "Bulk deletion preview is strictly restricted to Placement Heads." },
         { status: 403 }

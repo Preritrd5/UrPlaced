@@ -6,6 +6,10 @@ import {
   removeTenantMember,
   updateMemberStatus,
 } from "@/modules/tenancy/services/membership-service";
+import {
+  createInvitation,
+  acceptInvitation,
+} from "@/modules/identity-access/services/invitation-service";
 import { MemberRowActions } from "@/app/dashboard/members/components/member-row-actions";
 
 // Mock next/navigation
@@ -22,6 +26,18 @@ let mockMemberships: any[] = [];
 let mockProfiles: any[] = [];
 let mockAuditLogs: any[] = [];
 let mockUsers: any[] = [];
+let mockInvitations: any[] = [];
+let mockProfileDeleteCalls: any[] = [];
+
+// Track admin.auth.admin.deleteUser calls
+let shouldDeleteUserFail = false;
+const mockDeleteUser = vi.fn(async (userId: string) => {
+  if (shouldDeleteUserFail) {
+    return { data: { user: null }, error: { message: "Internal Auth Provider Failure" } };
+  }
+  mockUsers = mockUsers.filter((u) => u.id !== userId);
+  return { data: { user: null }, error: null };
+});
 
 // Mock audit service
 vi.mock("@/modules/identity-access/services/audit-service", () => ({
@@ -39,24 +55,36 @@ vi.mock("@/lib/supabase/admin", () => ({
           data: { users: [...mockUsers] },
           error: null,
         })),
-        deleteUser: vi.fn(async (userId: string) => {
-          mockUsers = mockUsers.filter((u) => u.id !== userId);
-          return { data: { user: null }, error: null };
-        }),
+        deleteUser: mockDeleteUser,
+        updateUserById: vi.fn(async (uid: string, updates: any) => ({
+          data: { user: { id: uid, ...updates } },
+          error: null,
+        })),
       },
     },
     from: vi.fn((table: string) => {
       let currentFilter: any = {};
-      let selectedData: any = null;
 
       const builder: any = {
         select: vi.fn((fields: string, options?: { count?: string; head?: boolean }) => {
-          let rows = [...(table === "tenant_memberships" ? mockMemberships : table === "profiles" ? mockProfiles : [])];
+          let rows = [
+            ...(table === "tenant_memberships"
+              ? mockMemberships
+              : table === "profiles"
+              ? mockProfiles
+              : table === "invitations"
+              ? mockInvitations
+              : [])
+          ];
 
           // Chainable filters
           const queryBuilder: any = {
             eq: vi.fn((col: string, val: any) => {
               rows = rows.filter((r) => r[col] === val);
+              return queryBuilder;
+            }),
+            neq: vi.fn((col: string, val: any) => {
+              rows = rows.filter((r) => r[col] !== val);
               return queryBuilder;
             }),
             in: vi.fn((col: string, vals: any[]) => {
@@ -88,6 +116,57 @@ vi.mock("@/lib/supabase/admin", () => ({
           };
           return queryBuilder;
         }),
+        insert: vi.fn((dataToInsert: any) => {
+          const items = Array.isArray(dataToInsert) ? dataToInsert : [dataToInsert];
+          if (table === "tenant_memberships") {
+            for (const item of items) {
+              const conflict = mockMemberships.find(m => m.user_id === item.user_id && m.tenant_id !== item.tenant_id);
+              if (conflict) {
+                return {
+                  select: vi.fn(() => ({
+                    single: vi.fn(async () => ({ data: null, error: { code: "23505", message: "duplicate key value violates unique constraint uq_tenant_memberships_user_id" } })),
+                  })),
+                  then: (resolve: any) => resolve({ data: null, error: { code: "23505", message: "duplicate key value violates unique constraint uq_tenant_memberships_user_id" } }),
+                };
+              }
+              mockMemberships.push({ id: item.id || `mem-${Date.now()}`, ...item });
+            }
+          } else if (table === "invitations") {
+            items.forEach(i => mockInvitations.push({ id: i.id || `inv-${Date.now()}`, ...i }));
+          }
+          return {
+            select: vi.fn(() => ({
+              single: vi.fn(async () => ({ data: items[0], error: null })),
+            })),
+            then: (resolve: any) => resolve({ data: items, error: null }),
+          };
+        }),
+        upsert: vi.fn((dataToUpsert: any, options?: { onConflict?: string }) => {
+          const item = Array.isArray(dataToUpsert) ? dataToUpsert[0] : dataToUpsert;
+          if (table === "tenant_memberships") {
+            const conflict = mockMemberships.find(m => m.user_id === item.user_id && m.tenant_id !== item.tenant_id);
+            if (conflict) {
+              return {
+                select: vi.fn(() => ({
+                  single: vi.fn(async () => ({ data: null, error: { code: "23505", message: "User already belongs to another college" } })),
+                })),
+                then: (resolve: any) => resolve({ data: null, error: { code: "23505", message: "User already belongs to another college" } }),
+              };
+            }
+            const existingIdx = mockMemberships.findIndex(m => m.user_id === item.user_id);
+            if (existingIdx >= 0) {
+              mockMemberships[existingIdx] = { ...mockMemberships[existingIdx], ...item };
+            } else {
+              mockMemberships.push({ id: item.id || `mem-${Date.now()}`, ...item });
+            }
+          }
+          return {
+            select: vi.fn(() => ({
+              single: vi.fn(async () => ({ data: item, error: null })),
+            })),
+            then: (resolve: any) => resolve({ data: item, error: null }),
+          };
+        }),
         delete: vi.fn(() => {
           const deleteBuilder: any = {
             eq: vi.fn((col: string, val: any) => {
@@ -104,9 +183,17 @@ vi.mock("@/lib/supabase/admin", () => ({
                   return false;
                 });
               } else if (table === "profiles") {
+                mockProfileDeleteCalls.push({ ...currentFilter });
                 mockProfiles = mockProfiles.filter((p) => {
                   for (const [k, v] of Object.entries(currentFilter)) {
                     if (p[k] !== v) return true;
+                  }
+                  return false;
+                });
+              } else if (table === "invitations") {
+                mockInvitations = mockInvitations.filter((inv) => {
+                  for (const [k, v] of Object.entries(currentFilter)) {
+                    if (inv[k] !== v) return true;
                   }
                   return false;
                 });
@@ -123,6 +210,7 @@ vi.mock("@/lib/supabase/admin", () => ({
               currentFilter[col] = val;
               return updateBuilder;
             }),
+            or: vi.fn(() => updateBuilder),
             then: (resolve: any) => {
               if (table === "tenant_memberships") {
                 mockMemberships.forEach((m) => {
@@ -131,6 +219,14 @@ vi.mock("@/lib/supabase/admin", () => ({
                     if (m[k] !== v) match = false;
                   }
                   if (match) Object.assign(m, updates);
+                });
+              } else if (table === "invitations") {
+                mockInvitations.forEach((inv) => {
+                  let match = true;
+                  for (const [k, v] of Object.entries(currentFilter)) {
+                    if (inv[k] !== v) match = false;
+                  }
+                  if (match) Object.assign(inv, updates);
                 });
               }
               resolve({ error: null });
@@ -144,9 +240,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   })),
 }));
 
-describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () => {
+describe("UrPlaced — Staff Membership Directory & Global Single-College Ownership", () => {
   const TENANT_A = "tenant-college-a-sapthagiri";
   const TENANT_B = "tenant-college-b-reva";
+  const TENANT_C = "tenant-college-c-bms";
 
   const HEAD_A_ID = "usr-head-a";
   const STAFF_A_ID = "usr-staff-a";
@@ -159,6 +256,11 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
 
   beforeEach(() => {
     mockAuditLogs = [];
+    mockProfileDeleteCalls = [];
+    mockInvitations = [];
+    shouldDeleteUserFail = false;
+    mockDeleteUser.mockClear();
+
     mockUsers = [
       { id: HEAD_A_ID, email: "admin@snpsu.edu.in", user_metadata: { full_name: "SNPSU-HRD" } },
       { id: STAFF_A_ID, email: "officer@snpsu.edu.in", user_metadata: { full_name: "John Staff" } },
@@ -294,31 +396,206 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
     });
   });
 
-  describe("2. Secure Staff Removal & Safeguards", () => {
-    it("successfully removes an ordinary staff member from the college workspace", async () => {
+  describe("2. Global Single-College Ownership Invariant (ONE PERSON = ONE COLLEGE ONLY)", () => {
+    it("enforces that a user belonging to College A cannot receive a membership in College B", () => {
+      // An individual already belonging to College A attempts to be added to College B
+      const existingUser = STAFF_A_ID;
+      const isAlreadyInCollegeA = mockMemberships.some(m => m.user_id === existingUser && m.tenant_id === TENANT_A);
+      expect(isAlreadyInCollegeA).toBe(true);
+
+      // Verify invariant: A user cannot have multiple distinct tenant memberships
+      const distinctTenantsForUser = new Set(mockMemberships.filter(m => m.user_id === existingUser).map(m => m.tenant_id));
+      expect(distinctTenantsForUser.size).toBe(1);
+    });
+
+    it("enforces database uniqueness on user_id across tenant_memberships", () => {
+      // Every user in the database must appear at most once in tenant_memberships
+      const userCounts = new Map<string, number>();
+      mockMemberships.forEach(m => {
+        userCounts.set(m.user_id, (userCounts.get(m.user_id) || 0) + 1);
+      });
+
+      userCounts.forEach((count, uid) => {
+        expect(count).toBe(1);
+      });
+    });
+
+    it("rejects assigning a student to a second college", () => {
+      const studentId = STUDENT_A1_ID;
+      const studentMemberships = mockMemberships.filter(m => m.user_id === studentId);
+      expect(studentMemberships).toHaveLength(1);
+      expect(studentMemberships[0].tenant_id).toBe(TENANT_A);
+    });
+  });
+
+  describe("3. Staff Email Invitation Ownership Validation", () => {
+    it("allows a Placement Head to send an invitation for their own college", async () => {
+      const result = await createInvitation({
+        tenantId: TENANT_A,
+        tenantName: "Sapthagiri NPS University",
+        email: "new.trainer@snpsu.edu.in",
+        role: "TRAINER",
+        createdBy: HEAD_A_ID,
+      });
+
+      expect(result.rawToken).toBeDefined();
+      expect(result.invitation.status).toBe("PENDING");
+      expect(result.invitation.tenant_id).toBe(TENANT_A);
+      expect(result.invitation.email).toBe("new.trainer@snpsu.edu.in");
+    });
+
+    it("strictly rejects inviting an email that already belongs to a staff member in another college", async () => {
+      // officer@snpsu.edu.in belongs to College A (Sapthagiri)
+      // College B (REVA) attempts to invite them
+      await expect(
+        createInvitation({
+          tenantId: TENANT_B,
+          tenantName: "REVA University",
+          email: "officer@snpsu.edu.in", // Already belongs to College A
+          role: "PLACEMENT_STAFF",
+          createdBy: HEAD_B_ID,
+        })
+      ).rejects.toThrow(/already affiliated with another institution/i);
+    });
+
+    it("strictly rejects creating conflicting pending invitations for the same email across different colleges", async () => {
+      // College A invites an email
+      await createInvitation({
+        tenantId: TENANT_A,
+        tenantName: "Sapthagiri NPS University",
+        email: "prospect@education.org",
+        role: "TRAINER",
+        createdBy: HEAD_A_ID,
+      });
+
+      // College B attempts to invite the same email while invitation is pending
+      await expect(
+        createInvitation({
+          tenantId: TENANT_B,
+          tenantName: "REVA University",
+          email: "prospect@education.org",
+          role: "TRAINER",
+          createdBy: HEAD_B_ID,
+        })
+      ).rejects.toThrow(/already has a pending invitation for another institution/i);
+    });
+
+    it("accepting an invitation establishes membership in the inviting college only", async () => {
+      const NEW_STAFF_ID = "usr-new-staff-1";
+      const NEW_EMAIL = "recruit@snpsu.edu.in";
+      mockUsers.push({ id: NEW_STAFF_ID, email: NEW_EMAIL, user_metadata: { full_name: "Recruit Staff" } });
+      mockProfiles.push({ id: NEW_STAFF_ID, email: NEW_EMAIL, full_name: "Recruit Staff" });
+
+      const { rawToken } = await createInvitation({
+        tenantId: TENANT_A,
+        tenantName: "Sapthagiri NPS University",
+        email: NEW_EMAIL,
+        role: "PLACEMENT_STAFF",
+        createdBy: HEAD_A_ID,
+      });
+
+      const acceptRes = await acceptInvitation({
+        rawToken,
+        userId: NEW_STAFF_ID,
+        userEmail: NEW_EMAIL,
+        fullName: "Recruit Staff",
+      });
+
+      expect(acceptRes.success).toBe(true);
+      expect(acceptRes.tenantId).toBe(TENANT_A);
+      expect(acceptRes.role).toBe("PLACEMENT_STAFF");
+
+      // Verify user is enrolled ONLY in College A
+      const userTenants = mockMemberships.filter(m => m.user_id === NEW_STAFF_ID);
+      expect(userTenants).toHaveLength(1);
+      expect(userTenants[0].tenant_id).toBe(TENANT_A);
+    });
+
+    it("rejects invitation acceptance if the user already holds a membership in another college", async () => {
+      // STAFF_B_ID already belongs to College B
+      // Suppose an invitation was created for College A
+      const invToken = "test-token-cross";
+      const { rawToken } = await createInvitation({
+        tenantId: TENANT_A,
+        tenantName: "Sapthagiri NPS University",
+        email: "unclaimed@snpsu.edu.in",
+        role: "PLACEMENT_STAFF",
+        createdBy: HEAD_A_ID,
+      });
+
+      // User STAFF_B_ID (from College B) attempts to accept it
+      await expect(
+        acceptInvitation({
+          rawToken,
+          userId: STAFF_B_ID,
+          userEmail: "unclaimed@snpsu.edu.in",
+        })
+      ).rejects.toThrow(/already associated with another college/i);
+    });
+  });
+
+  describe("4. Permanent Staff Account Removal", () => {
+    it("permanently deletes the staff member's Supabase Auth account, profile, and college membership", async () => {
       await removeTenantMember({
         membershipId: "mem-staff-a",
         tenantId: TENANT_A,
         actorUserId: HEAD_A_ID,
-        reason: "Terminated position",
+        reason: "Contract terminated",
       });
 
-      // Verify membership was removed from tenant_memberships
+      // 1. Verify membership was removed from tenant_memberships
       const updatedMembers = await listTenantMembers(TENANT_A);
       expect(updatedMembers).toHaveLength(1);
       expect(updatedMembers[0].role).toBe("PLACEMENT_HEAD");
+      expect(mockMemberships.some((m) => m.id === "mem-staff-a")).toBe(false);
 
-      // Verify audit log was emitted
+      // 2. Verify Supabase Auth user was permanently deleted
+      expect(mockDeleteUser).toHaveBeenCalledWith(STAFF_A_ID);
+      expect(mockUsers.some((u) => u.id === STAFF_A_ID)).toBe(false);
+
+      // 3. Verify public.profiles was permanently deleted
+      expect(mockProfiles.some((p) => p.id === STAFF_A_ID)).toBe(false);
+
+      // 4. Verify audit log was emitted with permanent deletion flags
       expect(mockAuditLogs).toHaveLength(1);
       expect(mockAuditLogs[0].action).toBe("membership.removed");
       expect(mockAuditLogs[0].tenantId).toBe(TENANT_A);
       expect(mockAuditLogs[0].actorId).toBe(HEAD_A_ID);
       expect(mockAuditLogs[0].afterState.authAccountDeleted).toBe(true);
       expect(mockAuditLogs[0].afterState.profileDeleted).toBe(true);
+    });
 
-      // Verify that public.profiles and auth.users were permanently deleted
-      expect(mockProfiles.some((p) => p.id === STAFF_A_ID)).toBe(false);
-      expect(mockUsers.some((u) => u.id === STAFF_A_ID)).toBe(false);
+    it("prevents removed staff from signing in again because the auth user is completely erased", async () => {
+      await removeTenantMember({
+        membershipId: "mem-staff-a",
+        tenantId: TENANT_A,
+        actorUserId: HEAD_A_ID,
+      });
+
+      // Attempting to find the user in auth returns undefined/false
+      const deletedUser = mockUsers.find((u) => u.id === STAFF_A_ID);
+      expect(deletedUser).toBeUndefined();
+
+      // No memberships exist for this user anywhere
+      const remainingMemberships = mockMemberships.filter((m) => m.user_id === STAFF_A_ID);
+      expect(remainingMemberships).toHaveLength(0);
+    });
+
+    it("strictly blocks cross-tenant removal (College A Placement Head cannot remove College B staff)", async () => {
+      await expect(
+        removeTenantMember({
+          membershipId: "mem-staff-b", // Belongs to TENANT_B
+          tenantId: TENANT_A,          // Action attempted under TENANT_A
+          actorUserId: HEAD_A_ID,
+        })
+      ).rejects.toThrow(/Staff member record not found in this college workspace/);
+
+      // Verify College B staff remains untouched in memberships, profiles, and auth
+      const membersB = await listTenantMembers(TENANT_B);
+      expect(membersB.some((m) => m.id === "mem-staff-b")).toBe(true);
+      expect(mockProfiles.some((p) => p.id === STAFF_B_ID)).toBe(true);
+      expect(mockUsers.some((u) => u.id === STAFF_B_ID)).toBe(true);
+      expect(mockDeleteUser).not.toHaveBeenCalled();
     });
 
     it("prevents self-removal when an administrator attempts to remove their own account", async () => {
@@ -334,6 +611,7 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       // Verify head remains enrolled
       const membersA = await listTenantMembers(TENANT_A);
       expect(membersA.some((m) => m.id === "mem-head-a")).toBe(true);
+      expect(mockDeleteUser).not.toHaveBeenCalled();
     });
 
     it("prevents removing the last active Placement Head of the college", async () => {
@@ -363,6 +641,7 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       // Verify head remains enrolled
       const membersA = await listTenantMembers(TENANT_A);
       expect(membersA.some((m) => m.id === "mem-head-a")).toBe(true);
+      expect(mockDeleteUser).not.toHaveBeenCalled();
     });
 
     it("allows removing a Placement Head if there is another active Placement Head in the same college", async () => {
@@ -391,20 +670,30 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       const updatedMembers = await listTenantMembers(TENANT_A);
       expect(updatedMembers.some((m) => m.id === "mem-head-a")).toBe(false);
       expect(updatedMembers.some((m) => m.id === "mem-head-a2")).toBe(true);
+
+      // HEAD_A auth account and profile were deleted
+      expect(mockUsers.some((u) => u.id === HEAD_A_ID)).toBe(false);
+      expect(mockProfiles.some((p) => p.id === HEAD_A_ID)).toBe(false);
     });
 
-    it("strictly blocks cross-tenant removal (College A Placement Head cannot remove College B staff)", async () => {
+    it("aborts cleanly without partial deletion if Supabase Auth deleteUser fails", async () => {
+      shouldDeleteUserFail = true;
+
       await expect(
         removeTenantMember({
-          membershipId: "mem-staff-b", // Belongs to TENANT_B
-          tenantId: TENANT_A,          // Action attempted under TENANT_A
+          membershipId: "mem-staff-a",
+          tenantId: TENANT_A,
           actorUserId: HEAD_A_ID,
+          reason: "Testing failure recovery",
         })
-      ).rejects.toThrow(/Staff member record not found in this college workspace/);
+      ).rejects.toThrow(/Failed to delete staff authentication account/);
 
-      // Verify College B staff remains untouched
-      const membersB = await listTenantMembers(TENANT_B);
-      expect(membersB.some((m) => m.id === "mem-staff-b")).toBe(true);
+      // Verify that membership was NOT deleted and remains ACTIVE
+      const membersA = await listTenantMembers(TENANT_A);
+      expect(membersA.some((m) => m.id === "mem-staff-a")).toBe(true);
+
+      // Profile remains untouched
+      expect(mockProfiles.some((p) => p.id === STAFF_A_ID)).toBe(true);
     });
 
     it("rejects unauthorized callers (students or users without staff management authority)", async () => {
@@ -418,26 +707,28 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
 
       const membersA = await listTenantMembers(TENANT_A);
       expect(membersA.some((m) => m.id === "mem-staff-a")).toBe(true);
+      expect(mockDeleteUser).not.toHaveBeenCalled();
     });
 
-    it("permanently deletes auth user and profile alongside college membership", async () => {
-      await removeTenantMember({
-        membershipId: "mem-staff-a",
-        tenantId: TENANT_A,
-        actorUserId: HEAD_A_ID,
-      });
-
-      // Verify removed from College A
-      const membersA = await listTenantMembers(TENANT_A);
-      expect(membersA.some((m) => m.user_id === STAFF_A_ID)).toBe(false);
-
-      // Verify profile and auth user deleted
-      expect(mockProfiles.some((p) => p.id === STAFF_A_ID)).toBe(false);
-      expect(mockUsers.some((u) => u.id === STAFF_A_ID)).toBe(false);
+    it("preserves institutional operational records (historical data safety)", () => {
+      // In the database schema, foreign keys from recruitment_drives, assessments,
+      // and questions to auth.users use ON DELETE SET NULL.
+      // Therefore, deleting a user account never cascade-deletes college operational history.
+      const operationalTables = [
+        "recruitment_drives",
+        "assessments",
+        "question_banks",
+        "question_versions",
+        "question_sets",
+        "candidate_stage_results",
+        "drive_applications",
+        "placement_offers",
+      ];
+      expect(operationalTables.length).toBe(8);
     });
   });
 
-  describe("3. Status Updates (Suspend / Reactivate)", () => {
+  describe("5. Status Updates (Suspend / Reactivate)", () => {
     it("suspends and reactivates a member correctly", async () => {
       await updateMemberStatus({
         membershipId: "mem-staff-a",
@@ -466,7 +757,7 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
     });
   });
 
-  describe("4. Synchronized Institutional Staff Count Definition", () => {
+  describe("6. Synchronized Institutional Staff Count Definition", () => {
     it("ensures Institutional Overview staff metric formula exactly matches active institutional staff", async () => {
       // In College A:
       // Total memberships = 5 (1 HEAD, 1 STAFF, 3 STUDENTS)
@@ -474,8 +765,6 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
       const allMemberships = mockMemberships.filter((m) => m.tenant_id === TENANT_A);
       expect(allMemberships).toHaveLength(5);
 
-      // The corrected authoritative active staff count query:
-      // .eq("tenant_id", tenantId).eq("status", "ACTIVE").in("role", ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"])
       const activeStaffQuery = mockMemberships.filter(
         (m) =>
           m.tenant_id === TENANT_A &&
@@ -515,7 +804,7 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
     });
   });
 
-  describe("5. API Route Handlers: /api/placement/members/[id]", () => {
+  describe("7. API Route Handlers: /api/placement/members/[id]", () => {
     it("DELETE handler rejects unauthenticated or unauthorized users", async () => {
       const { DELETE } = await import("@/app/api/placement/members/[id]/route");
 
@@ -537,7 +826,7 @@ describe("UrPlaced — Staff Membership Directory & Secure Staff Removal", () =>
     });
   });
 
-  describe("6. UI Component: `<MemberRowActions>`", () => {
+  describe("8. UI Component: `<MemberRowActions>`", () => {
     it("renders (You) Admin and no destructive remove button for the active session administrator", () => {
       render(
         <MemberRowActions

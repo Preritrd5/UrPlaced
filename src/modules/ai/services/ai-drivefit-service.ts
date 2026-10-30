@@ -43,10 +43,11 @@ export class AIDriveFitService {
     const admin = createAdminClient();
 
     // 1. Fetch recruitment drive and company details
-    const { data: drive, error: driveErr } = await admin
+    let driveQuery = admin
       .from("recruitment_drives")
       .select(`
         id,
+        tenant_id,
         title,
         status,
         companies (
@@ -55,8 +56,13 @@ export class AIDriveFitService {
           tier
         )
       `)
-      .eq("id", params.driveId)
-      .maybeSingle();
+      .eq("id", params.driveId);
+
+    if (params.tenantId) {
+      driveQuery = driveQuery.eq("tenant_id", params.tenantId);
+    }
+
+    const { data: drive, error: driveErr } = await driveQuery.maybeSingle();
 
     if (!drive || driveErr) {
       throw new Error("Recruitment drive not found or inaccessible.");
@@ -94,7 +100,7 @@ export class AIDriveFitService {
     // 4. Fetch student academic profile
     let studentProfile: any = null;
     try {
-      const { data: s } = await admin
+      let sQuery = admin
         .from("students")
         .select(`
           id,
@@ -107,8 +113,13 @@ export class AIDriveFitService {
             code
           )
         `)
-        .eq("user_id", params.userId)
-        .maybeSingle();
+        .eq("user_id", params.userId);
+
+      if (params.tenantId) {
+        sQuery = sQuery.eq("tenant_id", params.tenantId);
+      }
+
+      const { data: s } = await sQuery.maybeSingle();
       studentProfile = s;
     } catch {
       // Student query fallback
@@ -155,11 +166,16 @@ export class AIDriveFitService {
     // 6. Fetch relevant practice questions from question bank for this drive's topics
     let recommendedQuestionIds: string[] = [];
     try {
-      const { data: qList } = await admin
+      let qQuery = admin
         .from("questions")
         .select("id")
-        .eq("lifecycle_status", "APPROVED")
-        .limit(5);
+        .eq("lifecycle_status", "APPROVED");
+
+      if (params.tenantId) {
+        qQuery = qQuery.eq("tenant_id", params.tenantId);
+      }
+
+      const { data: qList } = await qQuery.limit(5);
       if (qList) {
         recommendedQuestionIds = qList.map((q) => q.id);
       }

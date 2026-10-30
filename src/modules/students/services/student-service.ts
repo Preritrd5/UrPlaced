@@ -1079,7 +1079,44 @@ export class StudentService {
 
     const supabase = createAdminClient();
 
-    // 1. Enforce 1:1 Account-to-Roster Invariant & Separately Guarded Same-Account Retry Path:
+    // 1. Enforce 1:1 Account-to-Roster Invariant & Single-College Ownership:
+    // Check if this user account holds an active or existing membership in another college or role
+    if (typeof supabase?.from === "function") {
+      try {
+        const tmQuery = supabase.from("tenant_memberships");
+        if (tmQuery && typeof tmQuery.select === "function") {
+          const { data: userMemberships } = await tmQuery
+            .select("id, tenant_id, role, status")
+            .eq("user_id", params.userId);
+
+          if (userMemberships && userMemberships.length > 0) {
+            if (params.tenantId) {
+              const otherCollege = userMemberships.find((m: any) => m.tenant_id !== params.tenantId);
+              if (otherCollege) {
+                return {
+                  success: false,
+                  code: "TENANT_MISMATCH",
+                  message: "This account is already associated with another college.",
+                };
+              }
+            }
+            const staffOrAdmin = userMemberships.find((m: any) =>
+              m.role === "PLACEMENT_HEAD" || m.role === "PLACEMENT_STAFF" || m.role === "TRAINER"
+            );
+            if (staffOrAdmin) {
+              return {
+                success: false,
+                code: "ROLE_CONFLICT",
+                message: `This account already holds an institutional role (${staffOrAdmin.role}) and cannot claim a student roster record.`,
+              };
+            }
+          }
+        }
+      } catch {
+        // Fallback to database procedure guards
+      }
+    }
+
     // Check if this user account has already claimed another roster record
     const { data: existingUserClaim } = await supabase
       .from("students")

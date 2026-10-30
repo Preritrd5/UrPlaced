@@ -42,13 +42,22 @@ vi.mock("@/lib/supabase/admin", () => ({
         insert: vi.fn((record: any) => {
           const items = Array.isArray(record) ? record : [record];
           const inserted: any[] = [];
-          items.forEach((item) => {
+          for (const item of items) {
+            if (table === "tenant_memberships") {
+              const existingUser = mockMemberships.find((m) => m.user_id === item.user_id);
+              if (existingUser) {
+                return {
+                  data: null,
+                  error: { code: "23505", message: "duplicate key value violates unique constraint uq_tenant_memberships_user_id" },
+                };
+              }
+            }
             const row = { id: item.id || `row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`, ...item, created_at: new Date().toISOString() };
             if (table === "invitations") mockInvitations.push(row);
             if (table === "tenant_memberships") mockMemberships.push(row);
             if (table === "profiles") mockProfiles.push(row);
             inserted.push(row);
-          });
+          }
           selectedData = inserted[0];
           return builder;
         }),
@@ -77,12 +86,25 @@ vi.mock("@/lib/supabase/admin", () => ({
         update: vi.fn((updates: any) => {
           const filters: Record<string, any> = {};
           const applyUpdates = () => {
+            if (Object.keys(filters).length === 0) return;
             if (table === "invitations") {
               mockInvitations.forEach((inv) => {
-                const match = Object.entries(filters).every(([k, v]) => inv[k] === v);
+                const match =
+                  (filters.token_hash && inv.token_hash === filters.token_hash) ||
+                  (filters.id && inv.id === filters.id) ||
+                  Object.entries(filters).every(([k, v]) => inv[k] === v);
                 if (match) {
                   Object.assign(inv, updates);
                   selectedData = { ...inv };
+                }
+              });
+            }
+            if (table === "tenant_memberships") {
+              mockMemberships.forEach((m) => {
+                const match = Object.entries(filters).every(([k, v]) => m[k] === v);
+                if (match) {
+                  Object.assign(m, updates);
+                  selectedData = { ...m };
                 }
               });
             }
@@ -94,11 +116,23 @@ vi.mock("@/lib/supabase/admin", () => ({
               applyUpdates();
               return updateChain;
             }),
+            or: vi.fn((clause: string) => {
+              const matchHash = clause.match(/token_hash\.eq\.([^,]+)/);
+              if (matchHash) filters.token_hash = matchHash[1];
+              const matchId = clause.match(/id\.eq\.([^,]+)/);
+              if (matchId) filters.id = matchId[1];
+              applyUpdates();
+              return updateChain;
+            }),
             select: vi.fn(() => updateChain),
             single: vi.fn(async () => {
               applyUpdates();
               return { data: selectedData || null, error: selectedData ? null : { message: "Not found" } };
             }),
+            then: (resolve: any) => {
+              applyUpdates();
+              resolve({ data: selectedData || null, error: null });
+            },
           };
 
           return updateChain;
@@ -108,7 +142,32 @@ vi.mock("@/lib/supabase/admin", () => ({
           currentFilter[col] = val;
           return builder;
         }),
+        or: vi.fn((clause: string) => {
+          const match = clause.match(/token_hash\.eq\.([^,]+)/);
+          if (match) {
+            currentFilter.token_hash = match[1];
+          }
+          return builder;
+        }),
         order: vi.fn(() => builder),
+        maybeSingle: vi.fn(async () => {
+          let row = null;
+          if (table === "invitations") {
+            row = mockInvitations.find((inv) => {
+              if (currentFilter.token_hash) return inv.token_hash === currentFilter.token_hash;
+              return Object.entries(currentFilter).every(([k, v]) => inv[k] === v);
+            });
+            if (row) {
+              row = { ...row, tenants: { name: row.tenant_name || "Sapthagiri NPS University", slug: "sapthagiri", status: "ACTIVE" } };
+            }
+          }
+          if (table === "tenant_memberships") {
+            row = mockMemberships.find((m) => {
+              return Object.entries(currentFilter).every(([k, v]) => m[k] === v);
+            });
+          }
+          return { data: row || null, error: null };
+        }),
         single: vi.fn(async () => {
           if (selectedData) {
             const res = selectedData;
@@ -121,11 +180,17 @@ vi.mock("@/lib/supabase/admin", () => ({
           let row = null;
           if (table === "invitations") {
             row = mockInvitations.find((inv) => {
+              if (currentFilter.token_hash) return inv.token_hash === currentFilter.token_hash;
               return Object.entries(currentFilter).every(([k, v]) => inv[k] === v);
             });
             if (row) {
-              row = { ...row, tenants: { name: "Sapthagiri NPS University", slug: "sapthagiri", status: "ACTIVE" } };
+              row = { ...row, tenants: { name: row.tenant_name || "Sapthagiri NPS University", slug: "sapthagiri", status: "ACTIVE" } };
             }
+          }
+          if (table === "tenant_memberships") {
+            row = mockMemberships.find((m) => {
+              return Object.entries(currentFilter).every(([k, v]) => m[k] === v);
+            });
           }
           return { data: row || null, error: row ? null : { message: "Not found" } };
         }),
@@ -133,10 +198,15 @@ vi.mock("@/lib/supabase/admin", () => ({
 
       // Handle query resolution returning multiple rows
       builder.then = (resolve: any) => {
-        let results = [];
+        let results: any[] = [];
         if (table === "invitations") {
           results = mockInvitations.filter((inv) => {
             return Object.entries(currentFilter).every(([k, v]) => inv[k] === v);
+          });
+        }
+        if (table === "tenant_memberships") {
+          results = mockMemberships.filter((m) => {
+            return Object.entries(currentFilter).every(([k, v]) => m[k] === v);
           });
         }
         resolve({ data: results, error: null });
@@ -171,6 +241,7 @@ import {
   listTenantInvitations,
   normalizeEmail,
   isValidEmail,
+  hashInvitationToken,
 } from "@/modules/identity-access/services/invitation-service";
 import { EmailAdapter } from "@/modules/identity-access/services/email-adapter";
 
@@ -368,6 +439,149 @@ describe("Staff & Members Secure Invitation & Onboarding Workflow", () => {
           userEmail: "attacker@otherdomain.com",
         })
       ).rejects.toThrow(/Invitation was issued to/);
+    });
+
+    it("rejects acceptance if user already belongs to another college (never silently reassigns college)", async () => {
+      const existingUser = "existing-college-a-staff-user";
+      const collegeATenantId = "college-a-sapthagiri-tenant";
+      const collegeBTenantId = "college-b-reva-tenant";
+
+      // User already belongs to College A
+      mockMemberships.push({
+        id: "mem-college-a",
+        tenant_id: collegeATenantId,
+        user_id: existingUser,
+        role: "PLACEMENT_STAFF",
+        status: "ACTIVE",
+      });
+
+      // College B creates invitation for this email
+      const email = "cross.college.test@campus.edu";
+      const created = await createInvitation({
+        tenantId: collegeBTenantId,
+        email,
+        role: "TRAINER",
+        createdBy: "college-b-admin",
+      });
+
+      // When the user tries to accept College B's invitation, it MUST reject
+      await expect(
+        acceptInvitation({
+          rawToken: created.rawToken,
+          userId: existingUser,
+          userEmail: email,
+          fullName: "Cross College Attacker",
+        })
+      ).rejects.toThrow(/already associated with another college/);
+
+      // Verify the user was NOT reassigned to College B
+      const userMembership = mockMemberships.find((m) => m.user_id === existingUser);
+      expect(userMembership.tenant_id).toBe(collegeATenantId);
+      expect(userMembership.role).toBe("PLACEMENT_STAFF");
+    });
+
+    it("preserves valid same-college invitation acceptance by updating role without changing tenant_id", async () => {
+      const sameUser = "same-college-user-777";
+      const email = "same.college.promote@campus.edu";
+
+      // User already belongs to Sapthagiri as TRAINER
+      mockMemberships.push({
+        id: "mem-sapthagiri-trainer",
+        tenant_id: tenantId,
+        user_id: sameUser,
+        role: "TRAINER",
+        status: "ACTIVE",
+        permissions: [],
+      });
+
+      // Sapthagiri issues new invitation promoting user to PLACEMENT_STAFF
+      const created = await createInvitation({
+        tenantId,
+        email,
+        role: "PLACEMENT_STAFF",
+        createdBy: inviterId,
+      });
+
+      const acceptResult = await acceptInvitation({
+        rawToken: created.rawToken,
+        userId: sameUser,
+        userEmail: email,
+        fullName: "Promoted Staff",
+      });
+
+      expect(acceptResult.success).toBe(true);
+      expect(acceptResult.tenantId).toBe(tenantId);
+      expect(acceptResult.role).toBe("PLACEMENT_STAFF");
+
+      // Verify membership was updated in place, retaining exact tenant_id
+      const updatedMem = mockMemberships.find((m) => m.user_id === sameUser);
+      expect(updatedMem.tenant_id).toBe(tenantId);
+      expect(updatedMem.role).toBe("PLACEMENT_STAFF");
+      expect(updatedMem.status).toBe("ACTIVE");
+    });
+
+    it("rejects simultaneous acceptance attempts by two different colleges via insert-only concurrency protection", async () => {
+      const concurrentUser = "concurrent-invitee-user-888";
+      const collegeATenantId = "college-alpha-uuid";
+      const collegeBTenantId = "college-beta-uuid";
+      const email = "concurrent.invitee@campus.edu";
+
+      const inviteA = await createInvitation({
+        tenantId: collegeATenantId,
+        email,
+        role: "PLACEMENT_STAFF",
+        createdBy: "admin-alpha",
+      });
+
+      // Directly seed a second invitation for College Beta to simulate a concurrent or pre-existing race invitation
+      const tokenB = "raw-concurrent-token-beta";
+      const hashB = hashInvitationToken(tokenB);
+      const recordB = {
+        id: "inv-beta-999",
+        tenant_id: collegeBTenantId,
+        tenant_name: "Beta College",
+        email,
+        role: "PLACEMENT_STAFF",
+        permissions: [],
+        token_hash: hashB,
+        status: "PENDING",
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+        accepted_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tenants: {
+          name: "Beta College",
+          slug: "beta-college",
+          status: "ACTIVE",
+        },
+      };
+      mockInvitations.push(recordB);
+
+      // Simulate simultaneous acceptance:
+      // Request 1 accepts College Alpha
+      const resultA = await acceptInvitation({
+        rawToken: inviteA.rawToken,
+        userId: concurrentUser,
+        userEmail: email,
+        fullName: "Concurrent User",
+      });
+      expect(resultA.success).toBe(true);
+      expect(resultA.tenantId).toBe(collegeATenantId);
+
+      // Request 2 attempts to accept College Beta concurrently
+      await expect(
+        acceptInvitation({
+          rawToken: tokenB,
+          userId: concurrentUser,
+          userEmail: email,
+          fullName: "Concurrent User",
+        })
+      ).rejects.toThrow(/already associated with another college/);
+
+      // Confirm final database state: user strictly belongs to College Alpha only
+      const userMems = mockMemberships.filter((m) => m.user_id === concurrentUser);
+      expect(userMems.length).toBe(1);
+      expect(userMems[0].tenant_id).toBe(collegeATenantId);
     });
   });
 

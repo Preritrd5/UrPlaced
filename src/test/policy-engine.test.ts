@@ -23,6 +23,13 @@ describe("Policy Engine & Scoped RBAC", () => {
     };
     expect(can(ctx, Permissions.MISTAKE_BANK_MANAGE_OWN)).toBe(false);
     expect(can(ctx, Permissions.RESULTS_READ_OWN)).toBe(false);
+    // Strict Option A: Platform Super Admin is also denied access to private college operational data
+    expect(can(ctx, Permissions.STUDENTS_READ)).toBe(false);
+    expect(can(ctx, Permissions.STUDENTS_DELETE)).toBe(false);
+    expect(can(ctx, Permissions.DRIVES_MANAGE)).toBe(false);
+    expect(can(ctx, Permissions.QUESTIONS_MANAGE)).toBe(false);
+    expect(can(ctx, Permissions.ASSESSMENTS_MANAGE)).toBe(false);
+    expect(can(ctx, Permissions.STAFF_MANAGE)).toBe(false);
   });
 
   it("grants Placement Head institution management within own tenant", () => {

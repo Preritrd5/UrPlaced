@@ -143,7 +143,7 @@ export function AuthSplitLayout({
         <div className="relative z-20 max-w-[360px] xl:max-w-[420px] text-white space-y-6">
           {/* White UrPlaced Logo */}
           <div className="flex items-center gap-3">
-            <div className="relative h-11 w-11 xl:h-12 xl:w-12 shrink-0">
+            {/* <div className="relative h-11 w-11 xl:h-12 xl:w-12 shrink-0">
               <Image
                 src="/assets/logo.png"
                 alt="UrPlaced"
@@ -152,7 +152,20 @@ export function AuthSplitLayout({
                 priority
                 className="w-full h-full object-contain brightness-0 invert pointer-events-none"
               />
+            </div> */}
+
+            <div className="relative h-11 w-11 xl:h-12 xl:w-12 shrink-0">
+              <Image
+                src="/assets/logo.png"
+                alt="UrPlaced"
+                width={48}
+                height={48}
+                priority
+                className="h-full w-full object-contain pointer-events-none !filter-none"
+                style={{ filter: "none", opacity: 1, mixBlendMode: "normal" }}
+              />
             </div>
+
             <div className="relative flex flex-col justify-center">
               <span className="font-heading font-extrabold text-2xl xl:text-3xl text-white tracking-tight leading-none">
                 UrPlaced

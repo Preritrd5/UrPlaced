@@ -77,8 +77,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const ctx = await requireAuthContext(Permissions.STUDENTS_DELETE);
 
-    // Only Placement Heads or Platform Admins are authorized to perform permanent deletions
-    if (ctx.tenantRole !== "PLACEMENT_HEAD" && !ctx.isPlatformAdmin) {
+    // Only Placement Heads are authorized to perform permanent deletions
+    if (ctx.tenantRole !== "PLACEMENT_HEAD") {
       return NextResponse.json(
         { error: "Permanent deletion of student records is strictly restricted to Placement Heads." },
         { status: 403 }

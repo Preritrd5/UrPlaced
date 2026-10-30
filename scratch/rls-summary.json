@@ -1,0 +1,1438 @@
+{
+  "totalTables": 55,
+  "rlsEnabledCount": 55,
+  "totalPolicies": 147,
+  "tables": [
+    {
+      "name": "tenants",
+      "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "tenants_select_policy",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_platform_admin(auth.uid()) OR id IN (SELECT tenant_id FROM public.get_user_active_tenants(",
+          "withCheck": ""
+        },
+        {
+          "name": "tenants_insert_policy",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "public.is_platform_admin(auth.uid())"
+        },
+        {
+          "name": "tenants_update_policy",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_platform_admin(auth.uid()) OR (public.is_tenant_admin(id, auth.uid()) AND status = 'ACTIVE",
+          "withCheck": "public.is_platform_admin(auth.uid()) OR (public.is_tenant_admin(id, auth.uid()) AND status = 'ACTIVE"
+        },
+        {
+          "name": "tenants_delete_policy",
+          "action": "DELETE",
+          "toRole": "PUBLIC",
+          "using": "public.is_platform_admin(auth.uid())",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "profiles",
+      "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "profiles_select_policy",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "auth.uid() = id OR public.is_platform_admin(auth.uid()) OR EXISTS ( SELECT 1 FROM public.tenant_memb",
+          "withCheck": ""
+        },
+        {
+          "name": "profiles_insert_policy",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "auth.uid() = id OR public.is_platform_admin(auth.uid())"
+        },
+        {
+          "name": "profiles_update_policy",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "auth.uid() = id OR public.is_platform_admin(auth.uid())",
+          "withCheck": "-- Normal users cannot elevate themselves to platform admin (auth.uid() = id AND is_platform_admin ="
+        },
+        {
+          "name": "users_can_update_own_profile",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "auth.uid() = id",
+          "withCheck": "auth.uid() = id"
+        }
+      ]
+    },
+    {
+      "name": "tenant_memberships",
+      "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "memberships_select_policy",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "user_id = auth.uid() OR public.is_tenant_admin(tenant_id, auth.uid()) OR public.is_platform_admin(au",
+          "withCheck": ""
+        },
+        {
+          "name": "memberships_insert_policy",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "public.is_tenant_admin(tenant_id, auth.uid()) OR public.is_platform_admin(auth.uid())"
+        },
+        {
+          "name": "memberships_update_policy",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_admin(tenant_id, auth.uid()) OR public.is_platform_admin(auth.uid())",
+          "withCheck": "public.is_tenant_admin(tenant_id, auth.uid()) OR public.is_platform_admin(auth.uid())"
+        },
+        {
+          "name": "memberships_delete_policy",
+          "action": "DELETE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_admin(tenant_id, auth.uid()) OR public.is_platform_admin(auth.uid())",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "invitations",
+      "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "invitations_select_policy",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "email = (SELECT email FROM auth.users WHERE id = auth.uid()) OR public.is_tenant_admin(tenant_id, au",
+          "withCheck": ""
+        },
+        {
+          "name": "invitations_insert_policy",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "(tenant_id IS NOT NULL AND public.is_tenant_admin(tenant_id, auth.uid())) OR public.is_platform_admi"
+        },
+        {
+          "name": "invitations_update_policy",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_admin(tenant_id, auth.uid()) OR public.is_platform_admin(auth.uid())",
+          "withCheck": "public.is_tenant_admin(tenant_id, auth.uid()) OR public.is_platform_admin(auth.uid())"
+        }
+      ]
+    },
+    {
+      "name": "audit_logs",
+      "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "audit_logs_select_policy",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "(tenant_id IS NOT NULL AND public.is_tenant_admin(tenant_id, auth.uid())) OR public.is_platform_admi",
+          "withCheck": ""
+        },
+        {
+          "name": "audit_logs_insert_policy",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "true -- System and authenticated actions may append audit entries"
+        }
+      ]
+    },
+    {
+      "name": "academic_years",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "academic_years_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_active_tenant_member(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        },
+        {
+          "name": "academic_years_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_admin(tenant_id)"
+        },
+        {
+          "name": "academic_years_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": "public.is_tenant_admin(tenant_id)"
+        },
+        {
+          "name": "academic_years_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "departments",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "departments_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_active_tenant_member(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        },
+        {
+          "name": "departments_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_admin(tenant_id)"
+        },
+        {
+          "name": "departments_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": "public.is_tenant_admin(tenant_id)"
+        },
+        {
+          "name": "departments_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "students",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "students_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND user_id = auth.u",
+          "withCheck": ""
+        },
+        {
+          "name": "students_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "students_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id)",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "students_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "companies",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "companies_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_active_tenant_member(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        },
+        {
+          "name": "companies_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "companies_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id)",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "companies_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "recruitment_drives",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "drives_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND status IN ('PUBL",
+          "withCheck": ""
+        },
+        {
+          "name": "drives_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "drives_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id)",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "drives_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "drive_eligibility_criteria",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "criteria_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_active_tenant_member(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        },
+        {
+          "name": "criteria_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "criteria_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id)",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "criteria_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "drive_stages",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "stages_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND is_student_visib",
+          "withCheck": ""
+        },
+        {
+          "name": "stages_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "stages_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id)",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "stages_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "drive_applications",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "applications_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "applications_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        },
+        {
+          "name": "applications_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        },
+        {
+          "name": "applications_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "candidate_stage_results",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "stage_results_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND application_id I",
+          "withCheck": ""
+        },
+        {
+          "name": "stage_results_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "stage_results_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id)",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "stage_results_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "placement_offers",
+      "file": "20261018000002_phase04_college_placement.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "offers_select_policy",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "offers_insert_policy",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "offers_update_policy",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        },
+        {
+          "name": "offers_delete_policy",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "public.is_tenant_admin(tenant_id)",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "canonical_skills",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_canonical_skills_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "true",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "practice_resources",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_practice_resources_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "tenant_id IS NULL OR is_tenant_staff(tenant_id) OR EXISTS ( SELECT 1 FROM public.students s WHERE s.",
+          "withCheck": ""
+        },
+        {
+          "name": "p_practice_resources_staff_write",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "tenant_id IS NOT NULL AND is_tenant_staff(tenant_id)",
+          "withCheck": "tenant_id IS NOT NULL AND is_tenant_staff(tenant_id)"
+        }
+      ]
+    },
+    {
+      "name": "recruitment_sources",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_recruitment_sources_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_recruitment_sources_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "access_classification = 'PUBLIC' AND verification_status = 'VERIFIED' AND EXISTS ( SELECT 1 FROM pub",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "recruitment_requirements",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_recruitment_requirements_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_recruitment_requirements_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "is_published_to_students = true AND verification_status = 'VERIFIED' AND EXISTS ( SELECT 1 FROM publ",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "requirement_skill_mappings",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_req_skill_mappings_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_req_skill_mappings_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.students s WHERE s.tenant_id = requirement_skill_mappings.tenant_id AN",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "student_preparation_plans",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_prep_plans_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_prep_plans_student",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.students s WHERE s.id = student_preparation_plans.student_id AND s.ten",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.students s WHERE s.id = student_preparation_plans.student_id AND s.ten"
+        }
+      ]
+    },
+    {
+      "name": "preparation_tasks",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_prep_tasks_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_prep_tasks_student",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.student_preparation_plans p JOIN public.students s ON s.id = p.student",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.student_preparation_plans p JOIN public.students s ON s.id = p.student"
+        }
+      ]
+    },
+    {
+      "name": "recruitment_experience_reports",
+      "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_exp_reports_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_exp_reports_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "moderation_status = 'APPROVED' AND EXISTS ( SELECT 1 FROM public.students s WHERE s.tenant_id = recr",
+          "withCheck": ""
+        },
+        {
+          "name": "p_exp_reports_student_insert",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.students s WHERE s.id = recruitment_experience_reports.student_id AND "
+        }
+      ]
+    },
+    {
+      "name": "question_banks",
+      "file": "20261018000004_phase06_questionbank_sentinel.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_q_banks_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_q_banks_global_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "sharing_policy = 'GLOBAL_SHARED' AND status = 'ACTIVE'",
+          "withCheck": ""
+        },
+        {
+          "name": "p_q_banks_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "status = 'ACTIVE' AND EXISTS ( SELECT 1 FROM public.students s WHERE s.tenant_id = question_banks.te",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "questions",
+      "file": "20261018000004_phase06_questionbank_sentinel.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_questions_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_questions_global_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "lifecycle_status = 'PUBLISHED' AND EXISTS ( SELECT 1 FROM public.question_banks qb WHERE qb.id = que",
+          "withCheck": ""
+        },
+        {
+          "name": "p_questions_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "lifecycle_status = 'PUBLISHED' AND EXISTS ( SELECT 1 FROM public.students s WHERE s.tenant_id = ques",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "question_versions",
+      "file": "20261018000004_phase06_questionbank_sentinel.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_q_versions_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_q_versions_global_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "published_at IS NOT NULL AND EXISTS ( SELECT 1 FROM public.questions q JOIN public.question_banks qb",
+          "withCheck": ""
+        },
+        {
+          "name": "p_q_versions_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "published_at IS NOT NULL AND EXISTS ( SELECT 1 FROM public.students s JOIN public.questions q ON q.i",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "question_import_jobs",
+      "file": "20261018000004_phase06_questionbank_sentinel.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_import_jobs_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        }
+      ]
+    },
+    {
+      "name": "question_duplicate_candidates",
+      "file": "20261018000004_phase06_questionbank_sentinel.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_dup_candidates_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        }
+      ]
+    },
+    {
+      "name": "question_sets",
+      "file": "20261018000004_phase06_questionbank_sentinel.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_q_sets_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_q_sets_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "status = 'PUBLISHED' AND EXISTS ( SELECT 1 FROM public.students s WHERE s.tenant_id = question_sets.",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "question_set_items",
+      "file": "20261018000004_phase06_questionbank_sentinel.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p_set_items_staff",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "is_tenant_staff(tenant_id)",
+          "withCheck": "is_tenant_staff(tenant_id)"
+        },
+        {
+          "name": "p_set_items_student_read",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.question_sets qs JOIN public.students s ON s.tenant_id = qs.tenant_id ",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "assessments",
+      "file": "20261019000001_phase07_assessment_engine.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p07_assessments_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND status = 'PUBLIS",
+          "withCheck": ""
+        },
+        {
+          "name": "p07_assessments_insert",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()"
+        },
+        {
+          "name": "p07_assessments_update",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()"
+        },
+        {
+          "name": "p07_assessments_delete",
+          "action": "DELETE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "assessment_assignments",
+      "file": "20261019000001_phase07_assessment_engine.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p07_assignments_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND ( student_id IS ",
+          "withCheck": ""
+        },
+        {
+          "name": "p07_assignments_insert",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()"
+        },
+        {
+          "name": "p07_assignments_update",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()"
+        },
+        {
+          "name": "p07_assignments_delete",
+          "action": "DELETE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "assessment_attempts",
+      "file": "20261019000001_phase07_assessment_engine.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p07_attempts_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p07_attempts_insert",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        },
+        {
+          "name": "p07_attempts_update",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        },
+        {
+          "name": "p07_attempts_delete",
+          "action": "DELETE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "attempt_responses",
+      "file": "20261019000001_phase07_assessment_engine.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p07_responses_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND attempt_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p07_responses_insert",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND attempt_id IN ( "
+        },
+        {
+          "name": "p07_responses_update",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND attempt_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND attempt_id IN ( "
+        },
+        {
+          "name": "p07_responses_delete",
+          "action": "DELETE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "preparation_practice_sessions",
+      "file": "20261019000001_phase07_assessment_engine.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p07_practice_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p07_practice_write",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        }
+      ]
+    },
+    {
+      "name": "student_behavioral_responses",
+      "file": "20261019000001_phase07_assessment_engine.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p07_behavioral_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p07_behavioral_write",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        }
+      ]
+    },
+    {
+      "name": "mistake_review_targets",
+      "file": "20261019000002_phase08_mistake_to_mastery.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p08_targets_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p08_targets_write",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        }
+      ]
+    },
+    {
+      "name": "mistake_occurrences",
+      "file": "20261019000002_phase08_mistake_to_mastery.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p08_occurrences_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p08_occurrences_write",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        }
+      ]
+    },
+    {
+      "name": "review_sessions",
+      "file": "20261019000002_phase08_mistake_to_mastery.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p08_sessions_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p08_sessions_write",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        }
+      ]
+    },
+    {
+      "name": "mastery_evidence_records",
+      "file": "20261019000002_phase08_mistake_to_mastery.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p08_evidence_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p08_evidence_write",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        }
+      ]
+    },
+    {
+      "name": "student_skill_mastery",
+      "file": "20261019000002_phase08_mistake_to_mastery.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p08_mastery_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": ""
+        },
+        {
+          "name": "p08_mastery_write",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( ",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND student_id IN ( "
+        }
+      ]
+    },
+    {
+      "name": "question_defect_reports",
+      "file": "20261019000002_phase08_mistake_to_mastery.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "p08_defects_select",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR (public.is_active_tenant_member(tenant_id) AND reported_by = au",
+          "withCheck": ""
+        },
+        {
+          "name": "p08_defects_insert",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "public.is_active_tenant_member(tenant_id) OR public.is_platform_admin()"
+        },
+        {
+          "name": "p08_defects_manage",
+          "action": "UPDATE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()"
+        },
+        {
+          "name": "p08_defects_delete",
+          "action": "DELETE",
+          "toRole": "PUBLIC",
+          "using": "public.is_tenant_staff(tenant_id) OR public.is_platform_admin()",
+          "withCheck": ""
+        }
+      ]
+    },
+    {
+      "name": "historical_recruitment_records",
+      "file": "20261019000003_phase09_placement_memory_analytics.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Super admins have full access to historical records",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.is_platform_admin ",
+          "withCheck": ""
+        },
+        {
+          "name": "Tenant members can view college private or global shared historical records",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "sharing_scope = 'GLOBAL_SHARED' OR EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_mem",
+          "withCheck": ""
+        },
+        {
+          "name": "Placement staff can manage tenant historical records",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = historical_rec",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = historical_rec"
+        }
+      ]
+    },
+    {
+      "name": "historical_drive_comparisons",
+      "file": "20261019000003_phase09_placement_memory_analytics.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Super admins have full access to drive comparisons",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.is_platform_admin ",
+          "withCheck": ""
+        },
+        {
+          "name": "Tenant members can view tenant drive comparisons",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = historical_dri",
+          "withCheck": ""
+        },
+        {
+          "name": "Placement staff can manage drive comparisons",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = historical_dri",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = historical_dri"
+        }
+      ]
+    },
+    {
+      "name": "experience_report_moderation_logs",
+      "file": "20261019000003_phase09_placement_memory_analytics.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Placement staff can view and create moderation logs",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = experience_rep",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = experience_rep"
+        }
+      ]
+    },
+    {
+      "name": "training_sessions",
+      "file": "20261019000003_phase09_placement_memory_analytics.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Tenant members can view training sessions",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_sessi",
+          "withCheck": ""
+        },
+        {
+          "name": "Staff and trainers can manage training sessions",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_sessi",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_sessi"
+        }
+      ]
+    },
+    {
+      "name": "training_attendance",
+      "file": "20261019000003_phase09_placement_memory_analytics.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Students can view their own training attendance",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.students WHERE students.id = training_attendance.student_id AND studen",
+          "withCheck": ""
+        },
+        {
+          "name": "Staff and trainers can manage training attendance",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_atten",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_atten"
+        }
+      ]
+    },
+    {
+      "name": "training_before_after_comparisons",
+      "file": "20261019000003_phase09_placement_memory_analytics.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Tenant members can view before-after comparisons",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_befor",
+          "withCheck": ""
+        },
+        {
+          "name": "Staff and trainers can manage before-after comparisons",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_befor",
+          "withCheck": "EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_memberships.tenant_id = training_befor"
+        }
+      ]
+    },
+    {
+      "name": "analytics_export_jobs",
+      "file": "20261019000003_phase09_placement_memory_analytics.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Users can view and manage their own export jobs",
+          "action": "ALL",
+          "toRole": "authenticated",
+          "using": "requested_by = auth.uid() AND EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_membersh",
+          "withCheck": "requested_by = auth.uid() AND EXISTS ( SELECT 1 FROM public.tenant_memberships WHERE tenant_membersh"
+        }
+      ]
+    },
+    {
+      "name": "ai_usage_logs",
+      "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Users can read own AI usage logs",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "auth.uid() = user_id",
+          "withCheck": ""
+        },
+        {
+          "name": "Tenant staff can view aggregate tenant AI logs",
+          "action": "SELECT",
+          "toRole": "PUBLIC",
+          "using": "EXISTS ( SELECT 1 FROM public.tenant_memberships tm WHERE tm.tenant_id = ai_usage_logs.tenant_id AND",
+          "withCheck": ""
+        },
+        {
+          "name": "Service role can insert AI usage logs",
+          "action": "INSERT",
+          "toRole": "PUBLIC",
+          "using": "",
+          "withCheck": "true"
+        }
+      ]
+    },
+    {
+      "name": "ai_tutor_conversations",
+      "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Users can manage own tutor conversations",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "auth.uid() = user_id",
+          "withCheck": "auth.uid() = user_id"
+        }
+      ]
+    },
+    {
+      "name": "ai_mistake_analyses",
+      "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Students can view own mistake analyses",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "auth.uid() = user_id",
+          "withCheck": "auth.uid() = user_id"
+        }
+      ]
+    },
+    {
+      "name": "ai_drivefit_evaluations",
+      "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "Students can view and create own drivefit evaluations",
+          "action": "ALL",
+          "toRole": "PUBLIC",
+          "using": "auth.uid() = user_id",
+          "withCheck": "auth.uid() = user_id"
+        }
+      ]
+    },
+    {
+      "name": "notification_announcements",
+      "file": "20261025000002_phase13_notifications_system.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "announcements_select_tenant_staff",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "public.is_active_tenant_member(college_id, auth.uid()) OR public.is_platform_admin(auth.uid())",
+          "withCheck": ""
+        },
+        {
+          "name": "announcements_insert_tenant_admin",
+          "action": "INSERT",
+          "toRole": "authenticated",
+          "using": "",
+          "withCheck": "public.is_tenant_admin(college_id, auth.uid()) OR public.is_platform_admin(auth.uid())"
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "file": "20261025000002_phase13_notifications_system.sql",
+      "rls": true,
+      "policies": [
+        {
+          "name": "notifications_select_recipient",
+          "action": "SELECT",
+          "toRole": "authenticated",
+          "using": "recipient_user_id = auth.uid()",
+          "withCheck": ""
+        },
+        {
+          "name": "notifications_update_read_at",
+          "action": "UPDATE",
+          "toRole": "authenticated",
+          "using": "recipient_user_id = auth.uid()",
+          "withCheck": "recipient_user_id = auth.uid()"
+        },
+        {
+          "name": "notifications_delete_recipient",
+          "action": "DELETE",
+          "toRole": "authenticated",
+          "using": "recipient_user_id = auth.uid()",
+          "withCheck": ""
+        }
+      ]
+    }
+  ],
+  "functions": [
+    "is_platform_admin",
+    "get_user_active_tenants",
+    "is_active_tenant_member",
+    "is_tenant_admin",
+    "handle_new_user",
+    "is_tenant_staff",
+    "log_question_lifecycle_change",
+    "check_notification_update",
+    "claim_student_roster",
+    "check_student_membership_tenant_consistency",
+    "handle_student_membership_deletion",
+    "check_student_membership_consistency"
+  ],
+  "buckets": [
+    "avatars"
+  ]
+}

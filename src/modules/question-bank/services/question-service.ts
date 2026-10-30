@@ -1403,8 +1403,8 @@ export class QuestionService {
       return { data: null, error: "Question not found." };
     }
 
-    // Tenant boundary check: unless platform admin, must match tenantId
-    if (!isPlatformAdmin && tenantId && question.tenant_id !== tenantId) {
+    // Tenant boundary check: must strictly match tenantId (Platform Admin has NO access to private college questions)
+    if (tenantId && question.tenant_id !== tenantId) {
       return { data: null, error: "Question not found." };
     }
 

@@ -255,9 +255,6 @@ export function UserAccountMenu({ className, size = "default" }: UserAccountMenu
             <div className="font-medium text-xs leading-tight">
               {isSigningOut ? "Signing out..." : "Sign Out"}
             </div>
-            <div className="text-[11px] text-text-muted leading-tight">
-              End current authenticated session
-            </div>
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>

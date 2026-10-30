@@ -134,41 +134,6 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.TENANT_REACTIVATE,
     Permissions.PLATFORM_HEALTH_READ,
     Permissions.AUDIT_LOG_READ,
-    Permissions.STUDENTS_DELETE,
-    Permissions.DASHBOARD_READ,
-    Permissions.REPORTS_EXPORT,
-    Permissions.INTELLIGENCE_SOURCES_READ,
-    Permissions.DRIVEFIT_READ_PUBLISHED,
-    Permissions.QUESTIONS_MANAGE,
-    Permissions.QUESTIONS_CREATE,
-    Permissions.QUESTIONS_REVIEW,
-    Permissions.QUESTIONS_PUBLISH,
-    Permissions.QUESTIONS_IMPORT,
-    Permissions.QUESTIONS_EXPORT,
-    Permissions.QUESTION_SETS_MANAGE,
-    Permissions.QUESTION_SETS_READ,
-    Permissions.ASSESSMENTS_CREATE,
-    Permissions.ASSESSMENTS_MANAGE,
-    Permissions.ASSESSMENTS_ASSIGN,
-    Permissions.ASSESSMENTS_GRADE,
-    Permissions.ASSESSMENTS_READ,
-    Permissions.PRACTICE_READ,
-    Permissions.MISTAKE_BANK_READ_COHORT,
-    Permissions.MISTAKE_BANK_MANAGE,
-    Permissions.QUESTION_DEFECTS_MANAGE,
-    Permissions.PLACEMENT_MEMORY_MANAGE,
-    Permissions.PLACEMENT_MEMORY_READ,
-    Permissions.REPORTS_MODERATE,
-    Permissions.ANALYTICS_READ_COHORT,
-    Permissions.ANALYTICS_EXPORT,
-    Permissions.TRAINING_SESSIONS_MANAGE,
-    Permissions.AI_STUDY_TUTOR_USE,
-    Permissions.AI_QUESTIONS_GENERATE,
-    Permissions.AI_MISTAKE_MASTERY_USE,
-    Permissions.AI_DRIVEFIT_EVALUATE,
-    Permissions.AI_PLACEMENT_INTEL_READ,
-    Permissions.ANNOUNCEMENTS_MANAGE,
-    Permissions.ANNOUNCEMENTS_READ,
   ],
   PLACEMENT_HEAD: [
     Permissions.STAFF_MANAGE,
@@ -372,18 +337,11 @@ export function can(
   resource?: ResourceTarget
 ): boolean {
   // 1. Platform Super Admin permissions check
+  // Strict Option A: Platform Super Admin ONLY has access to explicit platform management actions.
+  // They are strictly blocked from accessing any private college data.
   if (ctx.isPlatformAdmin) {
     const platformPerms = RoleDefaultPermissions.SUPER_ADMIN;
-    if (platformPerms.includes(action)) {
-      return true;
-    }
-    // Super Admin has NO automatic access to student-private data without support elevation
-    if (
-      action === Permissions.RESULTS_READ_OWN ||
-      action === Permissions.MISTAKE_BANK_MANAGE_OWN
-    ) {
-      return false;
-    }
+    return platformPerms.includes(action);
   }
 
   // 2. Deny if tenant is not ACTIVE

@@ -1,0 +1,168 @@
+<USER_REQUEST>
+# UrPlaced — Final Database Integrity & Real Tenant Isolation Correction
+
+The latest verification report shows substantial progress. Do not rebuild or unnecessarily modify completed functionality.
+
+Complete the following corrections before declaring the ownership remediation approved.
+
+### 1. CRITICAL — Correct the Student Composite Foreign Key
+
+Inspect:
+
+`supabase/migrations/20261030000001_enforce_single_college_ownership.sql`
+
+The current composite foreign key is reported as:
+
+```sql
+FOREIGN KEY (tenant_id, user_id)
+REFERENCES public.tenant_memberships (tenant_id, user_id)
+ON DELETE SET NULL
+DEFERRABLE INITIALLY DEFERRED;
+```
+
+This is unsafe because the default action sets both referencing columns to NULL when the referenced membership is deleted.
+
+Correct the intended behavior so that deleting a student membership or Auth account:
+- Sets only `students.user_id` to NULL.
+- Preserves `students.tenant_id`.
+- Preserves the college-owned student roster record.
+- Does not detach the student roster from its original college.
+
+Evaluate the PostgreSQL 15-supported syntax:
+
+```sql
+ON DELETE SET NULL (user_id)
+```
+
+Verify that the actual database version supports it.
+
+If necessary, create a new corrective migration rather than silently rewriting an already-applied migration.
+
+Test the complete lifecycle:
+1. Create a college-owned student roster record.
+2. Claim it using an authenticated student account.
+3. Confirm its tenant and user references match.
+4. Delete the test student's Auth identity.
+5. Confirm the student roster record remains.
+6. Confirm its original `tenant_id` is unchanged.
+7. Confirm only `user_id` becomes NULL.
+
+Also verify that the global single-college membership constraint remains effective.
+
+### 2. Enforce Student Role Consistency
+
+Inspect the student consistency trigger and every student-claiming RPC.
+
+The database must not allow a membership with `PLACEMENT_HEAD`, `PLACEMENT_STAFF`, or `TRAINER` to be linked to a student roster record.
+
+Ensure the linked membership:
+- Exists.
+- Belongs to the same college.
+- Has the `STUDENT` role.
+
+Verify every direct database, RPC and service path. Do not rely exclusively on frontend validation.
+
+Preserve existing student onboarding, SRN claiming and activation behavior.
+
+### 3. Prove Actual Two-College RLS Isolation
+
+Use a disposable local Supabase/PostgreSQL environment wherever possible.
+
+Create separate authenticated test users for Sapthagiri and ABC College.
+
+Run tests using their actual authenticated session/JWT context, not a privileged service-role client.
+
+Verify:
+
+- Sapthagiri cannot read ABC staff or student records.
+- ABC cannot read Sapthagiri staff or student records.
+- Question banks, questions and study materials remain isolated.
+- Assessments, attempts and results remain isolated.
+- Placement drives, applications and offers remain isolated.
+- Cross-college INSERT, UPDATE and DELETE attempts are rejected.
+- Changing client-supplied `tenant_id` cannot bypass authorization.
+
+Distinguish actual database integration testing from mocked unit tests.
+
+Do not use production records for destructive testing.
+
+If any behavior cannot be verified, explicitly report it as unverified.
+
+### 4. Recheck Staff Account Deletion
+
+Preserve the permanent staff deletion requirement.
+
+Verify that:
+- The authorized Placement Head can permanently delete staff in their own college.
+- Another college cannot delete that staff account.
+- Auth deletion failure does not produce false success.
+- Student roster and operational college data are preserved.
+- Existing sessions cannot continue using a deleted user's membership.
+- Audit records accurately reflect successful deletion.
+
+### 5. Recheck Migration Safety
+
+Inspect the complete final migration.
+
+Verify:
+- Global `UNIQUE(user_id)` on `tenant_memberships`.
+- Composite uniqueness required by the student foreign key.
+- Pending invitation email uniqueness.
+- Student single-account ownership.
+- Correct foreign-key deletion behavior.
+- Trigger correctness.
+- No unintended changes to unrelated tables or records.
+
+Do not apply any migration remotely.
+
+### 6. Regression and Build Verification
+
+Run relevant tests, including all existing:
+- Staff invitation tests.
+- Student SRN claiming tests.
+- Staff membership/removal tests.
+- Multi-college signup tests.
+- Student assessment visibility/isolation tests.
+
+Run TypeScript, ESLint and production build.
+
+Report actual results. Do not claim integration verification based solely on mocks.
+
+### 7. Implementation Boundaries
+
+- Preserve one person = one college.
+- Preserve strict college data isolation.
+- Preserve permanent staff account deletion.
+- Preserve existing email invitations.
+- Preserve existing UI customizations.
+- Do not expose `.env` secrets.
+- Do not begin Phase 1.
+- Do not create Platform Super Admin pages yet.
+- Do not modify remote Supabase data.
+- Do not push migrations.
+- Do not deploy to Vercel.
+- Do not commit, merge or push Git changes.
+
+### 8. Final Report
+
+Create:
+
+`docs/audit/UrPlaced_Final_Database_Integrity_and_RLS_Verification_Report.md`
+
+Include:
+1. Foreign-key correction and deletion lifecycle test results.
+2. Student role consistency enforcement.
+3. Actual RLS integration test evidence.
+4. Unit-test versus integration-test distinction.
+5. Migration safety findings.
+6. Staff permanent-deletion regression results.
+7. TypeScript, ESLint and build results.
+8. Outstanding risks.
+9. Files changed.
+10. Confirmation that no remote production changes occurred.
+
+Stop after this correction and verification pass. Do not proceed to Phase 1.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-30T10:10:52+05:30.
+</ADDITIONAL_METADATA>

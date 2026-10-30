@@ -1,0 +1,116 @@
+<USER_REQUEST>
+# UrPlaced — Global Single-College Ownership & Permanent Staff Account Deletion Remediation
+
+## OBJECTIVE
+
+Correct the recent Antigravity implementation and enforce UrPlaced's actual multi-college architecture.
+
+This is a multi-college SaaS platform. Multiple independent colleges use the same UrPlaced application, but **each individual belongs to exactly ONE college only**.
+
+This is the foundational product and data-ownership rule. It must be enforced throughout the database, authentication, registration, invitations, APIs, authorization, and UI.
+
+## 1. FUNDAMENTAL ARCHITECTURE — READ CAREFULLY
+
+UrPlaced supports multiple independent colleges on one platform.
+
+For example:
+
+**Sapthagiri College**
+- Placement Head: Jack
+- Placement Staff: Pop, Alice and Bob
+- Students: Sapthagiri's enrolled students
+- Trainers: Sapthagiri's trainers
+
+**ABC College**
+- Its own Placement Head
+- Its own Placement Staff
+- Its own Trainers
+- Its own Students
+
+**XYZ College**
+- Its own Placement Head
+- Its own Placement Staff
+- Its own Trainers
+- Its own Students
+
+These are independent institutional environments.
+
+### The non-negotiable ownership rule
+
+ONE PERSON = ONE COLLEGE ONLY.
+
+This applies to:
+- PLACEMENT_HEAD
+- PLACEMENT_STAFF
+- TRAINER
+- STUDENT
+
+Jack, Pop, Alice, Bob and Sapthagiri's students belong exclusively to Sapthagiri College.
+
+They must not simultaneously belong to ABC College or XYZ College.
+
+Likewise, ABC College users must not belong to Sapthagiri or XYZ College.
+
+**Important distinction:**
+- Multiple colleges can use one UrPlaced platform.
+- One person cannot have memberships in multiple colleges.
+- Multi-college SaaS does NOT mean multi-college user membership.
+
+Do not interpret this as a configurable restriction or an optional business preference. It represents the real-world college affiliation model.
+
+## 2. INVESTIGATE THE PREVIOUS IMPLEMENTATION
+
+Inspect the latest changes made in:
+
+- `MembershipService`
+- `removeTenantMember`
+
+<truncated 11760 bytes>
+n necessary.
+- Do not apply migrations to the remote Supabase project.
+- Do not modify production data.
+- Do not deploy to Vercel.
+- Do not push, merge or commit to Git unless explicitly authorized.
+
+Run relevant tests, TypeScript checks, ESLint and production build. Clearly distinguish new failures from pre-existing issues.
+
+## 11. FINAL VERIFICATION REPORT
+
+Create:
+
+`docs/audit/UrPlaced_Global_College_Ownership_and_Staff_Deletion_Remediation_Report.md`
+
+Include:
+
+1. Root cause of the previous implementation.
+2. Final one-person/one-college architecture.
+3. Database constraints and migration details.
+4. Legacy conflicting data findings.
+5. Staff invitation workflow verification.
+6. Permanent Supabase Auth deletion implementation.
+7. Foreign-key and historical-data impact analysis.
+8. Cross-college isolation verification.
+9. Tests executed and actual results.
+10. TypeScript, lint and production build results.
+11. Files changed.
+12. Outstanding risks or items requiring manual action.
+13. Confirmation that no remote database changes or production deployment occurred.
+
+## FINAL ACCEPTANCE CONDITION
+
+The remediation is complete only when all these statements are true:
+
+- Many colleges can independently use UrPlaced.
+- Every individual belongs to exactly one college.
+- Placement Heads, Placement Staff, Trainers and Students cannot belong to multiple colleges.
+- No college can view or manage another college's users or data.
+- The existing email-based staff invitation workflow still works.
+- An authorized Placement Head can permanently delete their own college's staff account, including its Supabase Auth identity.
+- The removed staff member cannot log in again.
+- No unrelated institutional or historical data is accidentally deleted.
+
+**Do not begin Phase 1 or any other new product implementation. Complete this remediation, verify it, and provide the report first.**
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-30T07:48:54+05:30.
+</ADDITIONAL_METADATA>

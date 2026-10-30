@@ -1,0 +1,9037 @@
+[
+  {
+    "name": "tenants",
+    "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "slug",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "primary_domain",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ACTIVE'"
+      },
+      {
+        "name": "student_seat_limit",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [],
+    "uniqueConstraints": [],
+    "checkConstraints": [
+      {
+        "name": "tenants_status_check",
+        "expression": "status IN ('PENDING_SETUP', 'ACTIVE', 'SUSPENDED', 'ARCHIVED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_tenants_slug",
+        "columns": [
+          "slug"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_tenants_status",
+        "columns": [
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "profiles",
+    "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "email",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "full_name",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_platform_admin",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "avatar_url",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_profiles_email",
+        "columns": [
+          "email"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "tenant_memberships",
+    "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "user_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ACTIVE'"
+      },
+      {
+        "name": "permissions",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_tenant_user_membership",
+        "columns": [
+          "tenant_id",
+          "user_id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "tenant_memberships_role_check",
+        "expression": "role IN ('PLACEMENT_HEAD', 'PLACEMENT_STAFF', 'TRAINER', 'STUDENT')"
+      },
+      {
+        "name": "tenant_memberships_status_check",
+        "expression": "status IN ('ACTIVE', 'SUSPENDED', 'REVOKED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_memberships_tenant_id",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_memberships_user_id",
+        "columns": [
+          "user_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_memberships_status",
+        "columns": [
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "invitations",
+    "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "email",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "permissions",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "token_hash",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING'"
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "expires_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "accepted_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [
+      {
+        "name": "invitations_role_check",
+        "expression": "role IN ('PLACEMENT_HEAD', 'PLACEMENT_STAFF', 'TRAINER', 'STUDENT', 'SUPER_ADMIN')"
+      },
+      {
+        "name": "invitations_status_check",
+        "expression": "status IN ('PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_invitations_token_hash",
+        "columns": [
+          "token_hash"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_invitations_email",
+        "columns": [
+          "email"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_invitations_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_invitations_status",
+        "columns": [
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "audit_logs",
+    "file": "20261018000001_phase03_auth_tenancy_rls.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "BIGSERIAL",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "actor_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "action",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "resource_type",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "resource_id",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "before_state",
+        "type": "JSONB",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "after_state",
+        "type": "JSONB",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "ip_address",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "user_agent",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "actor_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_audit_logs_tenant_id",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_audit_logs_actor_id",
+        "columns": [
+          "actor_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_audit_logs_action",
+        "columns": [
+          "action"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_audit_logs_created_at",
+        "columns": [
+          "created_at"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "academic_years",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "start_date",
+        "type": "DATE",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "end_date",
+        "type": "DATE",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PLANNED'"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_academic_year_tenant_name",
+        "columns": [
+          "tenant_id",
+          "name"
+        ]
+      },
+      {
+        "name": "uq_academic_year_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "academic_years_status_check",
+        "expression": "status IN ('PLANNED', 'ACTIVE', 'ARCHIVED')"
+      },
+      {
+        "name": "chk_academic_year_dates",
+        "expression": "start_date < end_date"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_academic_years_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_academic_years_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "departments",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "code",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ACTIVE'"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_departments_tenant_code",
+        "columns": [
+          "tenant_id",
+          "code"
+        ]
+      },
+      {
+        "name": "uq_departments_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "departments_status_check",
+        "expression": "status IN ('ACTIVE', 'INACTIVE')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_departments_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "students",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "user_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "enrollment_number",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "full_name",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "email",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "phone",
+        "type": "VARCHAR(32)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "department_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "graduation_year",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "degree",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "cgpa",
+        "type": "NUMERIC(4, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenth_percentage",
+        "type": "NUMERIC(5, 2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "twelfth_percentage",
+        "type": "NUMERIC(5, 2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "active_backlogs",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": "0"
+      },
+      {
+        "name": "total_backlogs",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": "0"
+      },
+      {
+        "name": "academic_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ACTIVE'"
+      },
+      {
+        "name": "skills",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "resume_url",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "is_archived",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "name": "fk_students_department",
+        "columns": [
+          "tenant_id",
+          "department_id"
+        ],
+        "refTable": "departments",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_students_tenant_enrollment",
+        "columns": [
+          "tenant_id",
+          "enrollment_number"
+        ]
+      },
+      {
+        "name": "uq_students_tenant_email",
+        "columns": [
+          "tenant_id",
+          "email"
+        ]
+      },
+      {
+        "name": "uq_students_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "students_cgpa_check",
+        "expression": "cgpa >= 0.00 AND cgpa <= 10.00"
+      },
+      {
+        "name": "students_tenth_percentage_check",
+        "expression": "tenth_percentage IS NULL OR (tenth_percentage >= 0.00 AND tenth_percentage <= 100.00)"
+      },
+      {
+        "name": "students_twelfth_percentage_check",
+        "expression": "twelfth_percentage IS NULL OR (twelfth_percentage >= 0.00 AND twelfth_percentage <= 100.00)"
+      },
+      {
+        "name": "students_active_backlogs_check",
+        "expression": "active_backlogs >= 0"
+      },
+      {
+        "name": "students_total_backlogs_check",
+        "expression": "total_backlogs >= 0"
+      },
+      {
+        "name": "students_academic_status_check",
+        "expression": "academic_status IN ('ACTIVE', 'GRADUATED', 'WITHDRAWN', 'SUSPENDED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_students_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_students_user_id",
+        "columns": [
+          "user_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_students_dept",
+        "columns": [
+          "tenant_id",
+          "department_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_students_grad_year",
+        "columns": [
+          "tenant_id",
+          "graduation_year"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_students_academic_status",
+        "columns": [
+          "tenant_id",
+          "academic_status"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_students_archived",
+        "columns": [
+          "tenant_id",
+          "is_archived"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "uq_students_user_id",
+        "columns": [
+          "user_id"
+        ],
+        "isUnique": true
+      },
+      {
+        "name": "idx_students_normalized_enrollment",
+        "columns": [
+          "UPPER(TRIM(enrollment_number"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "companies",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "normalized_name",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "website",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "industry",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "contact_person",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "contact_email",
+        "type": "VARCHAR(255)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "contact_phone",
+        "type": "VARCHAR(32)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "internal_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "is_archived",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_companies_tenant_name",
+        "columns": [
+          "tenant_id",
+          "normalized_name"
+        ]
+      },
+      {
+        "name": "uq_companies_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_companies_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_companies_archived",
+        "columns": [
+          "tenant_id",
+          "is_archived"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "recruitment_drives",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "company_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "academic_year_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "role_title",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recruitment_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'FULL_TIME'"
+      },
+      {
+        "name": "job_description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "location",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "compensation_range",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'DRAFT'"
+      },
+      {
+        "name": "registration_start",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "registration_deadline",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "cancellation_reason",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "internal_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "CONSTRAINT",
+        "type": "chk_registration_dates",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "registration_deadline",
+        "type": "IS",
+        "notNull": false,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "name": "fk_drives_company",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "name": "fk_drives_academic_year",
+        "columns": [
+          "tenant_id",
+          "academic_year_id"
+        ],
+        "refTable": "academic_years",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_drives_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "recruitment_drives_recruitment_type_check",
+        "expression": "recruitment_type IN ('FULL_TIME', 'INTERNSHIP', 'INTERN_TO_FTE')"
+      },
+      {
+        "name": "recruitment_drives_status_check",
+        "expression": "status IN ('DRAFT', 'PUBLISHED', 'REGISTRATION_OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ARCHIVED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_drives_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_drives_company",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_drives_academic_year",
+        "columns": [
+          "tenant_id",
+          "academic_year_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_drives_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "drive_eligibility_criteria",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "min_cgpa",
+        "type": "NUMERIC(4, 2)",
+        "notNull": true,
+        "default": "0.00"
+      },
+      {
+        "name": "min_tenth_percentage",
+        "type": "NUMERIC(5, 2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "min_twelfth_percentage",
+        "type": "NUMERIC(5, 2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "max_active_backlogs",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": "0"
+      },
+      {
+        "name": "max_total_backlogs",
+        "type": "INTEGER",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "allowed_departments",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "allowed_graduation_years",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "allowed_degrees",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "allowed_academic_statuses",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "criteria_version",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "name": "fk_criteria_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_drive_criteria",
+        "columns": [
+          "drive_id"
+        ]
+      },
+      {
+        "name": "uq_drive_criteria_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "drive_eligibility_criteria_min_cgpa_check",
+        "expression": "min_cgpa >= 0.00 AND min_cgpa <= 10.00"
+      },
+      {
+        "name": "drive_eligibility_criteria_min_tenth_percentage_check",
+        "expression": "min_tenth_percentage IS NULL OR (min_tenth_percentage >= 0.00 AND min_tenth_percentage <= 100.00)"
+      },
+      {
+        "name": "drive_eligibility_criteria_min_twelfth_percentage_check",
+        "expression": "min_twelfth_percentage IS NULL OR (min_twelfth_percentage >= 0.00 AND min_twelfth_percentage <= 100.00)"
+      },
+      {
+        "name": "drive_eligibility_criteria_max_active_backlogs_check",
+        "expression": "max_active_backlogs >= 0"
+      },
+      {
+        "name": "drive_eligibility_criteria_max_total_backlogs_check",
+        "expression": "max_total_backlogs IS NULL OR max_total_backlogs >= 0"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_criteria_drive",
+        "columns": [
+          "drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_criteria_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "drive_stages",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "stage_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "stage_order",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "scheduled_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "is_student_visible",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "name": "fk_stages_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_drive_stage_order",
+        "columns": [
+          "drive_id",
+          "stage_order"
+        ]
+      },
+      {
+        "name": "uq_drive_stages_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "drive_stages_stage_type_check",
+        "expression": "stage_type IN ('REGISTRATION', 'ONLINE_TEST', 'CODING_TEST', 'GROUP_DISCUSSION', 'TECHNICAL_INTERVIEW', 'HR_INTERVIEW', 'FINAL_SELECTION')"
+      },
+      {
+        "name": "drive_stages_stage_order_check",
+        "expression": "stage_order >= 1"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_stages_drive",
+        "columns": [
+          "drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_stages_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "drive_applications",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'REGISTERED'"
+      },
+      {
+        "name": "eligibility_snapshot",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "current_stage_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "registration_date",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "withdrawn_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "withdrawn_reason",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "registered_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "registered_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "name": "fk_applications_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "name": "fk_applications_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "name": "fk_applications_stage",
+        "columns": [
+          "tenant_id",
+          "current_stage_id"
+        ],
+        "refTable": "drive_stages",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_drive_student_application",
+        "columns": [
+          "drive_id",
+          "student_id"
+        ]
+      },
+      {
+        "name": "uq_applications_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "drive_applications_status_check",
+        "expression": "status IN ('REGISTERED', 'WITHDRAWN', 'IN_PROCESS', 'REJECTED', 'OFFER_EXTENDED', 'OFFER_ACCEPTED', 'OFFER_DECLINED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_applications_drive",
+        "columns": [
+          "drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_applications_student",
+        "columns": [
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_applications_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_applications_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "candidate_stage_results",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "application_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "stage_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING'"
+      },
+      {
+        "name": "score",
+        "type": "NUMERIC(6, 2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "student_feedback",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "internal_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "evaluated_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "evaluated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "evaluated_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "name": "fk_results_application",
+        "columns": [
+          "tenant_id",
+          "application_id"
+        ],
+        "refTable": "drive_applications",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "name": "fk_results_stage",
+        "columns": [
+          "tenant_id",
+          "stage_id"
+        ],
+        "refTable": "drive_stages",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_application_stage_result",
+        "columns": [
+          "application_id",
+          "stage_id"
+        ]
+      },
+      {
+        "name": "uq_stage_results_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "candidate_stage_results_status_check",
+        "expression": "status IN ('PENDING', 'SCHEDULED', 'PASSED', 'FAILED', 'SKIPPED', 'ON_HOLD')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_results_app",
+        "columns": [
+          "application_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_results_stage",
+        "columns": [
+          "stage_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_results_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "placement_offers",
+    "file": "20261018000002_phase04_college_placement.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "application_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "offer_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'FULL_TIME'"
+      },
+      {
+        "name": "compensation_amount",
+        "type": "NUMERIC(12, 2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "compensation_details",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'OFFERED'"
+      },
+      {
+        "name": "offered_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "decision_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "joining_date",
+        "type": "DATE",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "is_verified",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "internal_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "recorded_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "recorded_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "name": "fk_offers_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "name": "fk_offers_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "name": "fk_offers_application",
+        "columns": [
+          "tenant_id",
+          "application_id"
+        ],
+        "refTable": "drive_applications",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_offer_application",
+        "columns": [
+          "application_id"
+        ]
+      },
+      {
+        "name": "uq_offers_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "placement_offers_offer_type_check",
+        "expression": "offer_type IN ('FULL_TIME', 'INTERNSHIP', 'INTERN_TO_FTE')"
+      },
+      {
+        "name": "placement_offers_status_check",
+        "expression": "status IN ('OFFERED', 'ACCEPTED', 'DECLINED', 'RESCINDED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_offers_student",
+        "columns": [
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_offers_drive",
+        "columns": [
+          "drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_offers_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_offers_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "canonical_skills",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "normalized_name",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "category",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "tags",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [],
+    "uniqueConstraints": [],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_canonical_skills_category",
+        "columns": [
+          "category"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_canonical_skills_normalized",
+        "columns": [
+          "normalized_name"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "practice_resources",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "resource_type",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "content_class",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "url",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "estimated_minutes",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_active",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_practice_resources_skill",
+        "columns": [
+          "skill_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_practice_resources_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "recruitment_sources",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "company_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "publisher",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "source_type",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "canonical_url",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "document_ref",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "published_at",
+        "type": "DATE",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "effective_at",
+        "type": "DATE",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "collected_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "last_checked_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "verification_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING_REVIEW'"
+      },
+      {
+        "name": "access_classification",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'TENANT_CONFIDENTIAL'"
+      },
+      {
+        "name": "raw_content",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "excerpt",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "reviewed_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "reviewed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "review_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": ""
+      },
+      {
+        "columns": [
+          "reviewed_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": ""
+      },
+      {
+        "name": "fk_recruitment_sources_company_composite",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_recruitment_sources_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_recruitment_sources_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_recruitment_sources_company",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_recruitment_sources_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_recruitment_sources_status",
+        "columns": [
+          "tenant_id",
+          "verification_status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "recruitment_requirements",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "company_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "source_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "scope_level",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'DRIVE'"
+      },
+      {
+        "name": "category",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "structured_value",
+        "type": "JSONB",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "source_excerpt",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "evidence_level",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'INFERRED'"
+      },
+      {
+        "name": "verification_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'DRAFT'"
+      },
+      {
+        "name": "is_published_to_students",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "has_conflict",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "conflict_details",
+        "type": "JSONB",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "is_stale",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "stale_reason",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "verified_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "verified_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "source_id"
+        ],
+        "refTable": "recruitment_sources",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "verified_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": ""
+      },
+      {
+        "name": "fk_recruitment_requirements_company_composite",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_recruitment_requirements_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "recruitment_requirements_scope_level_check",
+        "expression": "scope_level IN ('COMPANY', 'ROLE', 'DRIVE')"
+      },
+      {
+        "name": "recruitment_requirements_evidence_level_check",
+        "expression": "evidence_level IN ('OFFICIAL', 'REPORTED', 'INFERRED', 'UNKNOWN')"
+      },
+      {
+        "name": "recruitment_requirements_verification_status_check",
+        "expression": "verification_status IN ('DRAFT', 'PENDING_REVIEW', 'VERIFIED', 'REJECTED', 'SUPERSEDED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_recruitment_requirements_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_recruitment_requirements_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_recruitment_requirements_category",
+        "columns": [
+          "tenant_id",
+          "category"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_recruitment_requirements_published",
+        "columns": [
+          "tenant_id",
+          "drive_id",
+          "is_published_to_students"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "requirement_skill_mappings",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "requirement_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "importance",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'RECOMMENDED'"
+      },
+      {
+        "name": "mapping_rationale",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "mapping_origin",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'HUMAN_AUTHORED'"
+      },
+      {
+        "name": "verification_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING_REVIEW'"
+      },
+      {
+        "name": "evidence_level",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'INFERRED'"
+      },
+      {
+        "name": "verified_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "verified_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "requirement_id"
+        ],
+        "refTable": "recruitment_requirements",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "verified_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": ""
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_req_skill_map_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "name": "uq_drive_req_skill",
+        "columns": [
+          "tenant_id",
+          "drive_id",
+          "requirement_id",
+          "skill_id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "requirement_skill_mappings_importance_check",
+        "expression": "importance IN ('MANDATORY', 'PREFERRED', 'RECOMMENDED')"
+      },
+      {
+        "name": "requirement_skill_mappings_mapping_origin_check",
+        "expression": "mapping_origin IN ('HUMAN_AUTHORED', 'AI_SUGGESTED', 'VERIFIED')"
+      },
+      {
+        "name": "requirement_skill_mappings_verification_status_check",
+        "expression": "verification_status IN ('PENDING_REVIEW', 'VERIFIED', 'REJECTED')"
+      },
+      {
+        "name": "requirement_skill_mappings_evidence_level_check",
+        "expression": "evidence_level IN ('OFFICIAL', 'REPORTED', 'INFERRED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_req_skill_mappings_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_req_skill_mappings_skill",
+        "columns": [
+          "skill_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "student_preparation_plans",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ACTIVE'"
+      },
+      {
+        "name": "target_completion_date",
+        "type": "DATE",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "name": "fk_prep_plan_student_composite",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "name": "fk_prep_plan_drive_composite",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_prep_plan_tenant_student_drive",
+        "columns": [
+          "tenant_id",
+          "student_id",
+          "drive_id"
+        ]
+      },
+      {
+        "name": "uq_prep_plan_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "student_preparation_plans_status_check",
+        "expression": "status IN ('ACTIVE', 'COMPLETED', 'ARCHIVED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_prep_plans_tenant_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_prep_plans_drive",
+        "columns": [
+          "tenant_id",
+          "drive_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "preparation_tasks",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "plan_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "requirement_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "resource_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "stage_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "activity_type",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "priority",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'MEDIUM'"
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PLANNED'"
+      },
+      {
+        "name": "recommendation_rationale",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "due_date",
+        "type": "DATE",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "estimated_minutes",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "completed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "plan_id"
+        ],
+        "refTable": "student_preparation_plans",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "requirement_id"
+        ],
+        "refTable": "recruitment_requirements",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "resource_id"
+        ],
+        "refTable": "practice_resources",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "stage_id"
+        ],
+        "refTable": "drive_stages",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "name": "fk_prep_tasks_plan_composite",
+        "columns": [
+          "tenant_id",
+          "plan_id"
+        ],
+        "refTable": "student_preparation_plans",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_prep_tasks_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "preparation_tasks_priority_check",
+        "expression": "priority IN ('HIGH', 'MEDIUM', 'LOW')"
+      },
+      {
+        "name": "preparation_tasks_status_check",
+        "expression": "status IN ('PLANNED', 'IN_PROGRESS', 'COMPLETED', 'SKIPPED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_prep_tasks_tenant_plan",
+        "columns": [
+          "tenant_id",
+          "plan_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_prep_tasks_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "recruitment_experience_reports",
+    "file": "20261018000003_phase05_recruitment_intelligence_drivefit.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "company_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "academic_year_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "role_title",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recruitment_cycle",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "report_origin",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'CANDIDATE_REPORTED'"
+      },
+      {
+        "name": "rounds_described",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "key_topics",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "moderation_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING'"
+      },
+      {
+        "name": "is_anonymous",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "verified_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "verified_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "academic_year_id"
+        ],
+        "refTable": "academic_years",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "verified_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": ""
+      },
+      {
+        "name": "fk_exp_reports_company_composite",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "tenant_id",
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_exp_reports_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [
+      {
+        "name": "recruitment_experience_reports_report_origin_check",
+        "expression": "report_origin IN ('CANDIDATE_REPORTED', 'COLLEGE_CONFIRMED')"
+      },
+      {
+        "name": "recruitment_experience_reports_moderation_status_check",
+        "expression": "moderation_status IN ('PENDING', 'APPROVED', 'REJECTED')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_exp_reports_tenant_company",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_exp_reports_moderation",
+        "columns": [
+          "tenant_id",
+          "moderation_status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "question_banks",
+    "file": "20261018000004_phase06_questionbank_sentinel.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "category",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "sharing_policy",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'COLLEGE_PRIVATE'"
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ACTIVE'"
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_question_banks_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_question_banks_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_banks_category",
+        "columns": [
+          "tenant_id",
+          "category"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_banks_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_banks_sharing",
+        "columns": [
+          "sharing_policy"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_banks_subject",
+        "columns": [
+          "tenant_id",
+          "subject"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "questions",
+    "file": "20261018000004_phase06_questionbank_sentinel.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "bank_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "question_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "current_version_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "lifecycle_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'DRAFT'"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "bank_id"
+        ],
+        "refTable": "question_banks",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_questions_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_questions_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_questions_bank",
+        "columns": [
+          "tenant_id",
+          "bank_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_questions_type",
+        "columns": [
+          "tenant_id",
+          "question_type"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_questions_status",
+        "columns": [
+          "tenant_id",
+          "lifecycle_status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "question_versions",
+    "file": "20261018000004_phase06_questionbank_sentinel.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "version_number",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "prompt",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "content_format",
+        "type": "VARCHAR(16)",
+        "notNull": true,
+        "default": "'MARKDOWN'"
+      },
+      {
+        "name": "options",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "answer_key",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "explanation",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "difficulty",
+        "type": "VARCHAR(16)",
+        "notNull": true,
+        "default": "'MEDIUM'"
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "topic_tags",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "source_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'COLLEGE_AUTHORED'"
+      },
+      {
+        "name": "source_reference",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "license_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PROPRIETARY'"
+      },
+      {
+        "name": "review_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'UNREVIEWED'"
+      },
+      {
+        "name": "review_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "fingerprint",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "change_summary",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "published_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "reviewed_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "reviewed_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_question_versions_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "name": "uq_question_version_num",
+        "columns": [
+          "question_id",
+          "version_number"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_question_versions_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_versions_question",
+        "columns": [
+          "question_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_versions_skill",
+        "columns": [
+          "skill_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_versions_fingerprint",
+        "columns": [
+          "tenant_id",
+          "fingerprint"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_versions_review",
+        "columns": [
+          "tenant_id",
+          "review_status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "question_import_jobs",
+    "file": "20261018000004_phase06_questionbank_sentinel.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "bank_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "file_name",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "total_rows",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "valid_rows",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "invalid_rows",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "duplicate_rows",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PREVIEWED'"
+      },
+      {
+        "name": "error_report",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "committed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "bank_id"
+        ],
+        "refTable": "question_banks",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_import_jobs_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_import_jobs_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_import_jobs_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "question_duplicate_candidates",
+    "file": "20261018000004_phase06_questionbank_sentinel.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "source_question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "matched_question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "similarity_score",
+        "type": "NUMERIC(5, 4)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "detection_method",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING_REVIEW'"
+      },
+      {
+        "name": "reviewed_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "reviewed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "source_question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "matched_question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "reviewed_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_dup_candidates_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "name": "uq_duplicate_pair",
+        "columns": [
+          "source_question_id",
+          "matched_question_id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_dup_candidates_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_dup_candidates_source",
+        "columns": [
+          "source_question_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_dup_candidates_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "question_sets",
+    "file": "20261018000004_phase06_questionbank_sentinel.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "purpose",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": "'ASSESSMENT'"
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'DRAFT'"
+      },
+      {
+        "name": "version_number",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_locked",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_question_sets_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_question_sets_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_sets_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_question_sets_purpose",
+        "columns": [
+          "tenant_id",
+          "purpose"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "question_set_items",
+    "file": "20261018000004_phase06_questionbank_sentinel.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "set_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "version_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "sequence_order",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "points",
+        "type": "NUMERIC(6, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "negative_points",
+        "type": "NUMERIC(6, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "set_id"
+        ],
+        "refTable": "question_sets",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "version_id"
+        ],
+        "refTable": "question_versions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_set_items_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "name": "uq_set_item_question",
+        "columns": [
+          "set_id",
+          "question_id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_set_items_set",
+        "columns": [
+          "set_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_set_items_question",
+        "columns": [
+          "question_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_set_items_version",
+        "columns": [
+          "version_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_set_items_order",
+        "columns": [
+          "set_id",
+          "sequence_order"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "assessments",
+    "file": "20261019000001_phase07_assessment_engine.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(256)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "purpose",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": "'ASSESSMENT'"
+      },
+      {
+        "name": "question_set_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "set_version_id",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "time_limit_minutes",
+        "type": "INTEGER",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "allowed_attempts",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "review_policy",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'IMMEDIATE'"
+      },
+      {
+        "name": "release_policy",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'IMMEDIATE'"
+      },
+      {
+        "name": "shuffle_questions",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "pass_percentage",
+        "type": "NUMERIC(5, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'DRAFT'"
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_set_id"
+        ],
+        "refTable": "question_sets",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "columns": [
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_assessments_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_assessments_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessments_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessments_purpose",
+        "columns": [
+          "tenant_id",
+          "purpose"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessments_set",
+        "columns": [
+          "question_set_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessments_drive",
+        "columns": [
+          "drive_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "assessment_assignments",
+    "file": "20261019000001_phase07_assessment_engine.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "assessment_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "cohort_name",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "window_start",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "window_end",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "max_attempts_override",
+        "type": "INTEGER",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ACTIVE'"
+      },
+      {
+        "name": "assigned_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "assessment_id"
+        ],
+        "refTable": "assessments",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "assigned_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_assessment_assignments_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_assessment_assignments_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessment_assignments_assessment",
+        "columns": [
+          "assessment_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessment_assignments_student",
+        "columns": [
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessment_assignments_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "assessment_attempts",
+    "file": "20261019000001_phase07_assessment_engine.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "assessment_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "assignment_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "attempt_number",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'IN_PROGRESS'"
+      },
+      {
+        "name": "started_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "expires_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "submitted_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "total_points",
+        "type": "NUMERIC(8, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "earned_points",
+        "type": "NUMERIC(8, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "score_percentage",
+        "type": "NUMERIC(5, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_passed",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "scoring_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING'"
+      },
+      {
+        "name": "client_meta",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "assessment_id"
+        ],
+        "refTable": "assessments",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "assignment_id"
+        ],
+        "refTable": "assessment_assignments",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_assessment_attempts_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "name": "uq_attempt_student_number",
+        "columns": [
+          "assessment_id",
+          "student_id",
+          "attempt_number"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_assessment_attempts_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessment_attempts_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessment_attempts_assessment",
+        "columns": [
+          "assessment_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_assessment_attempts_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "attempt_responses",
+    "file": "20261019000001_phase07_assessment_engine.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "attempt_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "version_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "response_payload",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "save_sequence",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_flagged",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_answered",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "points_awarded",
+        "type": "NUMERIC(6, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_correct",
+        "type": "BOOLEAN",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "scoring_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'UNSCORED'"
+      },
+      {
+        "name": "manual_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "last_saved_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "attempt_id"
+        ],
+        "refTable": "assessment_attempts",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "version_id"
+        ],
+        "refTable": "question_versions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_attempt_responses_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "name": "uq_attempt_question",
+        "columns": [
+          "attempt_id",
+          "question_id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_attempt_responses_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_attempt_responses_attempt",
+        "columns": [
+          "attempt_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_attempt_responses_question",
+        "columns": [
+          "question_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_attempt_responses_scoring",
+        "columns": [
+          "attempt_id",
+          "scoring_status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "preparation_practice_sessions",
+    "file": "20261019000001_phase07_assessment_engine.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "topic",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "questions_practiced",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "correct_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "time_spent_seconds",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_prep_practice_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_prep_practice_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_prep_practice_student",
+        "columns": [
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_prep_practice_skill",
+        "columns": [
+          "skill_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "student_behavioral_responses",
+    "file": "20261019000001_phase07_assessment_engine.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "prompt",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "category",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": "'HR_INTERVIEW'"
+      },
+      {
+        "name": "response_text",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "self_reflection",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "key_learnings",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_student_behavioral_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_student_behavioral_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_student_behavioral_student",
+        "columns": [
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_student_behavioral_category",
+        "columns": [
+          "tenant_id",
+          "category"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "mistake_review_targets",
+    "file": "20261019000002_phase08_mistake_to_mastery.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "version_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "primary_reason",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'NEEDS_REVIEW'"
+      },
+      {
+        "name": "occurrence_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "revision_stage",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "last_reviewed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "next_due_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "first_observed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "last_observed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_reflection",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "student_reason_category",
+        "type": "VARCHAR(32)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "version_id"
+        ],
+        "refTable": "question_versions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_review_target_student_question",
+        "columns": [
+          "tenant_id",
+          "student_id",
+          "question_id",
+          "version_id"
+        ]
+      },
+      {
+        "name": "uq_review_targets_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_review_targets_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_review_targets_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_review_targets_skill",
+        "columns": [
+          "tenant_id",
+          "skill_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_review_targets_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_review_targets_due",
+        "columns": [
+          "tenant_id",
+          "student_id",
+          "next_due_at"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_review_targets_reason",
+        "columns": [
+          "tenant_id",
+          "primary_reason"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "mistake_occurrences",
+    "file": "20261019000002_phase08_mistake_to_mastery.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "target_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "attempt_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "response_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "version_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "capture_reason",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "submitted_payload",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "points_awarded",
+        "type": "NUMERIC(6, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "occurred_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "target_id"
+        ],
+        "refTable": "mistake_review_targets",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "attempt_id"
+        ],
+        "refTable": "assessment_attempts",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "response_id"
+        ],
+        "refTable": "attempt_responses",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "version_id"
+        ],
+        "refTable": "question_versions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_mistake_occurrences_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      },
+      {
+        "name": "uq_occurrence_attempt_question",
+        "columns": [
+          "attempt_id",
+          "question_id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_mistake_occurrences_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_mistake_occurrences_target",
+        "columns": [
+          "target_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_mistake_occurrences_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_mistake_occurrences_attempt",
+        "columns": [
+          "attempt_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "review_sessions",
+    "file": "20261019000002_phase08_mistake_to_mastery.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "target_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "action_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "metadata",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "target_id"
+        ],
+        "refTable": "mistake_review_targets",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_review_sessions_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_review_sessions_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_review_sessions_target",
+        "columns": [
+          "target_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_review_sessions_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "mastery_evidence_records",
+    "file": "20261019000002_phase08_mistake_to_mastery.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "target_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "evidence_question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "evidence_version_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "attempt_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "is_new_question",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "is_correct",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "points_earned",
+        "type": "NUMERIC(6, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "difficulty",
+        "type": "VARCHAR(16)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "validity_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'VALID'"
+      },
+      {
+        "name": "invalidation_reason",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "recorded_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "target_id"
+        ],
+        "refTable": "mistake_review_targets",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "evidence_question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "evidence_version_id"
+        ],
+        "refTable": "question_versions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "columns": [
+          "attempt_id"
+        ],
+        "refTable": "assessment_attempts",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_mastery_evidence_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_mastery_evidence_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_mastery_evidence_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_mastery_evidence_skill",
+        "columns": [
+          "tenant_id",
+          "skill_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_mastery_evidence_validity",
+        "columns": [
+          "tenant_id",
+          "validity_status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "student_skill_mastery",
+    "file": "20261019000002_phase08_mistake_to_mastery.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "mastery_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'NEEDS_REVIEW'"
+      },
+      {
+        "name": "total_mistakes_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "active_review_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "independent_correct_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "independent_attempts_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "accuracy_percentage",
+        "type": "NUMERIC(5, 2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "last_evidence_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "policy_version",
+        "type": "VARCHAR(16)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_student_skill_mastery",
+        "columns": [
+          "tenant_id",
+          "student_id",
+          "skill_id"
+        ]
+      },
+      {
+        "name": "uq_skill_mastery_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_student_skill_mastery_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_student_skill_mastery_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_student_skill_mastery_status",
+        "columns": [
+          "tenant_id",
+          "mastery_status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "question_defect_reports",
+    "file": "20261019000002_phase08_mistake_to_mastery.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "question_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "version_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "reported_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "defect_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING'"
+      },
+      {
+        "name": "reviewed_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "resolution_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "resolved_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "version_id"
+        ],
+        "refTable": "question_versions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE RESTRICT"
+      },
+      {
+        "columns": [
+          "reported_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "reviewed_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_defect_reports_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_defect_reports_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_defect_reports_question",
+        "columns": [
+          "question_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_defect_reports_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "historical_recruitment_records",
+    "file": "20261019000003_phase09_placement_memory_analytics.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "company_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "role_title",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recruitment_year",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recruitment_cycle",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "historical_drive_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "source_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "record_type",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": "'COLLEGE_CONFIRMED'"
+      },
+      {
+        "name": "reliability_label",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": "'COLLEGE_CONFIRMED'"
+      },
+      {
+        "name": "process_summary",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "eligibility_criteria_snapshot",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "confirmed_rounds",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "reported_rounds",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "relevant_question_set_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "verification_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'VERIFIED'"
+      },
+      {
+        "name": "source_date",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "last_verified_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "is_superseded",
+        "type": "BOOLEAN",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "superseded_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "sharing_scope",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'COLLEGE_PRIVATE'"
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "company_id"
+        ],
+        "refTable": "companies",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "historical_drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "source_id"
+        ],
+        "refTable": "recruitment_sources",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "relevant_question_set_id"
+        ],
+        "refTable": "question_sets",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "superseded_by"
+        ],
+        "refTable": "historical_recruitment_records",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_historical_records_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_hist_records_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_hist_records_company",
+        "columns": [
+          "tenant_id",
+          "company_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_hist_records_year",
+        "columns": [
+          "tenant_id",
+          "recruitment_year"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_hist_records_scope",
+        "columns": [
+          "sharing_scope"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "historical_drive_comparisons",
+    "file": "20261019000003_phase09_placement_memory_analytics.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "current_drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "historical_record_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "matching_basis",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "shared_attributes",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "differing_attributes",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "unknown_fields",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "conflicts",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "comparability_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PARTIALLY_COMPARABLE'"
+      },
+      {
+        "name": "limitations_disclaimer",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "generated_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "generated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "current_drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "historical_record_id"
+        ],
+        "refTable": "historical_recruitment_records",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "generated_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_drive_comparisons_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_drive_comp_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_drive_comp_current",
+        "columns": [
+          "tenant_id",
+          "current_drive_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_drive_comp_historical",
+        "columns": [
+          "tenant_id",
+          "historical_record_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "experience_report_moderation_logs",
+    "file": "20261019000003_phase09_placement_memory_analytics.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "report_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "previous_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "new_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "moderated_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "moderation_notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "report_id"
+        ],
+        "refTable": "recruitment_experience_reports",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "moderated_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_report_mod_logs_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_report_mod_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_report_mod_report",
+        "columns": [
+          "report_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "training_sessions",
+    "file": "20261019000003_phase09_placement_memory_analytics.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "topic",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "trainer_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "session_date",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "duration_minutes",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "baseline_assessment_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "follow_up_assessment_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'SCHEDULED'"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "trainer_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "baseline_assessment_id"
+        ],
+        "refTable": "assessments",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "follow_up_assessment_id"
+        ],
+        "refTable": "assessments",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_training_sessions_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_training_sessions_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_training_sessions_skill",
+        "columns": [
+          "tenant_id",
+          "skill_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_training_sessions_date",
+        "columns": [
+          "tenant_id",
+          "session_date"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "training_attendance",
+    "file": "20261019000003_phase09_placement_memory_analytics.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "session_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "student_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "enrollment_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ENROLLED'"
+      },
+      {
+        "name": "attendance_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'ABSENT'"
+      },
+      {
+        "name": "pre_score",
+        "type": "NUMERIC(5,2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "post_score",
+        "type": "NUMERIC(5,2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "notes",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "session_id"
+        ],
+        "refTable": "training_sessions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "student_id"
+        ],
+        "refTable": "students",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_training_attendance",
+        "columns": [
+          "tenant_id",
+          "session_id",
+          "student_id"
+        ]
+      },
+      {
+        "name": "uq_training_attendance_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_training_att_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_training_att_session",
+        "columns": [
+          "session_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_training_att_student",
+        "columns": [
+          "tenant_id",
+          "student_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "training_before_after_comparisons",
+    "file": "20261019000003_phase09_placement_memory_analytics.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "session_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "skill_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "baseline_assessment_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "follow_up_assessment_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "eligible_students_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "paired_students_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "baseline_avg_score",
+        "type": "NUMERIC(5,2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "followup_avg_score",
+        "type": "NUMERIC(5,2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "absolute_delta",
+        "type": "NUMERIC(5,2)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "relative_percentage_delta",
+        "type": "NUMERIC(6,2)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "limitations_disclaimer",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "generated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "session_id"
+        ],
+        "refTable": "training_sessions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "skill_id"
+        ],
+        "refTable": "canonical_skills",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "baseline_assessment_id"
+        ],
+        "refTable": "assessments",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "follow_up_assessment_id"
+        ],
+        "refTable": "assessments",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_before_after_comp_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_before_after_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_before_after_session",
+        "columns": [
+          "session_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "analytics_export_jobs",
+    "file": "20261019000003_phase09_placement_memory_analytics.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "requested_by",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "report_type",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "filter_payload",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "file_name",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "file_path",
+        "type": "VARCHAR(512)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'PENDING'"
+      },
+      {
+        "name": "record_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "error_message",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "completed_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "requested_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [
+      {
+        "name": "uq_analytics_export_jobs_tenant_id",
+        "columns": [
+          "tenant_id",
+          "id"
+        ]
+      }
+    ],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_export_jobs_tenant",
+        "columns": [
+          "tenant_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_export_jobs_status",
+        "columns": [
+          "tenant_id",
+          "status"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "ai_usage_logs",
+    "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "user_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "feature",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "model",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "prompt_tokens",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "completion_tokens",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "total_tokens",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "duration_ms",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'SUCCESS'"
+      },
+      {
+        "name": "error_message",
+        "type": "TEXT",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_ai_usage_tenant_user",
+        "columns": [
+          "tenant_id",
+          "user_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_ai_usage_feature_status",
+        "columns": [
+          "feature",
+          "status"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_ai_usage_created_at",
+        "columns": [
+          "created_at DESC"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "ai_tutor_conversations",
+    "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "user_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "topic",
+        "type": "VARCHAR(128)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "question_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "messages",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "question_id"
+        ],
+        "refTable": "questions",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_ai_tutor_user_updated",
+        "columns": [
+          "user_id",
+          "updated_at DESC"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_ai_tutor_question",
+        "columns": [
+          "question_id"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "ai_mistake_analyses",
+    "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "user_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "summary",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "identified_gaps",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recommended_actions",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recommended_question_ids",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "total_mistakes_analyzed",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [],
+    "indexes": [
+      {
+        "name": "idx_ai_mistakes_user_created",
+        "columns": [
+          "user_id",
+          "created_at DESC"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "ai_drivefit_evaluations",
+    "file": "20261025000001_phase12_ai_intelligence_persistence.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "user_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "tenant_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "drive_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "overall_fit_score",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": "0"
+      },
+      {
+        "name": "eligibility_status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'UNKNOWN'"
+      },
+      {
+        "name": "eligibility_details",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "skill_match_analysis",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "preparation_roadmap",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recommended_question_ids",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "tenant_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "drive_id"
+        ],
+        "refTable": "recruitment_drives",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [
+      {
+        "name": "ai_drivefit_evaluations_overall_fit_score_check",
+        "expression": "overall_fit_score BETWEEN 0 AND 100"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_ai_drivefit_user_drive",
+        "columns": [
+          "user_id",
+          "drive_id",
+          "created_at DESC"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "notification_announcements",
+    "file": "20261025000002_phase13_notifications_system.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "college_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "created_by",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "category",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "audience_type",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "audience_filter",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "action_url",
+        "type": "VARCHAR(512)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": "'SENT'"
+      },
+      {
+        "name": "recipient_count",
+        "type": "INTEGER",
+        "notNull": true,
+        "default": "0"
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "sent_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "college_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "created_by"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [
+      {
+        "name": "notification_announcements_audience_type_check",
+        "expression": "audience_type IN ('ALL_STUDENTS', 'SELECTED_STUDENTS', 'DEPARTMENT')"
+      },
+      {
+        "name": "notification_announcements_status_check",
+        "expression": "status IN ('DRAFT', 'SENT', 'CANCELLED')"
+      },
+      {
+        "name": "notification_announcements_recipient_count_check",
+        "expression": "recipient_count >= 0"
+      },
+      {
+        "name": "chk_announcement_title_len",
+        "expression": "char_length(title) > 0 AND char_length(title) <= 255"
+      },
+      {
+        "name": "chk_announcement_body_len",
+        "expression": "char_length(body) > 0 AND char_length(body) <= 2000"
+      },
+      {
+        "name": "chk_announcement_action_url",
+        "expression": "action_url IS NULL OR (action_url LIKE '/%' AND action_url NOT LIKE '//%')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_announcements_college_created",
+        "columns": [
+          "college_id",
+          "created_at DESC"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_announcements_created_by",
+        "columns": [
+          "created_by"
+        ],
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "notifications",
+    "file": "20261025000002_phase13_notifications_system.sql",
+    "columns": [
+      {
+        "name": "id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "recipient_user_id",
+        "type": "UUID",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "college_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "actor_user_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "announcement_id",
+        "type": "UUID",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "source",
+        "type": "VARCHAR(32)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "type",
+        "type": "VARCHAR(64)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "title",
+        "type": "VARCHAR(255)",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "TEXT",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "action_url",
+        "type": "VARCHAR(512)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "metadata",
+        "type": "JSONB",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "deduplication_key",
+        "type": "VARCHAR(128)",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "read_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TIMESTAMPTZ",
+        "notNull": true,
+        "default": null
+      }
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "recipient_user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE CASCADE"
+      },
+      {
+        "columns": [
+          "college_id"
+        ],
+        "refTable": "tenants",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "actor_user_id"
+        ],
+        "refTable": "auth.users",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      },
+      {
+        "columns": [
+          "announcement_id"
+        ],
+        "refTable": "notification_announcements",
+        "refColumns": [
+          "id"
+        ],
+        "action": "ON DELETE SET NULL"
+      }
+    ],
+    "uniqueConstraints": [],
+    "checkConstraints": [
+      {
+        "name": "chk_notification_title_len",
+        "expression": "char_length(title) > 0 AND char_length(title) <= 255"
+      },
+      {
+        "name": "chk_notification_body_len",
+        "expression": "char_length(body) > 0 AND char_length(body) <= 2000"
+      },
+      {
+        "name": "chk_notification_type_len",
+        "expression": "char_length(type) > 0 AND char_length(type) <= 64"
+      },
+      {
+        "name": "chk_notification_action_url",
+        "expression": "action_url IS NULL OR (action_url LIKE '/%' AND action_url NOT LIKE '//%')"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "idx_notifications_recipient_created",
+        "columns": [
+          "recipient_user_id",
+          "created_at DESC"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_notifications_recipient_unread",
+        "columns": [
+          "recipient_user_id",
+          "created_at DESC"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_notifications_college",
+        "columns": [
+          "college_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "idx_notifications_announcement",
+        "columns": [
+          "announcement_id"
+        ],
+        "isUnique": false
+      },
+      {
+        "name": "uq_notifications_recipient_dedup",
+        "columns": [
+          "recipient_user_id",
+          "deduplication_key"
+        ],
+        "isUnique": true
+      }
+    ]
+  }
+]
