@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -11,7 +12,6 @@ import {
   Target,
   BarChart3,
   Sparkles,
-  Lock,
   Menu,
   X,
   Facebook,
@@ -61,11 +61,10 @@ export default function HomePage() {
       href: process.env.NEXT_PUBLIC_TWITTER_URL,
       Icon: Twitter,
     },
-
   ];
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(135deg,#E0EAFE_0%,#D9DDF9_45%,#C5CEDB_100%)] dark:bg-[linear-gradient(135deg,#111318_0%,#181B27_50%,#111318_100%)] text-text-primary flex flex-col selection:bg-primary/20">
+    <div className="min-h-screen bg-[url('/assets/bghome.png')] bg-cover bg-center bg-no-repeat bg-fixed dark:bg-[linear-gradient(135deg,#111318_0%,#181B27_50%,#111318_100%)] text-text-primary flex flex-col selection:bg-primary/20">
 
       {/* 1. Global Public Navigation Header */}
       <header className="sticky top-4 z-50 mx-4 sm:mx-6 lg:mx-10 rounded-[2rem] md:rounded-full border-2 border-slate-400/70 dark:border-border bg-gradient-to-r from-orange-50/95 via-white/95 to-sky-50/95 dark:from-[#1B1E2A]/95 dark:via-[#1B1E2A]/95 dark:to-[#1B1E2A]/95 shadow-[0_10px_35px_rgba(15,23,42,0.12)] backdrop-blur-md transition-all">
@@ -81,6 +80,7 @@ export default function HomePage() {
               priority
               className="h-9 w-9 sm:h-11 sm:w-11 group-hover:scale-105 transition-transform"
             />
+
             <span className="font-heading font-extrabold text-xl sm:text-2xl tracking-tight text-slate-900 dark:text-text-primary leading-none">
               UrPlaced
             </span>
@@ -90,7 +90,8 @@ export default function HomePage() {
           <nav className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 lg:gap-3">
             <a
               href="#solutions"
-              className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 dark:text-slate-100 hover:text-primary dark:hover:text-cyan-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-colors whitespace-nowrap"            >
+              className="px-3 lg:px-4 py-2 rounded-lg text-[15px] font-semibold text-slate-700 dark:text-slate-100 hover:text-primary dark:hover:text-cyan-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-colors whitespace-nowrap"
+            >
               Platform
             </a>
 
@@ -110,7 +111,8 @@ export default function HomePage() {
 
             <a
               href="#features"
-              className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 dark:text-slate-100 hover:text-primary dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"            >
+              className="px-3 py-2 rounded-lg text-base font-semibold text-slate-700 dark:text-slate-100 hover:text-primary dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+            >
               Features
             </a>
           </nav>
@@ -312,7 +314,7 @@ export default function HomePage() {
       {/* 3. Students and Colleges */}
       <section
         id="solutions"
-        className="py-20 md:py-28 bg-surface border-y border-border scroll-mt-20"
+        className="py-20 md:py-28 bg-surface/75 dark:bg-[#111318]/70 border-y border-border scroll-mt-20"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
@@ -551,7 +553,7 @@ export default function HomePage() {
       {/* 5. Platform Core Pillars and Benefits */}
       <section
         id="features"
-        className="py-20 md:py-28 bg-surface border-t border-border"
+        className="py-20 md:py-28 bg-surface/75 dark:bg-[#111318]/70 border-t border-border"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
@@ -572,6 +574,7 @@ export default function HomePage() {
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 
+            {/* QuestionBank Sentinel */}
             <Card className="border-border bg-card p-6 shadow-sm">
               <CardHeader className="p-0 pb-3">
                 <div className="h-12 w-12 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center mb-3">
@@ -589,6 +592,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
+            {/* DriveFit Matching */}
             <Card className="border-border bg-card p-6 shadow-sm">
               <CardHeader className="p-0 pb-3">
                 <div className="h-12 w-12 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center mb-3">
@@ -606,6 +610,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
+            {/* Mistake-to-Mastery */}
             <Card className="border-border bg-card p-6 shadow-sm">
               <CardHeader className="p-0 pb-3">
                 <div className="h-12 w-12 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center mb-3">
@@ -623,6 +628,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
+            {/* Placement Memory */}
             <Card className="border-border bg-card p-6 shadow-sm">
               <CardHeader className="p-0 pb-3">
                 <div className="h-12 w-12 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center mb-3">

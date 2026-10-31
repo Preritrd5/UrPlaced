@@ -1,4 +1,6 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,6 +23,9 @@
   --color-secondary-text: #292D40;
   --gradient-primary: linear-gradient(135deg, #7779D8 0%, #5052C9 100%);
 
+  /* Background Image Overlay */
+  --background-image-overlay: rgba(237, 236, 231, 0.55);
+
   /* Derived Interactive States */
   --color-primary-hover: #4345B0;
   --color-primary-active: #383A99;
@@ -31,7 +36,7 @@
   --color-secondary-active: #1F615B;
   --color-secondary-subtle: rgba(46, 143, 134, 0.10);
 
-  /* Derived Borders & Dividers — High-Visibility Design Tokens */
+  /* Derived Borders & Dividers */
   --color-border: #B8B6AC;
   --color-border-subtle: rgba(36, 40, 58, 0.16);
   --color-border-strong: rgba(36, 40, 58, 0.38);
@@ -52,45 +57,48 @@
   --color-danger: #B33A3A;
   --color-danger-subtle: rgba(179, 58, 58, 0.12);
 
-  /* Elevation Shadows (Derived from #24283A) */
+  /* Elevation Shadows */
   --shadow-sm: 0 1px 3px rgba(36, 40, 58, 0.06), 0 1px 2px rgba(36, 40, 58, 0.04);
   --shadow-md: 0 4px 6px -1px rgba(36, 40, 58, 0.07), 0 2px 4px -2px rgba(36, 40, 58, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(36, 40, 58, 0.08), 0 4px 6px -4px rgba(36, 40, 58, 0.04);
 
-  /* Fallback Font Stacks if Next Font variables are not applied */
+  /* Font Stacks */
   --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
 /* ========================================================
-   UrPlaced Strict Design System — Authoritative Dark Mode Tokens
+   UrPlaced Strict Design System — Dark Mode Tokens
    ======================================================== */
+
 .dark {
-  /* Browser color-scheme hint for native inputs, select & scrollbars */
   color-scheme: dark;
 
-  /* Core Surfaces (Table 2.1) */
+  /* Core Surfaces */
   --color-background: #111318;
   --color-card-bg: #1B1E2A;
   --color-card-elevated: #222636;
   --color-input-bg: #151821;
   --color-hover-surface: #252A3A;
 
-  /* Borders & Dividers (Table 2.1) */
+  /* Background Image Overlay */
+  --background-image-overlay: rgba(17, 19, 24, 0.70);
+
+  /* Borders & Dividers */
   --color-border: #303548;
   --color-border-subtle: #252A3A;
   --color-border-strong: #42485F;
   --color-border-focus: #9294FF;
 
-  /* Typography Colors (Table 2.3) */
+  /* Typography Colors */
   --color-primary-text: #F2F1F8;
   --color-secondary-text: #B9BDCD;
   --color-text-muted: #8D93A8;
   --color-text-disabled: rgba(185, 189, 205, 0.38);
   --color-bg-disabled: rgba(255, 255, 255, 0.05);
 
-  /* Brand & Action Colors (Table 2.2) */
+  /* Brand & Action Colors */
   --color-primary: #5052C9;
   --color-primary-hover: #5C5FD0;
   --color-primary-active: #4345B0;
@@ -104,7 +112,7 @@
 
   --gradient-primary: linear-gradient(135deg, #6265D8 0%, #5052C9 100%);
 
-  /* Status Colors (Table 2.4) */
+  /* Status Colors */
   --color-success: #4CC38A;
   --color-success-subtle: rgba(76, 195, 138, 0.16);
   --color-info: #76A9FA;
@@ -114,34 +122,75 @@
   --color-danger: #FF6B78;
   --color-danger-subtle: rgba(255, 107, 120, 0.16);
 
-  /* Elevation Shadows for Dark Surfaces */
+  /* Elevation Shadows */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.55), 0 4px 6px -4px rgba(0, 0, 0, 0.40);
 }
 
-/* Base Document Styling */
-html, body {
+/* ========================================================
+   BASE DOCUMENT STYLING
+   ======================================================== */
+
+html,
+body {
+  min-height: 100vh;
+  margin: 0;
+
   background-color: var(--color-background);
   color: var(--color-primary-text);
+
   font-family: var(--font-body);
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
 }
 
-h1, h2, h3, h4, h5, h6 {
+/* ========================================================
+   GLOBAL WEBSITE BACKGROUND IMAGE
+   ======================================================== */
+
+body {
+  background-image:
+    linear-gradient(
+      var(--background-image-overlay),
+      var(--background-image-overlay)
+    ),
+    url("/assets/bghome.png");
+
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* ========================================================
+   TYPOGRAPHY
+   ======================================================== */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   color: var(--color-primary-text);
   font-weight: 600;
   letter-spacing: -0.015em;
 }
 
-code, kbd, samp, pre {
+code,
+kbd,
+samp,
+pre {
   font-family: var(--font-mono);
 }
 
-/* Selection and Focus Highlights */
+/* ========================================================
+   SELECTION AND FOCUS HIGHLIGHTS
+   ======================================================== */
+
 ::selection {
   background-color: rgba(80, 82, 201, 0.20);
   color: var(--color-primary-text);
@@ -159,8 +208,9 @@ code, kbd, samp, pre {
 }
 
 /* ========================================================
-   Application-Wide Border & Outline Consistency
+   APPLICATION-WIDE BORDER & OUTLINE CONSISTENCY
    ======================================================== */
+
 .border-\[\#DDDCD5\],
 [class*="border-[#DDDCD5]"] {
   border-color: var(--color-border) !important;
@@ -172,10 +222,9 @@ code, kbd, samp, pre {
 }
 
 /* ========================================================
-   Dark Mode Application-Wide Single Source of Truth Mappings
-   Translates legacy arbitrary color classes automatically to
-   the authoritative Dark Mode tokens when `.dark` is active.
+   DARK MODE — BACKGROUND COLOR MAPPINGS
    ======================================================== */
+
 .dark .bg-\[\#EDECE7\],
 .dark [class*="bg-[#EDECE7]"] {
   background-color: var(--color-background) !important;
@@ -190,6 +239,10 @@ code, kbd, samp, pre {
 .dark [class*="bg-[#FBFAF7]"] {
   background-color: var(--color-input-bg) !important;
 }
+
+/* ========================================================
+   DARK MODE — TYPOGRAPHY MAPPINGS
+   ======================================================== */
 
 .dark .text-\[\#24283A\],
 .dark [class*="text-[#24283A]"] {
@@ -206,6 +259,10 @@ code, kbd, samp, pre {
   color: var(--color-text-muted) !important;
 }
 
+/* ========================================================
+   DARK MODE — BORDER MAPPINGS
+   ======================================================== */
+
 .dark .border-\[\#DDDCD5\],
 .dark [class*="border-[#DDDCD5]"],
 .dark .border-\[\#B8B6AC\],
@@ -218,7 +275,10 @@ code, kbd, samp, pre {
   border-color: var(--color-border) !important;
 }
 
-/* Elevated Surfaces in Dark Mode: Dialogs, Menus, Popovers (Table 2.1) */
+/* ========================================================
+   ELEVATED SURFACES IN DARK MODE
+   ======================================================== */
+
 .dark [role="dialog"],
 .dark [data-radix-popper-content-wrapper] [role="menu"],
 .dark [data-radix-select-content],
@@ -232,30 +292,36 @@ code, kbd, samp, pre {
 }
 
 /* ========================================================
-   Dark Mode Scrollbar Appearance
+   DARK MODE SCROLLBAR APPEARANCE
    ======================================================== */
+
 .dark ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 .dark ::-webkit-scrollbar-track {
   background: #111318;
 }
+
 .dark ::-webkit-scrollbar-thumb {
   background: #303548;
   border-radius: 4px;
 }
+
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #42485F;
 }
 
 /* ========================================================
-   Accessible Shimmer Animation & Motion Reductions
+   ACCESSIBLE SHIMMER ANIMATION
    ======================================================== */
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(100%);
   }
@@ -271,12 +337,14 @@ code, kbd, samp, pre {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
+
   background-image: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
     rgba(255, 255, 255, 0.45) 50%,
     rgba(255, 255, 255, 0) 100%
   );
+
   animation: shimmer 1.8s infinite;
   pointer-events: none;
 }
@@ -289,6 +357,10 @@ code, kbd, samp, pre {
     rgba(255, 255, 255, 0) 100%
   );
 }
+
+/* ========================================================
+   REDUCED MOTION ACCESSIBILITY
+   ======================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   .animate-shimmer::after,
