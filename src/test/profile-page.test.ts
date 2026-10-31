@@ -67,7 +67,7 @@ describe("Production-Ready Role-Aware Profile Page & API", () => {
     it("returns 401 when the request is unauthenticated", async () => {
       (getCurrentUserProfile as any).mockResolvedValue(null);
 
-      const res = await getProfileHandler();
+      const res = await getProfileHandler(new NextRequest("http://localhost:3000/api/profile"));
       expect(res.status).toBe(401);
 
       const data = await res.json();
@@ -93,7 +93,7 @@ describe("Production-Ready Role-Aware Profile Page & API", () => {
         membershipStatus: "ACTIVE",
       });
 
-      const res = await getProfileHandler();
+      const res = await getProfileHandler(new NextRequest("http://localhost:3000/api/profile"));
       expect(res.status).toBe(200);
 
       const data = await res.json();
@@ -126,7 +126,7 @@ describe("Production-Ready Role-Aware Profile Page & API", () => {
         },
       });
 
-      const res = await getProfileHandler();
+      const res = await getProfileHandler(new NextRequest("http://localhost:3000/api/profile"));
       expect(res.status).toBe(200);
 
       const data = await res.json();
@@ -236,7 +236,7 @@ describe("Production-Ready Role-Aware Profile Page & API", () => {
       expect(res.status).toBe(200);
 
       // Verify profile response did NOT adopt malicious fields
-      const getRes = await getProfileHandler();
+      const getRes = await getProfileHandler(new NextRequest("http://localhost:3000/api/profile"));
       const getData = await getRes.json();
       expect(getData.profile.role).toBe("STUDENT");
       expect(getData.profile.accountCategory).toBe("STUDENT");

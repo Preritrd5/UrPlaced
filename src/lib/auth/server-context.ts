@@ -61,6 +61,9 @@ export async function requireAuthContext(
     } = await supabase.auth.getUser();
 
     if (authError || !clientUser) {
+      if (process.env.NODE_ENV !== "test") {
+        console.warn(`[Auth Diagnostic] Session missing or invalid: ${authError?.message || "No active session"}`);
+      }
       throw new Error("UNAUTHORIZED");
     }
     user = clientUser;
@@ -149,6 +152,9 @@ export async function requireAuthContext(
     // No active database membership record!
     // Stale claims in app_metadata or JWT CANNOT grant institutional access.
     // Deny-by-default: fail safely without granting privileged access.
+    if (process.env.NODE_ENV !== "test") {
+      console.warn(`[Auth Diagnostic] User ${user.id} has no active tenant membership (targetTenant: ${targetTenantId || "first"})`);
+    }
     throw new Error("NO_ACTIVE_TENANT");
   }
 
@@ -189,6 +195,9 @@ export async function requireAuthContext(
     );
 
     if (!allowed) {
+      if (process.env.NODE_ENV !== "test") {
+        console.warn(`[Auth Diagnostic] Permission denied for user ${ctx.userId} (role: ${ctx.tenantRole}, tenant: ${ctx.tenantId}) on action: ${requiredPermission}`);
+      }
       throw new Error("FORBIDDEN");
     }
   }

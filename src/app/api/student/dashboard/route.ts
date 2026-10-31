@@ -4,20 +4,29 @@ import { Permissions } from "@/modules/identity-access/services/policy-engine";
 import { AssignmentService } from "@/modules/assessments/services/assignment-service";
 import { createClient } from "@/lib/supabase/server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
+
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const authContext = await requireAuthContext(Permissions.ASSESSMENTS_ATTEMPT);
-    const supabase = await createClient();
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    const authContext = await requireAuthContext(Permissions.ASSESSMENTS_ATTEMPT, undefined, token);
+    const supabase = await createClient(token);
+    const adminClient = createAdminClient();
 
     let studentId: string | null = null;
     let studentName: string | null = null;
 
-    const { data: student } = await supabase
+    // First attempt student lookup using tenant-scoped query
+    const { data: student } = await adminClient
       .from("students")
       .select("id, full_name, is_archived, academic_status")
-      .eq("tenant_id", authContext.tenantId)
       .eq("user_id", authContext.userId)
       .maybeSingle();
 
@@ -129,9 +138,12 @@ export async function GET(_request: NextRequest) {
       mistakes: mistakes.slice(0, 5),
     });
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
-      return NextResponse.json({ error: err.message }, { status: 403 });
+    if (err.message === "UNAUTHORIZED" || err.message === "NO_ACTIVE_TENANT") {
+      return NextResponse.json({ error: "UNAUTHORIZED: Active authenticated session required." }, { status: 401 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    if (err.message === "FORBIDDEN" || err.message?.startsWith?.("FORBIDDEN:")) {
+      return NextResponse.json({ error: "FORBIDDEN: Insufficient permissions." }, { status: 403 });
+    }
+    return NextResponse.json({ error: err.message || "Failed to load student dashboard." }, { status: 500 });
   }
 }

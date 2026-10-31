@@ -1,3 +1,4 @@
+import { createBrowserClient } from "@supabase/ssr";
 import { createClient as createSupabaseJsClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseConfig } from "./config";
 import { getTabStorageKey, tabSessionStorage } from "@/lib/auth/auth-tab";
@@ -9,10 +10,11 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * Creates or retrieves the browser-side Supabase client for this specific tab.
- * Uses tab-isolated storage (window.sessionStorage with a tab-scoped key)
- * so that different tabs within the same browser profile maintain completely
- * isolated authenticated sessions without cross-tab token overwrites or broadcasts.
+ * Creates or retrieves the browser-side Supabase client.
+ * Uses @supabase/ssr createBrowserClient to guarantee cookie-based session
+ * synchronization across Server Components, Route Handlers, Middleware,
+ * and page navigations, while syncing with tabSessionStorage for multi-tab
+ * bearer token awareness.
  */
 export function createClient(): SupabaseClient {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
@@ -23,20 +25,30 @@ export function createClient(): SupabaseClient {
       return win.__urplaced_supabase_client__;
     }
 
-    const storageKey = getTabStorageKey();
-    const client = createSupabaseJsClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        storage: tabSessionStorage,
-        storageKey,
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: "pkce",
-      },
-    });
+    const client = createBrowserClient(supabaseUrl, supabaseAnonKey);
+
+    // Sync session to tabSessionStorage so tab-scoped bearer interceptor remains populated
+    try {
+      const storageKey = getTabStorageKey();
+      client.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          tabSessionStorage.setItem(storageKey, JSON.stringify(session));
+        }
+      });
+
+      client.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          tabSessionStorage.setItem(storageKey, JSON.stringify(session));
+        } else {
+          tabSessionStorage.removeItem(storageKey);
+        }
+      });
+    } catch {
+      // Non-blocking sync
+    }
 
     win.__urplaced_supabase_client__ = client;
-    return client;
+    return client as unknown as SupabaseClient;
   }
 
   // Fallback for SSR / Node.js contexts where window is undefined

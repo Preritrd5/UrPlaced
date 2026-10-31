@@ -18,10 +18,37 @@ export function getTabAccessToken(): string | null {
   try {
     const key = getTabStorageKey();
     const raw = tabSessionStorage.getItem(key);
-    if (!raw) return null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const token = parsed?.access_token || parsed?.currentSession?.access_token || null;
+      if (token) return token;
+    }
 
-    const parsed = JSON.parse(raw);
-    return parsed?.access_token || parsed?.currentSession?.access_token || null;
+    // Fallback: extract token from document.cookie if tab storage has not yet synced
+    if (typeof document !== "undefined" && document.cookie) {
+      const cookies = document.cookie.split(";").map((c) => c.trim());
+      const directTokenCookie = cookies.find((c) => c.startsWith("sb-access-token="));
+      if (directTokenCookie) {
+        return decodeURIComponent(directTokenCookie.substring("sb-access-token=".length));
+      }
+
+      const authCookie = cookies.find((c) => c.includes("-auth-token"));
+      if (authCookie) {
+        const val = decodeURIComponent(authCookie.split("=").slice(1).join("="));
+        let rawVal = val;
+        if (rawVal.startsWith("base64-")) {
+          try {
+            rawVal = atob(rawVal.slice(7));
+          } catch {}
+        }
+        try {
+          const parsed = JSON.parse(rawVal);
+          return parsed?.access_token || parsed?.currentSession?.access_token || null;
+        } catch {}
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }

@@ -81,13 +81,9 @@ function CollegeSignInContent() {
           return;
         }
 
-        // Redirect based on role
-        if (authoritativeRole === "TRAINER") {
-          router.push("/dashboard/training");
-        } else {
-          router.push(next);
-        }
-        router.refresh();
+        // Redirect based on role with guaranteed cookie transmission
+        const dest = authoritativeRole === "TRAINER" ? "/dashboard/training" : next;
+        window.location.replace(dest);
       }
     } catch {
       setErrorMsg("An unexpected connection error occurred. Please try again.");

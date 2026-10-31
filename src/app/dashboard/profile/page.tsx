@@ -90,6 +90,7 @@ export default function MyProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<"UNAUTHORIZED" | "FORBIDDEN" | "ERROR" | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [studentMetrics, setStudentMetrics] = useState<StudentMetrics | null>(null);
   const [collegeMetrics, setCollegeMetrics] = useState<CollegeMetrics | null>(null);
@@ -135,6 +136,7 @@ export default function MyProfilePage() {
 
   async function fetchProfileData() {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch("/api/profile");
       if (res.ok) {
@@ -160,9 +162,16 @@ export default function MyProfilePage() {
           testUpdates: pref.testUpdates !== false,
           aiMistakeTips: pref.aiMistakeTips !== false,
         });
+      } else if (res.status === 401) {
+        setLoadError("UNAUTHORIZED");
+      } else if (res.status === 403) {
+        setLoadError("FORBIDDEN");
+      } else {
+        setLoadError("ERROR");
       }
     } catch (err) {
       console.error("Failed to load profile:", err);
+      setLoadError("ERROR");
     } finally {
       setLoading(false);
     }
@@ -358,13 +367,40 @@ export default function MyProfilePage() {
   }
 
   if (!profile) {
+    if (loadError === "UNAUTHORIZED" && !auth.isAuthenticated) {
+      return (
+        <div className="text-center py-16">
+          <AlertCircle className="h-10 w-10 text-status-danger mx-auto mb-3" />
+          <h2 className="text-xl font-bold font-heading text-text-primary">Profile Unavailable</h2>
+          <p className="text-xs text-text-secondary mt-1">Please sign in to view your profile.</p>
+          <Button asChild className="mt-4" variant="primary">
+            <Link href="/auth/signin">Sign In</Link>
+          </Button>
+        </div>
+      );
+    }
+
+    if (loadError === "FORBIDDEN") {
+      return (
+        <div className="text-center py-16">
+          <AlertCircle className="h-10 w-10 text-status-danger mx-auto mb-3" />
+          <h2 className="text-xl font-bold font-heading text-text-primary">Access Restricted</h2>
+          <p className="text-xs text-text-secondary mt-1">You do not have authorization to view this profile record.</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="text-center py-16">
-        <AlertCircle className="h-10 w-10 text-status-danger mx-auto mb-3" />
-        <h2 className="text-xl font-bold font-heading text-text-primary">Profile Unavailable</h2>
-        <p className="text-xs text-text-secondary mt-1">Please sign in to view your profile.</p>
-        <Button asChild className="mt-4" variant="primary">
-          <Link href="/auth/signin">Sign In</Link>
+      <div className="text-center py-16 space-y-4">
+        <AlertCircle className="h-10 w-10 text-status-warning mx-auto text-amber-500" />
+        <div>
+          <h2 className="text-xl font-bold font-heading text-text-primary">Unable to load profile data</h2>
+          <p className="text-xs text-text-secondary mt-1">
+            There was a temporary issue loading your profile details. Your session is active.
+          </p>
+        </div>
+        <Button onClick={() => fetchProfileData()} variant="outline" className="mt-2">
+          Retry Loading Profile
         </Button>
       </div>
     );

@@ -31,7 +31,14 @@ export async function createClient(explicitToken?: string) {
 
   // If a tab bearer token is present, bind client to that token for RLS and auth
   if (token && authHeader) {
-    return createServerClient(supabaseUrl, supabaseAnonKey, {
+    let cookieStore: any;
+    try {
+      cookieStore = await cookies();
+    } catch {
+      // Outside request context
+    }
+
+    const client = createServerClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
           Authorization: authHeader,
@@ -39,11 +46,27 @@ export async function createClient(explicitToken?: string) {
       },
       cookies: {
         getAll() {
-          return [];
+          return cookieStore?.getAll?.() || [];
         },
-        setAll() {},
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore?.set?.({ name, value, ...options });
+            });
+          } catch {
+            // Setting cookies in Server Components can fail safely
+          }
+        },
       },
     });
+
+    // Ensure client.auth.getUser() with no parameters automatically uses the verified bearer token
+    const originalGetUser = client.auth.getUser.bind(client.auth);
+    client.auth.getUser = async (jwt?: string) => {
+      return originalGetUser(jwt || token);
+    };
+
+    return client;
   }
 
   // Fallback to cookie-based client

@@ -19,6 +19,11 @@ export interface UseNotificationsReturn {
   refetch: () => Promise<void>;
 }
 
+// Shared in-flight deduplication cache to prevent concurrent redundant fetches (e.g. from mobile and desktop bells)
+let inFlightFetchPromise: Promise<{ notifications: NotificationRecord[]; unreadCount: number }> | null = null;
+let lastFetchTimestamp = 0;
+let cachedResult: { notifications: NotificationRecord[]; unreadCount: number; userId: string } | null = null;
+
 export function useNotifications(): UseNotificationsReturn {
   const auth = useAuthContext();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
@@ -43,17 +48,44 @@ export function useNotifications(): UseNotificationsReturn {
     setError(null);
 
     try {
-      const res = await fetch("/api/notifications?limit=30");
-      if (!res.ok) {
-        throw new Error(`Failed to load notifications: HTTP ${res.status}`);
+      // Reuse recent cached result if fetched within 1.5 seconds for the same user
+      if (
+        cachedResult &&
+        cachedResult.userId === auth.userId &&
+        Date.now() - lastFetchTimestamp < 1500
+      ) {
+        setNotifications(cachedResult.notifications);
+        setUnreadCount(cachedResult.unreadCount);
+        setIsLoading(false);
+        return;
       }
-      const data = await res.json();
-      if (data.success) {
-        setNotifications(data.notifications || []);
-        setUnreadCount(typeof data.unreadCount === "number" ? data.unreadCount : 0);
-      } else {
-        throw new Error(data.error || "Failed to load notifications");
+
+      // Deduplicate concurrent in-flight requests
+      if (!inFlightFetchPromise) {
+        inFlightFetchPromise = (async () => {
+          const res = await fetch("/api/notifications?limit=30");
+          if (!res.ok) {
+            throw new Error(`Failed to load notifications: HTTP ${res.status}`);
+          }
+          const data = await res.json();
+          if (!data.success) {
+            throw new Error(data.error || "Failed to load notifications");
+          }
+          const result = {
+            notifications: (data.notifications || []) as NotificationRecord[],
+            unreadCount: typeof data.unreadCount === "number" ? data.unreadCount : 0,
+          };
+          lastFetchTimestamp = Date.now();
+          cachedResult = { ...result, userId: auth.userId! };
+          return result;
+        })().finally(() => {
+          inFlightFetchPromise = null;
+        });
       }
+
+      const data = await inFlightFetchPromise;
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
     } catch (err: any) {
       setError(err.message || "Unable to fetch notifications");
     } finally {
@@ -194,6 +226,7 @@ export function useNotifications(): UseNotificationsReturn {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
 
+      cachedResult = null;
       try {
         const res = await fetch(`/api/notifications/${notificationId}/read`, {
           method: "PATCH",
@@ -211,6 +244,7 @@ export function useNotifications(): UseNotificationsReturn {
 
   // Mark all notifications as read (optimistic)
   const markAllAsRead = useCallback(async () => {
+    cachedResult = null;
     // Optimistic update
     setNotifications((prev) =>
       prev.map((item) =>
@@ -238,6 +272,9 @@ export function useNotifications(): UseNotificationsReturn {
     error,
     markAsRead,
     markAllAsRead,
-    refetch: () => fetchNotifications(false),
+    refetch: () => {
+      cachedResult = null;
+      return fetchNotifications(false);
+    },
   };
 }

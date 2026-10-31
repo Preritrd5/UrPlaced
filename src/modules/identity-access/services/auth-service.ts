@@ -35,13 +35,27 @@ export async function getCurrentUserProfile(
   explicitToken?: string
 ): Promise<UserSessionProfile | null> {
   try {
-    const supabase = await createClient(explicitToken);
+    let token = explicitToken;
+    if (!token) {
+      try {
+        const { headers } = await import("next/headers");
+        const headerStore = await headers();
+        const authHeader = headerStore.get("authorization");
+        if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+          token = authHeader.substring(7).trim();
+        }
+      } catch {
+        // Outside request context
+      }
+    }
+
+    const supabase = await createClient(token);
     let user: any = null;
 
-    if (explicitToken) {
+    if (token) {
       try {
         const adminClient = createAdminClient();
-        const { data, error } = await adminClient.auth.getUser(explicitToken);
+        const { data, error } = await adminClient.auth.getUser(token);
         if (!error && data?.user) {
           user = data.user;
         }

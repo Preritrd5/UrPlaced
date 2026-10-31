@@ -79,9 +79,8 @@ function StudentSignInContent() {
           return;
         }
 
-        // Student Account Authenticated: Proceed to student workspace
-        router.push(next);
-        router.refresh();
+        // Student Account Authenticated: Proceed to student workspace with guaranteed cookie transmission
+        window.location.replace(next);
       }
     } catch {
       setErrorMsg("An unexpected connection error occurred. Please try again.");

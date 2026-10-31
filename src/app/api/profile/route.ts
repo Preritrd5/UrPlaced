@@ -6,15 +6,21 @@ import { AvatarStorageService } from "@/modules/identity-access/services/avatar-
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const profile = await getCurrentUserProfile();
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    const profile = await getCurrentUserProfile(undefined, token);
 
     if (!profile) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    const supabase = await createClient(token);
     const admin = createAdminClient();
 
     let studentMetrics = null;
@@ -145,7 +151,13 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const profile = await getCurrentUserProfile();
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    const profile = await getCurrentUserProfile(undefined, token);
 
     if (!profile) {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
