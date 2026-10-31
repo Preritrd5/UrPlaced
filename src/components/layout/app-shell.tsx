@@ -46,9 +46,12 @@ export function AppShell({ children }: AppShellProps) {
     return getAuthorizedNavigation(role, false, auth.permissions);
   }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading]);
 
-  // If on public landing page or auth routes, render standalone without navigation sidebar
-  if (pathname === "/" || pathname.startsWith("/auth")) {
-    return <div className="min-h-screen bg-background">{children}</div>;
+  // Only render Student/College Application Shell on /dashboard routes.
+  // The public landing page (/), student/college auth routes (/auth/*),
+  // and the Platform Super Admin environment (/preritrd/*) must NEVER
+  // inherit the Student or College application shell, headers, sidebars, or account menus.
+  if (!pathname || !pathname.startsWith("/dashboard")) {
+    return <>{children}</>;
   }
 
   const defaultDashboard = getRoleDefaultDashboard(role);
@@ -125,6 +128,7 @@ export function AppShell({ children }: AppShellProps) {
               onClick={() => setMobileMenuOpen(false)}
               className="md:hidden text-text-secondary hover:text-text-primary p-1"
               aria-label="Close menu"
+              suppressHydrationWarning
             >
               <X className="h-5 w-5" />
             </button>

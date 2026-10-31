@@ -128,6 +128,7 @@ export function UserAccountMenu({ className, size = "default" }: UserAccountMenu
           aria-label="User account menu"
           aria-haspopup="menu"
           aria-expanded={open}
+          suppressHydrationWarning
           className={cn(
             "group relative flex items-center justify-center rounded-full p-0.5 transition-all outline-none",
             "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -233,9 +234,9 @@ export function UserAccountMenu({ className, size = "default" }: UserAccountMenu
             <Key className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-xs text-text-primary leading-tight">Account Settings</div>
+            <div className="font-medium text-xs text-text-primary leading-tight">Account &amp; Security</div>
             <div className="text-[11px] text-text-muted leading-tight">
-              Password, data &amp; security
+              Password, MFA &amp; tenant security
             </div>
           </div>
         </DropdownMenuItem>

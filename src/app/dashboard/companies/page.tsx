@@ -24,6 +24,7 @@ export const dynamic = "force-dynamic";
 interface CompaniesPageProps {
   searchParams: Promise<{
     search?: string;
+    status?: string;
     page?: string;
   }>;
 }
@@ -47,11 +48,13 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
 
   const resolvedParams = await searchParams;
   const search = resolvedParams.search || "";
+  const statusParam = (resolvedParams.status?.toUpperCase() as any) || "ACTIVE";
   const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1;
 
   const result = await CompanyService.list({
     tenantId: activeTenant.id,
     search: search || undefined,
+    status: statusParam,
     page,
     pageSize: 12,
   });
@@ -78,10 +81,10 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
         )}
       </div>
 
-      {/* Search Bar */}
+      {/* Search and Status Filters */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <form method="GET" className="flex gap-3">
+          <form method="GET" className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
               <Input
@@ -91,9 +94,20 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
                 className="pl-9 h-9 text-xs"
               />
             </div>
-            <Button type="submit" variant="outline" size="sm" className="h-9">
-              Search
-            </Button>
+            <div className="flex gap-2">
+              <select
+                name="status"
+                defaultValue={statusParam}
+                className="h-9 rounded-lg border border-border bg-input px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+              >
+                <option value="ACTIVE">Active Partners</option>
+                <option value="ARCHIVED">Archived Partners</option>
+                <option value="ALL">All Partners</option>
+              </select>
+              <Button type="submit" variant="outline" size="sm" className="h-9">
+                Filter
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -129,6 +143,11 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
                         {company.industry}
                       </Badge>
                     )}
+                    {company.is_archived && (
+                      <Badge variant="danger" className="text-[10px] ml-1">
+                        Archived
+                      </Badge>
+                    )}
                   </div>
                   <div className="h-8 w-8 rounded-lg bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center shrink-0">
                     <Building2 className="h-4 w-4" />
@@ -138,6 +157,12 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
 
               <CardContent className="space-y-3 pt-0">
                 <div className="space-y-1.5 text-xs text-text-secondary">
+                  {company.contact_person && (
+                    <div className="flex items-center gap-1.5 text-text-primary font-medium truncate">
+                      <span className="text-[10px] uppercase font-mono text-text-muted">Contact:</span>
+                      <span className="truncate">{company.contact_person}</span>
+                    </div>
+                  )}
                   {company.website && (
                     <div className="flex items-center gap-1.5 truncate">
                       <Globe className="h-3.5 w-3.5 text-text-muted shrink-0" />

@@ -38,11 +38,10 @@ export async function createClient(explicitToken?: string) {
         },
       },
       cookies: {
-        get() {
-          return undefined;
+        getAll() {
+          return [];
         },
-        set() {},
-        remove() {},
+        setAll() {},
       },
     });
   }
@@ -57,21 +56,16 @@ export async function createClient(explicitToken?: string) {
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(name: string) {
-        return cookieStore?.get(name)?.value;
+      getAll() {
+        return cookieStore?.getAll?.() || [];
       },
-      set(name: string, value: string, options: CookieOptions) {
+      setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
         try {
-          cookieStore?.set({ name, value, ...options });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore?.set?.({ name, value, ...options });
+          });
         } catch {
           // Setting cookies in Server Components can fail safely
-        }
-      },
-      remove(name: string, options: CookieOptions) {
-        try {
-          cookieStore?.set({ name, value: "", ...options, maxAge: 0 });
-        } catch {
-          // Removing cookies in Server Components can fail safely
         }
       },
     },

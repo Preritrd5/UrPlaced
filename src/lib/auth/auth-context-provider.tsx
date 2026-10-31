@@ -22,6 +22,7 @@ export interface AuthContextValue {
   can: (action: PermissionIdentifier) => boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  updateAvatar?: (avatarUrl: string | null) => void;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -180,6 +181,10 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
     window.location.href = "/auth/signin";
   }, []);
 
+  const updateAvatar = React.useCallback((avatarUrl: string | null) => {
+    setData((prev) => ({ ...prev, avatarUrl }));
+  }, []);
+
   const value = React.useMemo<AuthContextValue>(
     () => ({
       isLoading,
@@ -198,8 +203,9 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
       can,
       refresh: fetchContext,
       signOut,
+      updateAvatar,
     }),
-    [isLoading, data, can, fetchContext, signOut]
+    [isLoading, data, can, fetchContext, signOut, updateAvatar]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

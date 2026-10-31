@@ -10,6 +10,11 @@ export const Permissions = {
   TENANT_SUSPEND: "tenant.suspend",
   TENANT_REACTIVATE: "tenant.reactivate",
   PLATFORM_HEALTH_READ: "platform.health.read",
+  PLATFORM_SUBSCRIPTIONS_MANAGE: "platform.subscriptions.manage",
+  PLATFORM_BILLING_MANAGE: "platform.billing.manage",
+  PLATFORM_CONFIG_MANAGE: "platform.config.manage",
+  PLATFORM_ADMINS_MANAGE: "platform.admins.manage",
+  PLATFORM_ANALYTICS_READ: "platform.analytics.read",
 
   // Staff & Role Governance
   STAFF_MANAGE: "staff.manage",
@@ -134,6 +139,11 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.TENANT_REACTIVATE,
     Permissions.PLATFORM_HEALTH_READ,
     Permissions.AUDIT_LOG_READ,
+    Permissions.PLATFORM_SUBSCRIPTIONS_MANAGE,
+    Permissions.PLATFORM_BILLING_MANAGE,
+    Permissions.PLATFORM_CONFIG_MANAGE,
+    Permissions.PLATFORM_ADMINS_MANAGE,
+    Permissions.PLATFORM_ANALYTICS_READ,
   ],
   PLACEMENT_HEAD: [
     Permissions.STAFF_MANAGE,

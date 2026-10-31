@@ -9,7 +9,7 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
   const createMockAdmin = () => ({
     storage: {
       getBucket: vi.fn(async (name: string) => {
-        if (name === "avatars") return { data: { id: "avatars", public: true }, error: null };
+        if (name === "avatars") return { data: { id: "avatars", public: false }, error: null };
         return { data: null, error: { message: "Not found" } };
       }),
       createBucket: vi.fn(async (name: string) => {
@@ -24,6 +24,12 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
           data: {
             publicUrl: `https://test-project.supabase.co/storage/v1/object/public/${bucket}/${path}`,
           },
+        })),
+        createSignedUrl: vi.fn(async (path: string) => ({
+          data: {
+            signedUrl: `https://test-project.supabase.co/storage/v1/object/sign/${bucket}/${path}?token=mock-token`,
+          },
+          error: null,
         })),
         list: vi.fn(async (folder: string) => {
           const prefix = `${bucket}/${folder}/`;
@@ -97,18 +103,19 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
 
       expect(result.success).toBe(true);
       expect(result.storagePath).toMatch(/^user-alice-1\/avatar-\d+\.png$/);
-      expect(result.avatarUrl).toContain("https://test-project.supabase.co/storage/v1/object/public/avatars/user-alice-1/avatar-");
+      expect(result.avatarUrl).toContain("https://test-project.supabase.co/storage/v1/object/sign/avatars/user-alice-1/avatar-");
+      expect(result.avatarUrl).toContain("token=mock-token");
 
       // 2. Storage object exists
       expect(mockStorageStore[`avatars/${result.storagePath}`]).toBeDefined();
       expect(mockStorageStore[`avatars/${result.storagePath}`].contentType).toBe("image/png");
 
-      // 3. Database profile contains the durable canonical reference
+      // 3. Database profile contains the durable canonical storage path reference
       expect(mockProfilesDb[userId]).toBeDefined();
-      expect(mockProfilesDb[userId].avatar_url).toBe(result.avatarUrl);
+      expect(mockProfilesDb[userId].avatar_url).toBe(result.storagePath);
 
       // 4. Session / profile refresh simulation
-      const resolved = AvatarStorageService.resolveAvatarUrl(mockProfilesDb[userId].avatar_url, mockAdmin as any);
+      const resolved = await AvatarStorageService.resolveAvatarUrl(mockProfilesDb[userId].avatar_url, mockAdmin as any);
       expect(resolved).toBe(result.avatarUrl);
     });
   });
@@ -126,8 +133,8 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
         admin: mockAdmin as any,
       });
 
-      const initialUrl = mockProfilesDb[userId].avatar_url;
-      expect(initialUrl).toBeDefined();
+      const initialPath = mockProfilesDb[userId].avatar_url;
+      expect(initialPath).toBeDefined();
 
       // Simulate sign out (clearing client state)
       let clientSessionState: any = null;
@@ -137,10 +144,11 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
       const userProfileFromDb = mockProfilesDb[userId];
       clientSessionState = {
         userId: userProfileFromDb.id,
-        avatarUrl: AvatarStorageService.resolveAvatarUrl(userProfileFromDb.avatar_url, mockAdmin as any),
+        avatarUrl: await AvatarStorageService.resolveAvatarUrl(userProfileFromDb.avatar_url, mockAdmin as any),
       };
 
-      expect(clientSessionState.avatarUrl).toBe(initialUrl);
+      expect(clientSessionState.avatarUrl).toContain("user-bob-2/avatar-");
+      expect(clientSessionState.avatarUrl).toContain("token=mock-token");
     });
   });
 
@@ -163,7 +171,7 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
 
       // Device 2 authenticates and calls backend profile resolution
       const backendProfile = mockProfilesDb[userId];
-      const device2ResolvedAvatar = AvatarStorageService.resolveAvatarUrl(
+      const device2ResolvedAvatar = await AvatarStorageService.resolveAvatarUrl(
         backendProfile.avatar_url,
         mockAdmin as any
       );
@@ -199,9 +207,9 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
         admin: mockAdmin as any,
       });
 
-      // Database points to new replacement
-      expect(mockProfilesDb[userId].avatar_url).toBe(secondUpload.avatarUrl);
-      expect(secondUpload.avatarUrl).not.toBe(firstUpload.avatarUrl);
+      // Database points to canonical storage path of new replacement
+      expect(mockProfilesDb[userId].avatar_url).toBe(secondUpload.storagePath);
+      expect(secondUpload.storagePath).not.toBe(firstUpload.storagePath);
 
       // Old image file in storage was cleaned up
       expect(mockStorageStore[`avatars/${firstUpload.storagePath}`]).toBeUndefined();
@@ -263,8 +271,8 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
       expect(result.avatarUrl).toContain("user-schema-cache-miss/avatar-");
       // Verify storage file was preserved, NOT rolled back!
       expect(mockStorageStore[`avatars/${result.storagePath}`]).toBeDefined();
-      // Verify user_metadata contains the canonical storage URL
-      expect(mockUserMetadata[userId].avatar_url).toBe(result.avatarUrl);
+      // Verify user_metadata contains the canonical storage path
+      expect(mockUserMetadata[userId].avatar_url).toBe(result.storagePath);
     });
 
     it("rejects files exceeding 2MB with explicit validation error", async () => {
@@ -322,7 +330,62 @@ describe("Avatar Storage Persistence & Cross-Session Lifecycle", () => {
       expect(mockUserMetadata[userId].avatar_url).toBeNull();
 
       // Resolved avatar URL returns null (triggering initials fallback)
-      expect(AvatarStorageService.resolveAvatarUrl(mockProfilesDb[userId].avatar_url, mockAdmin as any)).toBeNull();
+      expect(await AvatarStorageService.resolveAvatarUrl(mockProfilesDb[userId].avatar_url, mockAdmin as any)).toBeNull();
+    });
+  });
+
+  describe("Test G: Canonical Path Extraction & Legacy URL Resolution", () => {
+    it("extracts canonical storage path across all URL formats and prefixes", () => {
+      // 1. Raw canonical path
+      expect(AvatarStorageService.extractStoragePath("user-123/avatar-999.png")).toBe("user-123/avatar-999.png");
+
+      // 2. Prefixed with bucket
+      expect(AvatarStorageService.extractStoragePath("avatars/user-123/avatar-999.png")).toBe("user-123/avatar-999.png");
+
+      // 3. Supabase public URL (like in the reported failure!)
+      expect(
+        AvatarStorageService.extractStoragePath(
+          "https://xyz.supabase.co/storage/v1/object/public/avatars/ab8e00dd-45e2-497e-a8c/avatar-1793387683201.png"
+        )
+      ).toBe("ab8e00dd-45e2-497e-a8c/avatar-1793387683201.png");
+
+      // 4. Supabase signed URL with token parameters
+      expect(
+        AvatarStorageService.extractStoragePath(
+          "https://xyz.supabase.co/storage/v1/object/sign/avatars/user-123/avatar-999.png?token=expiring-jwt-123"
+        )
+      ).toBe("user-123/avatar-999.png");
+
+      // 5. Custom domain path
+      expect(
+        AvatarStorageService.extractStoragePath("https://urplaced.storage/avatars/user-123/avatar-999.png")
+      ).toBe("user-123/avatar-999.png");
+
+      // 6. External non-storage OAuth URL returns null (not a Supabase storage path)
+      expect(AvatarStorageService.extractStoragePath("https://lh3.googleusercontent.com/a/ACg8ocI...=s96-c")).toBeNull();
+
+      // 7. Empty or null returns null
+      expect(AvatarStorageService.extractStoragePath(null)).toBeNull();
+      expect(AvatarStorageService.extractStoragePath("")).toBeNull();
+    });
+
+    it("resolves a fresh signed URL for legacy public storage URLs", async () => {
+      const mockAdmin = createMockAdmin();
+      const legacyPublicUrl =
+        "https://xyz.supabase.co/storage/v1/object/public/avatars/ab8e00dd-45e2-497e-a8c/avatar-1793387683201.png";
+
+      const signedUrl = await AvatarStorageService.resolveAvatarUrl(legacyPublicUrl, mockAdmin as any);
+      expect(signedUrl).toBeDefined();
+      expect(signedUrl).toContain("object/sign/avatars/ab8e00dd-45e2-497e-a8c/avatar-1793387683201.png");
+      expect(signedUrl).toContain("token=mock-token");
+    });
+
+    it("passes through external non-storage URLs (OAuth Google/GitHub avatars)", async () => {
+      const mockAdmin = createMockAdmin();
+      const externalGoogleUrl = "https://lh3.googleusercontent.com/a/ACg8ocI=s96-c";
+
+      const resolved = await AvatarStorageService.resolveAvatarUrl(externalGoogleUrl, mockAdmin as any);
+      expect(resolved).toBe(externalGoogleUrl);
     });
   });
 });

@@ -232,6 +232,48 @@ export async function getCurrentUserProfile(
       activeMembership = undefined;
     }
 
+    const rawAvatarRef =
+      profile?.avatar_url ||
+      user.user_metadata?.avatar_storage_path ||
+      user.user_metadata?.avatar_url ||
+      null;
+
+    let resolvedAvatarUrl: string | null = null;
+    if (rawAvatarRef) {
+      resolvedAvatarUrl = await AvatarStorageService.resolveAvatarUrl(rawAvatarRef, admin);
+
+      // Auto-heal legacy database record and user_metadata if it stored a public or full URL instead of canonical storage path
+      const canonicalPath = AvatarStorageService.extractStoragePath(rawAvatarRef);
+      if (canonicalPath) {
+        if (profile?.avatar_url && profile.avatar_url !== canonicalPath) {
+          try {
+            await admin
+              .from("profiles")
+              .update({ avatar_url: canonicalPath })
+              .eq("id", user.id);
+          } catch {
+            // non-fatal
+          }
+        }
+        if (
+          user.user_metadata?.avatar_url !== canonicalPath ||
+          user.user_metadata?.avatar_storage_path !== canonicalPath
+        ) {
+          try {
+            await admin.auth.admin.updateUserById(user.id, {
+              user_metadata: {
+                ...(user.user_metadata || {}),
+                avatar_url: canonicalPath,
+                avatar_storage_path: canonicalPath,
+              },
+            });
+          } catch {
+            // non-fatal
+          }
+        }
+      }
+    }
+
     return {
       id: user.id,
       email: user.email || "",
@@ -240,10 +282,7 @@ export async function getCurrentUserProfile(
       accountCategory: resolvedCategory,
       institutionName: activeMembership?.tenants?.name || serverAppMeta.institution_name || "",
       isPlatformAdmin,
-      avatarUrl: AvatarStorageService.resolveAvatarUrl(
-        profile?.avatar_url || user.user_metadata?.avatar_url,
-        admin
-      ),
+      avatarUrl: resolvedAvatarUrl,
       phone: profile?.phone || user.user_metadata?.phone || null,
       location: profile?.location || user.user_metadata?.location || null,
       bio: profile?.bio || user.user_metadata?.bio || null,

@@ -48,6 +48,45 @@ export class DriveService {
   };
 
   /**
+   * Get aggregate drive statistics for a college tenant
+   */
+  static async getMetrics(tenantId: string): Promise<{
+    totalDrives: number;
+    draftDrives: number;
+    openDrives: number;
+    completedDrives: number;
+    totalApplications: number;
+  }> {
+    const supabase = createAdminClient();
+
+    const { data: drives } = await supabase
+      .from("recruitment_drives")
+      .select("id, status")
+      .eq("tenant_id", tenantId);
+
+    const { count: appCount } = await supabase
+      .from("drive_applications")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId);
+
+    const all = drives || [];
+    const totalDrives = all.length;
+    const draftDrives = all.filter((d) => d.status === "DRAFT").length;
+    const openDrives = all.filter(
+      (d) => d.status === "PUBLISHED" || d.status === "REGISTRATION_OPEN" || d.status === "IN_PROGRESS"
+    ).length;
+    const completedDrives = all.filter((d) => d.status === "COMPLETED").length;
+
+    return {
+      totalDrives,
+      draftDrives,
+      openDrives,
+      completedDrives,
+      totalApplications: appCount || 0,
+    };
+  }
+
+  /**
    * List drives with filter, search, and pagination
    */
   static async list(params: DriveFilterParams): Promise<DriveListResult> {

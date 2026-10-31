@@ -330,6 +330,12 @@ export default function DriveDetailPage({ params }: DriveDetailPageProps) {
         {/* State Machine Action Controls */}
         {canManageDrives && (
           <div className="flex items-center gap-2 flex-wrap">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/dashboard/drives/${id}/pipeline`}>
+                <Layers className="h-4 w-4 mr-1.5 text-secondary" /> Pipeline Board
+              </Link>
+            </Button>
+
             {drive.status === "DRAFT" && (
               <Button
                 variant="primary"

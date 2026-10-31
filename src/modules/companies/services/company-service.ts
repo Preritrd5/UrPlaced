@@ -13,6 +13,7 @@ export type CompanyUpdate = Database["public"]["Tables"]["companies"]["Update"];
 export interface CompanyFilterParams {
   tenantId: string;
   search?: string;
+  status?: "ACTIVE" | "ARCHIVED" | "ALL";
   includeArchived?: boolean;
   page?: number;
   pageSize?: number;
@@ -51,7 +52,11 @@ export class CompanyService {
       .select("*, drives:recruitment_drives(count)", { count: "exact" })
       .eq("tenant_id", params.tenantId);
 
-    if (!params.includeArchived) {
+    if (params.status === "ARCHIVED") {
+      query = query.eq("is_archived", true);
+    } else if (params.status === "ALL" || params.includeArchived) {
+      // include all
+    } else {
       query = query.eq("is_archived", false);
     }
 
@@ -180,6 +185,7 @@ export class CompanyService {
       contactEmail: string | null;
       contactPhone: string | null;
       internalNotes: string | null;
+      isArchived: boolean;
     }>
   ): Promise<CompanyRow> {
     const supabase = createAdminClient();
@@ -195,6 +201,7 @@ export class CompanyService {
     if (updates.contactEmail !== undefined) payload.contact_email = updates.contactEmail;
     if (updates.contactPhone !== undefined) payload.contact_phone = updates.contactPhone;
     if (updates.internalNotes !== undefined) payload.internal_notes = updates.internalNotes;
+    if (updates.isArchived !== undefined) payload.is_archived = updates.isArchived;
 
     const { data, error } = await supabase
       .from("companies")

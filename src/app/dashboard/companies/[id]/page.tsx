@@ -16,6 +16,7 @@ import { ClientAuthGate } from "@/components/auth/client-auth-gate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CompanyDetailActions } from "@/components/companies/company-detail-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,9 @@ export default async function CompanyDetailPage({ params }: CompanyDetailPagePro
               {company.industry && (
                 <Badge variant="secondary">{company.industry}</Badge>
               )}
+              {company.is_archived && (
+                <Badge variant="danger" className="text-[10px]">Archived</Badge>
+              )}
             </div>
             <p className="text-xs text-text-secondary">
               Hiring Partner Profile &bull; {company.drives?.length || 0} Recruitment Drives Associated
@@ -71,11 +75,14 @@ export default async function CompanyDetailPage({ params }: CompanyDetailPagePro
         </div>
 
         {canManageDrives && (
-          <Button asChild variant="primary" size="sm">
-            <Link href={`/dashboard/drives/new?companyId=${company.id}`}>
-              <PlusCircle className="h-4 w-4 mr-1.5" /> Launch Drive
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <CompanyDetailActions company={company} canManage={canManageDrives} />
+            <Button asChild variant="primary" size="sm">
+              <Link href={`/dashboard/drives/new?companyId=${company.id}`}>
+                <PlusCircle className="h-4 w-4 mr-1.5" /> Launch Drive
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
 

@@ -101,19 +101,20 @@ export class AvatarStorageService {
       throw new Error(`Failed to upload image to storage: ${uploadError?.message || "Unknown error"}`);
     }
 
-    // 6. Obtain canonical storage URL or signed URL reference
-    const { data: urlData } = admin.storage
-      .from(this.BUCKET_NAME)
-      .getPublicUrl(storagePath);
+    // 6. Generate fresh signed URL for authorized access on private bucket
+    const signedUrl = await this.createSignedAvatarUrl(storagePath, 86400, admin);
+    if (!signedUrl) {
+      // Rollback on failure to create authorized signed access
+      await admin.storage.from(this.BUCKET_NAME).remove([storagePath]);
+      throw new Error("Failed to generate authorized access token for uploaded avatar.");
+    }
 
-    const publicUrl = urlData?.publicUrl || `https://urplaced.storage/avatars/${storagePath}`;
-
-    // 7. Persist canonical reference to Supabase Auth user_metadata and database profiles
-    // Primary guaranteed store: Supabase Auth user_metadata (always present across all Supabase tiers)
+    // 7. Persist CANONICAL STORAGE PATH to Supabase Auth user_metadata and database profiles
+    // The database and metadata must hold the durable relative path (not a temporary signed URL or public URL)
     try {
       await admin.auth.admin.updateUserById(userId, {
         user_metadata: {
-          avatar_url: publicUrl,
+          avatar_url: storagePath,
           avatar_storage_path: storagePath,
         },
       });
@@ -144,7 +145,7 @@ export class AvatarStorageService {
 
       const profileRecord: Record<string, any> = {
         id: userId,
-        avatar_url: publicUrl,
+        avatar_url: storagePath,
         updated_at: new Date().toISOString(),
       };
 
@@ -207,7 +208,7 @@ export class AvatarStorageService {
 
     return {
       success: true,
-      avatarUrl: publicUrl,
+      avatarUrl: signedUrl,
       storagePath,
     };
   }
@@ -240,6 +241,7 @@ export class AvatarStorageService {
       await admin.auth.admin.updateUserById(userId, {
         user_metadata: {
           avatar_url: null,
+          avatar_storage_path: null,
         },
       });
     } catch (authMetaErr: unknown) {
@@ -263,61 +265,112 @@ export class AvatarStorageService {
   }
 
   /**
-   * Resolves a durable display URL from an avatar reference.
-   * If the reference is a relative storage path or storage URL,
-   * derives a signed URL or canonical reference.
+   * Extracts the canonical storage path (<userId>/<fileName>) from any avatar reference.
+   * Handles relative paths, bucket-prefixed paths, and legacy public or signed URLs.
    */
-  static resolveAvatarUrl(
-    avatarRef: string | null | undefined,
-    admin = createAdminClient()
-  ): string | null {
+  static extractStoragePath(avatarRef: string | null | undefined): string | null {
     if (!avatarRef || typeof avatarRef !== "string" || avatarRef.trim() === "") {
       return null;
     }
 
     const ref = avatarRef.trim();
 
-    // If already a signed URL or standard external HTTP(S) URL
+    // 1. Supabase standard storage object path (public or sign):
+    // e.g. https://<project>.supabase.co/storage/v1/object/public/avatars/<userId>/avatar-123.png
+    // or   https://<project>.supabase.co/storage/v1/object/sign/avatars/<userId>/avatar-123.png?token=...
+    const storageMatch = ref.match(/\/storage\/v1\/object\/(?:public|sign)\/avatars\/([^?#]+)/);
+    if (storageMatch && storageMatch[1]) {
+      return decodeURIComponent(storageMatch[1]);
+    }
+
+    // 2. Custom storage domain path:
+    // e.g. https://urplaced.storage/avatars/<userId>/avatar-123.png
+    const urplacedMatch = ref.match(/\/avatars\/([^?#]+)/);
+    if (urplacedMatch && urplacedMatch[1]) {
+      return decodeURIComponent(urplacedMatch[1]);
+    }
+
+    // 3. Strip query parameters or hashes
+    const cleanRef = ref.split(/[?#]/)[0];
+
+    // 4. If prefixed with "avatars/"
+    if (cleanRef.startsWith("avatars/")) {
+      return cleanRef.substring("avatars/".length);
+    }
+
+    // 5. If it starts with http:// or https:// and did not match above, it's an external URL (e.g. Google OAuth photo)
+    if (cleanRef.startsWith("http://") || cleanRef.startsWith("https://")) {
+      return null;
+    }
+
+    // 6. Otherwise it's already a relative storage path (e.g. "<userId>/<fileName>")
+    return cleanRef;
+  }
+
+  /**
+   * Resolves a secure display URL from an avatar reference.
+   * For private Supabase Storage, creates a fresh signed URL for the object.
+   * If the reference is an external HTTP(S) URL (e.g. Google OAuth photo), returns it as-is.
+   */
+  static async resolveAvatarUrl(
+    avatarRef: string | null | undefined,
+    admin = createAdminClient(),
+    expiresInSeconds = 86400 // 24 hours
+  ): Promise<string | null> {
+    if (!avatarRef || typeof avatarRef !== "string" || avatarRef.trim() === "") {
+      return null;
+    }
+
+    const ref = avatarRef.trim();
+
+    // Extract storage path if this references a Supabase Storage object
+    const storagePath = this.extractStoragePath(ref);
+    if (storagePath) {
+      if (!admin?.storage?.from) {
+        return null;
+      }
+      // Generate a fresh signed URL for private bucket delivery
+      return this.createSignedAvatarUrl(storagePath, expiresInSeconds, admin);
+    }
+
+    // If it's a genuine external URL (e.g. Google/GitHub OAuth profile picture)
     if (ref.startsWith("http://") || ref.startsWith("https://")) {
       return ref;
     }
 
-    // If a storage path (e.g. "avatars/userId/avatar.png" or "userId/avatar.png")
-    let cleanPath = ref;
-    if (cleanPath.startsWith("avatars/")) {
-      cleanPath = cleanPath.substring("avatars/".length);
-    }
-
-    try {
-      const { data } = admin.storage.from(this.BUCKET_NAME).getPublicUrl(cleanPath);
-      return data?.publicUrl || null;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
   /**
-   * Generates a short-lived signed URL (e.g., 60 minutes) for private college avatar viewing.
+   * Generates a signed URL for private college avatar viewing.
    */
   static async createSignedAvatarUrl(
     storagePath: string,
-    expiresInSeconds = 3600,
+    expiresInSeconds = 86400,
     admin = createAdminClient()
   ): Promise<string | null> {
     try {
-      let cleanPath = storagePath.trim();
-      if (cleanPath.startsWith("avatars/")) {
-        cleanPath = cleanPath.substring("avatars/".length);
+      if (!admin?.storage?.from) {
+        return null;
       }
+      const cleanPath = this.extractStoragePath(storagePath) || storagePath.trim();
+      if (!cleanPath) return null;
+
       const { data, error } = await admin.storage
         .from(this.BUCKET_NAME)
         .createSignedUrl(cleanPath, expiresInSeconds);
 
       if (error || !data?.signedUrl) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[AvatarStorageService] Notice creating signed URL:", error?.message);
+        }
         return null;
       }
       return data.signedUrl;
-    } catch {
+    } catch (err: unknown) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[AvatarStorageService] Exception creating signed URL:", err);
+      }
       return null;
     }
   }

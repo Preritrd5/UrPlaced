@@ -31,6 +31,7 @@ export function ThemeToggle({
       aria-label={label}
       title={label}
       data-testid="theme-toggle-btn"
+      suppressHydrationWarning
       className={cn(
         // Base layout
         "inline-flex items-center justify-center rounded-lg border transition-all duration-150 select-none cursor-pointer",

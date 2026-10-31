@@ -21,12 +21,16 @@ vi.mock("@/lib/supabase/admin", () => ({
       limit: vi.fn().mockResolvedValue({ data: [], error: null }),
     })),
     storage: {
-      getBucket: vi.fn().mockResolvedValue({ data: { id: "avatars", public: true }, error: null }),
+      getBucket: vi.fn().mockResolvedValue({ data: { id: "avatars", public: false }, error: null }),
       createBucket: vi.fn().mockResolvedValue({ data: null, error: null }),
       from: vi.fn(() => ({
         upload: vi.fn().mockResolvedValue({ data: { path: "student-123/avatar.png" }, error: null }),
         getPublicUrl: vi.fn((path: string) => ({
           data: { publicUrl: `https://mock.supabase.co/storage/v1/object/public/avatars/${path}` },
+        })),
+        createSignedUrl: vi.fn((path: string) => ({
+          data: { signedUrl: `https://mock.supabase.co/storage/v1/object/sign/avatars/${path}?token=test-signed-token` },
+          error: null,
         })),
         list: vi.fn().mockResolvedValue({ data: [], error: null }),
         remove: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -259,7 +263,8 @@ describe("Production-Ready Role-Aware Profile Page & API", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-      expect(data.avatarUrl).toContain("https://mock.supabase.co/storage/v1/object/public/avatars/student-123/");
+      expect(data.avatarUrl).toContain("https://mock.supabase.co/storage/v1/object/sign/avatars/student-123/");
+      expect(data.avatarUrl).toContain("token=test-signed-token");
     });
 
     it("rejects invalid MIME types (e.g. text/html, application/pdf)", async () => {

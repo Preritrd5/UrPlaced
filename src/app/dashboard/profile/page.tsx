@@ -251,6 +251,7 @@ export default function MyProfilePage() {
       const json = await res.json();
       if (res.ok && json.avatarUrl) {
         setProfile((prev) => (prev ? { ...prev, avatarUrl: json.avatarUrl } : prev));
+        auth.updateAvatar?.(json.avatarUrl);
         setFeedbackMsg({ type: "success", text: "Profile photo saved and persisted to storage." });
         await auth.refresh();
       } else {
@@ -271,6 +272,7 @@ export default function MyProfilePage() {
       const res = await fetch("/api/profile/avatar", { method: "DELETE" });
       if (res.ok) {
         setProfile((prev) => (prev ? { ...prev, avatarUrl: null } : prev));
+        auth.updateAvatar?.(null);
         setFeedbackMsg({ type: "success", text: "Profile photo removed." });
         await auth.refresh();
       }

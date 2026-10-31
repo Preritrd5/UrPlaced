@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { AvatarStorageService } from "@/modules/identity-access/services/avatar-storage-service";
 
 export const dynamic = "force-dynamic";
 
@@ -205,8 +206,25 @@ export async function PATCH(request: NextRequest) {
       updates.bio = bio || null;
     }
 
+    // Query existing profile to verify current canonical storage path
+    const admin = createAdminClient();
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", profile.id)
+      .maybeSingle();
+
+    const currentCanonicalAvatar =
+      existingProfile?.avatar_url ||
+      (profile.avatarUrl ? AvatarStorageService.extractStoragePath(profile.avatarUrl) : null);
+
     if (body.avatarUrl !== undefined) {
-      updates.avatar_url = body.avatarUrl ? String(body.avatarUrl) : null;
+      updates.avatar_url = body.avatarUrl
+        ? AvatarStorageService.extractStoragePath(String(body.avatarUrl)) || String(body.avatarUrl)
+        : null;
+    } else {
+      // Do not overwrite permanent avatar storage path with temporary signed URL
+      updates.avatar_url = currentCanonicalAvatar;
     }
 
     if (body.preferences !== undefined && typeof body.preferences === "object") {
@@ -214,7 +232,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 2. Persist to Supabase Auth user_metadata
-    const admin = createAdminClient();
     const { data: updatedUserData, error: authUpdateError } =
       await admin.auth.admin.updateUserById(profile.id, {
         user_metadata: {
@@ -222,7 +239,8 @@ export async function PATCH(request: NextRequest) {
           phone: updates.phone ?? profile.phone,
           location: updates.location ?? profile.location,
           bio: updates.bio ?? profile.bio,
-          avatar_url: updates.avatar_url !== undefined ? updates.avatar_url : profile.avatarUrl,
+          avatar_url: updates.avatar_url,
+          avatar_storage_path: updates.avatar_url,
           preferences: updates.preferences ?? profile.preferences,
         },
       });
@@ -240,7 +258,7 @@ export async function PATCH(request: NextRequest) {
         id: profile.id,
         email: profile.email,
         full_name: (updates.full_name as string) || profile.fullName,
-        avatar_url: (updates.avatar_url as string) || profile.avatarUrl,
+        avatar_url: updates.avatar_url,
         phone: (updates.phone as string) || null,
         location: (updates.location as string) || null,
         bio: (updates.bio as string) || null,

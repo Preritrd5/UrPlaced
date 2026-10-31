@@ -58,8 +58,21 @@ export function UserAvatar({
   const initials = getAvatarInitials(name, email);
   const dimensionClass = sizeClasses[size];
 
-  // Render photo if src exists and hasn't failed to load
-  if (src && !imageFailed) {
+  // Resolve display source: if a canonical storage path without protocol, route to secure view endpoint
+  let resolvedSrc = src;
+  if (
+    resolvedSrc &&
+    typeof resolvedSrc === "string" &&
+    !resolvedSrc.startsWith("http://") &&
+    !resolvedSrc.startsWith("https://") &&
+    !resolvedSrc.startsWith("data:") &&
+    !resolvedSrc.startsWith("/")
+  ) {
+    resolvedSrc = `/api/profile/avatar/view?path=${encodeURIComponent(resolvedSrc)}`;
+  }
+
+  // Render photo if resolvedSrc exists and hasn't failed to load
+  if (resolvedSrc && !imageFailed) {
     return (
       <div
         className={cn(
@@ -71,10 +84,15 @@ export function UserAvatar({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={src}
+          src={resolvedSrc}
           alt={alt || name || "User profile photo"}
           className="h-full w-full object-cover"
-          onError={() => setImageFailed(true)}
+          onError={() => {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("[UserAvatar] Image load failed for avatar src:", resolvedSrc);
+            }
+            setImageFailed(true);
+          }}
         />
       </div>
     );

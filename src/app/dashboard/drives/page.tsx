@@ -52,13 +52,16 @@ export default async function DrivesPage({ searchParams }: DrivesPageProps) {
   const status = resolvedParams.status || "";
   const page = resolvedParams.page ? parseInt(resolvedParams.page, 10) : 1;
 
-  const result = await DriveService.list({
-    tenantId: activeTenant.id,
-    search: search || undefined,
-    status: (status as any) || undefined,
-    page,
-    pageSize: 12,
-  });
+  const [result, metrics] = await Promise.all([
+    DriveService.list({
+      tenantId: activeTenant.id,
+      search: search || undefined,
+      status: (status as any) || undefined,
+      page,
+      pageSize: 12,
+    }),
+    DriveService.getMetrics(activeTenant.id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -80,6 +83,30 @@ export default async function DrivesPage({ searchParams }: DrivesPageProps) {
             </Link>
           </Button>
         )}
+      </div>
+
+      {/* KPI Metrics Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <Card className="p-3">
+          <span className="text-[10px] font-mono uppercase text-text-muted">Total Drives</span>
+          <div className="text-xl font-bold font-heading text-text-primary">{metrics.totalDrives}</div>
+        </Card>
+        <Card className="p-3 border-secondary/30">
+          <span className="text-[10px] font-mono uppercase text-secondary">Active / Open</span>
+          <div className="text-xl font-bold font-heading text-secondary">{metrics.openDrives}</div>
+        </Card>
+        <Card className="p-3">
+          <span className="text-[10px] font-mono uppercase text-text-muted">Drafts</span>
+          <div className="text-xl font-bold font-heading text-text-secondary">{metrics.draftDrives}</div>
+        </Card>
+        <Card className="p-3">
+          <span className="text-[10px] font-mono uppercase text-text-muted">Completed</span>
+          <div className="text-xl font-bold font-heading text-text-secondary">{metrics.completedDrives}</div>
+        </Card>
+        <Card className="p-3 border-primary/30">
+          <span className="text-[10px] font-mono uppercase text-primary">Applications</span>
+          <div className="text-xl font-bold font-heading text-primary">{metrics.totalApplications}</div>
+        </Card>
       </div>
 
       {/* Filter and Search Bar */}

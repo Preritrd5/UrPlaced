@@ -395,6 +395,12 @@ export interface Database {
           primary_domain: string | null;
           status: TenantStatus;
           student_seat_limit: number;
+          official_email: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          onboarding_status: "INVITED" | "PENDING_VERIFICATION" | "COMPLETED" | "ACTION_REQUIRED";
+          onboarding_token: string | null;
+          onboarding_completed_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -405,10 +411,190 @@ export interface Database {
           primary_domain?: string | null;
           status?: TenantStatus;
           student_seat_limit?: number;
+          official_email?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          onboarding_status?: "INVITED" | "PENDING_VERIFICATION" | "COMPLETED" | "ACTION_REQUIRED";
+          onboarding_token?: string | null;
+          onboarding_completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["tenants"]["Insert"]>;
+      };
+      platform_admins: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string;
+          role: "SUPER_ADMIN";
+          status: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "REVOKED";
+          mfa_enabled: boolean;
+          mfa_enforced: boolean;
+          last_sign_in_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          full_name?: string;
+          role?: "SUPER_ADMIN";
+          status?: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "REVOKED";
+          mfa_enabled?: boolean;
+          mfa_enforced?: boolean;
+          last_sign_in_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["platform_admins"]["Insert"]>;
+      };
+      subscription_plans: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          price_inr: number;
+          billing_cycle: "MONTHLY" | "ANNUAL";
+          student_limit: number;
+          staff_limit: number;
+          storage_limit_gb: number;
+          features: Json;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          slug: string;
+          description?: string | null;
+          price_inr?: number;
+          billing_cycle?: "MONTHLY" | "ANNUAL";
+          student_limit?: number;
+          staff_limit?: number;
+          storage_limit_gb?: number;
+          features?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["subscription_plans"]["Insert"]>;
+      };
+      college_subscriptions: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          plan_id: string;
+          status: "ACTIVE" | "TRIALING" | "PAST_DUE" | "CANCELED" | "EXPIRED";
+          start_date: string;
+          expiry_date: string;
+          renewal_date: string;
+          grace_period_days: number;
+          student_seat_limit: number;
+          staff_seat_limit: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          plan_id: string;
+          status?: "ACTIVE" | "TRIALING" | "PAST_DUE" | "CANCELED" | "EXPIRED";
+          start_date?: string;
+          expiry_date?: string;
+          renewal_date?: string;
+          grace_period_days?: number;
+          student_seat_limit?: number;
+          staff_seat_limit?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["college_subscriptions"]["Insert"]>;
+      };
+      platform_invoices: {
+        Row: {
+          id: string;
+          invoice_number: string;
+          tenant_id: string;
+          subscription_id: string | null;
+          amount_inr: number;
+          tax_inr: number;
+          currency: string;
+          status: "PAID" | "PENDING" | "OVERDUE" | "CANCELED" | "REFUNDED";
+          issue_date: string;
+          due_date: string;
+          paid_at: string | null;
+          payment_method: string;
+          is_demo: boolean;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          invoice_number: string;
+          tenant_id: string;
+          subscription_id?: string | null;
+          amount_inr?: number;
+          tax_inr?: number;
+          currency?: string;
+          status?: "PAID" | "PENDING" | "OVERDUE" | "CANCELED" | "REFUNDED";
+          issue_date?: string;
+          due_date?: string;
+          paid_at?: string | null;
+          payment_method?: string;
+          is_demo?: boolean;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["platform_invoices"]["Insert"]>;
+      };
+      platform_settings: {
+        Row: {
+          key: string;
+          value: Json;
+          category: string;
+          description: string | null;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          value?: Json;
+          category?: string;
+          description?: string | null;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["platform_settings"]["Insert"]>;
+      };
+      platform_admin_invitations: {
+        Row: {
+          id: string;
+          email: string;
+          role: "SUPER_ADMIN";
+          token_hash: string;
+          status: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+          invited_by: string | null;
+          expires_at: string;
+          accepted_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          role?: "SUPER_ADMIN";
+          token_hash: string;
+          status?: "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+          invited_by?: string | null;
+          expires_at?: string;
+          accepted_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["platform_admin_invitations"]["Insert"]>;
       };
       profiles: {
         Row: {
