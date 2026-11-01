@@ -95,7 +95,7 @@ describe("Two-Portal Dynamic Role-Based Navigation & Access Control System", () 
       const allItems = nav.flatMap((s) => s.items);
       for (const item of allItems) {
         expect(item.accountCategory).toBe("STUDENT");
-        expect(item.href).toMatch(/^\/dashboard\/student/);
+        expect(item.href).toMatch(/^\/dashboard\/(student|profile)/);
         expect(item.allowedRoles).toContain("STUDENT");
       }
     });

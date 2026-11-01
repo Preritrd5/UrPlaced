@@ -2,6 +2,7 @@ import * as React from "react";
 import { redirect } from "next/navigation";
 import { PlatformAuthService } from "@/modules/platform-admin/services/platform-auth-service";
 import { PlatformSidebar, PlatformTopNavbar } from "@/components/platform-admin/platform-nav";
+import { PlatformAdminProvider } from "@/components/platform-admin/platform-admin-context";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +23,19 @@ export default async function PlatformProtectedLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#EDECE7] flex flex-col lg:flex-row font-sans selection:bg-[#5052C9] selection:text-white">
-      {/* Platform Navigation Sidebar */}
-      <PlatformSidebar adminEmail={admin.email} adminName={admin.fullName} />
+    <PlatformAdminProvider initialAdmin={admin}>
+      <div className="min-h-screen bg-[#EDECE7] flex flex-col lg:flex-row font-sans selection:bg-[#5052C9] selection:text-white">
+        {/* Platform Navigation Sidebar */}
+        <PlatformSidebar adminEmail={admin.email} adminName={admin.fullName} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <PlatformTopNavbar adminEmail={admin.email} adminName={admin.fullName} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {children}
-        </main>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <PlatformTopNavbar adminEmail={admin.email} adminName={admin.fullName} />
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </PlatformAdminProvider>
   );
 }

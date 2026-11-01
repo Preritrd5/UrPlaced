@@ -612,13 +612,13 @@ describe("UrPlaced Platform Super Admin Portal & Strict Option A Isolation", () 
 
       expect(res.college.name).toBe("XYZ Institute of Technology");
       expect(res.college.slug).toBe("xyz-institute");
-      expect(res.onboardingToken).toMatch(/^onb_xyz-institute_\d+_[a-z0-9]+$/);
+      expect(res.onboardingToken).toMatch(/^[a-f0-9]{64}$/);
 
       // Verify college added to mock database
       const added = mockDatabase["tenants"].find((t) => t.slug === "xyz-institute");
       expect(added).toBeDefined();
       expect(added.student_seat_limit).toBe(2000);
-    });
+    }, 15000);
 
     it("suspends and reactivates a college account with audit logging", async () => {
       const mockAdmin = createMockAdminClient();

@@ -10,6 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { can, Permissions, type PermissionIdentifier, type UserRole } from "@/modules/identity-access/services/policy-engine";
 import { MembershipService } from "@/modules/tenancy/services/membership-service";
 import { TenantService } from "@/modules/tenancy/services/tenant-service";
+import { EntitlementService } from "@/modules/platform-admin/services/entitlement-service";
+import { SubscriptionAccessService } from "@/modules/billing/services/subscription-access-service";
 
 export interface AuthenticatedServerContext {
   userId: string;
@@ -105,6 +107,24 @@ export async function requireAuthContext(
   }
 
   // 3. Strict database membership authority:
+  // Architecture Invariant: ONE PERSON = ONE COLLEGE ONLY
+  if (!isPlatformAdmin && userMemberships.length > 0) {
+    const uniqueTenants = new Set(userMemberships.map((m: any) => m.tenant_id).filter(Boolean));
+    if (uniqueTenants.size > 1) {
+      throw new Error("FORBIDDEN: MULTI_COLLEGE_MEMBERSHIP_VIOLATION: An individual may belong to exactly one college only.");
+    }
+  }
+
+  // Cross-tenant manipulation protection:
+  // If user supplies a targetTenantId (via cookie/param), it must match their authorized college
+  const activeMemberships = userMemberships.filter((m: any) => m.status === "ACTIVE");
+  if (!isPlatformAdmin && targetTenantId && activeMemberships.length > 0) {
+    const authorizedTenantId = activeMemberships[0].tenant_id;
+    if (authorizedTenantId && targetTenantId !== authorizedTenantId) {
+      throw new Error("FORBIDDEN: NO_ACTIVE_TENANT: Access to foreign institution resources is strictly prohibited.");
+    }
+  }
+
   // If user has a membership record for this tenant, verify it is not suspended or revoked
   const relevantMembership = targetTenantId
     ? userMemberships.find((m: any) => m.tenant_id === targetTenantId)
@@ -120,7 +140,6 @@ export async function requireAuthContext(
   }
 
   // Active membership lookup
-  const activeMemberships = userMemberships.filter((m: any) => m.status === "ACTIVE");
   const activeMembership = targetTenantId
     ? activeMemberships.find((m: any) => m.tenant_id === targetTenantId)
     : activeMemberships[0];
@@ -200,6 +219,21 @@ export async function requireAuthContext(
       }
       throw new Error("FORBIDDEN");
     }
+  }
+
+  // 4. Centralized Subscription Entitlement Enforcement (SA-03 / SA-06)
+  // College placement operations and student preparation are strictly locked when subscription is not ACTIVE/GRACE
+  if (
+    !ctx.isPlatformAdmin &&
+    ctx.tenantId &&
+    requiredPermission
+  ) {
+    await SubscriptionAccessService.assertOperationalAccess({
+      tenantId: ctx.tenantId,
+      userRole: ctx.tenantRole,
+      userId: ctx.userId,
+      permission: requiredPermission,
+    });
   }
 
   return ctx;

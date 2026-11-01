@@ -17,6 +17,14 @@ export interface SendInvitationEmailParams {
   expiresInHours?: number;
 }
 
+export interface SendCollegeInvitationParams {
+  toEmail: string;
+  collegeName: string;
+  placementHeadName: string;
+  inviteUrl: string;
+  expiresInHours?: number;
+}
+
 export interface SendPasswordResetParams {
   toEmail: string;
   resetUrl: string;
@@ -48,22 +56,56 @@ function escapeHtml(text: string): string {
 
 export class EmailAdapter {
   /**
-   * Resolves the canonical application base URL for generating recipient-accessible links.
-   * Priority: APP_BASE_URL > NEXT_PUBLIC_APP_URL > APP_URL > http://localhost:3000
+   * Resolves the canonical, trusted application base URL for generating recipient-accessible links.
+   * Environment awareness:
+   * - Preview deployments: Automatically resolves from VERCEL_URL when VERCEL_ENV === "preview"
+   * - Production / Custom domains: Resolves from validated APP_BASE_URL > NEXT_PUBLIC_APP_URL > VERCEL_PROJECT_PRODUCTION_URL
+   * - Local development: Resolves from APP_BASE_URL > NEXT_PUBLIC_APP_URL > http://localhost:${PORT || 3000}
+   * 
+   * SECURITY: Strictly validates scheme (http/https), trims trailing slashes, and NEVER trusts
+   * unvalidated client/browser headers (Host / X-Forwarded-Host).
    */
   public static getAppOrigin(): string {
-    const raw =
+    // 1. Preview Deployments (e.g. Vercel Branch / PR Previews)
+    const vercelEnv = process.env.VERCEL_ENV || process.env.NEXT_PUBLIC_VERCEL_ENV;
+    if (vercelEnv === "preview" && process.env.VERCEL_URL) {
+      const previewCandidate = `https://${process.env.VERCEL_URL.trim().replace(/\/+$/, "")}`;
+      try {
+        const parsed = new URL(previewCandidate);
+        return `${parsed.protocol}//${parsed.host}`;
+      } catch {
+        // Fallback to standard resolution if malformed
+      }
+    }
+
+    // 2. Explicit environment base URL overrides
+    const explicitCandidate =
       process.env.APP_BASE_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.APP_URL ||
-      "http://localhost:3000";
+      process.env.APP_URL;
 
-    const trimmed = raw.trim().replace(/\/+$/, "");
+    let candidate = "";
 
-    // Basic URL validation
+    if (explicitCandidate && explicitCandidate.trim().length > 0) {
+      candidate = explicitCandidate.trim();
+    } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      candidate = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}`;
+    } else if (process.env.NODE_ENV === "production" || vercelEnv === "production") {
+      candidate = "https://urplaced.vercel.app";
+    } else {
+      const port = process.env.PORT || "3000";
+      candidate = `http://localhost:${port}`;
+    }
+
+    const trimmed = candidate.replace(/\/+$/, "");
+
+    // Validate URL structure and scheme
     try {
-      new URL(trimmed);
-      return trimmed;
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return "http://localhost:3000";
+      }
+      return `${parsed.protocol}//${parsed.host}`;
     } catch {
       return "http://localhost:3000";
     }
@@ -358,38 +400,41 @@ export class EmailAdapter {
   }
 
   /**
-   * Dispatches an invitation email to a staff or faculty member.
+   * Universal transactional email dispatcher shared by all invitation and notification flows.
    * Priority:
    * 1. Real Gmail SMTP delivery via Nodemailer if GMAIL_USER and GMAIL_APP_PASSWORD are configured.
    * 2. Resend transactional API if RESEND_API_KEY is configured and Gmail is absent.
    * 3. Local test sink strictly in automated test runner (NODE_ENV === "test" || VITEST).
+   * 4. Honest unconfigured error.
    */
-  public static async sendInvitation(
-    params: SendInvitationEmailParams
-  ): Promise<EmailDeliveryResult> {
+  public static async dispatchTransactionalEmail(payload: {
+    toEmail: string;
+    subject: string;
+    html: string;
+    text: string;
+    senderName?: string;
+  }): Promise<EmailDeliveryResult> {
     const gmailConfig = this.getGmailConfig();
     const isTestEnvironment =
       process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
 
-    // 1. Primary: Real Gmail SMTP Delivery
+    // 1. Primary: Real Gmail SMTP Delivery via Nodemailer
     if (gmailConfig.isConfigured) {
-      const fromAddress = `UrPlaced <${gmailConfig.user}>`;
-      const subject = `You're invited to join ${params.tenantName} on UrPlaced — College / Cell`;
-      const html = this.generateInvitationHtml(params);
-      const text = this.generateInvitationPlainText(params);
+      const displayName = payload.senderName || "UrPlaced";
+      const fromAddress = `${displayName} <${gmailConfig.user}>`;
 
       const smtpResult = await this.sendViaGmailSmtp({
         user: gmailConfig.user,
         pass: gmailConfig.pass,
         from: fromAddress,
-        to: params.toEmail,
-        subject,
-        html,
-        text,
+        to: payload.toEmail,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
       });
 
       if (!smtpResult.success) {
-        // Enforce prompt rule: Do not silently fall back to Resend if Gmail SMTP fails
+        // Enforce rule: Do not silently fall back to Resend if Gmail SMTP fails
         return {
           success: false,
           deliveryMethod: "GMAIL_SMTP",
@@ -404,21 +449,17 @@ export class EmailAdapter {
       };
     }
 
-    // 2. Secondary: Resend API if configured and Gmail is not configured
+    // 2. Secondary: Resend API if configured and Gmail is absent
     const apiKey = (process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY || "").trim();
     if (apiKey.length > 0) {
       const fromEmail = this.getSenderEmail();
-      const subject = `You're invited to join ${params.tenantName} on UrPlaced — College / Cell`;
-      const html = this.generateInvitationHtml(params);
-      const text = this.generateInvitationPlainText(params);
-
       const resendResult = await this.postToResend({
         apiKey,
         from: fromEmail,
-        to: [params.toEmail],
-        subject,
-        html,
-        text,
+        to: [payload.toEmail],
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
       });
 
       if (!resendResult.success) {
@@ -436,7 +477,7 @@ export class EmailAdapter {
       };
     }
 
-    // 3. Automated test runner sink
+    // 3. Automated test runner sink strictly in unit tests without credentials
     if (isTestEnvironment) {
       return {
         success: true,
@@ -452,6 +493,29 @@ export class EmailAdapter {
       error:
         "Gmail SMTP credentials (GMAIL_USER, GMAIL_APP_PASSWORD) are not configured in environment variables. Real email delivery cannot be completed.",
     };
+  }
+
+  /**
+   * Dispatches an invitation email to a staff or faculty member.
+   * Priority:
+   * 1. Real Gmail SMTP delivery via Nodemailer if GMAIL_USER and GMAIL_APP_PASSWORD are configured.
+   * 2. Resend transactional API if RESEND_API_KEY is configured and Gmail is absent.
+   * 3. Local test sink strictly in automated test runner (NODE_ENV === "test" || VITEST).
+   */
+  public static async sendInvitation(
+    params: SendInvitationEmailParams
+  ): Promise<EmailDeliveryResult> {
+    const subject = `You're invited to join ${params.tenantName} on UrPlaced — College / Cell`;
+    const html = this.generateInvitationHtml(params);
+    const text = this.generateInvitationPlainText(params);
+
+    return this.dispatchTransactionalEmail({
+      toEmail: params.toEmail,
+      subject,
+      html,
+      text,
+      senderName: "UrPlaced",
+    });
   }
 
   /**
@@ -606,5 +670,145 @@ export class EmailAdapter {
       deliveryMethod: "UNCONFIGURED",
       error: "Email delivery credentials are not configured in environment variables.",
     };
+  }
+
+  /**
+   * Generates branded HTML template for College Placement Head onboarding invitations.
+   * Dedicated template strictly adhering to UrPlaced Design System tokens.
+   */
+  private static generateCollegeInvitationHtml(params: SendCollegeInvitationParams): string {
+    const safeCollege = escapeHtml(params.collegeName);
+    const safeHeadName = escapeHtml(params.placementHeadName);
+    const safeEmail = escapeHtml(params.toEmail);
+    const safeUrl = escapeHtml(params.inviteUrl);
+    const expiryText = params.expiresInHours ? `${params.expiresInHours} hours` : "72 hours";
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Invited to Set Up Your UrPlaced College Placement Account</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #EDECE7; margin: 0; padding: 40px 16px; color: #24283A;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #F8F7F3; border-radius: 16px; border: 1px solid #DDDCD5; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(36, 40, 58, 0.07);">
+    <!-- Header Banner -->
+    <tr>
+      <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #DDDCD5;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #7779D8 0%, #5052C9 100%); color: #ffffff; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 20px; letter-spacing: -0.5px;">
+          UrPlaced
+        </div>
+        <p style="margin: 8px 0 0; font-size: 12px; color: #747683; font-family: monospace; text-transform: uppercase; letter-spacing: 1px;">
+          Institutional Placement SaaS &bull; Platform Control Plane
+        </p>
+      </td>
+    </tr>
+
+    <!-- Main Content -->
+    <tr>
+      <td style="padding: 32px;">
+        <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 700; color: #24283A;">
+          Set Up Your College Placement Account
+        </h1>
+        <p style="margin: 0 0 12px; font-size: 14px; line-height: 1.6; color: #292D40;">
+          Dear <strong>${safeHeadName}</strong>,
+        </p>
+        <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #292D40;">
+          Your institution has been registered on UrPlaced by the platform administration team. You have been invited to set up the College Placement Head account for this institution.
+        </p>
+
+        <!-- Institution Details Card -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FBFAF7; border: 1px solid #DDDCD5; border-radius: 8px; margin-bottom: 24px; padding: 16px;">
+          <tr>
+            <td style="font-size: 13px; color: #747683; padding: 6px 8px;">Institution:</td>
+            <td style="font-size: 13px; font-weight: 700; color: #24283A; padding: 6px 8px;">${safeCollege}</td>
+          </tr>
+          <tr>
+            <td style="font-size: 13px; color: #747683; padding: 6px 8px;">Designation / Role:</td>
+            <td style="font-size: 13px; font-weight: 600; color: #2E8F86; padding: 6px 8px;">Placement Head (Administrator)</td>
+          </tr>
+          <tr>
+            <td style="font-size: 13px; color: #747683; padding: 6px 8px;">Bound Institutional Email:</td>
+            <td style="font-size: 13px; font-weight: 600; color: #24283A; font-family: monospace; padding: 6px 8px;">${safeEmail}</td>
+          </tr>
+        </table>
+
+        <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #292D40;">
+          Use the secure link below to create your login password and activate your account setup.
+        </p>
+
+        <!-- CTA Button -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td align="center">
+              <a href="${safeUrl}" target="_blank" style="display: inline-block; background-color: #5052C9; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 14px 28px; border-radius: 8px; box-shadow: 0 2px 4px rgba(80, 82, 201, 0.25);">
+                Complete College Account Setup
+              </a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin: 24px 0 0; font-size: 12px; color: #747683; line-height: 1.5; text-align: center;">
+          This single-use invitation link expires in <strong>${expiryText}</strong>.<br>
+          If you have questions, contact platform support at <strong>support@urplaced.com</strong>.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="padding: 20px 32px; background-color: #EDECE7; text-align: center; border-top: 1px solid #DDDCD5; font-size: 11px; color: #747683;">
+        Secured with Supabase Authentication &amp; Multi-Tenant Platform Control Plane.<br>
+        UrPlaced &copy; 2026
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  }
+
+  /**
+   * Generates plain-text fallback for College Placement Head onboarding invitations.
+   */
+  private static generateCollegeInvitationPlainText(params: SendCollegeInvitationParams): string {
+    const expiryText = params.expiresInHours ? `${params.expiresInHours} hours` : "72 hours";
+    return `UrPlaced — College Placement Head Onboarding
+
+Dear ${params.placementHeadName},
+
+Your institution (${params.collegeName}) has been registered on UrPlaced by the platform administration team. You have been invited to set up the College Placement Head account for this institution.
+
+Complete your account setup using this secure link:
+${params.inviteUrl}
+
+This single-use invitation link expires in ${expiryText}.
+
+Institution: ${params.collegeName}
+Designation: Placement Head (Administrator)
+Bound Email: ${params.toEmail}
+
+Secured with Supabase Authentication & Multi-Tenant Platform Control Plane.
+UrPlaced © 2026`;
+  }
+
+  /**
+   * Dispatches an invitation email to a newly registered College Placement Head.
+   * Leverages the exact same unified transactional email infrastructure as staff invitations,
+   * while preserving the dedicated Placement Head branding, template, and secure signup link.
+   */
+  public static async sendCollegePlacementHeadInvitation(
+    params: SendCollegeInvitationParams
+  ): Promise<EmailDeliveryResult> {
+    const subject = "You're Invited to Set Up Your UrPlaced College Placement Account";
+    const html = this.generateCollegeInvitationHtml(params);
+    const text = this.generateCollegeInvitationPlainText(params);
+
+    return this.dispatchTransactionalEmail({
+      toEmail: params.toEmail,
+      subject,
+      html,
+      text,
+      senderName: "UrPlaced Platform",
+    });
   }
 }

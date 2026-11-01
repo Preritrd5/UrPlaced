@@ -23,6 +23,8 @@ import {
   FileSpreadsheet,
   Megaphone,
   Award,
+  CreditCard,
+  User,
 } from "lucide-react";
 import {
   Permissions,
@@ -187,6 +189,20 @@ export const MASTER_NAVIGATION: {
         href: "/dashboard/student/analytics",
         icon: BarChart3,
         requiredPermission: Permissions.ANALYTICS_READ_OWN,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+      },
+    ],
+  },
+  {
+    section: "Student Account",
+    accountCategory: "STUDENT",
+    items: [
+      {
+        id: "student-profile",
+        name: "My Profile",
+        href: "/dashboard/profile",
+        icon: User,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
       },
@@ -359,15 +375,42 @@ export const MASTER_NAVIGATION: {
       },
     ],
   },
+  {
+    section: "Account & Subscription",
+    accountCategory: "COLLEGE",
+    items: [
+      {
+        id: "college-billing",
+        name: "Subscription & Billing",
+        href: "/dashboard/billing",
+        icon: CreditCard,
+        allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF"],
+        accountCategory: "COLLEGE",
+      },
+      {
+        id: "college-profile",
+        name: "My Profile",
+        href: "/dashboard/profile",
+        icon: User,
+        allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
+        accountCategory: "COLLEGE",
+      },
+    ],
+  },
 ];
 
 /**
- * Filter and resolve authorized navigation sections for the active user context
+ * Filter and resolve authorized navigation sections for the active user context.
+ * Enforces SA-03 / SA-06 subscription entitlement locking:
+ * When college subscription is not ACTIVE (e.g. PENDING_PAYMENT), only
+ * Subscription & Billing and My Profile are permitted in navigation.
  */
 export function getAuthorizedNavigation(
   userRole: UserRole,
   isPlatformAdmin?: boolean,
-  userPermissions?: string[]
+  userPermissions?: string[],
+  subscriptionStatus?: string | null,
+  isGracePeriod?: boolean
 ): NavigationSection[] {
   // Determine user's effective permissions
   const effectivePerms = new Set<string>(
@@ -376,6 +419,14 @@ export function getAuthorizedNavigation(
 
   const targetCategory: AccountCategory =
     userRole === "STUDENT" ? "STUDENT" : "COLLEGE";
+
+  // During 7-day grace period, full subscribed navigation is retained (Q1)
+  const isGrace = Boolean(isGracePeriod || subscriptionStatus === "PAST_DUE_GRACE");
+  const isLocked =
+    subscriptionStatus &&
+    subscriptionStatus !== "ACTIVE" &&
+    subscriptionStatus !== "TRIALING" &&
+    !isGrace;
 
   const resolvedSections: NavigationSection[] = [];
 
@@ -392,9 +443,26 @@ export function getAuthorizedNavigation(
         continue;
       }
 
-      // 2. Permission match check
+      // 2. Permission match check (if requiredPermission is defined)
       if (item.requiredPermission && !effectivePerms.has(item.requiredPermission)) {
         continue;
+      }
+
+      // 3. Strict Subscription Entitlement Filter:
+      // If subscription is locked, permit only billing and profile for staff, and profile for students
+      if (isLocked) {
+        if (targetCategory === "COLLEGE") {
+          const isPermittedUnderLocked =
+            item.href === "/dashboard/billing" || item.href === "/dashboard/profile";
+          if (!isPermittedUnderLocked) {
+            continue;
+          }
+        } else if (targetCategory === "STUDENT") {
+          const isPermittedUnderLocked = item.href === "/dashboard/profile";
+          if (!isPermittedUnderLocked) {
+            continue;
+          }
+        }
       }
 
       permittedItems.push(item);

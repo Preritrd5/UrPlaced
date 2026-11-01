@@ -76,7 +76,7 @@ describe("Separate Student and College Authentication Portals", () => {
       expect(data.nextUrl).toBe("/dashboard/student");
     });
 
-    it("handles College signup with COLLEGE category and routes to /dashboard", async () => {
+    it("rejects public College self-registration with HTTP 403 when missing invitation token", async () => {
       const uniqueSuffix = Date.now().toString(36);
       const req = new NextRequest("http://localhost:3000/api/auth/signup", {
         method: "POST",
@@ -94,12 +94,13 @@ describe("Separate Student and College Authentication Portals", () => {
       const res = await signUpHandler(req);
       const data = await res.json();
 
-      expect(res.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.nextUrl).toBe("/dashboard");
+      expect(res.status).toBe(403);
+      expect(data.success).toBe(false);
+      expect(data.code).toBe("COLLEGE_REGISTRATION_RESTRICTED");
+      expect(data.error).toContain("Public self-registration for College Placement Cells is disabled");
     });
 
-    it("requires institution name when registering under COLLEGE category", async () => {
+    it("requires an invitation token for College accounts", async () => {
       const req = new NextRequest("http://localhost:3000/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,16 +110,15 @@ describe("Separate Student and College Authentication Portals", () => {
           password: "SecurePassword123!",
           role: "PLACEMENT_HEAD",
           accountCategory: "COLLEGE",
-          // missing institutionName
         }),
       });
 
       const res = await signUpHandler(req);
       const data = await res.json();
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(data.success).toBe(false);
-      expect(data.error).toContain("college / institution name");
+      expect(data.code).toBe("COLLEGE_REGISTRATION_RESTRICTED");
     });
   });
 

@@ -3,6 +3,7 @@ import { headers, cookies } from "next/headers";
 import { combineChunks } from "@supabase/ssr";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { AvatarStorageService } from "@/modules/identity-access/services/avatar-storage-service";
 
 export interface AuthenticatedSuperAdmin {
   id: string;
@@ -13,6 +14,11 @@ export interface AuthenticatedSuperAdmin {
   mfaEnforced: boolean;
   mfaVerified: boolean;
   lastSignInAt?: string | null;
+  avatarUrl?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  bio?: string | null;
+  preferences?: Record<string, any> | null;
 }
 
 export class PlatformAuthService {
@@ -150,7 +156,7 @@ export class PlatformAuthService {
     // 1. Database authority: Check profiles.is_platform_admin
     const { data: profile, error: profileErr } = await adminClient
       .from("profiles")
-      .select("id, email, full_name, is_platform_admin")
+      .select("id, email, full_name, avatar_url, phone, location, bio, preferences, is_platform_admin")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -195,16 +201,14 @@ export class PlatformAuthService {
     // Client-editable user_metadata and custom unverified cookies are strictly rejected.
     let mfaVerified = false;
 
-    // A. Check verified Supabase JWT top-level payload claim (aal === 'aal2' or amr containing totp)
+    // A. Check verified Supabase JWT top-level payload claim (aal === 'aal2')
+    // Cryptographic assurance requires active session elevation; historical AMR methods alone do not grant AAL2.
     if (token) {
       try {
         const parts = token.split(".");
         if (parts.length === 3) {
           const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
           if (payload.aal === "aal2") {
-            mfaVerified = true;
-          }
-          if (Array.isArray(payload.amr) && payload.amr.some((m: any) => m.method === "totp" || m.method === "mfa")) {
             mfaVerified = true;
           }
         }
@@ -234,6 +238,19 @@ export class PlatformAuthService {
       throw new Error("MFA_REQUIRED: SESSION_NOT_AAL2");
     }
 
+    let resolvedAvatarUrl: string | null = null;
+    if (profile.avatar_url) {
+      try {
+        resolvedAvatarUrl = await AvatarStorageService.resolveAvatarUrl(
+          profile.avatar_url,
+          adminClient,
+          86400
+        );
+      } catch {
+        resolvedAvatarUrl = profile.avatar_url;
+      }
+    }
+
     return {
       id: user.id,
       email: profile.email || user.email || "",
@@ -243,6 +260,11 @@ export class PlatformAuthService {
       mfaEnforced: adminRecord?.mfa_enforced ?? true,
       mfaVerified,
       lastSignInAt: adminRecord?.last_sign_in_at,
+      avatarUrl: resolvedAvatarUrl,
+      phone: profile.phone || null,
+      location: profile.location || null,
+      bio: profile.bio || null,
+      preferences: profile.preferences || null,
     };
   }
 
@@ -268,18 +290,22 @@ export class PlatformAuthService {
     } = params;
 
     try {
-      await adminClient.from("audit_logs").insert({
+      const { error } = await adminClient.from("audit_logs").insert({
         tenant_id: null, // Strictly platform-level
         actor_id: actorId || null,
         action,
         resource_type: resourceType,
-        resource_id: resourceId || null,
-        metadata: {
+        resource_id: resourceId || "PLATFORM_CONTROL_PLANE",
+        after_state: {
           ...metadata,
           source: "PLATFORM_SUPER_ADMIN_PORTAL",
           timestamp: new Date().toISOString(),
         },
+        metadata,
       });
+      if (error) {
+        console.warn("[PlatformAuthService] Warning recording platform audit log:", error.message);
+      }
     } catch (err) {
       console.warn("[PlatformAuthService] Warning recording platform audit log:", err);
     }

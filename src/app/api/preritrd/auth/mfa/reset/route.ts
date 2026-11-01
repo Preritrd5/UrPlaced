@@ -55,10 +55,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Unenroll existing factors
+    // 3. Security Check: Prevent password-only authentication from removing already verified MFA factors
     const userClient = await createClient(sessionToken);
     const { data: factorsData } = await userClient.auth.mfa.listFactors();
 
+    const hasVerifiedFactor = factorsData?.totp?.some(
+      (f: any) => f.status === "verified"
+    );
+
+    if (hasVerifiedFactor) {
+      // Check if current session has genuine AAL2 assurance
+      let isAal2 = false;
+      try {
+        const parts = String(sessionToken).split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+          if (payload.aal === "aal2") isAal2 = true;
+        }
+      } catch {
+        // Parse error
+      }
+
+      if (!isAal2) {
+        const { data: aalData } = await userClient.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalData?.currentLevel === "aal2") isAal2 = true;
+      }
+
+      if (!isAal2) {
+        return NextResponse.json(
+          {
+            error:
+              "Security Violation: An already verified MFA factor cannot be removed or reset using password-only authentication. AAL2 elevation or administrative recovery is required.",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Unenroll factors (unverified setup artifacts, or verified if authenticated with genuine AAL2)
     if (factorsData?.totp) {
       for (const factor of factorsData.totp) {
         try {

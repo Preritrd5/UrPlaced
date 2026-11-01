@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { StudentService } from "@/modules/students/services/student-service";
+import { PlatformCollegeService } from "@/modules/platform-admin/services/platform-college-service";
 import type { TenantRole } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -63,15 +64,49 @@ export async function POST(request: NextRequest) {
       body.accountCategory === "COLLEGE" ||
       assignedRole === "PLACEMENT_HEAD" ||
       assignedRole === "COLLEGE";
-    const canonicalRole = isCollegeAccount ? "PLACEMENT_HEAD" : "STUDENT";
-    const canonicalCategory = isCollegeAccount ? "COLLEGE" : "STUDENT";
 
-    if (isCollegeAccount && (!institutionName || typeof institutionName !== "string" || institutionName.trim().length < 3)) {
-      return NextResponse.json(
-        { success: false, error: "Please enter your college / institution name (minimum 3 characters)." },
-        { status: 400 }
-      );
+    // STRICT INVITATION ENFORCEMENT:
+    // Only colleges registered by Platform Super Admin can create College accounts on UrPlaced.
+    // Public self-registration for College Placement Cells is strictly disabled.
+    if (isCollegeAccount) {
+      const invitationToken = body.token || body.invitationToken;
+      if (!invitationToken || typeof invitationToken !== "string") {
+        return NextResponse.json(
+          {
+            success: false,
+            code: "COLLEGE_REGISTRATION_RESTRICTED",
+            error:
+              "Public self-registration for College Placement Cells is disabled. Institutional accounts must be provisioned by the Platform Super Admin via an authorized institutional invitation.",
+          },
+          { status: 403 }
+        );
+      }
+
+      // If invitation token was submitted, securely process invitation-based setup
+      try {
+        const setupResult = await PlatformCollegeService.completeCollegeOnboarding({
+          token: invitationToken,
+          password,
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: setupResult.message,
+          user: {
+            id: setupResult.userId,
+            email: setupResult.email,
+            fullName: cleanName,
+          },
+          nextUrl: "/dashboard",
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to verify college onboarding invitation.";
+        return NextResponse.json({ success: false, error: msg }, { status: 403 });
+      }
     }
+
+    const canonicalRole = "STUDENT";
+    const canonicalCategory = "STUDENT";
 
     const institution = (institutionName || "Campus Placement Cell").trim();
     const admin = createAdminClient();

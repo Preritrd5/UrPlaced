@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogIn, Mail, ArrowLeft, ShieldAlert } from "lucide-react";
+import { LogIn, Mail, ArrowLeft, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { AuthSplitLayout, UrPlacedBrandLogo } from "@/components/auth/auth-split-layout";
 import { AuthInput, AuthPasswordInput } from "@/components/auth/auth-input";
@@ -108,6 +108,16 @@ function CollegeSignInContent() {
         </div>
 
         {/* Compact Alert Notification */}
+        {searchParams.get("setup") === "completed" && !errorMsg && (
+          <div
+            role="status"
+            className="shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 text-xs sm:text-sm font-medium"
+          >
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <div className="text-xs sm:text-sm">Account setup completed successfully! Please sign in with your credentials.</div>
+          </div>
+        )}
+
         {errorMsg && (
           <div
             role="alert"
@@ -168,14 +178,13 @@ function CollegeSignInContent() {
             <span>{isLoading ? "Signing In..." : "Sign In to Placement Portal"}</span>
           </button>
 
-          {/* Secondary CTA: Create Institutional Account Card Button */}
-          <Link
-            href="/auth/college/signup"
-            className="w-full bg-[#FFF9F2] hover:bg-[#FFF2E2] border border-[#FDECD4] text-[#24283A] text-xs sm:text-sm font-medium rounded-xl h-11 sm:h-12 flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 shadow-sm"
-          >
-            <span>New institution?</span>
-            <span className="text-[#5052C9] font-bold ml-1.5">Register Placement Cell (Sign Up) →</span>
-          </Link>
+          {/* Institutional Invitation Notice */}
+          <div className="w-full bg-[#FBFAF7] border border-[#DDDCD5] text-[#747683] text-xs rounded-xl p-3.5 text-center space-y-1">
+            <div className="font-semibold text-[#24283A]">Invitation-Only Institutional Access</div>
+            <p className="text-[11px] leading-relaxed">
+              College placement accounts are registered by Platform Super Admin. Open the secure invitation link sent to your institutional email to complete account setup.
+            </p>
+          </div>
         </form>
       </div>
     </AuthSplitLayout>

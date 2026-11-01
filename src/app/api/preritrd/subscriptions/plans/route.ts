@@ -3,12 +3,26 @@ import { PlatformAuthService } from "@/modules/platform-admin/services/platform-
 import { PlatformSubscriptionService } from "@/modules/platform-admin/services/platform-subscription-service";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
     await PlatformAuthService.requireSuperAdmin(request);
 
-    const plans = await PlatformSubscriptionService.listPlans();
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search") || undefined;
+    const status = searchParams.get("status") || undefined;
+    const billingInterval = searchParams.get("billingInterval") || undefined;
+    const sortBy = (searchParams.get("sortBy") as any) || "displayOrder";
+    const sortOrder = (searchParams.get("sortOrder") as any) || "asc";
+
+    const plans = await PlatformSubscriptionService.listPlans({
+      search,
+      status,
+      billingInterval,
+      sortBy,
+      sortOrder,
+    });
 
     return NextResponse.json({
       success: true,
@@ -16,7 +30,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to load plans";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const status = msg.includes("UNAUTHORIZED") ? 401 : msg.includes("FORBIDDEN") ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 
@@ -30,44 +45,55 @@ export async function POST(request: NextRequest) {
       name,
       slug,
       description,
+      displayOrder,
+      status,
       priceInr,
-      billingCycle,
-      studentLimit,
-      staffLimit,
-      storageLimitGb,
-      features,
-      isActive,
+      currency,
+      billingInterval,
+      discountPercentage,
+      limits,
+      entitlements,
     } = body;
 
-    if (!id || !name || !slug || priceInr === undefined) {
+    if (!name || !slug || priceInr === undefined) {
       return NextResponse.json(
-        { error: "Plan ID, Name, Slug, and Price are required." },
+        { error: "Plan Name, Slug, and Price are required." },
         { status: 400 }
       );
     }
 
-    const plan = await PlatformSubscriptionService.upsertPlan({
+    const plan = await PlatformSubscriptionService.createPlan({
       id,
       name,
       slug,
       description,
+      displayOrder: Number(displayOrder || 0),
+      status: status || "PUBLISHED",
       priceInr: Number(priceInr),
-      billingCycle: billingCycle || "ANNUAL",
-      studentLimit: Number(studentLimit || 1000),
-      staffLimit: Number(staffLimit || 10),
-      storageLimitGb: Number(storageLimitGb || 20),
-      features: Array.isArray(features) ? features : [],
-      isActive: isActive !== false,
+      currency: currency || "INR",
+      billingInterval: billingInterval || "ANNUAL",
+      discountPercentage: Number(discountPercentage || 0),
+      limits,
+      entitlements,
       adminId: admin.id,
     });
 
     return NextResponse.json({
       success: true,
-      message: "Subscription plan saved successfully.",
+      message: `Subscription plan '${plan.name}' created successfully.`,
       plan,
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to save plan";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const msg = err instanceof Error ? err.message : "Failed to create plan";
+    const status = msg.includes("already exists")
+      ? 409
+      : msg.includes("required") || msg.includes("must be") || msg.includes("cannot be")
+      ? 400
+      : msg.includes("UNAUTHORIZED")
+      ? 401
+      : msg.includes("FORBIDDEN")
+      ? 403
+      : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

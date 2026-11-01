@@ -3,6 +3,7 @@ import { PlatformAuthService } from "@/modules/platform-admin/services/platform-
 import { PlatformCollegeService } from "@/modules/platform-admin/services/platform-college-service";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +79,8 @@ export async function POST(request: NextRequest) {
       message: "College platform account registered successfully.",
       college: result.college,
       onboardingToken: result.onboardingToken,
+      invitationUrl: result.invitationUrl,
+      emailDelivery: result.emailDelivery,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to register college";

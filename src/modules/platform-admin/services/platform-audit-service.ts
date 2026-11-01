@@ -27,18 +27,10 @@ export class PlatformAuditService {
 
     let query = admin
       .from("audit_logs")
-      .select(`
-        id,
-        action,
-        actor_id,
-        resource_type,
-        resource_id,
-        metadata,
-        created_at,
-        profiles:actor_id (
-          email
-        )
-      `, { count: "exact" })
+      .select(
+        "id, action, actor_id, resource_type, resource_id, before_state, after_state, ip_address, user_agent, created_at",
+        { count: "exact" }
+      )
       .is("tenant_id", null) // Strict Platform Control-Plane Isolation
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
@@ -53,14 +45,36 @@ export class PlatformAuditService {
       throw new Error(`Failed to query platform audit logs: ${error.message}`);
     }
 
+    // Resolve actor emails from profiles table safely without depending on invalid postgrest foreign key embeds
+    const actorIds = Array.from(
+      new Set((data || []).map((r: any) => r.actor_id).filter(Boolean))
+    );
+    const emailMap: Record<string, string> = {};
+
+    if (actorIds.length > 0) {
+      try {
+        const { data: profiles } = await admin
+          .from("profiles")
+          .select("id, email")
+          .in("id", actorIds);
+        if (profiles) {
+          for (const p of profiles) {
+            emailMap[p.id] = p.email;
+          }
+        }
+      } catch {
+        // Fallback to default label
+      }
+    }
+
     const logs: PlatformAuditLogItem[] = (data || []).map((row: any) => ({
-      id: row.id,
+      id: String(row.id),
       action: row.action,
       actorId: row.actor_id,
-      actorEmail: row.profiles?.email || "Platform System",
+      actorEmail: emailMap[row.actor_id] || "Platform Admin",
       resourceType: row.resource_type,
       resourceId: row.resource_id,
-      metadata: row.metadata || {},
+      metadata: row.after_state || row.metadata || {},
       createdAt: row.created_at,
     }));
 

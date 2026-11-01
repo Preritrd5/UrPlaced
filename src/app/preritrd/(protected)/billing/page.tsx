@@ -14,6 +14,8 @@ import {
   DollarSign,
   Info,
   ShieldCheck,
+  Download,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +47,16 @@ export default function PlatformBillingPage() {
   const [createAmount, setCreateAmount] = React.useState("49999");
   const [createNotes, setCreateNotes] = React.useState("");
   const [createLoading, setCreateLoading] = React.useState(false);
+
+  // Refund Modal (Q10 & Q20)
+  const [refundTarget, setRefundTarget] = React.useState<PlatformInvoiceItem | null>(null);
+  const [refundAmount, setRefundAmount] = React.useState("");
+  const [refundReason, setRefundReason] = React.useState("");
+  const [subscriptionAction, setSubscriptionAction] = React.useState<"KEEP_ACTIVE" | "CANCEL_IMMEDIATELY" | "CANCEL_AT_PERIOD_END">("KEEP_ACTIVE");
+  const [refundLoading, setRefundLoading] = React.useState(false);
+
+  // Reconciliation state (Q18 & Q21)
+  const [reconciling, setReconciling] = React.useState(false);
 
   const fetchBillingData = React.useCallback(async () => {
     setLoading(true);
@@ -148,6 +160,71 @@ export default function PlatformBillingPage() {
     }
   }
 
+  // Handle Issue Refund (Q10 & Q20)
+  async function handleIssueRefund(e: React.FormEvent) {
+    e.preventDefault();
+    if (!refundTarget || !refundReason.trim()) return;
+    setRefundLoading(true);
+
+    try {
+      const res = await fetch("/api/preritrd/billing/refunds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoiceId: refundTarget.id,
+          amountInr: refundAmount ? Number(refundAmount) : undefined,
+          reason: refundReason.trim(),
+          subscriptionAction,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: "error", text: data.error || "Failed to issue refund." });
+      } else {
+        setFeedback({
+          type: "success",
+          text: `Refund of ₹${data.result.amountInr.toLocaleString()} processed successfully. Credit Note ${data.result.creditNoteNumber} issued.`,
+        });
+        setRefundTarget(null);
+        setRefundAmount("");
+        setRefundReason("");
+        setSubscriptionAction("KEEP_ACTIVE");
+        await fetchBillingData();
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Network error processing refund." });
+    } finally {
+      setRefundLoading(false);
+    }
+  }
+
+  // Handle Run Reconciliation (Q18 & Q21)
+  async function handleRunReconcile() {
+    setReconciling(true);
+    try {
+      const res = await fetch("/api/preritrd/billing/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sweepType: "15_MIN" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedback({
+          type: "success",
+          text: `Reconciliation complete: ${data.summary.scannedOrders} orders scanned, ${data.summary.reconciledCaptured} reconciled, ${data.summary.discrepanciesFound} discrepancies found.`,
+        });
+        await fetchBillingData();
+      } else {
+        setFeedback({ type: "error", text: data.error || "Reconciliation sweep failed." });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Network error triggering reconciliation." });
+    } finally {
+      setReconciling(false);
+    }
+  }
+
   // Derived KPI metrics
   const totalCollected = invoices
     .filter((i) => i.status === "PAID")
@@ -173,20 +250,55 @@ export default function PlatformBillingPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams();
+              params.set("format", "csv");
+              if (statusFilter !== "ALL") params.set("status", statusFilter);
+              window.open(`/api/preritrd/billing/export?${params.toString()}`, "_blank");
+            }}
+            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer"
+          >
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams();
+              params.set("format", "xlsx");
+              if (statusFilter !== "ALL") params.set("status", statusFilter);
+              window.open(`/api/preritrd/billing/export?${params.toString()}`, "_blank");
+            }}
+            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer text-[#2E8F86] hover:bg-emerald-50"
+          >
+            <Download className="h-3.5 w-3.5" /> Export Excel (.xlsx)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRunReconcile}
+            disabled={reconciling}
+            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer"
+          >
+            <ShieldCheck className={`h-3.5 w-3.5 ${reconciling ? "animate-spin" : ""}`} /> Reconcile
+          </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={fetchBillingData}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5"
+            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
           <Button
             size="sm"
             onClick={() => setShowCreateModal(true)}
-            className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 gap-1.5 shadow-sm"
+            className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 gap-1.5 shadow-xs cursor-pointer"
           >
             <PlusCircle className="h-4 w-4" /> Generate Invoice
           </Button>
@@ -353,21 +465,39 @@ export default function PlatformBillingPage() {
                         {new Date(inv.dueDate).toLocaleDateString()}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        {inv.status !== "PAID" && (
+                        <div className="flex items-center justify-end gap-1.5">
+                          {inv.status !== "PAID" && inv.status !== "REFUNDED" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPayTarget(inv)}
+                              className="h-7 text-xs border-emerald-300 text-emerald-800 hover:bg-emerald-50 cursor-pointer"
+                            >
+                              Record Payment
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setPayTarget(inv)}
-                            className="h-7 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => window.open(`/api/billing/invoices/${inv.id}/download`, "_blank")}
+                            className="h-7 text-xs border-[#B8B6AC] text-[#24283A] hover:bg-[#FBFAF7] cursor-pointer"
                           >
-                            Record Payment
+                            <FileText className="h-3 w-3 mr-1" /> View
                           </Button>
-                        )}
-                        {inv.status === "PAID" && (
-                          <span className="text-[11px] text-emerald-700 font-medium">
-                            Paid {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : ""}
-                          </span>
-                        )}
+                          {inv.status === "PAID" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setRefundTarget(inv);
+                                setRefundAmount(String(inv.totalInr));
+                              }}
+                              className="h-7 text-xs border-amber-300 text-amber-900 hover:bg-amber-50 cursor-pointer"
+                            >
+                              <RotateCcw className="h-3 w-3 mr-1" /> Refund
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -529,6 +659,97 @@ export default function PlatformBillingPage() {
                     className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9"
                   >
                     {createLoading ? "Generating..." : "Generate Invoice"}
+                  </Button>
+                </div>
+              </CardContent>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Issue Refund Modal (Q10 & Q20) */}
+      {refundTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <Card className="w-full max-w-lg bg-[#F8F7F3] border-[#B8B6AC] shadow-xl rounded-2xl">
+            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
+              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
+                <RotateCcw className="h-4 w-4 text-amber-700" />
+                <span>Issue Refund &mdash; {refundTarget.invoiceNumber}</span>
+              </CardTitle>
+              <CardDescription className="text-xs text-[#292D40]/70">
+                {refundTarget.tenantName} &bull; Total Paid: ₹{refundTarget.totalInr.toLocaleString()}
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleIssueRefund}>
+              <CardContent className="p-5 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#24283A]">
+                    Refund Amount (INR)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={refundAmount}
+                    onChange={(e) => setRefundAmount(e.target.value)}
+                    max={refundTarget.totalInr}
+                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 font-mono"
+                  />
+                  <p className="text-[10px] text-[#747683]">
+                    Maximum refundable amount: ₹{refundTarget.totalInr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#24283A]">
+                    Mandatory Refund Reason
+                  </label>
+                  <Input
+                    placeholder="e.g. Approved administrative concession / institutional adjustment"
+                    required
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#24283A] flex items-center gap-1.5">
+                    <span>Subscription Action (Q10)</span>
+                    <Badge variant="outline" className="text-[9px] font-mono border-amber-300 bg-amber-50 text-amber-800">
+                      Decoupled Action
+                    </Badge>
+                  </label>
+                  <select
+                    value={subscriptionAction}
+                    onChange={(e) => setSubscriptionAction(e.target.value as any)}
+                    className="w-full bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg p-2.5 text-[#24283A] outline-none font-medium"
+                  >
+                    <option value="KEEP_ACTIVE">Keep subscription active (Do not cancel)</option>
+                    <option value="CANCEL_IMMEDIATELY">Cancel subscription immediately (Immediate lockout)</option>
+                    <option value="CANCEL_AT_PERIOD_END">Cancel at end of paid period (Retain access until expiry)</option>
+                  </select>
+                  <p className="text-[10px] text-[#747683] leading-relaxed">
+                    Per UrPlaced financial policy, refunds do not automatically cancel subscriptions. Choose whether this institution retains access.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-[#B8B6AC]/30">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRefundTarget(null)}
+                    disabled={refundLoading}
+                    className="border-[#B8B6AC] text-xs h-9 cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={refundLoading}
+                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-9 cursor-pointer"
+                  >
+                    {refundLoading ? "Processing Refund..." : "Confirm & Process Refund"}
                   </Button>
                 </div>
               </CardContent>

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserProfile } from "@/modules/identity-access/services/auth-service";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   RoleDefaultPermissions,
   type UserRole,
 } from "@/modules/identity-access/services/policy-engine";
+import { SubscriptionAccessService } from "@/modules/billing/services/subscription-access-service";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,31 @@ export async function GET(request: Request) {
     const activeMembership = profile.activeMembership;
     const effectivePermissions = RoleDefaultPermissions[role] || [];
 
+    let subscriptionStatus: string | null = null;
+    let isGracePeriod = false;
+    let gracePeriodEndsAt: string | null = null;
+    let canAccessOperational = true;
+    let accessDecision: string | null = null;
+
+    if (activeMembership?.tenants?.id) {
+      try {
+        const access = await SubscriptionAccessService.evaluateAccess({
+          tenantId: activeMembership.tenants.id,
+          userRole: role,
+          userId: profile.id,
+          admin: createAdminClient(),
+          skipDenialLogging: true,
+        });
+        subscriptionStatus = access.subscriptionStatus || null;
+        isGracePeriod = access.isGracePeriod;
+        gracePeriodEndsAt = access.gracePeriodEndsAt || null;
+        canAccessOperational = access.canAccessOperational;
+        accessDecision = access.decision;
+      } catch {
+        // Fallback
+      }
+    }
+
     const availableTenants = (profile.memberships || [])
       .filter((m) => m.status === "ACTIVE" && m.tenants)
       .map((m) => ({
@@ -75,11 +102,21 @@ export async function GET(request: Request) {
         ? {
             id: activeMembership.tenants.id,
             name: activeMembership.tenants.name,
+            subscriptionStatus,
+            isGracePeriod,
+            gracePeriodEndsAt,
+            canAccessOperational,
+            accessDecision,
           }
         : profile.institutionName
         ? {
             id: `tenant-${profile.id}`,
             name: profile.institutionName,
+            subscriptionStatus: null,
+            isGracePeriod: false,
+            gracePeriodEndsAt: null,
+            canAccessOperational: true,
+            accessDecision: null,
           }
         : null,
       availableTenants,

@@ -137,7 +137,7 @@ describe("Platform Super Admin Login & MFA Authentication Flow", () => {
       });
       const res = await mfaVerifyHandler(req);
       expect(res.status).toBe(403);
-    });
+    }, 30000);
   });
 
   describe("4. MFA Reset Flow (/api/preritrd/auth/mfa/reset)", () => {

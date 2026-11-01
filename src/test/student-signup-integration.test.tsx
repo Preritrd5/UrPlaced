@@ -477,10 +477,10 @@ describe("Phase 3: Student Signup SRN Integration & Security Suite", () => {
   });
 
   // ============================================================================
-  // 4. College Registration Workflow Preservation
+  // 4. College Registration Workflow Protection & Invitation Enforcement
   // ============================================================================
-  describe("4. Preservation of College Placement Cell Workflow", () => {
-    it("preserves College registration workflow with institutionName and PLACEMENT_HEAD role", async () => {
+  describe("4. Preservation of College Registration Boundaries", () => {
+    it("strictly blocks public College registration without an invitation token with 403 Forbidden", async () => {
       const req = new NextRequest("http://localhost:3000/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -497,9 +497,9 @@ describe("Phase 3: Student Signup SRN Integration & Security Suite", () => {
       const res = await signUpHandler(req);
       const data = await res.json();
 
-      expect(res.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.nextUrl).toBe("/dashboard");
+      expect(res.status).toBe(403);
+      expect(data.success).toBe(false);
+      expect(data.code).toBe("COLLEGE_REGISTRATION_RESTRICTED");
 
       // SRN methods must NOT be called for college accounts
       expect(mockFindEligibleRosterBySrn).not.toHaveBeenCalled();

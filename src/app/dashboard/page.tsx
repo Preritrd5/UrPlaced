@@ -152,6 +152,29 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Pending Subscription Entitlement Lock Banner */}
+      {auth.tenant?.subscriptionStatus === "PENDING_PAYMENT" && (
+        <Card className="bg-amber-50/80 border-amber-300 shadow-xs rounded-2xl overflow-hidden">
+          <CardContent className="p-5 sm:p-6 space-y-3">
+            <div className="flex items-center gap-2.5 text-amber-950 font-bold font-heading text-base">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+              <span>Institutional Placement Operations Locked — Pending Subscription Activation</span>
+            </div>
+            <p className="text-xs text-amber-900 leading-relaxed max-w-3xl">
+              Your College Placement Cell account has been successfully provisioned. Operational placement features (recruitment drives, student roster ingestion, and AI assessment generation) remain locked until an active subscription tier is confirmed by platform administration.
+            </p>
+            <div className="flex items-center gap-3 pt-1">
+              <Badge variant="outline" className="bg-amber-100 text-amber-900 border-amber-300 font-mono text-[10px]">
+                Subscription Status: PENDING_PAYMENT
+              </Badge>
+              <span className="text-[11px] text-amber-800">
+                You can manage your Profile and Account Security settings in the top-right menu.
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Operational KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Students */}

@@ -170,8 +170,11 @@ describe("UrPlaced Complete Authentication UI Redesign & Viewport Invariants", (
       expect(
         screen.getByRole("button", { name: /Sign In to Placement Portal/i })
       ).toBeInTheDocument();
-      expect(screen.getByText(/New institution\?/i)).toBeInTheDocument();
-      expect(screen.getByText(/Register Placement Cell \(Sign Up\) →/i)).toBeInTheDocument();
+      // SA-03: Invitation requirement notice replaces public self-registration
+      expect(screen.getByText(/Invitation-Only Institutional Access/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/College placement accounts are registered by Platform Super Admin/i)
+      ).toBeInTheDocument();
 
       expect(screen.getByText("Placement")).toBeInTheDocument();
       expect(screen.getByText("Cell Portal")).toBeInTheDocument();
@@ -182,27 +185,15 @@ describe("UrPlaced Complete Authentication UI Redesign & Viewport Invariants", (
   // 4. College / Cell Sign Up Page Verification
   // ============================================================================
   describe("4. College / Cell Sign Up Route (/auth/college/signup)", () => {
-    it("renders college name, placement head, email, password fields and institutional CTA", () => {
+    it("renders invitation requirement gate when accessed without a valid token", () => {
       render(<CollegeSignUpPage />);
 
       expect(screen.getByRole("link", { name: /^Back to Home$/i })).toBeInTheDocument();
       expect(screen.getAllByText("UrPlaced").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByRole("heading", { name: "Register Placement Cell" })).toBeInTheDocument();
-      expect(
-        screen.getByText(/Provision an authorized institutional workspace for your college or university/i)
-      ).toBeInTheDocument();
-
-      expect(screen.getByLabelText(/College or University Name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Placement Officer Full Name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Institutional Email Address/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Create Login Password/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Retype Login Password/i)).toBeInTheDocument();
-
-      expect(
-        screen.getByRole("button", { name: /Register College Workspace \(Sign Up\)/i })
-      ).toBeInTheDocument();
-      expect(screen.getByText(/Already have a college account\?/i)).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /Sign In →/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Institutional Invitation Required" })).toBeInTheDocument();
+      expect(screen.getByText(/An authorized institutional invitation is required to access college account setup/i)).toBeInTheDocument();
+      expect(screen.getByText(/Only colleges registered by the Platform Super Admin can provision College Placement Cell accounts/i)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Return to College Sign In/i })).toBeInTheDocument();
 
       expect(screen.getByText("Partner With")).toBeInTheDocument();
       expect(screen.getAllByText("UrPlaced").length).toBeGreaterThanOrEqual(2);
@@ -277,10 +268,8 @@ describe("UrPlaced Complete Authentication UI Redesign & Viewport Invariants", (
         expect(main?.className).toContain("h-[100dvh]");
         expect(main?.className).toContain("overflow-hidden");
 
-        expect(screen.getByLabelText(/College or University Name/i)).toBeInTheDocument();
-        expect(
-          screen.getByRole("button", { name: /Register College Workspace \(Sign Up\)/i })
-        ).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Institutional Invitation Required" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: /Return to College Sign In/i })).toBeInTheDocument();
       });
     }
   });

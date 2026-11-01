@@ -131,37 +131,63 @@ export default function RegisterCollegePage() {
 
             <p className="text-xs text-emerald-800 leading-relaxed">
               The institutional account for{" "}
-              <span className="font-bold">{createdCollege.college.name}</span> has been provisioned on the SaaS control plane. An initial subscription on the{" "}
-              <span className="font-bold">{createdCollege.college.subscriptionPlan?.name}</span> plan and billing record have been generated.
+              <span className="font-bold">{createdCollege.college.name}</span> has been provisioned on the SaaS control plane. An initial subscription and billing record have been generated.
             </p>
 
+            {/* Email Delivery Outcome Banner */}
+            {createdCollege.emailDelivery?.success ? (
+              <div className="p-3.5 rounded-xl bg-white border border-emerald-300 text-xs text-emerald-900 flex items-center gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div>
+                  <span className="font-bold">Invitation Email Sent:</span> An automated account setup email was dispatched to{" "}
+                  <span className="font-mono font-bold text-emerald-950">{createdCollege.college.officialEmail}</span>.
+                </div>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-900 space-y-1">
+                <div className="flex items-center gap-2 font-bold text-amber-950">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Email Provider Status: Unconfigured or Delivery Notice</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  The college was provisioned, but automated email delivery was not completed ({createdCollege.emailDelivery?.error || "Credentials unconfigured"}). You may copy the secure invitation link below and share it directly with the Placement Head.
+                </p>
+              </div>
+            )}
+
+            {/* Secure Invitation Link Box */}
             <div className="p-3.5 rounded-xl bg-white border border-emerald-200 space-y-2">
               <div className="text-[11px] font-mono uppercase font-bold text-emerald-900">
-                Institutional Onboarding Token
+                Placement Head Activation Link (Single-Use &bull; 72-Hour Expiry)
               </div>
               <div className="flex items-center gap-2">
                 <code className="text-xs font-mono bg-emerald-50 text-emerald-950 p-2 rounded-lg flex-1 border border-emerald-200 break-all select-all">
-                  {createdCollege.onboardingToken}
+                  {createdCollege.invitationUrl || `${window.location.origin}/auth/college/signup?token=${createdCollege.onboardingToken}`}
                 </code>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleCopyToken}
+                  onClick={() => {
+                    const url = createdCollege.invitationUrl || `${window.location.origin}/auth/college/signup?token=${createdCollege.onboardingToken}`;
+                    navigator.clipboard.writeText(url);
+                    setCopiedToken(true);
+                    setTimeout(() => setCopiedToken(false), 2000);
+                  }}
                   className="border-emerald-300 text-emerald-800 hover:bg-emerald-100 h-9 gap-1 text-xs shrink-0"
                 >
                   {copiedToken ? (
                     <>
-                      <Check className="h-3.5 w-3.5 text-emerald-600" /> Copied
+                      <Check className="h-3.5 w-3.5 text-emerald-600" /> Copied Link
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3.5 w-3.5" /> Copy Token
+                      <Copy className="h-3.5 w-3.5" /> Copy Link
                     </>
                   )}
                 </Button>
               </div>
               <p className="text-[11px] text-emerald-700">
-                Provide this onboarding token to the College Placement Head to activate their institutional credentials.
+                When opened, the Placement Head will confirm their prefilled details and choose their login password.
               </p>
             </div>
 
@@ -248,19 +274,22 @@ export default function RegisterCollegePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-[#24283A] block">
-                    Official Institutional Email *
+                    Placement Head Institutional Email *
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-[#747683]" />
                     <Input
                       type="email"
                       required
-                      placeholder="placements@sapthagiri.edu.in"
+                      placeholder="placements.head@sapthagiri.edu.in"
                       value={officialEmail}
                       onChange={(e) => setOfficialEmail(e.target.value)}
                       className="pl-8 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
                     />
                   </div>
+                  <p className="text-[10px] text-[#747683]">
+                    The single-use account setup invitation is bound and dispatched to this address.
+                  </p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -296,7 +325,7 @@ export default function RegisterCollegePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-[#24283A] block">
-                    Contact Person Name *
+                    Placement Head Full Name *
                   </label>
                   <Input
                     required
@@ -305,6 +334,9 @@ export default function RegisterCollegePage() {
                     onChange={(e) => setContactName(e.target.value)}
                     className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
                   />
+                  <p className="text-[10px] text-[#747683]">
+                    Authorized administrator of institutional placement operations.
+                  </p>
                 </div>
 
                 <div className="space-y-1.5">

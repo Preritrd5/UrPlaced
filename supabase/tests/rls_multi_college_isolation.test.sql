@@ -16,7 +16,7 @@
 -- ==============================================================================
 
 BEGIN;
-SELECT plan(70);
+SELECT plan(92);
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
@@ -403,14 +403,21 @@ INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', fal
 SET LOCAL ROLE authenticated;
 SET LOCAL "request.jwt.claim.sub" = '11111111-1111-1111-1111-111111111111';
 
--- Sapthagiri Head inserts into their own folder: avatars/11111111-1111-1111-1111-111111111111/avatar.png
+-- 31. Sapthagiri Head inserts into their own folder: Format 1 (<userId>/avatar.png)
 SELECT lives_ok(
     $$ INSERT INTO storage.objects (bucket_id, name, owner) 
        VALUES ('avatars', '11111111-1111-1111-1111-111111111111/avatar.png', auth.uid()) $$,
-    'User CAN upload avatar into their own user ID folder'
+    'User CAN upload avatar into their own user ID folder (Format 1)'
 );
 
--- Sapthagiri Head attempts to insert into another user folder: avatars/22222222-2222-2222-2222-222222222221/avatar.png
+-- 32. Sapthagiri Head inserts into Format 2 (avatars/<userId>/avatar.png)
+SELECT lives_ok(
+    $$ INSERT INTO storage.objects (bucket_id, name, owner) 
+       VALUES ('avatars', 'avatars/11111111-1111-1111-1111-111111111111/avatar_f2.png', auth.uid()) $$,
+    'User CAN upload avatar into bucket-prefixed folder (Format 2 compatibility)'
+);
+
+-- 33. Sapthagiri Head attempts to insert into another user folder: 22222222-2222-2222-2222-222222222221/avatar.png
 SELECT throws_ok(
     $$ INSERT INTO storage.objects (bucket_id, name, owner) 
        VALUES ('avatars', '22222222-2222-2222-2222-222222222221/avatar.png', auth.uid()) $$,
@@ -418,21 +425,145 @@ SELECT throws_ok(
     'User CANNOT upload avatar into another user folder'
 );
 
--- Sapthagiri Head attempts to delete ABC Head avatar file
-SELECT throws_ok(
-    $$ DELETE FROM storage.objects 
-       WHERE bucket_id = 'avatars' AND name = '22222222-2222-2222-2222-222222222221/avatar.png' $$,
-    NULL,
-    'User CANNOT delete another user avatar file'
+-- 34. Sapthagiri Head updates / replaces their own avatar (Format 1)
+SELECT lives_ok(
+    $$ UPDATE storage.objects 
+       SET metadata = '{"replaced": true, "version": 2}' 
+       WHERE bucket_id = 'avatars' AND name = '11111111-1111-1111-1111-111111111111/avatar.png' $$,
+    'User CAN replace / update their own avatar file'
 );
 
--- Authenticate as ABC Head
+-- 35. Sapthagiri Head updates / replaces their Format 2 avatar
+SELECT lives_ok(
+    $$ UPDATE storage.objects 
+       SET metadata = '{"replaced": true, "version": 2}' 
+       WHERE bucket_id = 'avatars' AND name = 'avatars/11111111-1111-1111-1111-111111111111/avatar_f2.png' $$,
+    'User CAN replace / update their Format 2 avatar file'
+);
+
+-- 36. Sapthagiri Head attempts to update and reassign avatar to another user folder (WITH CHECK violation)
+SELECT throws_ok(
+    $$ UPDATE storage.objects 
+       SET name = '22222222-2222-2222-2222-222222222221/avatar.png' 
+       WHERE bucket_id = 'avatars' AND name = '11111111-1111-1111-1111-111111111111/avatar.png' $$,
+    NULL,
+    'User CANNOT reassign avatar file to another user folder (WITH CHECK violation)'
+);
+
+-- 37. Authenticate as ABC Head to upload ABC avatar
 SET LOCAL "request.jwt.claim.sub" = '22222222-2222-2222-2222-222222222221';
 
 SELECT lives_ok(
     $$ INSERT INTO storage.objects (bucket_id, name, owner) 
        VALUES ('avatars', '22222222-2222-2222-2222-222222222221/avatar.png', auth.uid()) $$,
     'ABC Head CAN upload to their own user ID folder'
+);
+
+-- 38. Switch back to Sapthagiri Head: attempts to delete ABC Head avatar file (Storage API context)
+SET LOCAL "request.jwt.claim.sub" = '11111111-1111-1111-1111-111111111111';
+SET LOCAL "storage.allow_delete_query" = 'true';
+
+WITH del_cross AS (
+    DELETE FROM storage.objects 
+    WHERE bucket_id = 'avatars' AND name = '22222222-2222-2222-2222-222222222221/avatar.png' 
+    RETURNING *
+)
+SELECT is(
+    (SELECT count(*)::int FROM del_cross),
+    0,
+    'User CANNOT delete another user avatar file (0 rows deleted)'
+);
+
+-- 39. Sapthagiri Head attempts to update ABC Head avatar file (0 rows updated)
+WITH upd AS (
+    UPDATE storage.objects 
+    SET metadata = '{"hacked": true}' 
+    WHERE bucket_id = 'avatars' AND name = '22222222-2222-2222-2222-222222222221/avatar.png' 
+    RETURNING *
+)
+SELECT is(
+    (SELECT count(*)::int FROM upd),
+    0,
+    'Sapthagiri Head CANNOT update ABC Head avatar file (0 rows updated)'
+);
+
+-- 40. Sapthagiri Head CANNOT view ABC Head avatar file (SELECT)
+SELECT ok(
+    NOT EXISTS (
+        SELECT 1 FROM storage.objects 
+        WHERE bucket_id = 'avatars' AND name = '22222222-2222-2222-2222-222222222221/avatar.png'
+    ),
+    'Sapthagiri Head CANNOT view ABC Head avatar file (SELECT)'
+);
+
+-- 41. Sapthagiri Head uploads a secondary avatar file to test deletion
+INSERT INTO storage.objects (bucket_id, name, owner) 
+VALUES ('avatars', '11111111-1111-1111-1111-111111111111/temp_delete.png', auth.uid());
+
+WITH del_own AS (
+    DELETE FROM storage.objects 
+    WHERE bucket_id = 'avatars' AND name = '11111111-1111-1111-1111-111111111111/temp_delete.png' 
+    RETURNING *
+)
+SELECT is(
+    (SELECT count(*)::int FROM del_own),
+    1,
+    'User CAN delete their own avatar file (1 row deleted)'
+);
+
+-- 42. Malicious second segment test:
+-- Reset role to insert an object belonging to Sapthagiri Head with a nested path: 1111.../2222.../nested.png
+RESET ROLE;
+DELETE FROM storage.objects WHERE bucket_id = 'avatars' AND name = '11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222221/nested.png';
+INSERT INTO storage.objects (bucket_id, name, owner)
+VALUES ('avatars', '11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222221/nested.png', '11111111-1111-1111-1111-111111111111');
+
+-- Authenticate as ABC Head (2222...)
+SET LOCAL ROLE authenticated;
+SET LOCAL "request.jwt.claim.sub" = '22222222-2222-2222-2222-222222222221';
+SET LOCAL "storage.allow_delete_query" = 'true';
+
+-- 42. ABC Head attempts to update Alice's nested file where segment 2 equals ABC Head's ID
+WITH upd_nested AS (
+    UPDATE storage.objects 
+    SET metadata = '{"hacked": true}' 
+    WHERE bucket_id = 'avatars' AND name = '11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222221/nested.png'
+    RETURNING *
+)
+SELECT is(
+    (SELECT count(*)::int FROM upd_nested),
+    0,
+    'Folder Spoofing Guard: User CANNOT update another user file even if caller ID is in segment 2'
+);
+
+-- 43. ABC Head attempts to delete Alice's nested file where segment 2 equals ABC Head's ID
+WITH del_nested AS (
+    DELETE FROM storage.objects 
+    WHERE bucket_id = 'avatars' AND name = '11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222221/nested.png'
+    RETURNING *
+)
+SELECT is(
+    (SELECT count(*)::int FROM del_nested),
+    0,
+    'Folder Spoofing Guard: User CANNOT delete another user file even if caller ID is in segment 2'
+);
+
+-- 44. ABC Head attempts to upload directly into another user's nested folder with caller ID in segment 2
+SELECT throws_ok(
+    $$ INSERT INTO storage.objects (bucket_id, name, owner) 
+       VALUES ('avatars', '11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222221/exploit.png', auth.uid()) $$,
+    NULL,
+    'Folder Spoofing Guard: User CANNOT upload into another user nested directory'
+);
+
+-- 45. Platform Super Admin CANNOT view institutional avatars under Strict Option A
+SET LOCAL "request.jwt.claim.sub" = '99999999-9999-9999-9999-999999999999';
+
+SELECT ok(
+    NOT EXISTS (
+        SELECT 1 FROM storage.objects WHERE bucket_id = 'avatars'
+    ),
+    'Strict Option A: Platform Super Admin CANNOT view institutional avatars'
 );
 
 --------------------------------------------------------------------------------
@@ -698,6 +829,99 @@ SELECT throws_ok(
        VALUES ('00000000-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111114', 'fake.action', 'test', '123') $$,
     NULL,
     'Audit Log Integrity: Ordinary user CANNOT forge audit log for another college'
+);
+
+-- 65. Authenticated user CANNOT directly insert privileged control-plane events
+SET LOCAL "request.jwt.claim.sub" = '11111111-1111-1111-1111-111111111111';
+
+SELECT throws_ok(
+    $$ INSERT INTO public.audit_logs (tenant_id, actor_id, action, resource_type, resource_id)
+       VALUES ('00000000-0000-0000-0000-000000000001', auth.uid(), 'SUBSCRIPTION_TEMPORARY_OVERRIDE_GRANTED', 'subscription', 'sub-fake-1') $$,
+    NULL,
+    'Audit Insert Integrity: Authenticated user CANNOT fabricate override audit events (permission denied)'
+);
+
+SELECT throws_ok(
+    $$ INSERT INTO public.audit_logs (tenant_id, actor_id, action, resource_type, resource_id)
+       VALUES (NULL, auth.uid(), 'PAYMENT_VERIFIED', 'billing', 'pay-fake-1') $$,
+    NULL,
+    'Audit Insert Integrity: Authenticated user CANNOT forge payment verification audit events'
+);
+
+-- 66. Anonymous (anon) user CANNOT insert audit events
+SET LOCAL ROLE anon;
+RESET "request.jwt.claim.sub";
+
+SELECT throws_ok(
+    $$ INSERT INTO public.audit_logs (action, resource_type, resource_id)
+       VALUES ('ANON_FORGED_EVENT', 'hack', '0') $$,
+    NULL,
+    'Audit Insert Integrity: Anonymous (anon) user CANNOT insert audit records (permission denied)'
+);
+
+-- 67. Authenticated college user CANNOT update audit records (permission denied)
+SET LOCAL ROLE authenticated;
+SET LOCAL "request.jwt.claim.sub" = '11111111-1111-1111-1111-111111111111';
+
+SELECT throws_ok(
+    $$ UPDATE public.audit_logs SET action = 'tampered' WHERE tenant_id = '00000000-0000-0000-0000-000000000001' $$,
+    NULL,
+    'Audit Immutability: Authenticated user CANNOT update audit logs (permission denied)'
+);
+
+-- 68. Authenticated college user CANNOT delete audit records (permission denied)
+SELECT throws_ok(
+    $$ DELETE FROM public.audit_logs WHERE tenant_id = '00000000-0000-0000-0000-000000000001' $$,
+    NULL,
+    'Audit Immutability: Authenticated user CANNOT delete audit logs (permission denied)'
+);
+
+-- 69. Platform Super Admin CANNOT update audit records through client API
+SET LOCAL "request.jwt.claim.sub" = '99999999-9999-9999-9999-999999999999';
+
+SELECT throws_ok(
+    $$ UPDATE public.audit_logs SET action = 'tampered' WHERE tenant_id IS NULL $$,
+    NULL,
+    'Audit Immutability: Platform Super Admin CANNOT update audit logs (permission denied)'
+);
+
+-- 70. Platform Super Admin CANNOT delete audit records through client API
+SELECT throws_ok(
+    $$ DELETE FROM public.audit_logs WHERE tenant_id IS NULL $$,
+    NULL,
+    'Audit Immutability: Platform Super Admin CANNOT delete audit logs (permission denied)'
+);
+
+-- 71-74. service_role privilege and immutability checks
+RESET ROLE;
+SET LOCAL ROLE service_role;
+
+-- 71. service_role CAN insert legitimate events
+SELECT lives_ok(
+    $$ INSERT INTO public.audit_logs (tenant_id, actor_id, action, resource_type, resource_id)
+       VALUES ('00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'placement.drive_created', 'recruitment_drive', 'drive-101') $$,
+    'Audit Append: service_role CAN insert legitimate audit records'
+);
+
+-- 72. service_role CANNOT update existing audit records
+SELECT throws_ok(
+    $$ UPDATE public.audit_logs SET action = 'tampered' WHERE tenant_id = '00000000-0000-0000-0000-000000000001' $$,
+    NULL,
+    'Audit Immutability: service_role CANNOT update audit records (permission denied)'
+);
+
+-- 73. service_role CANNOT delete existing audit records
+SELECT throws_ok(
+    $$ DELETE FROM public.audit_logs WHERE tenant_id = '00000000-0000-0000-0000-000000000001' $$,
+    NULL,
+    'Audit Immutability: service_role CANNOT delete audit records (permission denied)'
+);
+
+-- 74. service_role CANNOT truncate audit records
+SELECT throws_ok(
+    $$ TRUNCATE public.audit_logs $$,
+    NULL,
+    'Audit Immutability: service_role CANNOT truncate audit records (permission denied)'
 );
 
 --------------------------------------------------------------------------------

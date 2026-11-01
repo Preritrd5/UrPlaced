@@ -11,6 +11,8 @@ import {
   Building,
   User,
   GraduationCap,
+  Lock,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -37,14 +39,17 @@ export function AppShell({ children }: AppShellProps) {
   const auth = useAuthContext();
 
   const role = auth.role || "STUDENT";
+  const subStatus = (auth.tenant as any)?.subscriptionStatus;
+  const isGracePeriod = (auth.tenant as any)?.isGracePeriod || false;
+  const gracePeriodEndsAt = (auth.tenant as any)?.gracePeriodEndsAt;
 
-  // Resolve authorized navigation sections based on verified session context
+  // Resolve authorized navigation sections based on verified session context & subscription entitlement
   const navigationSections: NavigationSection[] = React.useMemo(() => {
     if (!auth.isAuthenticated && !auth.isLoading) {
       return [];
     }
-    return getAuthorizedNavigation(role, false, auth.permissions);
-  }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading]);
+    return getAuthorizedNavigation(role, false, auth.permissions, subStatus, isGracePeriod);
+  }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading, subStatus, isGracePeriod]);
 
   // Only render Student/College Application Shell on /dashboard routes.
   // The public landing page (/), student/college auth routes (/auth/*),
@@ -53,6 +58,26 @@ export function AppShell({ children }: AppShellProps) {
   if (!pathname || !pathname.startsWith("/dashboard")) {
     return <>{children}</>;
   }
+
+  // SA-03 / SA-06: Strict Subscription Entitlement Enforcement:
+  // If subscription is not ACTIVE (e.g. PENDING_PAYMENT, EXPIRED, CANCELED),
+  // operational features are locked unless protected by 7-day grace period (Q1).
+  const isCollege =
+    auth.accountCategory === "COLLEGE" ||
+    ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role);
+  const isStudent = role === "STUDENT";
+
+  const isProtectedByGrace = Boolean(isGracePeriod);
+  const isLockedSubscription = Boolean(
+    subStatus &&
+    subStatus !== "ACTIVE" &&
+    subStatus !== "TRIALING" &&
+    !isProtectedByGrace
+  );
+
+  const isPermittedRouteUnderLock = isCollege
+    ? pathname?.startsWith("/dashboard/billing") || pathname?.startsWith("/dashboard/profile")
+    : pathname?.startsWith("/dashboard/profile");
 
   const defaultDashboard = getRoleDefaultDashboard(role);
 
@@ -272,7 +297,129 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         <main className="flex-1 py-4 sm:py-8 px-3.5 sm:px-6 lg:px-10 max-w-7xl w-full mx-auto">
-          {children}
+          {/* Q1: 7-Day Renewal Grace Period Warning Banner */}
+          {isProtectedByGrace && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-semibold text-sm">
+                    Subscription Renewal Notice — 7-Day Grace Period Active
+                  </div>
+                  <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-0.5">
+                    Your subscription renewal is past due. All subscribed placement and preparation features remain fully active during your 7-day grace period
+                    {gracePeriodEndsAt ? ` (active through ${new Date(gracePeriodEndsAt).toLocaleDateString()})` : ""}.
+                    {isCollege ? " Please settle the outstanding renewal invoice to maintain uninterrupted operational access." : ""}
+                  </p>
+                </div>
+              </div>
+              {isCollege && (
+                <Button asChild size="sm" className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs shrink-0 h-9">
+                  <Link href="/dashboard/billing">
+                    <CreditCard className="w-3.5 h-3.5 mr-1.5" /> Settle Invoice
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
+
+          {isLockedSubscription && !isPermittedRouteUnderLock ? (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
+              <div className="max-w-lg w-full bg-card border border-border p-6 sm:p-8 rounded-2xl shadow-xs space-y-5">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-300 flex items-center justify-center mx-auto shadow-xs">
+                  <Lock className="w-7 h-7" />
+                </div>
+
+                {isCollege ? (
+                  // College / Placement Cell Lock Screen
+                  <>
+                    <div className="space-y-1.5">
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 font-mono text-[11px]">
+                        {subStatus || "PENDING_PAYMENT"}
+                      </Badge>
+                      <h2 className="text-xl sm:text-2xl font-bold font-heading text-text-primary">
+                        {subStatus === "PENDING_PAYMENT"
+                          ? "College Subscription Payment Required"
+                          : "Operational Placement Access Suspended"}
+                      </h2>
+                      <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                        The placement operations workspace for{" "}
+                        <span className="font-semibold text-text-primary">{auth.tenant?.name || "your college"}</span>{" "}
+                        {subStatus === "PENDING_PAYMENT"
+                          ? "is locked pending initial subscription payment. Operational modules (student roster, recruitment drives, company directory, assessments, and analytics) become available immediately upon payment verification."
+                          : "is currently restricted due to an expired or suspended subscription. Settle your outstanding invoice to restore full operational access."}
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-background border border-border text-left text-xs space-y-2">
+                      <div className="font-bold text-text-primary text-xs uppercase tracking-wider font-mono">
+                        Permitted Administrative Access:
+                      </div>
+                      <ul className="text-xs text-text-secondary space-y-1.5 list-disc list-inside">
+                        <li>Subscription &amp; Invoicing Portal</li>
+                        <li>Placement Head Profile Management</li>
+                        <li>Account &amp; Security Settings</li>
+                        <li>Sign Out</li>
+                      </ul>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                      <Button asChild className="flex-1 bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-10">
+                        <Link href="/dashboard/billing">
+                          <CreditCard className="w-4 h-4 mr-1.5" /> View Subscription &amp; Invoices
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" className="flex-1 text-xs h-10 border-border">
+                        <Link href="/dashboard/profile">
+                          <User className="w-4 h-4 mr-1.5" /> My Profile
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  // Student Lock Screen (Clean, non-leaking, supportive)
+                  <>
+                    <div className="space-y-1.5">
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 font-mono text-[11px]">
+                        INSTITUTIONAL SERVICE NOTICE
+                      </Badge>
+                      <h2 className="text-xl sm:text-2xl font-bold font-heading text-text-primary">
+                        Placement Preparation Services Pending
+                      </h2>
+                      <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+                        Placement preparation and drive services for students of{" "}
+                        <span className="font-semibold text-text-primary">{auth.tenant?.name || "your institution"}</span>{" "}
+                        are currently awaiting institutional subscription activation or renewal. Please contact your college Placement Cell for status updates.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-background border border-border text-left text-xs space-y-2">
+                      <div className="font-bold text-text-primary text-xs uppercase tracking-wider font-mono">
+                        Available Student Services:
+                      </div>
+                      <ul className="text-xs text-text-secondary space-y-1.5 list-disc list-inside">
+                        <li>Student Profile &amp; Resume Details</li>
+                        <li>Account &amp; Password Settings</li>
+                        <li>Session Management &amp; Sign Out</li>
+                      </ul>
+                    </div>
+
+                    <div className="pt-2">
+                      <Button asChild className="w-full bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-10">
+                        <Link href="/dashboard/profile">
+                          <User className="w-4 h-4 mr-1.5" /> My Student Profile
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            children
+          )}
         </main>
 
       </div>

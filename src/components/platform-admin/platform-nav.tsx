@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { PlatformNotificationBell } from "./platform-notification-bell";
+import { PlatformUserAccountMenu } from "./platform-user-account-menu";
 import { createClient } from "@/lib/supabase/client";
 
 export interface PlatformNavItem {
@@ -229,6 +231,30 @@ export function PlatformSidebar({
         ))}
       </div>
 
+      {/* Administrator Account & Sign Out in Sidebar */}
+      <div className="p-4 border-t border-[#B8B6AC]/40 bg-[#FBFAF7]/60 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-[#5052C9]/15 text-[#5052C9] flex items-center justify-center font-bold font-mono text-xs border border-[#5052C9]/30">
+            {adminEmail ? adminEmail.slice(0, 2).toUpperCase() : "SA"}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-bold text-[#24283A] truncate font-heading">
+              {adminName || "Super Admin"}
+            </div>
+            <div className="text-[10px] text-[#747683] truncate font-mono">{adminEmail}</div>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleLogout}
+          className="w-full text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8 justify-start gap-2"
+        >
+          <LogOut className="h-3.5 w-3.5" /> Sign Out
+        </Button>
+      </div>
+
     </div>
   );
 
@@ -237,24 +263,26 @@ export function PlatformSidebar({
       {/* Mobile Top Toggle Bar */}
       <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#F8F7F3] border-b border-[#B8B6AC] sticky top-0 z-30">
         <div className="flex items-center gap-2">
-
           <div className="h-7 w-7 rounded-lg bg-[#5052C9] text-white flex items-center justify-center font-heading font-extrabold text-xs">
             UP
           </div>
-
           <span className="font-heading font-extrabold text-sm text-[#24283A]">
             UrPlaced Super Admin
           </span>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setMobileOpen(true)}
-          className="h-8 px-2 border-[#B8B6AC]"
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <PlatformNotificationBell size="sm" />
+          <PlatformUserAccountMenu size="sm" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMobileOpen(true)}
+            className="h-8 px-2 border-[#B8B6AC]"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Desktop Sidebar */}
@@ -285,8 +313,8 @@ export function PlatformTopNavbar({
   adminName,
   adminEmail,
 }: {
-  adminName: string;
-  adminEmail: string;
+  adminName?: string;
+  adminEmail?: string;
 }) {
   const pathname = usePathname();
 
@@ -302,23 +330,6 @@ export function PlatformTopNavbar({
   React.useEffect(() => {
     setThemeToggleMounted(true);
   }, []);
-
-  async function handleLogout() {
-    try {
-      const supabase = createClient();
-      await supabase.auth.signOut();
-    } catch {
-      // non-fatal
-    }
-
-    try {
-      await fetch("/api/preritrd/auth/logout", { method: "POST" });
-    } catch {
-      // non-fatal
-    }
-
-    window.location.replace("/preritrd/login");
-  }
 
   // Derive current page title from pathname
   const currentTitle = React.useMemo(() => {
@@ -338,11 +349,15 @@ export function PlatformTopNavbar({
       return "College Details";
     }
 
+    if (pathname.includes("/profile")) {
+      return "Administrator Profile";
+    }
+
     return "Platform Administration";
   }, [pathname]);
 
   return (
-    <header className="bg-[#F8F7F3] border-b border-[#B8B6AC]/40 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-10">
+    <header className="bg-[#F8F7F3] border-b border-[#B8B6AC]/40 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-10">
 
       <div className="flex items-center gap-2 text-xs text-[#747683]">
         <span className="font-bold text-[#24283A] font-heading text-sm">
@@ -351,6 +366,14 @@ export function PlatformTopNavbar({
       </div>
 
       <div className="flex items-center gap-2.5 sm:gap-3">
+
+        <Badge
+          variant="outline"
+          className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+          Strict Option A Enforced
+        </Badge>
 
         {/* Theme Control — Hydration Safe */}
         {themeToggleMounted ? (
@@ -362,29 +385,11 @@ export function PlatformTopNavbar({
           />
         )}
 
-        {/* Administrator Account Context */}
-        <div className="hidden sm:block text-right">
-          <div className="text-xs font-bold text-[#24283A] font-heading">
-            {adminName}
-          </div>
+        {/* Platform Control-Plane Notification Bell */}
+        <PlatformNotificationBell size="default" />
 
-          <div className="text-[10px] text-[#747683] font-mono">
-            Super Admin
-          </div>
-        </div>
-
-        {/* Secure Logout Action */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLogout}
-          aria-label="Sign out"
-          title="Sign out of Platform Control Plane"
-          className="h-8 px-2 sm:px-2.5 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 gap-1.5"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Sign Out</span>
-        </Button>
+        {/* Super Admin Profile Avatar & Rich Account Dropdown */}
+        <PlatformUserAccountMenu size="default" />
 
       </div>
     </header>

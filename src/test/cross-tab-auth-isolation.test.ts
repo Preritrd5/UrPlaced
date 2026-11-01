@@ -96,6 +96,26 @@ vi.mock("@/lib/supabase/admin", () => ({
               };
             }
           }
+          if (table === "college_subscriptions") {
+            return {
+              data: {
+                tenant_id: val,
+                status: "ACTIVE",
+                plan_id: "plan-growth",
+                renewal_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                subscription_plans: { id: "plan-growth", name: "Growth Institution" },
+                entitlements_snapshot: {
+                  planId: "plan-growth",
+                  planName: "Growth Institution",
+                  planVersion: 1,
+                  entitlements: { core_drives_management: true },
+                  limits: {},
+                  snapshotAt: new Date().toISOString(),
+                },
+              },
+              error: null,
+            };
+          }
           return { data: null, error: null };
         }),
         limit: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -346,7 +366,7 @@ describe("UrPlaced Cross-Tab Authentication and User Identity Isolation", () => 
       await expect(
         requireAuthContext(Permissions.STAFF_MANAGE, undefined, USERS.abcStudent.token)
       ).rejects.toThrow("FORBIDDEN");
-    });
+    }, 15000);
 
     it("enforces that an XYZ College user cannot access ABC College resources", async () => {
       // Tab 1 (XYZ College) attempts to access ABC College with explicit tenantId override

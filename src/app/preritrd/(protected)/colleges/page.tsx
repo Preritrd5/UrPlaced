@@ -16,12 +16,22 @@ import {
   Users,
   ExternalLink,
   ShieldAlert,
+  Mail,
+  RotateCcw,
+  XCircle,
+  Eye,
+  Info,
+  Copy,
+  Check,
+  User,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/dialog-system";
 import type { CollegeListItem } from "@/modules/platform-admin/services/platform-college-service";
 
 export default function PlatformCollegesPage() {
@@ -39,6 +49,12 @@ export default function PlatformCollegesPage() {
   const [actionTarget, setActionTarget] = React.useState<{ college: CollegeListItem; newStatus: "ACTIVE" | "SUSPENDED" } | null>(null);
   const [actionReason, setActionReason] = React.useState("");
   const [actionLoading, setActionLoading] = React.useState(false);
+
+  // Onboarding Details Modal State
+  const [detailsTarget, setDetailsTarget] = React.useState<CollegeListItem | null>(null);
+  const [resendingId, setResendingId] = React.useState<string | null>(null);
+  const [revokingId, setRevokingId] = React.useState<string | null>(null);
+  const [copiedInvite, setCopiedInvite] = React.useState(false);
 
   const fetchColleges = React.useCallback(async () => {
     setLoading(true);
@@ -84,19 +100,62 @@ export default function PlatformCollegesPage() {
       const data = await res.json();
       if (!res.ok) {
         setFeedback({ type: "error", text: data.error || "Failed to update status." });
+        toast.error(data.error || "Failed to update status.");
       } else {
         setFeedback({
           type: "success",
           text: `College '${actionTarget.college.name}' status updated to ${actionTarget.newStatus}.`,
         });
+        toast.success(`College '${actionTarget.college.name}' status updated to ${actionTarget.newStatus}.`);
         setActionTarget(null);
         setActionReason("");
         await fetchColleges();
       }
     } catch {
       setFeedback({ type: "error", text: "Network error updating college status." });
+      toast.error("Network error updating college status.");
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  async function handleResendInvite(college: CollegeListItem) {
+    setResendingId(college.id);
+    try {
+      const res = await fetch(`/api/preritrd/colleges/${college.id}/invitation/resend`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || "Failed to resend onboarding invitation.");
+      } else {
+        toast.success(data.message || `Replacement invitation sent to ${college.officialEmail}.`);
+        await fetchColleges();
+      }
+    } catch {
+      toast.error("Network error resending onboarding invitation.");
+    } finally {
+      setResendingId(null);
+    }
+  }
+
+  async function handleRevokeInvite(college: CollegeListItem) {
+    setRevokingId(college.id);
+    try {
+      const res = await fetch(`/api/preritrd/colleges/${college.id}/invitation/revoke`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || "Failed to revoke onboarding invitation.");
+      } else {
+        toast.success(data.message || `Invitation for '${college.name}' has been revoked.`);
+        await fetchColleges();
+      }
+    } catch {
+      toast.error("Network error revoking onboarding invitation.");
+    } finally {
+      setRevokingId(null);
     }
   }
 
@@ -205,10 +264,10 @@ export default function PlatformCollegesPage() {
               <thead className="bg-[#FBFAF7] text-[#747683] font-mono text-[10px] uppercase border-b border-[#B8B6AC]/30">
                 <tr>
                   <th className="px-5 py-3 font-semibold">College / Tenant</th>
+                  <th className="px-5 py-3 font-semibold">Placement Head</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 font-semibold">Plan &amp; Limits</th>
                   <th className="px-5 py-3 font-semibold">Onboarding</th>
-                  <th className="px-5 py-3 font-semibold">Renewal Date</th>
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
@@ -224,13 +283,26 @@ export default function PlatformCollegesPage() {
                 ) : colleges.length > 0 ? (
                   colleges.map((col) => (
                     <tr key={col.id} className="hover:bg-[#FBFAF7] transition-colors">
-                      {/* Name & Contact */}
+                      {/* Name & Slug */}
                       <td className="px-5 py-3.5">
                         <div className="font-bold font-heading text-[#24283A] text-sm">
                           {col.name}
                         </div>
                         <div className="text-[11px] text-[#747683] font-mono">
-                          slug: {col.slug} &bull; {col.officialEmail || "no email"}
+                          slug: {col.slug}
+                        </div>
+                        <div className="text-[10px] text-[#747683] font-mono mt-0.5">
+                          Registered: {new Date(col.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+
+                      {/* Placement Head Identity */}
+                      <td className="px-5 py-3.5">
+                        <div className="font-semibold text-[#24283A] text-xs">
+                          {col.contactName || "—"}
+                        </div>
+                        <div className="text-[11px] text-[#5052C9] font-mono truncate max-w-[200px]">
+                          {col.officialEmail || "No institutional email"}
                         </div>
                       </td>
 
@@ -274,6 +346,8 @@ export default function PlatformCollegesPage() {
                           className={
                             col.onboardingStatus === "COMPLETED"
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-mono"
+                              : col.onboardingStatus === "INVITED"
+                              ? "bg-blue-50 text-blue-800 border-blue-300 text-[10px] font-mono"
                               : "bg-amber-50 text-amber-800 border-amber-300 text-[10px] font-mono"
                           }
                         >
@@ -281,15 +355,50 @@ export default function PlatformCollegesPage() {
                         </Badge>
                       </td>
 
-                      {/* Renewal Date */}
-                      <td className="px-5 py-3.5 font-mono text-[#747683]">
-                        {col.subscriptionPlan?.renewalDate
-                          ? new Date(col.subscriptionPlan.renewalDate).toLocaleDateString()
-                          : "—"}
-                      </td>
-
                       {/* Actions */}
                       <td className="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+                        {/* Details Action */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setDetailsTarget(col)}
+                          className="h-7 text-xs text-[#5052C9] hover:bg-[#5052C9]/10"
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" /> Details
+                        </Button>
+
+                        {/* Onboarding Invitation Actions */}
+                        {col.onboardingStatus !== "COMPLETED" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleResendInvite(col)}
+                              disabled={resendingId === col.id}
+                              className="h-7 text-xs border-[#5052C9]/30 text-[#5052C9] hover:bg-[#5052C9]/5"
+                              title="Generate replacement invitation and email Placement Head"
+                            >
+                              <RotateCcw className={`h-3 w-3 mr-1 ${resendingId === col.id ? "animate-spin" : ""}`} />
+                              Resend
+                            </Button>
+
+                            {col.onboardingStatus !== "ACTION_REQUIRED" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRevokeInvite(col)}
+                                disabled={revokingId === col.id}
+                                className="h-7 text-xs border-amber-300 text-amber-800 hover:bg-amber-50"
+                                title="Revoke pending invitation link"
+                              >
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Revoke
+                              </Button>
+                            )}
+                          </>
+                        )}
+
+                        {/* Suspend / Activate Action */}
                         {col.status === "ACTIVE" ? (
                           <Button
                             size="sm"
@@ -334,6 +443,164 @@ export default function PlatformCollegesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Onboarding Details Modal */}
+      {detailsTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <Card className="w-full max-w-lg bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-[#5052C9]" />
+                  <span>College Onboarding &amp; Identity Profile</span>
+                </CardTitle>
+                <button
+                  onClick={() => setDetailsTarget(null)}
+                  className="text-xs text-[#747683] hover:text-[#24283A] font-bold p-1"
+                >
+                  &times;
+                </button>
+              </div>
+              <CardDescription className="text-xs text-[#292D40]/70">
+                Institutional metadata and administrative onboarding tracking
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4 text-xs">
+              {/* Institution Identity */}
+              <div className="p-3 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
+                  Institution Information
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[#747683]">Name:</span>{" "}
+                    <span className="font-semibold text-[#24283A]">{detailsTarget.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#747683]">Slug:</span>{" "}
+                    <span className="font-mono text-[#5052C9]">{detailsTarget.slug}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#747683]">Status:</span>{" "}
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {detailsTarget.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-[#747683]">Registered:</span>{" "}
+                    <span className="text-[#24283A]">
+                      {new Date(detailsTarget.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Placement Head Identity */}
+              <div className="p-3 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
+                  Placement Head &amp; Bound Contact
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-[#2E8F86]" />
+                    <span className="font-semibold text-[#24283A]">{detailsTarget.contactName || "—"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5 text-[#5052C9]" />
+                    <span className="font-mono text-[#24283A]">{detailsTarget.officialEmail || "—"}</span>
+                  </div>
+                  {detailsTarget.contactPhone && (
+                    <div className="flex items-center gap-2 text-[#747683]">
+                      <span>Phone: {detailsTarget.contactPhone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Onboarding Lifecycle */}
+              <div className="p-3 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
+                  Onboarding Lifecycle State
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[#747683]">Status:</span>{" "}
+                    <Badge
+                      variant="outline"
+                      className={
+                        detailsTarget.onboardingStatus === "COMPLETED"
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[10px]"
+                          : "bg-blue-50 text-blue-800 border-blue-300 font-mono text-[10px]"
+                      }
+                    >
+                      {detailsTarget.onboardingStatus}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-[#747683]">Completed:</span>{" "}
+                    <span className="text-[#24283A]">
+                      {detailsTarget.onboardingCompletedAt
+                        ? new Date(detailsTarget.onboardingCompletedAt).toLocaleString()
+                        : "Pending Setup"}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-[#747683]">Subscription Plan:</span>{" "}
+                    <span className="font-semibold text-[#24283A]">
+                      {detailsTarget.subscriptionPlan?.name || "Standard Plan"} ({detailsTarget.subscriptionPlan?.status || "PENDING_PAYMENT"})
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-between pt-2 border-t border-[#B8B6AC]/30">
+                <div className="flex gap-2">
+                  {detailsTarget.onboardingStatus !== "COMPLETED" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          const col = detailsTarget;
+                          setDetailsTarget(null);
+                          await handleResendInvite(col);
+                        }}
+                        className="text-xs h-8 gap-1 border-[#5052C9]/30 text-[#5052C9]"
+                      >
+                        <RotateCcw className="h-3 w-3" /> Resend Invite
+                      </Button>
+                      {detailsTarget.onboardingStatus !== "ACTION_REQUIRED" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const col = detailsTarget;
+                            setDetailsTarget(null);
+                            await handleRevokeInvite(col);
+                          }}
+                          className="text-xs h-8 gap-1 border-amber-300 text-amber-800"
+                        >
+                          <XCircle className="h-3 w-3" /> Revoke Invite
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setDetailsTarget(null)}
+                  className="text-xs h-8"
+                >
+                  Close
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Confirmation Modal for Suspend/Activate */}
       {actionTarget && (

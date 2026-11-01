@@ -155,7 +155,7 @@ describe("Super Admin Portal Layout Isolation & Navigation Invariants", () => {
       expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
     });
 
-    it("renders PlatformTopNavbar with current title, ThemeToggle, and Sign Out button", () => {
+    it("renders PlatformTopNavbar with current title, ThemeToggle, and account menu", () => {
       mockPathname.mockReturnValue("/preritrd/billing");
 
       render(
@@ -165,7 +165,7 @@ describe("Super Admin Portal Layout Isolation & Navigation Invariants", () => {
       expect(screen.getByText("Billing & Invoices")).toBeInTheDocument();
       expect(screen.getByText("Strict Option A Enforced")).toBeInTheDocument();
       expect(screen.getByTestId("theme-toggle-btn")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /super admin account menu/i })).toBeInTheDocument();
     });
   });
 });

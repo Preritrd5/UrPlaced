@@ -556,20 +556,20 @@ export function FloatingAIChatbot() {
                 </button>
 
                 {showMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-[#222636] border border-[#DDDCD5] rounded-xl shadow-lg p-1 z-10 text-xs text-[#24283A] space-y-0.5">
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-[#222636] border border-[#DDDCD5] rounded-xl shadow-lg p-1 z-10 text-xs text-[#24283A] space-y-0.5">
+                    <button
+                      onClick={resetPosition}
+                      className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-[#F8F7F3] flex items-center gap-2"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-[#5052C9]" />
+                      Reset Launcher Position
+                    </button>
                     <button
                       onClick={resetConversation}
                       className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-[#F8F7F3] flex items-center gap-2"
                     >
                       <RotateCcw className="w-3.5 h-3.5 text-[#5052C9]" />
                       New Conversation
-                    </button>
-                    <button
-                      onClick={resetPosition}
-                      className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-[#F8F7F3] flex items-center gap-2"
-                    >
-                      <Move className="w-3.5 h-3.5 text-[#2E8F86]" />
-                      Reset Launcher Position
                     </button>
                   </div>
                 )}
