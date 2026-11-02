@@ -244,14 +244,13 @@ export default function SuperAdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#e6c20c] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-[#5052C9] selection:text-white">
+    <div className="min-h-screen bg-[#EDECE7] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-[#5052C9] selection:text-white">
       {/* Platform Branding Header */}
       <div className="w-full max-w-md text-center mb-6 space-y-2">
-        <img
-          src="/assets/logo.png"
-          alt="UrPlaced Logo"
-          className="h-9 w-9 rounded-xl object-contain shadow-sm"
-        />
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#5052C9]/10 border border-[#5052C9]/25 text-[#5052C9] text-xs font-semibold font-mono uppercase tracking-wider">
+          <ShieldCheck className="h-4 w-4" />
+          <span>Platform Control Plane</span>
+        </div>
         <h1 className="text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
           UrPlaced
         </h1>
