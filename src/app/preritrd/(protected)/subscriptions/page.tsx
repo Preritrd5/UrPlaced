@@ -714,11 +714,12 @@ export default function PlatformSubscriptionsPage() {
               />
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto" suppressHydrationWarning>
               <select
                 value={planStatusFilter}
                 onChange={(e) => setPlanStatusFilter(e.target.value)}
                 className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-2.5 py-1.5 text-[#24283A] outline-none"
+                suppressHydrationWarning
               >
                 <option value="ALL">All Statuses</option>
                 <option value="PUBLISHED">Published Only</option>
@@ -730,6 +731,7 @@ export default function PlatformSubscriptionsPage() {
                 value={planIntervalFilter}
                 onChange={(e) => setPlanIntervalFilter(e.target.value)}
                 className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-2.5 py-1.5 text-[#24283A] outline-none"
+                suppressHydrationWarning
               >
                 <option value="ALL">All Intervals</option>
                 <option value="ANNUAL">Annual</option>

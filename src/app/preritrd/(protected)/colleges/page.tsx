@@ -268,7 +268,7 @@ export default function PlatformCollegesPage() {
 
       {/* Filter and Search Bar */}
       <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl">
-        <CardContent className="p-4 flex flex-col sm:flex-row gap-3">
+        <CardContent className="p-4 flex flex-col sm:flex-row gap-3" suppressHydrationWarning>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#747683]" />
             <Input
@@ -277,14 +277,16 @@ export default function PlatformCollegesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 focus:ring-2 focus:ring-[#5052C9]/30"
+              suppressHydrationWarning
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2" suppressHydrationWarning>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-3 py-1.5 text-[#24283A] outline-none focus:ring-2 focus:ring-[#5052C9]/30"
+              suppressHydrationWarning
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active</option>
@@ -296,6 +298,7 @@ export default function PlatformCollegesPage() {
               value={planFilter}
               onChange={(e) => setPlanFilter(e.target.value)}
               className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-3 py-1.5 text-[#24283A] outline-none focus:ring-2 focus:ring-[#5052C9]/30"
+              suppressHydrationWarning
             >
               <option value="ALL">All Plans</option>
               <option value="starter">Institutional Starter</option>

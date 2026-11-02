@@ -98,12 +98,13 @@ export default function PlatformAuditLogsPage() {
             <span className="font-bold text-[#24283A]">{total}</span> recorded events
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" suppressHydrationWarning>
             <Filter className="h-3.5 w-3.5 text-[#747683]" />
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
               className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-3 py-1.5 text-[#24283A] outline-none"
+              suppressHydrationWarning
             >
               <option value="ALL">All Event Actions</option>
               <option value="PLATFORM_ADMIN_LOGIN_SUCCESS">Admin Login</option>
