@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, FolderPlus, Loader2, AlertCircle, BookOpen } from "lucide-react";
+import { X, FolderPlus, AlertCircle, BookOpen } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { BankCategory, BankSharingPolicy } from "@/types/database";
 import {
   STANDARD_SUBJECTS,
@@ -347,7 +348,7 @@ export function CreateQuestionBankModal({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <BrandLoader size="button" className="mr-1.5" />
                 <span>Creating Bank...</span>
               </>
             ) : (

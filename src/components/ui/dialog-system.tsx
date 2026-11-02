@@ -8,11 +8,11 @@ import {
   AlertTriangle,
   Info,
   X,
-  Loader2,
   HelpCircle,
   Trash2,
   ArrowRight,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -604,7 +604,7 @@ export function DialogSystemHost() {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <BrandLoader size="button" className="mr-1.5" />
                     Processing...
                   </>
                 ) : (

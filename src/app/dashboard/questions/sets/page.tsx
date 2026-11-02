@@ -21,10 +21,10 @@ import {
   Calendar,
   X,
   Send,
-  Loader2,
   Trash2,
   Wand2,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
@@ -621,7 +621,7 @@ export default function QuestionSetsPage() {
                                 aria-label={`Remove question #${item.sequence_order || idx + 1} from set`}
                               >
                                 {removingItemId === item.id ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <BrandLoader size="button" />
                                 ) : (
                                   <Trash2 className="w-3.5 h-3.5" />
                                 )}

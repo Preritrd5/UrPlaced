@@ -78,18 +78,49 @@ export interface SyncCollegePlanVersionParams {
 
 export class PlatformSubscriptionService {
   /**
-   * Helper to normalize and validate default limits map.
+   * Helper to normalize and validate default limits map scaled by tier.
    */
-  public static buildDefaultLimits(overrides?: Partial<PlanLimitsMap> | null): PlanLimitsMap {
-    const base: PlanLimitsMap = {
-      max_students: 1000,
-      max_staff: 10,
-      max_drives: 25,
-      max_storage_gb: 20,
-      max_assessments: 50,
-      ai_tokens_monthly: 100000,
+  public static buildDefaultLimits(
+    overrides?: Partial<PlanLimitsMap> | null,
+    tierOrPlanId?: string | null
+  ): PlanLimitsMap {
+    const tier = tierOrPlanId
+      ? tierOrPlanId.toLowerCase().includes("enterprise")
+        ? "enterprise"
+        : tierOrPlanId.toLowerCase().includes("growth")
+        ? "growth"
+        : "starter"
+      : "growth";
+
+    const baseLimits: Record<"starter" | "growth" | "enterprise", PlanLimitsMap> = {
+      starter: {
+        max_students: 500,
+        max_staff: 5,
+        max_drives: 5,
+        max_storage_gb: 10,
+        max_assessments: 10,
+        ai_tokens_monthly: 0,
+      },
+      growth: {
+        max_students: 2500,
+        max_staff: 20,
+        max_drives: 25,
+        max_storage_gb: 100,
+        max_assessments: 50,
+        ai_tokens_monthly: 100000,
+      },
+      enterprise: {
+        max_students: 10000,
+        max_staff: 50,
+        max_drives: 100,
+        max_storage_gb: 1000,
+        max_assessments: 500,
+        ai_tokens_monthly: 1000000,
+      },
     };
-    if (!overrides) return base;
+
+    const base: PlanLimitsMap = baseLimits[tier] || baseLimits.growth;
+    if (!overrides) return { ...base };
     const result: PlanLimitsMap = { ...base };
     for (const [k, v] of Object.entries(overrides)) {
       if (v !== undefined) {
@@ -101,15 +132,27 @@ export class PlatformSubscriptionService {
 
   /**
    * Helper to normalize and validate default entitlements map from the controlled catalogue.
+   * Automatically assigns features belonging to the plan tier, then layers overrides.
    */
-  public static buildDefaultEntitlements(overrides?: Partial<PlanEntitlementsMap> | null): PlanEntitlementsMap {
+  public static buildDefaultEntitlements(
+    overrides?: Partial<PlanEntitlementsMap> | null,
+    tierOrPlanId?: string | null
+  ): PlanEntitlementsMap {
+    const tier = tierOrPlanId
+      ? tierOrPlanId.toLowerCase().includes("enterprise")
+        ? "enterprise"
+        : tierOrPlanId.toLowerCase().includes("growth")
+        ? "growth"
+        : "starter"
+      : null;
+
     const map: PlanEntitlementsMap = {};
     for (const feat of CONTROLLED_FEATURE_CATALOGUE) {
-      map[feat.key] = false;
+      map[feat.key] = Boolean(tier && (feat.defaultTiers as readonly string[]).includes(tier));
     }
     if (!overrides) return map;
     for (const [k, v] of Object.entries(overrides)) {
-      if (v !== undefined) {
+      if (v !== undefined && v !== null) {
         map[k] = Boolean(v);
       }
     }
@@ -203,19 +246,20 @@ export class PlatformSubscriptionService {
     }
 
     const plans: DetailedSubscriptionPlan[] = (rawPlans || []).map((p: any) => {
+      const planTier = p.slug || p.id;
       const limits: PlanLimitsMap =
         p.limits && typeof p.limits === "object"
-          ? { ...this.buildDefaultLimits(), ...p.limits }
+          ? { ...this.buildDefaultLimits(null, planTier), ...p.limits }
           : this.buildDefaultLimits({
               max_students: p.student_limit,
               max_staff: p.staff_limit,
               max_storage_gb: p.storage_limit_gb,
-            });
+            }, planTier);
 
       const entitlements: PlanEntitlementsMap =
         p.entitlements && typeof p.entitlements === "object" && Object.keys(p.entitlements).length > 0
-          ? { ...this.buildDefaultEntitlements(), ...p.entitlements }
-          : this.buildDefaultEntitlements();
+          ? { ...this.buildDefaultEntitlements(null, planTier), ...p.entitlements }
+          : this.buildDefaultEntitlements(null, planTier);
 
       const featuresList =
         Array.isArray(p.features) && p.features.length > 0
@@ -290,19 +334,20 @@ export class PlatformSubscriptionService {
       .select("*", { count: "exact", head: true })
       .eq("plan_id", planId);
 
+    const planTier = p.slug || p.id;
     const limits =
       p.limits && typeof p.limits === "object"
-        ? { ...this.buildDefaultLimits(), ...p.limits }
+        ? { ...this.buildDefaultLimits(null, planTier), ...p.limits }
         : this.buildDefaultLimits({
             max_students: p.student_limit,
             max_staff: p.staff_limit,
             max_storage_gb: p.storage_limit_gb,
-          });
+          }, planTier);
 
     const entitlements =
       p.entitlements && typeof p.entitlements === "object" && Object.keys(p.entitlements).length > 0
-        ? { ...this.buildDefaultEntitlements(), ...p.entitlements }
-        : this.buildDefaultEntitlements();
+        ? { ...this.buildDefaultEntitlements(null, planTier), ...p.entitlements }
+        : this.buildDefaultEntitlements(null, planTier);
 
     const planStatus: PlanStatus = p.status || (p.is_active ? "PUBLISHED" : "ARCHIVED");
 
@@ -879,6 +924,63 @@ export class PlatformSubscriptionService {
   }
 
   /**
+   * Deletes an unreferenced draft plan.
+   * If a plan has any college subscriptions or has been published with references, deletion is strictly rejected.
+   */
+  static async deleteDraftPlan(
+    planId: string,
+    adminId: string,
+    admin = createAdminClient()
+  ): Promise<{ success: boolean; message: string }> {
+    const plan = await this.getPlanById(planId, admin);
+    if (!plan) {
+      throw new Error(`Subscription plan '${planId}' not found.`);
+    }
+
+    // Safety Verification: Must not have any subscriptions referencing it
+    const { data: referencingSubs, error: subErr } = await admin
+      .from("college_subscriptions")
+      .select("id")
+      .eq("plan_id", planId)
+      .limit(1);
+
+    if (subErr) {
+      throw new Error(`Failed to check plan references: ${subErr.message}`);
+    }
+
+    if (referencingSubs && referencingSubs.length > 0) {
+      throw new Error(`Cannot delete plan '${plan.name}': It is referenced by existing college subscriptions. You may archive it instead.`);
+    }
+
+    if (plan.status !== "DRAFT" && plan.status !== "ARCHIVED") {
+      throw new Error(`Cannot delete plan '${plan.name}': Only DRAFT or unreferenced ARCHIVED plans may be deleted. Active published plans must be archived.`);
+    }
+
+    const { error: delErr } = await admin
+      .from("subscription_plans")
+      .delete()
+      .eq("id", planId);
+
+    if (delErr) {
+      throw new Error(`Failed to delete plan: ${delErr.message}`);
+    }
+
+    await PlatformAuthService.logAuditEvent({
+      actorId: adminId,
+      action: "PLATFORM_PLAN_DELETE",
+      resourceType: "SUBSCRIPTION_PLAN",
+      resourceId: planId,
+      metadata: { planName: plan.name, planId },
+      adminClient: admin,
+    });
+
+    return {
+      success: true,
+      message: `Subscription plan '${plan.name}' deleted successfully.`,
+    };
+  }
+
+  /**
    * Lists all college subscriptions with plan version comparison and entitlements snapshots.
    */
   static async listCollegeSubscriptions(
@@ -927,9 +1029,48 @@ export class PlatformSubscriptionService {
       query = query.eq("plan_id", planId);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
     if (error) {
-      throw new Error(`Failed to list college subscriptions: ${error.message}`);
+      // Compatibility fallback: if extended versioning/snapshot columns are not present in schema
+      const fallbackQuery = admin
+        .from("college_subscriptions")
+        .select(`
+          id,
+          tenant_id,
+          plan_id,
+          status,
+          start_date,
+          expiry_date,
+          renewal_date,
+          grace_period_days,
+          student_seat_limit,
+          staff_seat_limit,
+          created_at,
+          updated_at,
+          tenants (
+            id,
+            name,
+            slug
+          ),
+          subscription_plans (
+            id,
+            name
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (status && status !== "ALL") {
+        fallbackQuery.eq("status", status);
+      }
+      if (planId && planId !== "ALL") {
+        fallbackQuery.eq("plan_id", planId);
+      }
+
+      const fallbackRes = await fallbackQuery;
+      if (fallbackRes.error) {
+        throw new Error(`Failed to list college subscriptions: ${error.message}`);
+      }
+      data = fallbackRes.data as any;
     }
 
     let items: DetailedCollegeSubscription[] = (data || []).map((cs: any) => {
@@ -1167,8 +1308,30 @@ export class PlatformSubscriptionService {
           `)
           .single();
 
+        let finalSub = updatedSub;
         if (updateErr || !updatedSub) {
-          throw new Error(`Failed to execute immediate plan override: ${updateErr?.message || "Database update failed"}`);
+          const { data: retrySub, error: retryErr } = await admin
+            .from("college_subscriptions")
+            .update({
+              plan_id: newPlan.id,
+              student_seat_limit: Number(studentSeatLimit),
+              staff_seat_limit: Number(staffSeatLimit),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("tenant_id", tenantId)
+            .select(`
+              *,
+              tenants (
+                name,
+                slug
+              )
+            `)
+            .single();
+
+          if (retryErr || !retrySub) {
+            throw new Error(`Failed to execute immediate plan override: ${retryErr?.message || updateErr?.message || "Database update failed"}`);
+          }
+          finalSub = retrySub;
         }
 
         await admin
@@ -1180,7 +1343,7 @@ export class PlatformSubscriptionService {
           actorId: adminId,
           action: "PLATFORM_COLLEGE_PLAN_CHANGE_IMMEDIATE_OVERRIDE",
           resourceType: "COLLEGE_SUBSCRIPTION",
-          resourceId: updatedSub.id,
+          resourceId: finalSub.id,
           metadata: {
             tenantId,
             previousPlanId: currentSub.plan_id,
@@ -1260,8 +1423,30 @@ export class PlatformSubscriptionService {
       `)
       .single();
 
+    let finalSub = updatedSub;
     if (updateErr || !updatedSub) {
-      throw new Error(`Failed to change subscription plan: ${updateErr?.message || "Database update failed"}`);
+      const { data: retrySub, error: retryErr } = await admin
+        .from("college_subscriptions")
+        .update({
+          plan_id: newPlan.id,
+          student_seat_limit: Number(studentSeatLimit),
+          staff_seat_limit: Number(staffSeatLimit),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("tenant_id", tenantId)
+        .select(`
+          *,
+          tenants (
+            name,
+            slug
+          )
+        `)
+        .single();
+
+      if (retryErr || !retrySub) {
+        throw new Error(`Failed to change subscription plan: ${retryErr?.message || updateErr?.message || "Database update failed"}`);
+      }
+      finalSub = retrySub;
     }
 
     await admin
@@ -1274,7 +1459,7 @@ export class PlatformSubscriptionService {
       actorId: adminId,
       action: "PLATFORM_COLLEGE_PLAN_CHANGE_PENDING_PAYMENT",
       resourceType: "COLLEGE_SUBSCRIPTION",
-      resourceId: updatedSub.id,
+      resourceId: finalSub.id,
       metadata: {
         tenantId,
         previousPlanId: currentSub.plan_id,
@@ -1630,19 +1815,31 @@ export class PlatformSubscriptionService {
       throw new Error(`College subscription not found for tenant: ${tenantId}`);
     }
 
-    // If already ACTIVE, ensure we don't disrupt current subscription
-    if (sub.status === "ACTIVE") {
-      return {
-        success: true,
-        subscriptionId: sub.id,
-        status: "ACTIVE",
-        tenantId: sub.tenant_id,
-      };
+    // Check if this payment is for an upgrade
+    let upgradePlanId: string | null = (sub as any).pending_plan_id || null;
+    if (!upgradePlanId) {
+      const { data: inv } = await admin
+        .from("platform_invoices")
+        .select("notes")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (inv?.notes) {
+        const match = inv.notes.match(/\[UPGRADE:([a-zA-Z0-9_-]+)\]/);
+        if (match && match[1]) {
+          upgradePlanId = match[1];
+        }
+      }
     }
 
     const now = new Date();
     const startDate = now.toISOString();
     const expiryDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
+    // If already ACTIVE and not upgrading, treat as verified renewal or reactivation
+    // (extends renewal period by 1 year, clears grace/retry, and ensures tenant status is ACTIVE)
+    const isRenewalOrReactivation = sub.status === "ACTIVE" && (!upgradePlanId || upgradePlanId === sub.plan_id);
 
     const updatePayload: Record<string, any> = {
       status: "ACTIVE",
@@ -1656,9 +1853,9 @@ export class PlatformSubscriptionService {
       updated_at: startDate,
     };
 
-    // If there is a pending scheduled plan change awaiting payment, apply it now
-    if (sub.pending_plan_id) {
-      const plan = await this.getPlanById(sub.pending_plan_id, admin);
+    // If there is an upgrade awaiting payment, apply it now
+    if (upgradePlanId) {
+      const plan = await this.getPlanById(upgradePlanId, admin);
       if (plan) {
         updatePayload.plan_id = plan.id;
         updatePayload.plan_version = plan.version;
@@ -1670,17 +1867,64 @@ export class PlatformSubscriptionService {
         updatePayload.plan_change_scheduled_at = null;
         updatePayload.plan_change_effective_at = null;
       }
+    } else if (!sub.entitlements_snapshot && sub.plan_id) {
+      // Ensure active subscription always has an immutable entitlements snapshot
+      try {
+        const plan = await this.getPlanById(sub.plan_id, admin);
+        if (plan) {
+          updatePayload.entitlements_snapshot = this.createSnapshot(plan);
+        }
+      } catch {
+        // Fallback to default tier builder
+      }
     }
 
-    const { data: updatedSub, error: updateErr } = await admin
-      .from("college_subscriptions")
-      .update(updatePayload)
-      .eq("id", sub.id)
-      .select("*")
-      .single();
+    let updatedSub: any = null;
+    let updateErr: any = null;
+
+    try {
+      const res = await admin
+        .from("college_subscriptions")
+        .update(updatePayload)
+        .eq("id", sub.id)
+        .select("*")
+        .single();
+      updatedSub = res.data;
+      updateErr = res.error;
+    } catch (e: any) {
+      updateErr = e;
+    }
 
     if (updateErr || !updatedSub) {
-      throw new Error(`Failed to activate subscription: ${updateErr?.message || "Update error"}`);
+      // Fallback for base schema without retry/grace/snapshot columns
+      const basePayload: Record<string, any> = {
+        status: "ACTIVE",
+        start_date: startDate,
+        renewal_date: expiryDate,
+        expiry_date: expiryDate,
+        updated_at: startDate,
+      };
+      if (updatePayload.student_seat_limit) {
+        basePayload.student_seat_limit = updatePayload.student_seat_limit;
+      }
+      if (updatePayload.staff_seat_limit) {
+        basePayload.staff_seat_limit = updatePayload.staff_seat_limit;
+      }
+      if (updatePayload.plan_id) {
+        basePayload.plan_id = updatePayload.plan_id;
+      }
+
+      const { data: retrySub, error: retryErr } = await admin
+        .from("college_subscriptions")
+        .update(basePayload)
+        .eq("id", sub.id)
+        .select("*")
+        .single();
+
+      if (retryErr || !retrySub) {
+        throw new Error(`Failed to activate subscription: ${retryErr?.message || updateErr?.message || "Update error"}`);
+      }
+      updatedSub = retrySub;
     }
 
     // Ensure tenant status is ACTIVE

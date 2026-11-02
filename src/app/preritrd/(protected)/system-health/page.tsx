@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoader } from "@/components/common/brand-loader";
 import type { SystemHealthReport } from "@/modules/platform-admin/services/platform-health-service";
 
 export default function PlatformSystemHealthPage() {
@@ -122,7 +123,7 @@ export default function PlatformSystemHealthPage() {
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-white/80 shadow-xs flex items-center justify-center shrink-0">
               {loading ? (
-                <RefreshCw className="h-6 w-6 text-[#5052C9] animate-spin" />
+                <BrandLoader size="inline" />
               ) : (
                 getStatusIcon(report?.overallStatus || "HEALTHY")
               )}

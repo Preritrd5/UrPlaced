@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Loader2 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -66,7 +66,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         suppressHydrationWarning
         {...props}
       >
-        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin text-current" aria-hidden="true" />}
+        {isLoading && <BrandLoader size="button" className="mr-2" aria-hidden="true" />}
         {children}
       </button>
     );

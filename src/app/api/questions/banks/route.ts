@@ -38,7 +38,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(banks || []);
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+    if (err.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err.message === "FORBIDDEN" || err.message?.startsWith?.("FORBIDDEN")) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -110,7 +113,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(bank, { status: 201 });
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+    if (err.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err.message === "FORBIDDEN" || err.message?.startsWith?.("FORBIDDEN")) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
     return NextResponse.json({ error: err.message }, { status: 500 });

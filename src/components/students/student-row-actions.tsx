@@ -11,9 +11,9 @@ import {
   Trash2,
   AlertTriangle,
   ShieldAlert,
-  Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -365,7 +365,7 @@ export function StudentRowActions({
 
           {checkingEligibility ? (
             <div className="py-8 text-center space-y-3">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <BrandLoader size="card" className="mx-auto" />
               <p className="text-xs text-text-secondary">
                 Verifying institutional dependencies, authentication accounts, and placement records...
               </p>

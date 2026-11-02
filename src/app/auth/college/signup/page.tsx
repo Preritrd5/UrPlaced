@@ -11,10 +11,10 @@ import {
   CheckCircle2,
   Lock,
   ArrowLeft,
-  Loader2,
   Check,
   AlertCircle,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { createClient } from "@/lib/supabase/client";
 import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { AuthPasswordInput } from "@/components/auth/auth-input";
@@ -176,7 +176,7 @@ function CollegeSignUpContent() {
         {/* Loading Verification State */}
         {verifying && (
           <div className="py-12 flex flex-col items-center justify-center space-y-3 text-center">
-            <Loader2 className="h-8 w-8 text-[#5052C9] animate-spin" />
+            <BrandLoader size="card" className="mx-auto" />
             <h2 className="text-base font-bold font-heading text-[#24283A]">
               Verifying Institutional Invitation...
             </h2>
@@ -343,7 +343,7 @@ function CollegeSignUpContent() {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <BrandLoader size="button" className="mr-2" />
                     <span>Activating Institutional Account...</span>
                   </>
                 ) : (

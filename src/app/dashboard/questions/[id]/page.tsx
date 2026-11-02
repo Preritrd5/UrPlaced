@@ -24,7 +24,6 @@ import {
   Send,
   Code2,
   FileText,
-  Loader2,
   Trash2,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";

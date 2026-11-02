@@ -10,13 +10,13 @@ import {
   AlertTriangle,
   XCircle,
   X,
-  Loader2,
   BookOpen,
   Filter,
   FileCheck,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 
 export interface BulkReviewFilters {
   bankId?: string;
@@ -330,7 +330,7 @@ export function BulkReviewModal({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <BrandLoader size="button" className="mr-1.5" />
                     Accepting Questions...
                   </>
                 ) : (

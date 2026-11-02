@@ -15,10 +15,10 @@ import {
   ArrowRight,
   Briefcase,
   DollarSign,
-  Loader2,
   Check,
   X,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -298,7 +298,7 @@ export default function StudentOffersPage() {
                         >
                           {respondingId === offer.id ? (
                             <>
-                              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Processing...
+                              <BrandLoader size="button" className="mr-1" /> Processing...
                             </>
                           ) : (
                             <>

@@ -12,12 +12,12 @@ export async function PATCH(
     const admin = await PlatformAuthService.requireSuperAdmin(request);
     const { id } = await params;
 
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { status, reason } = body;
 
-    if (!["ACTIVE", "SUSPENDED", "ARCHIVED"].includes(status)) {
+    if (!status || (status !== "ACTIVE" && status !== "SUSPENDED")) {
       return NextResponse.json(
-        { error: "Invalid status value. Must be ACTIVE, SUSPENDED, or ARCHIVED." },
+        { error: "Invalid status. Must be 'ACTIVE' or 'SUSPENDED'." },
         { status: 400 }
       );
     }
@@ -32,10 +32,11 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       status: result.status,
-      message: `College account status successfully updated to ${status}.`,
+      tenantId: id,
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to update college status";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const httpStatus = msg.includes("UNAUTHORIZED") ? 401 : msg.includes("FORBIDDEN") ? 403 : 500;
+    return NextResponse.json({ error: msg }, { status: httpStatus });
   }
 }

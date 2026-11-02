@@ -7,11 +7,11 @@ import {
   AlertTriangle,
   ShieldCheck,
   CheckCircle2,
-  Loader2,
   Users,
   ShieldAlert,
   Info,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import {
   Dialog,
   DialogContent,
@@ -137,7 +137,7 @@ export function BulkDeleteModal({ collegeName = "your college" }: BulkDeleteModa
 
         {loadingPreview ? (
           <div className="py-12 text-center space-y-3">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-status-danger" />
+            <BrandLoader size="card" className="mx-auto" />
             <p className="text-xs text-text-secondary">
               Calculating impact preview and auditing student dependencies for {collegeName}...
             </p>

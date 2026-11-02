@@ -24,8 +24,12 @@ export async function GET(
       return NextResponse.json({ error: "Credit note not found" }, { status: 404 });
     }
 
-    if (!ctx.isPlatformAdmin && note.tenant_id !== ctx.tenantId) {
-      return NextResponse.json({ error: "Forbidden: Cannot view credit note of another institution" }, { status: 403 });
+    // Reconciled Billing RBAC: Only PLACEMENT_HEAD or platform super admin may download credit notes
+    if (!ctx.isPlatformAdmin && (note.tenant_id !== ctx.tenantId || ctx.tenantRole !== "PLACEMENT_HEAD")) {
+      return NextResponse.json(
+        { error: "Forbidden: Only authorized institutional billing administrators may download credit notes." },
+        { status: 403 }
+      );
     }
 
     const format = request.nextUrl.searchParams.get("format") || "pdf";

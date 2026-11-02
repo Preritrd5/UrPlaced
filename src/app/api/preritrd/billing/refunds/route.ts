@@ -58,7 +58,15 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("[Super Admin Refund API Error]:", error);
     const msg = error.message || "Failed to process refund";
-    const status = msg.includes("Super Admin") ? 403 : msg.includes("exceeds") || msg.includes("already been fully refunded") ? 400 : 500;
+    const status = msg.includes("Super Admin")
+      ? 403
+      : msg.includes("exceeds") ||
+        msg.includes("already been fully refunded") ||
+        msg.includes("Razorpay refund failed") ||
+        msg.includes("Only PAID invoices") ||
+        msg.includes("not found")
+      ? 400
+      : 500;
     return NextResponse.json({ error: msg }, { status });
   }
 }

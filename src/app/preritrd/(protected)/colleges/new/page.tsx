@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowLeft,
-  Loader2,
   Copy,
   Check,
   ShieldCheck,
@@ -19,6 +18,7 @@ import {
   Globe,
   Hash,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -154,42 +154,6 @@ export default function RegisterCollegePage() {
                 </p>
               </div>
             )}
-
-            {/* Secure Invitation Link Box */}
-            <div className="p-3.5 rounded-xl bg-white border border-emerald-200 space-y-2">
-              <div className="text-[11px] font-mono uppercase font-bold text-emerald-900">
-                Placement Head Activation Link (Single-Use &bull; 72-Hour Expiry)
-              </div>
-              <div className="flex items-center gap-2">
-                <code className="text-xs font-mono bg-emerald-50 text-emerald-950 p-2 rounded-lg flex-1 border border-emerald-200 break-all select-all">
-                  {createdCollege.invitationUrl || `${window.location.origin}/auth/college/signup?token=${createdCollege.onboardingToken}`}
-                </code>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const url = createdCollege.invitationUrl || `${window.location.origin}/auth/college/signup?token=${createdCollege.onboardingToken}`;
-                    navigator.clipboard.writeText(url);
-                    setCopiedToken(true);
-                    setTimeout(() => setCopiedToken(false), 2000);
-                  }}
-                  className="border-emerald-300 text-emerald-800 hover:bg-emerald-100 h-9 gap-1 text-xs shrink-0"
-                >
-                  {copiedToken ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-emerald-600" /> Copied Link
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" /> Copy Link
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-[11px] text-emerald-700">
-                When opened, the Placement Head will confirm their prefilled details and choose their login password.
-              </p>
-            </div>
 
             <div className="flex gap-2.5 pt-2">
               <Button asChild className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9">
@@ -369,7 +333,7 @@ export default function RegisterCollegePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 sm:p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Plan 1 */}
                 <label
                   className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
@@ -438,6 +402,29 @@ export default function RegisterCollegePage() {
                     Up to 10,000 students &bull; Dedicated SLA &amp; Support
                   </div>
                 </label>
+
+                {/* Option C: Unassigned Post-Registration Plan Selection */}
+                <label
+                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
+                    initialPlanId === "unassigned"
+                      ? "bg-[#2E8F86]/10 border-[#2E8F86] ring-2 ring-[#2E8F86]/30"
+                      : "bg-[#FBFAF7] border-[#B8B6AC]/50 hover:border-[#2E8F86]/40"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="plan"
+                    value="unassigned"
+                    checked={initialPlanId === "unassigned"}
+                    onChange={(e) => setInitialPlanId(e.target.value)}
+                    className="sr-only"
+                  />
+                  <div className="font-bold text-xs text-[#24283A]">Leave Unassigned</div>
+                  <div className="text-base font-extrabold font-heading text-[#2E8F86] mt-1">Option C</div>
+                  <div className="text-[11px] text-[#747683] mt-2 leading-relaxed">
+                    Placement Head selects approved plan post-registration
+                  </div>
+                </label>
               </div>
 
               <div className="space-y-1.5 pt-2">
@@ -471,7 +458,7 @@ export default function RegisterCollegePage() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" /> Provisioning Institution...
+                  <BrandLoader size="button" className="mr-2" /> Provisioning Institution...
                 </>
               ) : (
                 "Provision College Account"

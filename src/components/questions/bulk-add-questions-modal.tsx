@@ -12,11 +12,11 @@ import {
   Filter,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Check,
   Plus,
   BookOpen,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { QuestionType, QuestionDifficulty } from "@/types/database";
 import { STANDARD_SUBJECTS, normalizeSubjectName } from "@/modules/question-bank/services/subject-constants";
 
@@ -417,7 +417,7 @@ export function BulkAddQuestionsModal({
           <div className="border border-[#DDDCD5] rounded-lg divide-y divide-[#DDDCD5] max-h-72 overflow-y-auto bg-white">
             {loading ? (
               <div className="p-8 text-center text-xs text-[#292D40]/60">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary mb-1.5" />
+                <BrandLoader size="inline" className="mx-auto mb-1.5" />
                 Loading eligible questions...
               </div>
             ) : questions.length === 0 ? (
@@ -535,7 +535,7 @@ export function BulkAddQuestionsModal({
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <BrandLoader size="button" className="mr-1.5" />
                   Adding Questions...
                 </>
               ) : (

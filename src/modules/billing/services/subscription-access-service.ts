@@ -66,20 +66,38 @@ export class SubscriptionAccessService {
   private static denialLogThrottle = new Map<string, number>();
 
   /**
+   * Identifies whether the active user role is authorized for institutional billing administration.
+   * Only PLACEMENT_HEAD and SUPER_ADMIN have authoritative billing rights.
+   * Ordinary PLACEMENT_STAFF, TRAINER, and STUDENT have no automatic billing access.
+   */
+  static isBillingAuthorized(userRole?: string): boolean {
+    return userRole === "PLACEMENT_HEAD" || userRole === "SUPER_ADMIN";
+  }
+
+  /**
    * Identifies whether a requested permission or route is an administrative self-service
    * exemption (such as profile, billing, account security, or authentication) which remains
    * accessible even under subscription payment restrictions (Q2).
+   *
+   * Reconciled RBAC Invariant:
+   * - Personal profile, auth, and signout are exempt for all accounts.
+   * - Billing and subscription recovery are ONLY exempt for authorized billing roles (PLACEMENT_HEAD, SUPER_ADMIN).
    */
-  static isExemptSelfServicePermission(permission?: PermissionIdentifier | string): boolean {
+  static isExemptSelfServicePermission(permission?: PermissionIdentifier | string, userRole?: string): boolean {
     if (!permission) return false;
     const perm = String(permission).toLowerCase();
-    return (
-      perm.includes("profile") ||
-      perm.includes("billing") ||
-      perm.includes("subscription") ||
-      perm.includes("auth") ||
-      perm.includes("signout")
-    );
+    
+    // Personal account settings are accessible to all institutional roles under lock
+    if (perm.includes("profile") || perm.includes("auth") || perm.includes("signout")) {
+      return true;
+    }
+
+    // Billing/subscription management is ONLY exempt for authorized billing administration
+    if (perm.includes("billing") || perm.includes("subscription")) {
+      return this.isBillingAuthorized(userRole);
+    }
+
+    return false;
   }
 
   /**
@@ -97,7 +115,9 @@ export class SubscriptionAccessService {
     } = params;
 
     const isStudent = userRole === "STUDENT";
-    const isExempt = this.isExemptSelfServicePermission(permission);
+    const isBillingAuthorized = this.isBillingAuthorized(userRole);
+    const isExempt = this.isExemptSelfServicePermission(permission, userRole);
+    const effectiveFeatureKey = featureKey || this.resolveFeatureKeyFromPermission(permission);
 
     // Default deny response structure
     const makeDenial = (
@@ -113,14 +133,14 @@ export class SubscriptionAccessService {
         reasonCode,
         message,
         isGracePeriod: false,
-        canAccessBilling: !isStudent && (decision === "DENY_PENDING_PAYMENT" || decision === "DENY_EXPIRED" || decision === "DENY_CANCELLED" || decision === "DENY_SUSPENDED"),
+        canAccessBilling: isBillingAuthorized && (decision === "DENY_PENDING_PAYMENT" || decision === "DENY_EXPIRED" || decision === "DENY_CANCELLED" || decision === "DENY_SUSPENDED" || decision === "DENY_INVALID_SUBSCRIPTION"),
         canAccessOperational: false,
         ...extra,
       };
 
       // Record diagnostic denial log if not throttled
       if (!skipDenialLogging) {
-        this.recordAccessDenial(res, userRole, userId, featureKey, admin).catch(() => {});
+        this.recordAccessDenial(res, userRole, userId, effectiveFeatureKey, admin).catch(() => {});
       }
 
       return res;
@@ -134,8 +154,9 @@ export class SubscriptionAccessService {
       );
     }
 
-    // 1. Fetch authoritative subscription record directly from database
-    const { data: sub, error } = await admin
+    // 1. Fetch authoritative subscription record directly from database with schema fallback
+    let sub: any = null;
+    const { data: extendedSub, error: extErr } = await admin
       .from("college_subscriptions")
       .select(`
         id,
@@ -166,7 +187,47 @@ export class SubscriptionAccessService {
       .eq("tenant_id", tenantId)
       .maybeSingle();
 
-    if (error || !sub) {
+    if (!extErr && extendedSub) {
+      sub = extendedSub;
+    } else {
+      // Graceful fallback to schema-valid columns
+      const { data: baseSub, error: baseErr } = await admin
+        .from("college_subscriptions")
+        .select(`
+          id,
+          tenant_id,
+          status,
+          plan_id,
+          start_date,
+          expiry_date,
+          renewal_date,
+          student_seat_limit,
+          staff_seat_limit,
+          subscription_plans (
+            id,
+            name
+          )
+        `)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      if (!baseErr && baseSub) {
+        sub = baseSub;
+      } else {
+        // Essential columns fallback if relation fails
+        const { data: simpleSub } = await admin
+          .from("college_subscriptions")
+          .select("id, tenant_id, status, plan_id, start_date, expiry_date, renewal_date, student_seat_limit, staff_seat_limit")
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        if (simpleSub) {
+          sub = simpleSub;
+        }
+      }
+    }
+
+    if (!sub) {
       // If exempt route, permit access even without subscription record
       if (isExempt) {
         return {
@@ -176,7 +237,7 @@ export class SubscriptionAccessService {
           reasonCode: "EXEMPT_SELF_SERVICE",
           message: "Exempt account or billing self-service action permitted.",
           isGracePeriod: false,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
           canAccessOperational: false,
         };
       }
@@ -185,7 +246,10 @@ export class SubscriptionAccessService {
         "NO_SUBSCRIPTION_RECORD",
         isStudent
           ? "Institutional placement services for your college are not currently activated."
-          : "No subscription record found for this college tenant."
+          : "No subscription record found for this college tenant. Please select an approved subscription plan in the Billing portal (Option C).",
+        {
+          canAccessBilling: isBillingAuthorized,
+        }
       );
     }
 
@@ -214,7 +278,7 @@ export class SubscriptionAccessService {
           isOverridden: true,
           overrideUntil: sub.temporary_override_until,
           overrideReason: sub.override_reason,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
           canAccessOperational: true,
           effectiveExpiryDate: sub.temporary_override_until,
           entitlements: resolvedEntitlements.features,
@@ -240,7 +304,7 @@ export class SubscriptionAccessService {
           reasonCode: "EXEMPT_PENDING_PAYMENT",
           message: "Permitted billing or account self-service under initial pending payment.",
           isGracePeriod: false,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
           canAccessOperational: false,
         };
       }
@@ -256,7 +320,7 @@ export class SubscriptionAccessService {
           subscriptionStatus: rawStatus,
           planId: sub.plan_id,
           planName,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
         }
       );
     }
@@ -307,7 +371,7 @@ export class SubscriptionAccessService {
           message: `Subscription renewal is past due. Full operational access is protected under 7-day grace period until ${gracePeriodEnds.toISOString()}.`,
           isGracePeriod: true,
           gracePeriodEndsAt: gracePeriodEnds.toISOString(),
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
           canAccessOperational: true,
           effectiveExpiryDate: gracePeriodEnds.toISOString(),
           entitlements: resolvedEntitlements.features,
@@ -326,7 +390,7 @@ export class SubscriptionAccessService {
           reasonCode: "EXEMPT_EXPIRED_GRACE",
           message: "Billing and account recovery permitted after grace period expiration.",
           isGracePeriod: false,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
           canAccessOperational: false,
         };
       }
@@ -344,7 +408,7 @@ export class SubscriptionAccessService {
           planName,
           isGracePeriod: false,
           gracePeriodEndsAt: gracePeriodEnds.toISOString(),
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
         }
       );
     }
@@ -361,7 +425,7 @@ export class SubscriptionAccessService {
           reasonCode: `EXEMPT_${rawStatus}`,
           message: `Billing and account recovery permitted for ${rawStatus} subscription.`,
           isGracePeriod: false,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
           canAccessOperational: false,
         };
       }
@@ -377,7 +441,7 @@ export class SubscriptionAccessService {
           subscriptionStatus: rawStatus,
           planId: sub.plan_id,
           planName,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
         }
       );
     }
@@ -412,7 +476,7 @@ export class SubscriptionAccessService {
             reasonCode: "CANCEL_AT_PERIOD_END_ACTIVE",
             message: `Subscription scheduled for cancellation at period end (${periodEndDate.toISOString()}). Full operational access active until end date.`,
             isGracePeriod: false,
-            canAccessBilling: !isStudent,
+            canAccessBilling: isBillingAuthorized,
             canAccessOperational: true,
             effectiveExpiryDate: sub.expiry_date,
             entitlements: resolvedEntitlements.features,
@@ -432,7 +496,7 @@ export class SubscriptionAccessService {
           reasonCode: "EXEMPT_CANCELED",
           message: "Billing and account history accessible for canceled subscription.",
           isGracePeriod: false,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
           canAccessOperational: false,
         };
       }
@@ -448,7 +512,7 @@ export class SubscriptionAccessService {
           subscriptionStatus: rawStatus,
           planId: sub.plan_id,
           planName,
-          canAccessBilling: !isStudent,
+          canAccessBilling: isBillingAuthorized,
         }
       );
     }
@@ -468,26 +532,27 @@ export class SubscriptionAccessService {
             subscriptionStatus: rawStatus,
             planId: sub.plan_id,
             planName,
-            canAccessBilling: !isStudent,
+            canAccessBilling: isBillingAuthorized,
           }
         );
       }
 
       // 2. Feature Key Entitlement Check
-      if (featureKey) {
-        const isEntitled = Boolean(features[featureKey]);
+      const targetFeature = featureKey || effectiveFeatureKey;
+      if (targetFeature) {
+        const isEntitled = Boolean(features[targetFeature]);
         if (!isEntitled) {
           return makeDenial(
             "DENY_ENTITLEMENT",
             "FEATURE_NOT_IN_PLAN",
-            `Feature '${featureKey}' is not included in the college's assigned subscription plan (${planName}).`,
+            `Feature '${targetFeature}' is not included in the college's assigned subscription plan (${planName}).`,
             {
               subscriptionId: sub.id,
               subscriptionStatus: rawStatus,
               planId: sub.plan_id,
               planName,
-              featureKey,
-              canAccessBilling: !isStudent,
+              featureKey: targetFeature,
+              canAccessBilling: isBillingAuthorized,
               entitlements: features,
               limits,
             }
@@ -508,7 +573,7 @@ export class SubscriptionAccessService {
         reasonCode: "SUBSCRIPTION_ACTIVE",
         message: "Subscription is active and authorized for operational features.",
         isGracePeriod: false,
-        canAccessBilling: !isStudent,
+        canAccessBilling: isBillingAuthorized,
         canAccessOperational: true,
         effectiveExpiryDate: sub.expiry_date,
         entitlements: features,
@@ -524,13 +589,16 @@ export class SubscriptionAccessService {
       {
         subscriptionId: sub.id,
         subscriptionStatus: rawStatus,
-        canAccessBilling: !isStudent,
+        canAccessBilling: isBillingAuthorized,
       }
     );
   }
 
   /**
    * Helper to safely extract and validate frozen entitlement snapshot.
+   * If snapshot is missing or null in a snapshot-enabled table, rejects as corrupt/missing.
+   * If the schema lacks the entitlements_snapshot column entirely (live database fallback),
+   * safely reconstructs canonical snapshot from purchased plan tier.
    */
   private static extractSnapshotEntitlements(sub: any): {
     features: PlanEntitlementsMap;
@@ -538,6 +606,29 @@ export class SubscriptionAccessService {
     isValid: boolean;
     errorMsg?: string;
   } {
+    // If the schema does not have the entitlements_snapshot column (e.g. live database before migration),
+    // sub.entitlements_snapshot is undefined. In that case, reconstruct from sub.plan_id.
+    const isColumnAbsent = !("entitlements_snapshot" in sub) || sub.entitlements_snapshot === undefined;
+    if (isColumnAbsent && sub && sub.plan_id) {
+      const tier = (sub.plan_id || "").toLowerCase().includes("enterprise")
+        ? "enterprise"
+        : (sub.plan_id || "").toLowerCase().includes("growth")
+        ? "growth"
+        : "starter";
+
+      const features = PlatformSubscriptionService.buildDefaultEntitlements(null, tier);
+      const limits = PlatformSubscriptionService.buildDefaultLimits(null, tier);
+
+      if (sub.student_seat_limit) {
+        limits.max_students = Number(sub.student_seat_limit);
+      }
+      if (sub.staff_seat_limit) {
+        limits.max_staff = Number(sub.staff_seat_limit);
+      }
+
+      return { features, limits, isValid: true };
+    }
+
     const snapshot: EntitlementsSnapshot | null = sub.entitlements_snapshot;
 
     if (
@@ -548,15 +639,16 @@ export class SubscriptionAccessService {
       snapshot.limits &&
       typeof snapshot.limits === "object"
     ) {
+      const planTier = snapshot.planId || sub.plan_id;
       const features = PlatformSubscriptionService.buildDefaultEntitlements({
         ...snapshot.entitlements,
         ...(snapshot.customOverrides?.entitlements || {}),
-      });
+      }, planTier);
 
       const limits = PlatformSubscriptionService.buildDefaultLimits({
         ...snapshot.limits,
         ...(snapshot.customOverrides?.limits || {}),
-      });
+      }, planTier);
 
       if (sub.student_seat_limit) {
         limits.max_students = Number(sub.student_seat_limit);
@@ -581,6 +673,27 @@ export class SubscriptionAccessService {
       isValid: false,
       errorMsg: "Snapshot missing or corrupt",
     };
+  }
+
+  /**
+   * Resolves canonical product catalogue feature key from a permission identifier.
+   */
+  public static resolveFeatureKeyFromPermission(permission?: string): string | undefined {
+    if (!permission) return undefined;
+    const p = permission.toLowerCase();
+    if (p.startsWith("drives.") || p.startsWith("stages.") || p.startsWith("candidates.")) return "core_drives_management";
+    if (p.startsWith("students.")) return "student_roster_directory";
+    if (p.startsWith("companies.")) return "company_management";
+    if (p.startsWith("questions.") || p.startsWith("question_sets.")) return "subject_question_banks";
+    if (p.startsWith("assessments.")) return "standard_assessments";
+    if (p.startsWith("mistake_bank.") || p.startsWith("practice.")) return "mistake_to_mastery";
+    if (p.startsWith("placement_memory.") || p.startsWith("analytics.")) return "placement_memory_analytics";
+    if (p.startsWith("eligibility.")) return "automated_eligibility_engine";
+    if (p.startsWith("ai.question") || p.startsWith("ai.generate")) return "ai_question_generator";
+    if (p.startsWith("ai.tutor") || p.startsWith("ai_study_tutor")) return "ai_tutor_assistant";
+    if (p.startsWith("departments.")) return "department_hierarchy";
+    if (p.startsWith("reports.") || p.startsWith("export.")) return "audit_data_export_hub";
+    return undefined;
   }
 
   /**

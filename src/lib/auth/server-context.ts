@@ -71,16 +71,25 @@ export async function requireAuthContext(
     user = clientUser;
   }
 
-  // 1. Check if platform admin
+  // 1. Check if platform admin & verify account lifecycle (Reject revoked/deleted users holding lingering JWTs)
   let isPlatformAdmin = false;
   try {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_platform_admin, email")
+      .select("id, is_platform_admin, email")
       .eq("id", user.id)
       .maybeSingle();
+      
+    // If profiles row was permanently deleted, immediately reject lingering session token
+    if (!profile && !user.app_metadata?.is_platform_admin) {
+      throw new Error("UNAUTHORIZED: ACCOUNT_DELETED");
+    }
+
     isPlatformAdmin = profile?.is_platform_admin || user.app_metadata?.is_platform_admin === true;
-  } catch {
+  } catch (err: any) {
+    if (err?.message?.includes("ACCOUNT_DELETED")) {
+      throw err;
+    }
     isPlatformAdmin = user.app_metadata?.is_platform_admin === true;
   }
 

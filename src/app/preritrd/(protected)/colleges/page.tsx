@@ -25,6 +25,7 @@ import {
   Check,
   User,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/dialog-system";
+import { BrandLoader } from "@/components/common/brand-loader";
 import type { CollegeListItem } from "@/modules/platform-admin/services/platform-college-service";
 
 export default function PlatformCollegesPage() {
@@ -55,6 +57,14 @@ export default function PlatformCollegesPage() {
   const [resendingId, setResendingId] = React.useState<string | null>(null);
   const [revokingId, setRevokingId] = React.useState<string | null>(null);
   const [copiedInvite, setCopiedInvite] = React.useState(false);
+
+  // Decommission / Delete Modal State
+  const [deleteTarget, setDeleteTarget] = React.useState<CollegeListItem | null>(null);
+  const [deleteReason, setDeleteReason] = React.useState("Administrative deletion via Super Admin portal");
+  const [deleteMode, setDeleteMode] = React.useState<"permanent" | "archive">("permanent");
+  const [confirmTypedName, setConfirmTypedName] = React.useState("");
+  const [confirmChecked, setConfirmChecked] = React.useState(false);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
 
   const fetchColleges = React.useCallback(async () => {
     setLoading(true);
@@ -156,6 +166,46 @@ export default function PlatformCollegesPage() {
       toast.error("Network error revoking onboarding invitation.");
     } finally {
       setRevokingId(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setFeedback(null);
+    try {
+      const reasonText = deleteReason.trim() || "Administrative deletion via Super Admin portal";
+      const res = await fetch(`/api/preritrd/colleges/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: reasonText,
+          hardDelete: deleteMode === "permanent",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setFeedback({ type: "error", text: data.error || "Failed to delete college." });
+        toast.error(data.error || "Failed to delete college.");
+      } else {
+        const successMsg = data.message || `College '${deleteTarget.name}' has been successfully deleted.`;
+        setFeedback({
+          type: "success",
+          text: successMsg,
+        });
+        toast.success(successMsg);
+        setDeleteTarget(null);
+        setDeleteReason("Administrative deletion via Super Admin portal");
+        setConfirmTypedName("");
+        setConfirmChecked(false);
+        await fetchColleges();
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Network error deleting college." });
+      toast.error("Network error deleting college.");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -265,8 +315,8 @@ export default function PlatformCollegesPage() {
                 <tr>
                   <th className="px-5 py-3 font-semibold">College / Tenant</th>
                   <th className="px-5 py-3 font-semibold">Placement Head</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
-                  <th className="px-5 py-3 font-semibold">Plan &amp; Limits</th>
+                  <th className="px-5 py-3 font-semibold">Account Status</th>
+                  <th className="px-5 py-3 font-semibold">Subscription</th>
                   <th className="px-5 py-3 font-semibold">Onboarding</th>
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
@@ -306,7 +356,7 @@ export default function PlatformCollegesPage() {
                         </div>
                       </td>
 
-                      {/* Status */}
+                      {/* Account Status */}
                       <td className="px-5 py-3.5">
                         <Badge
                           variant={
@@ -328,10 +378,24 @@ export default function PlatformCollegesPage() {
                         </Badge>
                       </td>
 
-                      {/* Subscription Plan & Seat Limit */}
-                      <td className="px-5 py-3.5">
-                        <div className="font-medium text-[#24283A]">
-                          {col.subscriptionPlan?.name || "Standard Plan"}
+                      {/* Subscription Plan, Status & Seat Limit */}
+                      <td className="px-5 py-3.5 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-[#24283A]">
+                            {col.subscriptionPlan?.name || "Unassigned Plan"}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={
+                              col.subscriptionPlan?.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[9px]"
+                                : col.subscriptionPlan?.status === "PENDING_PAYMENT"
+                                ? "bg-amber-50 text-amber-800 border-amber-300 font-mono text-[9px]"
+                                : "bg-gray-50 text-gray-700 border-gray-300 font-mono text-[9px]"
+                            }
+                          >
+                            {col.subscriptionPlan?.status || "NO_SUB"}
+                          </Badge>
                         </div>
                         <div className="text-[11px] text-[#747683] flex items-center gap-1 font-mono">
                           <Users className="h-3 w-3" />
@@ -362,7 +426,7 @@ export default function PlatformCollegesPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => setDetailsTarget(col)}
-                          className="h-7 text-xs text-[#5052C9] hover:bg-[#5052C9]/10"
+                          className="h-7 text-xs text-[#5052C9] hover:bg-[#5052C9]/10 cursor-pointer"
                         >
                           <Eye className="h-3.5 w-3.5 mr-1" /> Details
                         </Button>
@@ -375,7 +439,7 @@ export default function PlatformCollegesPage() {
                               variant="outline"
                               onClick={() => handleResendInvite(col)}
                               disabled={resendingId === col.id}
-                              className="h-7 text-xs border-[#5052C9]/30 text-[#5052C9] hover:bg-[#5052C9]/5"
+                              className="h-7 text-xs border-[#5052C9]/30 text-[#5052C9] hover:bg-[#5052C9]/5 cursor-pointer"
                               title="Generate replacement invitation and email Placement Head"
                             >
                               <RotateCcw className={`h-3 w-3 mr-1 ${resendingId === col.id ? "animate-spin" : ""}`} />
@@ -388,7 +452,7 @@ export default function PlatformCollegesPage() {
                                 variant="outline"
                                 onClick={() => handleRevokeInvite(col)}
                                 disabled={revokingId === col.id}
-                                className="h-7 text-xs border-amber-300 text-amber-800 hover:bg-amber-50"
+                                className="h-7 text-xs border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer"
                                 title="Revoke pending invitation link"
                               >
                                 <XCircle className="h-3 w-3 mr-1" />
@@ -409,11 +473,11 @@ export default function PlatformCollegesPage() {
                                 newStatus: "SUSPENDED",
                               })
                             }
-                            className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-50"
+                            className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-50 cursor-pointer"
                           >
                             <Ban className="h-3 w-3 mr-1" /> Suspend
                           </Button>
-                        ) : (
+                        ) : col.status !== ("DECOMMISSIONED" as any) ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -423,11 +487,28 @@ export default function PlatformCollegesPage() {
                                 newStatus: "ACTIVE",
                               })
                             }
-                            className="h-7 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            className="h-7 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 cursor-pointer"
                           >
                             <Play className="h-3 w-3 mr-1" /> Activate
                           </Button>
-                        )}
+                        ) : null}
+
+                        {/* Delete Action */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setDeleteTarget(col);
+                            setDeleteReason("Administrative deletion via Super Admin portal");
+                            setDeleteMode("permanent");
+                            setConfirmTypedName("");
+                            setConfirmChecked(false);
+                          }}
+                          className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 cursor-pointer"
+                          title="Delete or decommission institution"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" /> Delete
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -622,6 +703,10 @@ export default function PlatformCollegesPage() {
                   : " This will restore operational access for this institution."}
               </p>
 
+              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
+                <strong>Important:</strong> Activating an institutional account restores administrative access, but does not bypass subscription payment requirements. Operational capabilities remain locked until an approved subscription plan is paid and verified.
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[#24283A]">
                   Administrative Reason (Logged in Platform Audit)
@@ -656,6 +741,160 @@ export default function PlatformCollegesPage() {
                   }`}
                 >
                   {actionLoading ? "Updating..." : `Confirm ${actionTarget.newStatus}`}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Confirmation Modal for College Deletion */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <Card className="w-full max-w-lg bg-[#F8F7F3] border-red-300 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30 bg-red-50/60">
+              <CardTitle className="text-base font-bold font-heading text-red-950 flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-red-600" />
+                <span>Delete College Account</span>
+              </CardTitle>
+              <CardDescription className="text-xs text-red-800">
+                Administrative removal of institutional workspace and associated accounts.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+              <div className="p-3.5 rounded-xl bg-white border border-[#DDDCD5] space-y-1.5">
+                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">Target Institution</div>
+                <div className="text-sm font-bold font-heading text-[#24283A]">{deleteTarget.name}</div>
+                <div className="text-[11px] font-mono text-[#5052C9]">Slug: {deleteTarget.slug}</div>
+              </div>
+
+              {/* Deletion Mode */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-[#24283A]">
+                  Choose Deletion Action:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div
+                    onClick={() => setDeleteMode("permanent")}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                      deleteMode === "permanent"
+                        ? "border-red-500 bg-red-50/50 shadow-xs"
+                        : "border-[#DDDCD5] bg-white hover:bg-stone-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-bold text-red-900">
+                      <input
+                        type="radio"
+                        name="deleteMode"
+                        checked={deleteMode === "permanent"}
+                        onChange={() => setDeleteMode("permanent")}
+                        className="text-red-600 focus:ring-red-500"
+                      />
+                      <span>Permanent Delete</span>
+                    </div>
+                    <p className="text-[11px] text-[#747683] mt-1">
+                      Completely removes the college and student records from the database. Recommended for test accounts.
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => setDeleteMode("archive")}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                      deleteMode === "archive"
+                        ? "border-[#5052C9] bg-[#5052C9]/5 shadow-xs"
+                        : "border-[#DDDCD5] bg-white hover:bg-stone-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 font-bold text-[#24283A]">
+                      <input
+                        type="radio"
+                        name="deleteMode"
+                        checked={deleteMode === "archive"}
+                        onChange={() => setDeleteMode("archive")}
+                        className="text-[#5052C9] focus:ring-[#5052C9]"
+                      />
+                      <span>Archive &amp; Lockout</span>
+                    </div>
+                    <p className="text-[11px] text-[#747683] mt-1">
+                      Revokes logins and cancels subscriptions, but preserves historical invoices and audit logs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#24283A]">
+                  Administrative Reason (Audit Recorded)
+                </label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Administrative removal via Super Admin portal"
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                />
+              </div>
+
+              {/* Confirmation Controls */}
+              <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="confirmDeleteCheck"
+                    checked={confirmChecked}
+                    onChange={(e) => setConfirmChecked(e.target.checked)}
+                    className="mt-0.5 rounded text-red-600 focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="confirmDeleteCheck" className="text-xs text-[#24283A] font-medium cursor-pointer leading-tight">
+                    I confirm that I want to {deleteMode === "permanent" ? "permanently delete" : "archive"}{" "}
+                    <strong className="text-red-700">{deleteTarget.name}</strong>.
+                  </label>
+                </div>
+                <div className="text-[11px] text-[#747683]">
+                  Or type <strong className="font-mono text-[#24283A]">DELETE</strong> below:
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Type DELETE to confirm"
+                  value={confirmTypedName}
+                  onChange={(e) => setConfirmTypedName(e.target.value)}
+                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-8"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDeleteTarget(null);
+                    setDeleteReason("Administrative deletion via Super Admin portal");
+                    setConfirmTypedName("");
+                    setConfirmChecked(false);
+                  }}
+                  disabled={deleteLoading}
+                  className="border-[#B8B6AC] text-xs h-9 cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={
+                    deleteLoading ||
+                    (!confirmChecked &&
+                      confirmTypedName.trim().toUpperCase() !== "DELETE" &&
+                      confirmTypedName.trim().toLowerCase() !== deleteTarget.name.toLowerCase())
+                  }
+                  className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 disabled:opacity-50 cursor-pointer font-semibold"
+                >
+                  {deleteLoading ? (
+                    <span className="flex items-center gap-1.5">
+                      <BrandLoader size="button" /> Deleting...
+                    </span>
+                  ) : (
+                    `Confirm & Delete`
+                  )}
                 </Button>
               </div>
             </CardContent>

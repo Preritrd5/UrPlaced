@@ -265,8 +265,9 @@ export function CompanyDetailActions({ company, canManage }: CompanyDetailAction
                     variant="primary"
                     size="sm"
                     disabled={isSubmitting}
+                    isLoading={isSubmitting}
                   >
-                    <Save className="h-3.5 w-3.5 mr-1" />
+                    {!isSubmitting && <Save className="h-3.5 w-3.5 mr-1" />}
                     {isSubmitting ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>

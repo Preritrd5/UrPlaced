@@ -11,7 +11,6 @@ import {
   UserPlus,
   AlertCircle,
   Inbox,
-  Loader2,
   X,
   ExternalLink,
 } from "lucide-react";

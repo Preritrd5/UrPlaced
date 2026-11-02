@@ -19,8 +19,8 @@ import {
   X,
   PlusCircle,
   AlertCircle,
-  Loader2,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -580,7 +580,7 @@ export default function CandidatePipelinePage({ params }: PipelinePageProps) {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="primary" size="sm" disabled={isSubmittingEval}>
+                  <Button type="submit" variant="primary" size="sm" disabled={isSubmittingEval} isLoading={isSubmittingEval}>
                     {isSubmittingEval ? "Saving..." : "Save Evaluation"}
                   </Button>
                 </div>
@@ -669,7 +669,7 @@ export default function CandidatePipelinePage({ params }: PipelinePageProps) {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit" variant="secondary" size="sm" disabled={isSubmittingOffer}>
+                  <Button type="submit" variant="secondary" size="sm" disabled={isSubmittingOffer} isLoading={isSubmittingOffer}>
                     {isSubmittingOffer ? "Issuing..." : "Confirm & Extend Offer"}
                   </Button>
                 </div>

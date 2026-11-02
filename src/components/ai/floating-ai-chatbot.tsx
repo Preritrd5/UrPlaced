@@ -10,13 +10,13 @@ import {
   Minus,
   RotateCcw,
   Sparkles,
-  Loader2,
   AlertCircle,
   MoreVertical,
   Move,
   Check,
   Copy,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 
 interface ChatMessage {
@@ -670,7 +670,7 @@ export function FloatingAIChatbot() {
                       UrPlaced AI
                     </span>
                     <div className="bg-[#FBFAF7] border border-[#DDDCD5] p-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-2 text-xs text-[#292D40]">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5052C9]" />
+                      <BrandLoader size="button" className="mr-1" />
                       <span>Formulating response...</span>
                     </div>
                   </div>
@@ -737,7 +737,7 @@ export function FloatingAIChatbot() {
                     aria-label="Send message"
                   >
                     {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <BrandLoader size="button" />
                     ) : (
                       <Send className="w-4 h-4" />
                     )}

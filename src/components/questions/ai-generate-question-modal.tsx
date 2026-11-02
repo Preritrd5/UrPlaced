@@ -5,7 +5,6 @@ import React, { useState, useEffect } from "react";
 import {
   Sparkles,
   X,
-  Loader2,
   CheckCircle2,
   AlertTriangle,
   FileQuestion,
@@ -13,6 +12,7 @@ import {
   HelpCircle,
   FolderPlus,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreateQuestionBankModal } from "@/components/questions/create-question-bank-modal";
@@ -439,7 +439,7 @@ export function AIGenerateQuestionModal({
               disabled={isLoading || !topic.trim() || !isCountValid}
               className="text-xs border-[#5052C9] text-[#5052C9] hover:bg-[#5052C9]/10 flex-1 sm:flex-initial"
             >
-              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+              {isLoading ? <BrandLoader size="button" className="mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
               Preview Drafts
             </Button>
             <Button
@@ -449,7 +449,7 @@ export function AIGenerateQuestionModal({
               className="text-xs bg-[#5052C9] hover:bg-[#4345B0] text-white w-full sm:w-auto"
             >
               {isLoading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                <BrandLoader size="button" className="mr-1" />
               ) : (
                 <Save className="w-3.5 h-3.5 mr-1" />
               )}

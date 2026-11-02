@@ -30,7 +30,6 @@ import {
   BookOpen,
   ArrowRight,
   Send,
-  Loader2,
   Sparkles,
   FolderPlus,
   Trash2,
@@ -110,16 +109,18 @@ export default function QuestionsDashboardPage() {
     try {
       const res = await fetch("/api/questions/banks");
       if (!res.ok) {
-        if (res.status === 403) {
-          throw new Error("You do not have permission to view Question Banks.");
-        }
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to load Question Banks.");
+        setBanksError(
+          errData.error ||
+          (res.status === 403
+            ? "You do not have permission to view Question Banks."
+            : "Failed to load Question Banks.")
+        );
+        return;
       }
       const data = await res.json();
       setBanks(data || []);
     } catch (err: any) {
-      console.error("Failed to load banks", err);
       setBanksError(err.message || "Failed to load Question Banks.");
     } finally {
       setLoadingBanks(false);

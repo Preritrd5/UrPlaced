@@ -5,6 +5,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AuditService } from "@/modules/identity-access/services/audit-service";
+import { UserDeletionService } from "@/modules/identity-access/services/user-deletion-service";
 import type { Database, AcademicStatus } from "@/types/database";
 
 export type StudentRow = Database["public"]["Tables"]["students"]["Row"];
@@ -547,6 +548,22 @@ export class StudentService {
       throw new Error(
         `Confirmation enrollment ID mismatch. Expected '${eligibility.student.enrollment_number}', but received '${confirmedSrn}'.`
       );
+    }
+
+    // If student has a registered login account, permanently delete their Auth user, storage, and memberships
+    if (eligibility.student.user_id) {
+      try {
+        await UserDeletionService.executePermanentDeletion({
+          targetUserId: eligibility.student.user_id,
+          actorUserId: actorId || "SYSTEM",
+          actorRole: "PLACEMENT_HEAD",
+          tenantId,
+          reason: `Student account permanently deleted by Placement Head (SRN: ${eligibility.student.enrollment_number})`,
+          adminClient: supabase,
+        });
+      } catch (userDelErr: any) {
+        console.warn("[StudentService] Notice on UserDeletionService execution:", userDelErr?.message || userDelErr);
+      }
     }
 
     const { error } = await supabase

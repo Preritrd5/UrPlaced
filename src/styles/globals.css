@@ -359,6 +359,25 @@ pre {
 }
 
 /* ========================================================
+   URPLACED BRAND LOADER CONTINUOUS 1.8s ROTATION
+   ======================================================== */
+
+@keyframes brand-loader-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-brand-loader {
+  animation: brand-loader-spin 1.8s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* ========================================================
    REDUCED MOTION ACCESSIBILITY
    ======================================================== */
 
@@ -366,6 +385,10 @@ pre {
   .animate-shimmer::after,
   .animate-pulse,
   .animate-spin {
+    animation: none !important;
+  }
+
+  .animate-brand-loader {
     animation: none !important;
   }
 }

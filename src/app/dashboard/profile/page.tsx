@@ -32,8 +32,8 @@ import {
   Lock,
   Save,
   X,
-  Loader2,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -503,7 +503,7 @@ export default function MyProfilePage() {
                   title="Upload profile photo"
                 >
                   {avatarUploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <BrandLoader size="button" />
                   ) : (
                     <Camera className="h-4 w-4" />
                   )}

@@ -17,10 +17,10 @@ import {
   Award,
   Layers,
   Send,
-  Loader2,
   ShieldCheck,
   Check,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -222,7 +222,7 @@ export default function StudentDriveDetailPage({ params }: StudentDriveDetailPag
                 >
                   {isApplying ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...
+                      <BrandLoader size="button" className="mr-2" /> Submitting...
                     </>
                   ) : (
                     <>

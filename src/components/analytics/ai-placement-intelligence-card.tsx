@@ -4,7 +4,6 @@
 import React, { useState } from "react";
 import {
   Sparkles,
-  Loader2,
   AlertTriangle,
   Lightbulb,
   CheckCircle2,
@@ -14,6 +13,7 @@ import {
   ArrowRight,
   RefreshCw,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +83,7 @@ export function AIPlacementIntelligenceCard() {
             className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs"
           >
             {loading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              <BrandLoader size="button" className="mr-1.5" />
             ) : report ? (
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             ) : (
@@ -112,7 +112,7 @@ export function AIPlacementIntelligenceCard() {
 
         {loading && (
           <div className="text-center py-8 space-y-3">
-            <Loader2 className="w-8 h-8 animate-spin text-[#5052C9] mx-auto" />
+            <BrandLoader size="card" className="mx-auto" />
             <p className="text-sm font-medium text-[#24283A]">
               Aggregating anonymized cohort performance and generating strategic recommendations...
             </p>

@@ -91,3 +91,36 @@ export async function PUT(
     return NextResponse.json({ error: msg }, { status });
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const admin = await PlatformAuthService.requireSuperAdmin(request);
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json({ error: "Plan ID is required." }, { status: 400 });
+    }
+
+    const result = await PlatformSubscriptionService.deleteDraftPlan(id, admin.id);
+
+    return NextResponse.json({
+      success: true,
+      message: result.message,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to delete plan";
+    const status = msg.includes("not found")
+      ? 404
+      : msg.includes("referenced") || msg.includes("Only DRAFT")
+      ? 400
+      : msg.includes("UNAUTHORIZED")
+      ? 401
+      : msg.includes("FORBIDDEN")
+      ? 403
+      : 500;
+    return NextResponse.json({ error: msg }, { status });
+  }
+}

@@ -14,8 +14,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "targetPlanId query parameter is required." }, { status: 400 });
     }
 
+    const targetTenantId = ctx.tenantId || (ctx.isPlatformAdmin ? searchParams.get("tenantId") : null);
+    if (!targetTenantId) {
+      return NextResponse.json({ error: "Active college context is required." }, { status: 400 });
+    }
+
     const quote = await SubscriptionLifecycleBillingService.calculateUpgradeProration({
-      tenantId: ctx.tenantId,
+      tenantId: targetTenantId,
       targetPlanId,
     });
 
@@ -39,14 +44,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { targetPlanId } = body;
+    const { targetPlanId, tenantId: bodyTenantId } = body;
 
     if (!targetPlanId) {
       return NextResponse.json({ error: "targetPlanId is required." }, { status: 400 });
     }
 
+    const targetTenantId = ctx.tenantId || (ctx.isPlatformAdmin ? bodyTenantId : null);
+    if (!targetTenantId) {
+      return NextResponse.json({ error: "Active college context is required." }, { status: 400 });
+    }
+
     const result = await SubscriptionLifecycleBillingService.requestUpgrade({
-      tenantId: ctx.tenantId,
+      tenantId: targetTenantId,
       targetPlanId,
       userId: ctx.userId,
     });

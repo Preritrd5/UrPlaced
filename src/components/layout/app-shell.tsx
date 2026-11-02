@@ -40,6 +40,7 @@ export function AppShell({ children }: AppShellProps) {
 
   const role = auth.role || "STUDENT";
   const subStatus = (auth.tenant as any)?.subscriptionStatus;
+  const canAccessOperational = (auth.tenant as any)?.canAccessOperational;
   const isGracePeriod = (auth.tenant as any)?.isGracePeriod || false;
   const gracePeriodEndsAt = (auth.tenant as any)?.gracePeriodEndsAt;
 
@@ -48,8 +49,13 @@ export function AppShell({ children }: AppShellProps) {
     if (!auth.isAuthenticated && !auth.isLoading) {
       return [];
     }
-    return getAuthorizedNavigation(role, false, auth.permissions, subStatus, isGracePeriod);
-  }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading, subStatus, isGracePeriod]);
+    // Option C: When tenant operational access is denied or missing active subscription, pass "NO_SUBSCRIPTION" to lock nav
+    const effectiveSubStatus =
+      canAccessOperational === false
+        ? "NO_SUBSCRIPTION"
+        : (subStatus || "ACTIVE");
+    return getAuthorizedNavigation(role, auth.isPlatformAdmin, auth.permissions, effectiveSubStatus, isGracePeriod);
+  }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading, subStatus, canAccessOperational, isGracePeriod, auth.isPlatformAdmin]);
 
   // Only render Student/College Application Shell on /dashboard routes.
   // The public landing page (/), student/college auth routes (/auth/*),
@@ -59,9 +65,10 @@ export function AppShell({ children }: AppShellProps) {
     return <>{children}</>;
   }
 
-  // SA-03 / SA-06: Strict Subscription Entitlement Enforcement:
-  // If subscription is not ACTIVE (e.g. PENDING_PAYMENT, EXPIRED, CANCELED),
+  // SA-03 / SA-06 / SA-07 Option C: Strict Subscription Entitlement Enforcement:
+  // If subscription is not ACTIVE (e.g. NO_SUBSCRIPTION, PENDING_PAYMENT, EXPIRED, CANCELED),
   // operational features are locked unless protected by 7-day grace period (Q1).
+  const isPlacementHead = role === "PLACEMENT_HEAD" || auth.isPlatformAdmin;
   const isCollege =
     auth.accountCategory === "COLLEGE" ||
     ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role);
@@ -69,13 +76,17 @@ export function AppShell({ children }: AppShellProps) {
 
   const isProtectedByGrace = Boolean(isGracePeriod);
   const isLockedSubscription = Boolean(
-    subStatus &&
-    subStatus !== "ACTIVE" &&
-    subStatus !== "TRIALING" &&
-    !isProtectedByGrace
+    !auth.isLoading &&
+    auth.isAuthenticated &&
+    auth.tenant &&
+    !auth.isPlatformAdmin &&
+    (
+      canAccessOperational === false ||
+      (subStatus && subStatus !== "ACTIVE" && subStatus !== "TRIALING" && !isProtectedByGrace)
+    )
   );
 
-  const isPermittedRouteUnderLock = isCollege
+  const isPermittedRouteUnderLock = isPlacementHead
     ? pathname?.startsWith("/dashboard/billing") || pathname?.startsWith("/dashboard/profile")
     : pathname?.startsWith("/dashboard/profile");
 
@@ -315,7 +326,7 @@ export function AppShell({ children }: AppShellProps) {
                   </p>
                 </div>
               </div>
-              {isCollege && (
+              {isPlacementHead && (
                 <Button asChild size="sm" className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs shrink-0 h-9">
                   <Link href="/dashboard/billing">
                     <CreditCard className="w-3.5 h-3.5 mr-1.5" /> Settle Invoice
@@ -337,11 +348,13 @@ export function AppShell({ children }: AppShellProps) {
                   <>
                     <div className="space-y-1.5">
                       <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 font-mono text-[11px]">
-                        {subStatus || "PENDING_PAYMENT"}
+                        {subStatus ? subStatus.replace("_", " ") : "NO ACTIVE SUBSCRIPTION (OPTION C)"}
                       </Badge>
                       <h2 className="text-xl sm:text-2xl font-bold font-heading text-text-primary">
                         {subStatus === "PENDING_PAYMENT"
                           ? "College Subscription Payment Required"
+                          : !subStatus
+                          ? "Subscription Plan Selection Required (Option C)"
                           : "Operational Placement Access Suspended"}
                       </h2>
                       <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
@@ -349,34 +362,59 @@ export function AppShell({ children }: AppShellProps) {
                         <span className="font-semibold text-text-primary">{auth.tenant?.name || "your college"}</span>{" "}
                         {subStatus === "PENDING_PAYMENT"
                           ? "is locked pending initial subscription payment. Operational modules (student roster, recruitment drives, company directory, assessments, and analytics) become available immediately upon payment verification."
+                          : !subStatus
+                          ? "was invited without an initial pre-assigned plan (Option C). The Placement Head must select an approved subscription plan and complete payment checkout in the Billing portal before operational features can be activated."
                           : "is currently restricted due to an expired or suspended subscription. Settle your outstanding invoice to restore full operational access."}
                       </p>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-background border border-border text-left text-xs space-y-2">
-                      <div className="font-bold text-text-primary text-xs uppercase tracking-wider font-mono">
-                        Permitted Administrative Access:
-                      </div>
-                      <ul className="text-xs text-text-secondary space-y-1.5 list-disc list-inside">
-                        <li>Subscription &amp; Invoicing Portal</li>
-                        <li>Placement Head Profile Management</li>
-                        <li>Account &amp; Security Settings</li>
-                        <li>Sign Out</li>
-                      </ul>
-                    </div>
+                    {isPlacementHead ? (
+                      <>
+                        <div className="p-4 rounded-xl bg-background border border-border text-left text-xs space-y-2">
+                          <div className="font-bold text-text-primary text-xs uppercase tracking-wider font-mono">
+                            Permitted Administrative Access:
+                          </div>
+                          <ul className="text-xs text-text-secondary space-y-1.5 list-disc list-inside">
+                            <li>Subscription &amp; Invoicing Portal</li>
+                            <li>Placement Head Profile Management</li>
+                            <li>Account &amp; Security Settings</li>
+                            <li>Sign Out</li>
+                          </ul>
+                        </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-                      <Button asChild className="flex-1 bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-10">
-                        <Link href="/dashboard/billing">
-                          <CreditCard className="w-4 h-4 mr-1.5" /> View Subscription &amp; Invoices
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" className="flex-1 text-xs h-10 border-border">
-                        <Link href="/dashboard/profile">
-                          <User className="w-4 h-4 mr-1.5" /> My Profile
-                        </Link>
-                      </Button>
-                    </div>
+                        <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                          <Button asChild className="flex-1 bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-10">
+                            <Link href="/dashboard/billing">
+                              <CreditCard className="w-4 h-4 mr-1.5" /> {!subStatus ? "Select Subscription Plan" : "View Subscription & Invoices"}
+                            </Link>
+                          </Button>
+                          <Button asChild variant="outline" className="flex-1 text-xs h-10 border-border">
+                            <Link href="/dashboard/profile">
+                              <User className="w-4 h-4 mr-1.5" /> My Profile
+                            </Link>
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-4 rounded-xl bg-background border border-border text-left text-xs space-y-2">
+                          <div className="font-bold text-text-primary text-xs uppercase tracking-wider font-mono">
+                            Institutional Notice:
+                          </div>
+                          <p className="text-xs text-text-secondary leading-relaxed">
+                            Subscription plan selection and invoice payments are managed by your institutional Placement Head. Please contact your Placement Head to restore operational access.
+                          </p>
+                        </div>
+
+                        <div className="pt-2">
+                          <Button asChild variant="outline" className="w-full text-xs h-10 border-border">
+                            <Link href="/dashboard/profile">
+                              <User className="w-4 h-4 mr-1.5" /> My Profile
+                            </Link>
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </>
                 ) : (
                   // Student Lock Screen (Clean, non-leaking, supportive)

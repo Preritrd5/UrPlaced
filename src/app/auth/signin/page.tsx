@@ -7,6 +7,7 @@ import { LogIn, Mail, ArrowLeft, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { AuthSplitLayout, UrPlacedBrandLogo } from "@/components/auth/auth-split-layout";
 import { AuthInput, AuthPasswordInput } from "@/components/auth/auth-input";
+import { BrandLoader } from "@/components/common/brand-loader";
 
 function StudentSignInContent() {
   const router = useRouter();
@@ -161,8 +162,17 @@ function StudentSignInContent() {
             suppressHydrationWarning
             className="w-full bg-[#5052C9] hover:bg-[#4345B0] active:bg-[#383A99] text-white font-semibold text-xs sm:text-sm rounded-xl h-11 sm:h-12 shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 mt-2"
           >
-            <LogIn className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-            <span>{isLoading ? "Signing In..." : "Sign In to Student Portal"}</span>
+            {isLoading ? (
+              <>
+                <BrandLoader size="button" className="mr-2" />
+                <span>Signing In...</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+                <span>Sign In to Student Portal</span>
+              </>
+            )}
           </button>
 
           {/* Secondary CTA: Create Account Card Button */}

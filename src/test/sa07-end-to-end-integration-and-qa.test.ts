@@ -223,8 +223,11 @@ function resetMockDb() {
         price_inr: 49999,
         billing_cycle: "ANNUAL",
         max_students: 500,
+        student_limit: 500,
+        staff_limit: 5,
         version: 1,
         is_active: true,
+        status: "PUBLISHED",
         entitlements_snapshot: {
           entitlements: {
             core_drives_management: true,
@@ -255,8 +258,11 @@ function resetMockDb() {
         price_inr: 129999,
         billing_cycle: "ANNUAL",
         max_students: 1500,
+        student_limit: 1500,
+        staff_limit: 25,
         version: 1,
         is_active: true,
+        status: "PUBLISHED",
         entitlements_snapshot: {
           entitlements: {
             core_drives_management: true,
@@ -280,6 +286,18 @@ function resetMockDb() {
             ai_credits_monthly: 500,
           },
         },
+      },
+      {
+        id: "pilot-draft",
+        name: "Pilot Draft Plan",
+        price_inr: 19999,
+        billing_cycle: "ANNUAL",
+        max_students: 200,
+        student_limit: 200,
+        staff_limit: 2,
+        version: 1,
+        is_active: false,
+        status: "DRAFT",
       },
     ],
     college_subscriptions: [
@@ -696,7 +714,7 @@ describe("URPLACED SA-07: MASTER END-TO-END INTEGRATION, SECURITY VALIDATION & Q
       expect(collegesResult.colleges.map((c) => c.slug)).toContain("sapthagiri");
       expect(collegesResult.colleges.map((c) => c.slug)).toContain("abc-tech");
 
-      const plans = await PlatformSubscriptionService.listPlans(admin);
+      const plans = await PlatformSubscriptionService.listPlans({ status: "PUBLISHED", admin });
       expect(plans.length).toBe(2);
       expect(plans.map((p) => p.id)).toEqual(["starter", "growth"]);
     });
@@ -898,6 +916,133 @@ describe("URPLACED SA-07: MASTER END-TO-END INTEGRATION, SECURITY VALIDATION & Q
       expect(access.decision).toBe("DENY_PENDING_PAYMENT");
       expect(access.canAccessOperational).toBe(false);
       expect(access.canAccessBilling).toBe(true);
+    });
+
+    it("Option C Workflow 2: Super Admin registers a college with unassigned plan (no automatic Growth fallback)", async () => {
+      const admin = createMockAdmin();
+      const result = await PlatformCollegeService.registerCollege({
+        name: "Bangalore University of Tech",
+        slug: "but-tech",
+        officialEmail: "head@but.edu.in",
+        contactName: "Prof. BUT Head",
+        initialPlanId: undefined, // Option C: unassigned
+        studentSeatLimit: 800,
+        adminId: "super-admin-01",
+        admin,
+      });
+
+      expect(result.college.slug).toBe("but-tech");
+      expect(result.college.onboardingStatus).toBe("INVITED");
+      expect(result.college.subscriptionPlan).toBeNull(); // Strictly null: no Growth fallback!
+
+      // Verify NO subscription or invoice exists in database yet
+      const sub = mockDb.college_subscriptions.find((s) => s.tenant_id === result.college.id);
+      expect(sub).toBeUndefined();
+
+      const inv = mockDb.platform_invoices.find((i) => i.tenant_id === result.college.id);
+      expect(inv).toBeUndefined();
+    });
+
+    it("Option C Workflow 2: Placement Head completes onboarding and selects an approved published plan post-registration", async () => {
+      const admin = createMockAdmin();
+
+      // 1. Super Admin invites college without plan assignment
+      const regResult = await PlatformCollegeService.registerCollege({
+        name: "Kuvempu Institute",
+        slug: "kuvempu-inst",
+        officialEmail: "head@kuvempu.edu.in",
+        contactName: "Dr. Kuvempu Head",
+        initialPlanId: "unassigned", // Option C: unassigned
+        adminId: "super-admin-01",
+        admin,
+      });
+
+      // 2. Placement Head completes account registration
+      const onboardRes = await PlatformCollegeService.completeCollegeOnboarding({
+        token: regResult.onboardingToken,
+        password: "Password123!",
+        admin,
+      });
+      expect(onboardRes.success).toBe(true);
+
+      // 3. Placement Head selects approved "starter" plan
+      const targetPlan = mockDb.subscription_plans.find((p) => p.id === "starter");
+      expect(targetPlan.status).toBe("PUBLISHED");
+
+      const snapshot = PlatformSubscriptionService.createSnapshot(targetPlan);
+
+      // Subscriptions inserted in PENDING_PAYMENT status with frozen snapshot
+      const { data: subData } = await admin.from("college_subscriptions").insert({
+        tenant_id: regResult.college.id,
+        plan_id: targetPlan.id,
+        plan_version: targetPlan.version || 1,
+        status: "PENDING_PAYMENT",
+        student_seat_limit: targetPlan.student_limit || 500,
+        staff_seat_limit: targetPlan.staff_limit || 5,
+        entitlements_snapshot: snapshot,
+        start_date: new Date().toISOString(),
+        expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        renewal_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      }).select().single();
+
+      // Initial invoice generated in PENDING status with 18% GST
+      const planPrice = Number(targetPlan.price_inr);
+      const taxPrice = Number((planPrice * 0.18).toFixed(2));
+      await admin.from("platform_invoices").insert({
+        invoice_number: "INV-2026-8888",
+        tenant_id: regResult.college.id,
+        subscription_id: subData?.id || "sub-kuvempu",
+        amount_inr: planPrice,
+        tax_inr: taxPrice,
+        currency: "INR",
+        status: "PENDING",
+      }).select().single();
+
+      // 4. Verify subscription in PENDING_PAYMENT status with frozen snapshot
+      const createdSub = mockDb.college_subscriptions.find((s) => s.tenant_id === regResult.college.id);
+      expect(createdSub).toBeDefined();
+      expect(createdSub.status).toBe("PENDING_PAYMENT");
+      expect(createdSub.plan_id).toBe("starter");
+      expect(createdSub.entitlements_snapshot.entitlements).toBeDefined();
+
+      // 5. Verify operational access remains LOCKED prior to verified payment
+      const prePaymentAccess = await SubscriptionAccessService.evaluateAccess({
+        tenantId: regResult.college.id,
+        userRole: "PLACEMENT_HEAD",
+        permission: "DRIVES_MANAGE",
+        admin,
+      });
+      expect(prePaymentAccess.allowed).toBe(false);
+      expect(prePaymentAccess.decision).toBe("DENY_PENDING_PAYMENT");
+      expect(prePaymentAccess.canAccessOperational).toBe(false);
+
+      // 6. Verify verified payment activates subscription and grants operational access
+      createdSub.status = "ACTIVE";
+      const postPaymentAccess = await SubscriptionAccessService.evaluateAccess({
+        tenantId: regResult.college.id,
+        userRole: "PLACEMENT_HEAD",
+        permission: "DRIVES_MANAGE",
+        admin,
+      });
+      expect(postPaymentAccess.allowed).toBe(true);
+      expect(postPaymentAccess.decision).toBe("ALLOW");
+      expect(postPaymentAccess.canAccessOperational).toBe(true);
+    });
+
+    it("Option C Plan Authorization: Assigning or selecting a DRAFT plan is strictly rejected", async () => {
+      const admin = createMockAdmin();
+
+      await expect(
+        PlatformCollegeService.registerCollege({
+          name: "Draft Plan College",
+          slug: "draft-college",
+          officialEmail: "head@draft.edu.in",
+          contactName: "Dr. Draft",
+          initialPlanId: "pilot-draft", // DRAFT plan!
+          adminId: "super-admin-01",
+          admin,
+        })
+      ).rejects.toThrow(/Only PUBLISHED plans can be assigned/i);
     });
   });
 
@@ -1514,6 +1659,226 @@ describe("URPLACED SA-07: MASTER END-TO-END INTEGRATION, SECURITY VALIDATION & Q
       const tab2Active = true;
       expect(tab1Active).toBe(false);
       expect(tab2Active).toBe(true);
+    });
+  });
+
+  // ===========================================================================
+  // WORKSTREAM 09: Option C Missing-Subscription Fail-Closed & Reconciled Billing RBAC
+  // ===========================================================================
+  describe("WORKSTREAM 09: Option C Missing-Subscription Fail-Closed & Reconciled Billing RBAC", () => {
+    beforeEach(() => {
+      resetMockDb();
+    });
+
+    it("Scenario 36: Placement Head in college without subscription record fails closed on operations but accesses billing", async () => {
+      const admin = createMockAdmin();
+      const targetTenantId = "tenant-unassigned";
+      mockDb.tenants.push({
+        id: targetTenantId,
+        name: "Unassigned College of Engineering",
+        slug: "unassigned-eng",
+        status: "ACTIVE",
+      });
+
+      // Confirm target tenant has NO subscription record in mockDb.college_subscriptions
+      const existingSub = mockDb.college_subscriptions.find((s) => s.tenant_id === targetTenantId);
+      expect(existingSub).toBeUndefined();
+
+      // 1. Operational requests (drives, students, questions, assessments) fail closed
+      const opCheck = await SubscriptionAccessService.evaluateAccess({
+        tenantId: targetTenantId,
+        userRole: "PLACEMENT_HEAD",
+        permission: Permissions.DRIVES_MANAGE,
+        admin,
+      });
+
+      expect(opCheck.allowed).toBe(false);
+      expect(opCheck.canAccessOperational).toBe(false);
+      expect(opCheck.decision).toBe("DENY_INVALID_SUBSCRIPTION");
+      expect(opCheck.reasonCode).toBe("NO_SUBSCRIPTION_RECORD");
+      expect(opCheck.canAccessBilling).toBe(true); // Placement Head retains billing right to select plan
+
+      // 2. Server assertion throws structured FORBIDDEN
+      await expect(
+        SubscriptionAccessService.assertOperationalAccess({
+          tenantId: targetTenantId,
+          userRole: "PLACEMENT_HEAD",
+          permission: Permissions.DRIVES_MANAGE,
+          admin,
+        })
+      ).rejects.toThrow("FORBIDDEN: NO_SUBSCRIPTION");
+
+      // 3. Billing self-service (plan selection, checkout) is permitted for Placement Head
+      const billingCheck = await SubscriptionAccessService.evaluateAccess({
+        tenantId: targetTenantId,
+        userRole: "PLACEMENT_HEAD",
+        permission: "billing.select_plan",
+        admin,
+      });
+
+      expect(billingCheck.allowed).toBe(true);
+      expect(billingCheck.decision).toBe("ALLOW");
+      expect(billingCheck.canAccessBilling).toBe(true);
+      expect(billingCheck.canAccessOperational).toBe(false);
+    });
+
+    it("Scenario 37: Placement Staff in college without subscription is denied operational and billing access", async () => {
+      const admin = createMockAdmin();
+      const targetTenantId = "tenant-unassigned";
+
+      // 1. Operational access fails closed
+      const opCheck = await SubscriptionAccessService.evaluateAccess({
+        tenantId: targetTenantId,
+        userRole: "PLACEMENT_STAFF",
+        permission: Permissions.DRIVES_MANAGE,
+        admin,
+      });
+
+      expect(opCheck.allowed).toBe(false);
+      expect(opCheck.canAccessOperational).toBe(false);
+      expect(opCheck.canAccessBilling).toBe(false);
+
+      // 2. Direct billing access is denied for ordinary Placement Staff
+      const billingCheck = await SubscriptionAccessService.evaluateAccess({
+        tenantId: targetTenantId,
+        userRole: "PLACEMENT_STAFF",
+        permission: "billing.manage",
+        admin,
+      });
+
+      expect(billingCheck.allowed).toBe(false);
+      expect(billingCheck.canAccessBilling).toBe(false);
+    });
+
+    it("Scenario 38: Trainer and Student in college without subscription fail closed with zero billing access", async () => {
+      const admin = createMockAdmin();
+      const targetTenantId = "tenant-unassigned";
+
+      // 1. Trainer cannot access operational questions or billing
+      const trainerCheck = await SubscriptionAccessService.evaluateAccess({
+        tenantId: targetTenantId,
+        userRole: "TRAINER",
+        permission: Permissions.QUESTIONS_MANAGE,
+        admin,
+      });
+      expect(trainerCheck.allowed).toBe(false);
+      expect(trainerCheck.canAccessOperational).toBe(false);
+      expect(trainerCheck.canAccessBilling).toBe(false);
+
+      // 2. Student cannot attempt assessments or access financial records
+      const studentCheck = await SubscriptionAccessService.evaluateAccess({
+        tenantId: targetTenantId,
+        userRole: "STUDENT",
+        permission: Permissions.ASSESSMENTS_ATTEMPT,
+        admin,
+      });
+      expect(studentCheck.allowed).toBe(false);
+      expect(studentCheck.canAccessOperational).toBe(false);
+      expect(studentCheck.canAccessBilling).toBe(false);
+      expect(studentCheck.message).toContain("Institutional placement services for your college are not currently activated");
+      expect(studentCheck.message).not.toContain("invoice");
+      expect(studentCheck.message).not.toContain("price");
+    });
+
+    it("Scenario 39: Reconciled Billing RBAC strictly restricts billing rights to Placement Head across all lifecycle states", async () => {
+      const admin = createMockAdmin();
+
+      // 1. Authoritative helper checks
+      expect(SubscriptionAccessService.isBillingAuthorized("PLACEMENT_HEAD")).toBe(true);
+      expect(SubscriptionAccessService.isBillingAuthorized("SUPER_ADMIN")).toBe(true);
+      expect(SubscriptionAccessService.isBillingAuthorized("PLACEMENT_STAFF")).toBe(false);
+      expect(SubscriptionAccessService.isBillingAuthorized("TRAINER")).toBe(false);
+      expect(SubscriptionAccessService.isBillingAuthorized("STUDENT")).toBe(false);
+
+      // 2. Self-service exemption check: billing/subscription is exempt ONLY for Placement Head
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("billing.read", "PLACEMENT_HEAD")).toBe(true);
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("billing.read", "PLACEMENT_STAFF")).toBe(false);
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("billing.read", "TRAINER")).toBe(false);
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("billing.read", "STUDENT")).toBe(false);
+
+      // Personal profile remains exempt for all accounts
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("profile.update", "PLACEMENT_HEAD")).toBe(true);
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("profile.update", "PLACEMENT_STAFF")).toBe(true);
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("profile.update", "TRAINER")).toBe(true);
+      expect(SubscriptionAccessService.isExemptSelfServicePermission("profile.update", "STUDENT")).toBe(true);
+
+      // 3. Expired subscription state does NOT accidentally grant billing to staff or trainer
+      mockDb.college_subscriptions.push({
+        id: "sub-expired-test",
+        tenant_id: "tenant-expired",
+        status: "EXPIRED",
+        plan_id: "growth",
+        plan_version: 1,
+      });
+
+      const headExpired = await SubscriptionAccessService.evaluateAccess({
+        tenantId: "tenant-expired",
+        userRole: "PLACEMENT_HEAD",
+        permission: "billing.manage",
+        admin,
+      });
+      expect(headExpired.allowed).toBe(true); // Head can recover billing
+      expect(headExpired.canAccessBilling).toBe(true);
+
+      const staffExpired = await SubscriptionAccessService.evaluateAccess({
+        tenantId: "tenant-expired",
+        userRole: "PLACEMENT_STAFF",
+        permission: "billing.manage",
+        admin,
+      });
+      expect(staffExpired.allowed).toBe(false); // Staff CANNOT access billing
+      expect(staffExpired.canAccessBilling).toBe(false);
+
+      const trainerExpired = await SubscriptionAccessService.evaluateAccess({
+        tenantId: "tenant-expired",
+        userRole: "TRAINER",
+        permission: "billing.manage",
+        admin,
+      });
+      expect(trainerExpired.allowed).toBe(false);
+      expect(trainerExpired.canAccessBilling).toBe(false);
+    });
+
+    it("Scenario 40: Navigation RBAC removes Billing from Placement Staff and retains only Profile under lock", () => {
+      // 1. Active subscription navigation
+      const headNav = getAuthorizedNavigation("PLACEMENT_HEAD", false, undefined, "ACTIVE", false);
+      const headHrefs = headNav.flatMap((s) => s.items).map((i) => i.href);
+      expect(headHrefs).toContain("/dashboard/billing");
+
+      const staffNav = getAuthorizedNavigation("PLACEMENT_STAFF", false, undefined, "ACTIVE", false);
+      const staffHrefs = staffNav.flatMap((s) => s.items).map((i) => i.href);
+      expect(staffHrefs).not.toContain("/dashboard/billing"); // Reconciled: Staff never gets billing
+
+      const trainerNav = getAuthorizedNavigation("TRAINER", false, undefined, "ACTIVE", false);
+      const trainerHrefs = trainerNav.flatMap((s) => s.items).map((i) => i.href);
+      expect(trainerHrefs).not.toContain("/dashboard/billing");
+
+      const studentNav = getAuthorizedNavigation("STUDENT", false, undefined, "ACTIVE", false);
+      const studentHrefs = studentNav.flatMap((s) => s.items).map((i) => i.href);
+      expect(studentHrefs).not.toContain("/dashboard/billing");
+
+      // 2. Locked subscription navigation (PENDING_PAYMENT / EXPIRED)
+      const headLocked = getAuthorizedNavigation("PLACEMENT_HEAD", false, undefined, "PENDING_PAYMENT", false);
+      const headLockedHrefs = headLocked.flatMap((s) => s.items).map((i) => i.href);
+      expect(headLockedHrefs).toContain("/dashboard/billing");
+      expect(headLockedHrefs).toContain("/dashboard/profile");
+      expect(headLockedHrefs).not.toContain("/dashboard/drives");
+
+      const staffLocked = getAuthorizedNavigation("PLACEMENT_STAFF", false, undefined, "PENDING_PAYMENT", false);
+      const staffLockedHrefs = staffLocked.flatMap((s) => s.items).map((i) => i.href);
+      expect(staffLockedHrefs).not.toContain("/dashboard/billing"); // Staff locked out of billing
+      expect(staffLockedHrefs).toContain("/dashboard/profile");
+      expect(staffLockedHrefs).not.toContain("/dashboard/drives");
+
+      const trainerLocked = getAuthorizedNavigation("TRAINER", false, undefined, "PENDING_PAYMENT", false);
+      const trainerLockedHrefs = trainerLocked.flatMap((s) => s.items).map((i) => i.href);
+      expect(trainerLockedHrefs).not.toContain("/dashboard/billing");
+      expect(trainerLockedHrefs).toContain("/dashboard/profile");
+
+      const studentLocked = getAuthorizedNavigation("STUDENT", false, undefined, "PENDING_PAYMENT", false);
+      const studentLockedHrefs = studentLocked.flatMap((s) => s.items).map((i) => i.href);
+      expect(studentLockedHrefs).not.toContain("/dashboard/billing");
+      expect(studentLockedHrefs).toContain("/dashboard/profile");
     });
   });
 });

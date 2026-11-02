@@ -69,7 +69,10 @@ export async function POST(request: NextRequest) {
       contactName,
       contactPhone,
       primaryDomain,
-      initialPlanId: initialPlanId || "growth",
+      initialPlanId:
+        initialPlanId && initialPlanId !== "unassigned" && initialPlanId.trim() !== ""
+          ? initialPlanId.trim()
+          : undefined,
       studentSeatLimit: studentSeatLimit || 1000,
       adminId: admin.id,
     });

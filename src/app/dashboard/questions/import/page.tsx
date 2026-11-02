@@ -17,10 +17,10 @@ import {
   FileSpreadsheet,
   ShieldCheck,
   Send,
-  Loader2,
   FolderPlus,
   AlertCircle,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { CreateQuestionBankModal } from "@/components/questions/create-question-bank-modal";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { ProfileSkeleton } from "@/components/ui/page-skeletons";
@@ -271,7 +271,7 @@ export default function QuestionImportPage() {
 
                 {loadingBanks ? (
                   <div className="h-10 px-3 rounded-md bg-input border border-border text-xs text-text-secondary flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <BrandLoader size="button" className="mr-1.5" />
                     <span>Loading Question Banks...</span>
                   </div>
                 ) : banksError ? (

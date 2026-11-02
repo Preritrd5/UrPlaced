@@ -10,7 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Trash2, Loader2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 
 export interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -95,7 +96,7 @@ export function DeleteConfirmationDialog({
           >
             {activeLoading ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <BrandLoader size="button" className="mr-1.5" />
                 Deleting...
               </>
             ) : (

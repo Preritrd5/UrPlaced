@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QuestionForm } from "@/components/questions/question-form";
-import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { ProfileSkeleton } from "@/components/ui/page-skeletons";
 

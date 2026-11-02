@@ -16,9 +16,9 @@ import {
   BookOpen,
   ArrowRight,
   RefreshCw,
-  Loader2,
   Trash2,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -759,7 +759,7 @@ export default function StaffAssessmentsPage() {
               <Button type="submit" variant="primary" size="sm" disabled={submitting}>
                 {submitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <BrandLoader size="button" className="mr-2" />
                     Creating...
                   </>
                 ) : (
@@ -909,7 +909,7 @@ export default function StaffAssessmentsPage() {
               <Button type="submit" variant="primary" size="sm" disabled={submitting}>
                 {submitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <BrandLoader size="button" className="mr-2" />
                     Assigning...
                   </>
                 ) : (

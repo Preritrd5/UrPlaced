@@ -5,7 +5,6 @@ import React, { useState } from "react";
 import {
   Sparkles,
   X,
-  Loader2,
   AlertCircle,
   Brain,
   Clock,
@@ -13,6 +12,7 @@ import {
   Target,
   CheckCircle2,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -107,7 +107,7 @@ export function AIMistakeAnalysisModal({ isOpen, onClose }: AIMistakeAnalysisMod
 
           {loading && (
             <div className="text-center py-12 space-y-3">
-              <Loader2 className="w-8 h-8 animate-spin text-[#5052C9] mx-auto" />
+              <BrandLoader size="card" className="mx-auto" />
               <p className="text-sm font-medium text-[#24283A]">
                 Evaluating mistake history and synthesizing conceptual gaps...
               </p>

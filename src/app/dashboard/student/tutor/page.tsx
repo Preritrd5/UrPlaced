@@ -11,9 +11,9 @@ import {
   RotateCcw,
   Compass,
   AlertCircle,
-  Loader2,
   CheckCircle,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -281,7 +281,7 @@ export default function StudentAITutorPage() {
                 UrPlaced AI Tutor
               </span>
               <div className="bg-[#FBFAF7] border border-[#DDDCD5] p-4 rounded-xl rounded-tl-none shadow-sm flex items-center gap-2 text-sm text-[#292D40]">
-                <Loader2 className="w-4 h-4 animate-spin text-[#5052C9]" />
+                <BrandLoader size="inline" className="mr-1" />
                 <span>Formulating personalized pedagogical explanation...</span>
               </div>
             </div>
@@ -317,7 +317,7 @@ export default function StudentAITutorPage() {
               className="bg-[#5052C9] hover:bg-[#4345B0] text-white px-4 h-11 shrink-0 font-medium"
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <BrandLoader size="button" />
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-1.5" />

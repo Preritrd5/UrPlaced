@@ -15,12 +15,14 @@ import {
   Copy,
   UserX,
   UserCheck,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/dialog-system";
 import type {
   PlatformAdminUserItem,
   PlatformAdminInvitationItem,
@@ -42,6 +44,12 @@ export default function PlatformAccountsPage() {
   // Status Change Action State
   const [statusTarget, setStatusTarget] = React.useState<{ admin: PlatformAdminUserItem; newStatus: "ACTIVE" | "SUSPENDED" | "REVOKED" } | null>(null);
   const [statusLoading, setStatusLoading] = React.useState(false);
+
+  // Permanent Deletion State
+  const [deleteTarget, setDeleteTarget] = React.useState<PlatformAdminUserItem | null>(null);
+  const [deleteReason, setDeleteReason] = React.useState("Administrative permanent deletion via platform Super Admin console");
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = React.useState("");
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
 
   const fetchAccounts = React.useCallback(async () => {
     setLoading(true);
@@ -130,6 +138,54 @@ export default function PlatformAccountsPage() {
       navigator.clipboard.writeText(createdInviteLink);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
+    }
+  }
+
+  // Handle Permanent Administrator Deletion
+  async function handleDeleteAdmin() {
+    if (!deleteTarget) return;
+    if (deleteConfirmEmail.trim().toLowerCase() !== deleteTarget.email.toLowerCase()) {
+      toast.error("Email confirmation does not match the target administrator email.");
+      return;
+    }
+    if (!deleteReason || deleteReason.trim().length < 5) {
+      toast.error("A valid deletion reason of at least 5 characters is required.");
+      return;
+    }
+
+    setDeleteLoading(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch(`/api/preritrd/accounts/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emailConfirmation: deleteConfirmEmail.trim(),
+          reason: deleteReason.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setFeedback({ type: "error", text: data.error || "Failed to permanently delete administrator." });
+        toast.error(data.error || "Failed to delete administrator.");
+      } else {
+        setFeedback({
+          type: "success",
+          text: `Administrator '${deleteTarget.email}' permanently deleted from Supabase Auth and platform registry.`,
+        });
+        toast.success(`Administrator '${deleteTarget.email}' permanently deleted.`);
+        setDeleteTarget(null);
+        setDeleteConfirmEmail("");
+        setDeleteReason("Administrative permanent deletion via platform Super Admin console");
+        await fetchAccounts();
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Network error deleting administrator." });
+      toast.error("Network error deleting administrator.");
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -279,6 +335,19 @@ export default function PlatformAccountsPage() {
                             <UserCheck className="h-3 w-3 mr-1" /> Activate
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setDeleteTarget(adm);
+                            setDeleteConfirmEmail("");
+                            setDeleteReason("Administrative permanent deletion via platform Super Admin console");
+                          }}
+                          className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+                          title="Permanently Delete Admin"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1 text-red-600" /> Delete
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -467,6 +536,92 @@ export default function PlatformAccountsPage() {
                   }`}
                 >
                   {statusLoading ? "Updating..." : `Confirm ${statusTarget.newStatus}`}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Permanent Administrator Deletion Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <Card className="w-full max-w-lg bg-[#F8F7F3] border-red-300 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-red-200 bg-red-50/60">
+              <CardTitle className="text-base font-bold font-heading text-red-900 flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-red-600 shrink-0" />
+                <span>Permanently Delete Administrator</span>
+              </CardTitle>
+              <CardDescription className="text-xs text-red-700 mt-1">
+                P0 Permanent Removal: Supabase Auth credentials, active sessions, and profile records will be permanently deleted.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4">
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
+                <div className="font-bold flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Permanent Irreversible Action</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Target account: <strong className="font-mono">{deleteTarget.email}</strong>. Once deleted, this administrator will immediately lose all login access and credentials cannot be recovered.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#24283A] block">
+                  Mandatory Audit Reason (min 5 characters) <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Reason for deletion..."
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                  disabled={deleteLoading}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#24283A] block">
+                  Type <span className="font-mono font-bold text-red-600">{deleteTarget.email}</span> to confirm:
+                </label>
+                <Input
+                  type="text"
+                  placeholder={deleteTarget.email}
+                  value={deleteConfirmEmail}
+                  onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 font-mono"
+                  disabled={deleteLoading}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#B8B6AC]/30">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDeleteTarget(null);
+                    setDeleteConfirmEmail("");
+                  }}
+                  disabled={deleteLoading}
+                  className="border-[#B8B6AC] text-xs h-9"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleDeleteAdmin}
+                  disabled={
+                    deleteLoading ||
+                    deleteConfirmEmail.trim().toLowerCase() !== deleteTarget.email.toLowerCase() ||
+                    deleteReason.trim().length < 5
+                  }
+                  className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 font-semibold gap-1.5 shadow-sm disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {deleteLoading ? "Deleting..." : "Permanently Delete Administrator"}
                 </Button>
               </div>
             </CardContent>

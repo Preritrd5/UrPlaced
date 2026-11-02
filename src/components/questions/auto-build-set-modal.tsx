@@ -10,7 +10,6 @@ import {
   X,
   AlertTriangle,
   CheckCircle2,
-  Loader2,
   Plus,
   Trash2,
   RefreshCw,
@@ -22,6 +21,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { QuestionType, QuestionDifficulty, QuestionSetPurpose } from "@/types/database";
 import { STANDARD_SUBJECTS, normalizeSubjectName } from "@/modules/question-bank/services/subject-constants";
 import { toast } from "@/components/ui/dialog-system";
@@ -655,7 +655,7 @@ export function AutoBuildSetModal({
                     <span className="text-xs font-bold text-[#24283A] uppercase tracking-wider">
                       Inventory Availability
                     </span>
-                    {checkingAvailability && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />}
+                    {checkingAvailability && <BrandLoader size="button" className="ml-1" />}
                   </div>
 
                   {availability && (
@@ -886,7 +886,7 @@ export function AutoBuildSetModal({
                           title="Swap with another eligible question"
                         >
                           {swappingId === item.question_id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <BrandLoader size="button" />
                           ) : (
                             <RefreshCw className="w-3.5 h-3.5" />
                           )}
@@ -937,7 +937,7 @@ export function AutoBuildSetModal({
               >
                 {loadingPreview ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <BrandLoader size="button" className="mr-1.5" />
                     Selecting Eligible Questions...
                   </>
                 ) : (
@@ -979,7 +979,7 @@ export function AutoBuildSetModal({
                 >
                   {committing ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <BrandLoader size="button" className="mr-1.5" />
                       Saving Question Set...
                     </>
                   ) : (

@@ -9,7 +9,6 @@ import {
   KeyRound,
   ArrowRight,
   AlertCircle,
-  Loader2,
   CheckCircle2,
   Building,
   QrCode,
@@ -17,6 +16,7 @@ import {
   Check,
   Smartphone,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,7 +92,7 @@ export default function SuperAdminLoginPage() {
       if (authError || !authData?.user || !authData?.session) {
         setErrorMsg(
           authError?.message ||
-            "Invalid email or password. Access is restricted to authorized platform personnel."
+          "Invalid email or password. Access is restricted to authorized platform personnel."
         );
         setLoading(false);
         return;
@@ -227,7 +227,7 @@ export default function SuperAdminLoginPage() {
       setIsVerified(true);
       setLoading(false);
       setSuccessMsg("MFA verified with AAL2 elevation. Opening platform control plane...");
-      
+
       // Perform clean document navigation to dashboard
       window.location.replace(data.redirectTo || "/preritrd/dashboard");
     } catch {
@@ -244,13 +244,14 @@ export default function SuperAdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#EDECE7] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-[#5052C9] selection:text-white">
+    <div className="min-h-screen bg-[#e6c20c] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-[#5052C9] selection:text-white">
       {/* Platform Branding Header */}
       <div className="w-full max-w-md text-center mb-6 space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#5052C9]/10 border border-[#5052C9]/25 text-[#5052C9] text-xs font-semibold font-mono uppercase tracking-wider">
-          <ShieldCheck className="h-4 w-4" />
-          <span>Platform Control Plane</span>
-        </div>
+        <img
+          src="/assets/logo.png"
+          alt="UrPlaced Logo"
+          className="h-9 w-9 rounded-xl object-contain shadow-sm"
+        />
         <h1 className="text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
           UrPlaced
         </h1>
@@ -276,8 +277,8 @@ export default function SuperAdminLoginPage() {
               {step === "CREDENTIALS"
                 ? "Enter your platform administrator credentials to proceed."
                 : mfaAction === "ENROLL"
-                ? `Scan the QR code into your authenticator app to enroll ${email}.`
-                : `Enter the 6-digit TOTP code associated with ${email}.`}
+                  ? `Scan the QR code into your authenticator app to enroll ${email}.`
+                  : `Enter the 6-digit TOTP code associated with ${email}.`}
             </p>
           </div>
 
@@ -336,10 +337,9 @@ export default function SuperAdminLoginPage() {
               </div>
 
               <div className="flex justify-between items-center text-xs">
-                <span className="text-[11px] text-[#747683]">Super Admin Authority</span>
                 <a
                   href="/auth/forgot-password"
-                  className="text-[11px] text-[#5052C9] hover:underline font-medium"
+                  className="text-[11px] text-[#5052C9] hover:underline font-medium "
                 >
                   Forgot Password?
                 </a>
@@ -352,7 +352,7 @@ export default function SuperAdminLoginPage() {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <BrandLoader size="button" className="mr-2" />
                     Authenticating...
                   </>
                 ) : (
@@ -376,7 +376,7 @@ export default function SuperAdminLoginPage() {
                 </p>
               </div>
               <div className="flex justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-[#5052C9]" />
+                <BrandLoader size="inline" className="mx-auto" />
               </div>
             </div>
           ) : (
@@ -470,7 +470,7 @@ export default function SuperAdminLoginPage() {
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <BrandLoader size="button" className="mr-2" />
                       Verifying...
                     </>
                   ) : (
@@ -496,9 +496,8 @@ export default function SuperAdminLoginPage() {
 
           {/* Security Notice Footer */}
           <div className="pt-4 border-t border-[#B8B6AC]/30 text-center space-y-1 text-[11px] text-[#747683]">
-            <p className="font-semibold text-[#24283A]">Strict Option A Security Enforced</p>
             <p>
-              Platform Super Admin manages SaaS infrastructure only and cannot access private college student records or evaluation data.
+              Platform Super Admin manages SaaS infrastructure
             </p>
           </div>
         </CardContent>

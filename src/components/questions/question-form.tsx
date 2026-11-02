@@ -8,7 +8,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { QuestionType, QuestionDifficulty, BankCategory } from "@/types/database";
 import { QuestionValidator, McqOption } from "@/modules/question-bank/services/question-validator";
 import { CreateQuestionBankModal } from "@/components/questions/create-question-bank-modal";
-import { Plus, Trash2, AlertCircle, CheckCircle2, Eye, Sparkles, FolderPlus, Loader2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle, CheckCircle2, Eye, Sparkles, FolderPlus } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 
 interface QuestionFormProps {
   initialData?: any;
@@ -269,7 +270,7 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
 
               {loadingBanks ? (
                 <div className="h-10 px-3 rounded-md bg-input border border-border text-xs text-text-secondary flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <BrandLoader size="button" className="mr-1.5" />
                   <span>Loading Question Banks...</span>
                 </div>
               ) : banksError ? (

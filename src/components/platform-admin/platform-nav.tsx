@@ -367,14 +367,6 @@ export function PlatformTopNavbar({
 
       <div className="flex items-center gap-2.5 sm:gap-3">
 
-        <Badge
-          variant="outline"
-          className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
-          Strict Option A Enforced
-        </Badge>
-
         {/* Theme Control — Hydration Safe */}
         {themeToggleMounted ? (
           <ThemeToggle size="sm" />

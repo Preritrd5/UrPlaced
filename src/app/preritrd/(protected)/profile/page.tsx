@@ -17,7 +17,6 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Sliders,
   Bell,
   Activity,
@@ -30,6 +29,7 @@ import {
   Check,
   RefreshCw,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -429,7 +429,7 @@ export default function SuperAdminProfilePage() {
   if (loading && !profileData) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-4">
-        <Loader2 className="w-8 h-8 text-[#5052C9] animate-spin" />
+        <BrandLoader size="card" className="mx-auto" />
         <p className="text-xs font-mono text-[#747683]">Loading Platform Super Admin credentials...</p>
       </div>
     );
@@ -531,7 +531,7 @@ export default function SuperAdminProfilePage() {
                   className="absolute bottom-0 right-0 p-2 rounded-full bg-[#5052C9] text-white shadow-md hover:bg-[#4345B0] transition-transform active:scale-90"
                 >
                   {avatarUploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <BrandLoader size="button" />
                   ) : (
                     <Camera className="w-4 h-4" />
                   )}
@@ -918,7 +918,7 @@ export default function SuperAdminProfilePage() {
 
                 {notifSaving && (
                   <span className="text-[10px] text-[#5052C9] font-mono flex items-center gap-1">
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <BrandLoader size="button" className="mr-1" />
                     Saving...
                   </span>
                 )}
@@ -1093,7 +1093,7 @@ export default function SuperAdminProfilePage() {
                 >
                   {passwordLoading ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                      <BrandLoader size="button" className="mr-1.5" />
                       <span>Updating Credentials...</span>
                     </>
                   ) : (

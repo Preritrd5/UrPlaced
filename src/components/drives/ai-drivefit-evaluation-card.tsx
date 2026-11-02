@@ -4,7 +4,6 @@
 import React, { useState } from "react";
 import {
   Sparkles,
-  Loader2,
   CheckCircle2,
   XCircle,
   HelpCircle,
@@ -13,6 +12,7 @@ import {
   ArrowRight,
   TrendingUp,
 } from "lucide-react";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -106,7 +106,7 @@ export function AIDriveFitEvaluationCard({
             className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs"
           >
             {loading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              <BrandLoader size="button" className="mr-1.5" />
             ) : (
               <Sparkles className="w-3.5 h-3.5 mr-1.5" />
             )}
@@ -132,7 +132,7 @@ export function AIDriveFitEvaluationCard({
 
         {loading && (
           <div className="text-center py-6 space-y-2">
-            <Loader2 className="w-6 h-6 animate-spin text-[#5052C9] mx-auto" />
+            <BrandLoader size="card" className="mx-auto" />
             <p className="text-xs font-medium text-[#24283A]">
               Matching your academic records and skill history against {companyName}&apos;s recruitment criteria...
             </p>

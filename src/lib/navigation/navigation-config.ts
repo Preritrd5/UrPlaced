@@ -384,7 +384,7 @@ export const MASTER_NAVIGATION: {
         name: "Subscription & Billing",
         href: "/dashboard/billing",
         icon: CreditCard,
-        allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF"],
+        allowedRoles: ["PLACEMENT_HEAD"],
         accountCategory: "COLLEGE",
       },
       {
@@ -412,21 +412,33 @@ export function getAuthorizedNavigation(
   subscriptionStatus?: string | null,
   isGracePeriod?: boolean
 ): NavigationSection[] {
-  // Determine user's effective permissions
+  // Determine user's effective permissions:
+  // If userPermissions is undefined, null, or empty array, fall back to RoleDefaultPermissions
   const effectivePerms = new Set<string>(
-    userPermissions || RoleDefaultPermissions[userRole] || []
+    userPermissions && userPermissions.length > 0
+      ? userPermissions
+      : RoleDefaultPermissions[userRole] || []
   );
 
   const targetCategory: AccountCategory =
     userRole === "STUDENT" ? "STUDENT" : "COLLEGE";
 
+  // Platform Super Admins are never locked out of institutional administration
+  if (isPlatformAdmin) {
+    // Return all sections for target category with role permissions satisfied
+  }
+
   // During 7-day grace period, full subscribed navigation is retained (Q1)
   const isGrace = Boolean(isGracePeriod || subscriptionStatus === "PAST_DUE_GRACE");
   const isLocked =
-    subscriptionStatus &&
-    subscriptionStatus !== "ACTIVE" &&
-    subscriptionStatus !== "TRIALING" &&
-    !isGrace;
+    !isPlatformAdmin &&
+    (subscriptionStatus === "NO_SUBSCRIPTION" ||
+      Boolean(
+        subscriptionStatus &&
+        subscriptionStatus !== "ACTIVE" &&
+        subscriptionStatus !== "TRIALING" &&
+        !isGrace
+      ));
 
   const resolvedSections: NavigationSection[] = [];
 
@@ -453,7 +465,8 @@ export function getAuthorizedNavigation(
       if (isLocked) {
         if (targetCategory === "COLLEGE") {
           const isPermittedUnderLocked =
-            item.href === "/dashboard/billing" || item.href === "/dashboard/profile";
+            (item.href === "/dashboard/billing" && userRole === "PLACEMENT_HEAD") ||
+            item.href === "/dashboard/profile";
           if (!isPermittedUnderLocked) {
             continue;
           }

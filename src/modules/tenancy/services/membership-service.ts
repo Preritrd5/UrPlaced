@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UserRole } from "@/modules/identity-access/services/policy-engine";
 import { logAuditEvent } from "@/modules/identity-access/services/audit-service";
+import { UserDeletionService } from "@/modules/identity-access/services/user-deletion-service";
 
 export interface MembershipRecord {
   id: string;
@@ -393,12 +394,31 @@ export async function removeTenantMember(params: {
     }
   }
 
-  // 6. Permanently delete user login account from Supabase Auth
-  // This is the authoritative action: deleting the auth user permanently revokes login capability.
-  if (targetUserId && admin.auth?.admin?.deleteUser) {
-    const { error: authDelErr } = await admin.auth.admin.deleteUser(targetUserId);
-    if (authDelErr) {
-      throw new Error(`Failed to delete staff authentication account: ${authDelErr.message}`);
+  // 6. Permanently delete user login account from Supabase Auth & Storage via UserDeletionService
+  // This is the authoritative action: deleting the auth user and storage permanently revokes login capability.
+  if (targetUserId) {
+    try {
+      await UserDeletionService.executePermanentDeletion({
+        targetUserId,
+        actorUserId: params.actorUserId,
+        actorRole: "PLACEMENT_HEAD",
+        tenantId: params.tenantId,
+        reason: params.reason || "Staff member account permanently removed by college administrator",
+        adminClient: admin,
+      });
+    } catch (delErr: any) {
+      if (
+        delErr.message?.includes("Failed to permanently delete user from Supabase Auth") ||
+        delErr.message?.includes("Internal Auth Provider Failure")
+      ) {
+        throw new Error(`Failed to delete staff authentication account: ${delErr.message}`);
+      }
+      if (admin.auth?.admin?.deleteUser) {
+        const { error: authDelErr } = await admin.auth.admin.deleteUser(targetUserId);
+        if (authDelErr) {
+          throw new Error(`Failed to delete staff authentication account: ${authDelErr.message}`);
+        }
+      }
     }
   }
 

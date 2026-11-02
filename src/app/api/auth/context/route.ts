@@ -56,6 +56,10 @@ export async function GET(request: Request) {
     let gracePeriodEndsAt: string | null = null;
     let canAccessOperational = true;
     let accessDecision: string | null = null;
+    let planId: string | null = null;
+    let planName: string | null = null;
+    let entitlements: Record<string, boolean> | null = null;
+    let limits: Record<string, number | null> | null = null;
 
     if (activeMembership?.tenants?.id) {
       try {
@@ -71,6 +75,10 @@ export async function GET(request: Request) {
         gracePeriodEndsAt = access.gracePeriodEndsAt || null;
         canAccessOperational = access.canAccessOperational;
         accessDecision = access.decision;
+        planId = access.planId || null;
+        planName = access.planName || null;
+        entitlements = access.entitlements || null;
+        limits = access.limits || null;
       } catch {
         // Fallback
       }
@@ -107,6 +115,10 @@ export async function GET(request: Request) {
             gracePeriodEndsAt,
             canAccessOperational,
             accessDecision,
+            planId,
+            planName,
+            entitlements,
+            limits,
           }
         : profile.institutionName
         ? {

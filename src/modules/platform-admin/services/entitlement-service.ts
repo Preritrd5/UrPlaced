@@ -194,7 +194,8 @@ export class EntitlementService {
     if (!tenantId) return null;
 
     try {
-      const { data: sub, error } = await admin
+      let sub: any = null;
+      const { data: extendedSub, error: extErr } = await admin
         .from("college_subscriptions")
         .select(`
           tenant_id,
@@ -213,7 +214,36 @@ export class EntitlementService {
         .eq("tenant_id", tenantId)
         .maybeSingle();
 
-      if (error || !sub) {
+      if (!extErr && extendedSub) {
+        sub = extendedSub;
+      } else if (extErr && (extErr.code === "42703" || extErr.message?.includes("does not exist"))) {
+        const { data: baseSub, error: baseErr } = await admin
+          .from("college_subscriptions")
+          .select(`
+            id,
+            tenant_id,
+            status,
+            plan_id,
+            start_date,
+            expiry_date,
+            renewal_date,
+            grace_period_days,
+            student_seat_limit,
+            staff_seat_limit,
+            subscription_plans (
+              id,
+              name
+            )
+          `)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        if (!baseErr && baseSub) {
+          sub = baseSub;
+        }
+      }
+
+      if (!sub) {
         return null;
       }
 
@@ -227,6 +257,8 @@ export class EntitlementService {
       let isSnapshotValid = false;
       let snapshotError: string | undefined = undefined;
 
+      const isColumnAbsent = !("entitlements_snapshot" in sub) || sub.entitlements_snapshot === undefined;
+
       if (
         snapshot &&
         typeof snapshot === "object" &&
@@ -235,16 +267,30 @@ export class EntitlementService {
         snapshot.limits &&
         typeof snapshot.limits === "object"
       ) {
+        const planTier = snapshot.planId || sub.plan_id;
         effectiveLimits = PlatformSubscriptionService.buildDefaultLimits({
           ...snapshot.limits,
           ...(snapshot.customOverrides?.limits || {}),
-        });
+        }, planTier);
         effectiveFeatures = PlatformSubscriptionService.buildDefaultEntitlements({
           ...snapshot.entitlements,
           ...(snapshot.customOverrides?.entitlements || {}),
-        });
+        }, planTier);
         planVersion = Number(snapshot.planVersion || sub.plan_version || 1);
         isSnapshotSource = true;
+        isSnapshotValid = true;
+      } else if (isColumnAbsent && sub.plan_id) {
+        // Schema fallback for environment where entitlements_snapshot column is absent
+        const tier = (sub.plan_id || "").toLowerCase().includes("enterprise")
+          ? "enterprise"
+          : (sub.plan_id || "").toLowerCase().includes("growth")
+          ? "growth"
+          : "starter";
+
+        effectiveFeatures = PlatformSubscriptionService.buildDefaultEntitlements(null, tier);
+        effectiveLimits = PlatformSubscriptionService.buildDefaultLimits(null, tier);
+        planVersion = Number(sub.plan_version || 1);
+        isSnapshotSource = false;
         isSnapshotValid = true;
       } else {
         // STRICT IMMUTABILITY: Reject unsafe fallback to mutable live plan definition!

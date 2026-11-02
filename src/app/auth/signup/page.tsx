@@ -7,6 +7,7 @@ import { UserPlus, User, Mail, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { AuthSplitLayout, UrPlacedBrandLogo } from "@/components/auth/auth-split-layout";
 import { AuthInput, AuthPasswordInput } from "@/components/auth/auth-input";
+import { BrandLoader } from "@/components/common/brand-loader";
 
 export default function StudentSignUpPage() {
   const router = useRouter();
@@ -290,10 +291,17 @@ export default function StudentSignUpPage() {
             suppressHydrationWarning
             className="w-full bg-[#5052C9] hover:bg-[#4345B0] active:bg-[#383A99] text-white font-semibold text-xs sm:text-sm rounded-xl h-11 sm:h-12 shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5052C9]/50 mt-1"
           >
-            <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-            <span>
-              {isLoading ? "Creating Account..." : "Create Student Account (Sign Up)"}
-            </span>
+            {isLoading ? (
+              <>
+                <BrandLoader size="button" className="mr-2" />
+                <span>Creating Account...</span>
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+                <span>Create Student Account (Sign Up)</span>
+              </>
+            )}
           </button>
         </form>
 

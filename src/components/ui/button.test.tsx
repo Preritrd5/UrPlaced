@@ -34,6 +34,6 @@ describe("Button component", () => {
     render(<Button isLoading>Submitting</Button>);
     const button = screen.getByRole("button", { name: /submitting/i });
     expect(button).toBeDisabled();
-    expect(button.querySelector("svg")).toBeInTheDocument();
+    expect(button.querySelector("img, [data-brand-loader]")).toBeInTheDocument();
   });
 });

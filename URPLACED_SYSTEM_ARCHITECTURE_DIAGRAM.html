@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UrPlaced — Complete System Architecture & Topology</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #EDECE7;
+      color: #24283A;
+    }
+    h1, h2, h3, h4, .font-heading {
+      font-family: 'Outfit', sans-serif;
+    }
+    code, pre, .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-primary {
+      background-color: rgba(80, 82, 201, 0.12);
+      color: #5052C9;
+      border: 1px solid rgba(80, 82, 201, 0.3);
+    }
+    .badge-teal {
+      background-color: rgba(46, 143, 134, 0.12);
+      color: #2E8F86;
+      border: 1px solid rgba(46, 143, 134, 0.3);
+    }
+    .badge-amber {
+      background-color: rgba(217, 119, 6, 0.12);
+      color: #B45309;
+      border: 1px solid rgba(217, 119, 6, 0.3);
+    }
+    .badge-red {
+      background-color: rgba(220, 38, 38, 0.12);
+      color: #DC2626;
+      border: 1px solid rgba(220, 38, 38, 0.3);
+    }
+    .arch-card {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+    .arch-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(36, 40, 58, 0.12);
+      border-color: #5052C9;
+    }
+    .active-card {
+      border-color: #5052C9 !important;
+      box-shadow: 0 0 0 2px #5052C9, 0 12px 24px -6px rgba(80, 82, 201, 0.25) !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+  <!-- Header Section -->
+  <header class="max-w-7xl mx-auto mb-8 bg-[#F8F7F3] border border-[#B8B6AC] rounded-2xl p-6 shadow-sm">
+    <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3 mb-1">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold badge-primary tracking-wide uppercase">
+            Platform System Architecture V1.0
+          </span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold badge-teal tracking-wide">
+            100% Production Verified
+          </span>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold badge-amber tracking-wide">
+            Strict Option A & One-College Rule
+          </span>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-[#24283A] tracking-tight">
+          UrPlaced Architecture & Topology Map
+        </h1>
+        <p class="text-sm md:text-base text-[#292D40] opacity-80 mt-1 max-w-3xl">
+          Complete physical and logical boundary visualization across client portals, Next.js 15 application runtime, security and subscription gates, external cloud integrations, and PostgreSQL RLS storage.
+        </p>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div class="flex items-center gap-3 bg-[#FBFAF7] border border-[#DDDCD5] p-3 rounded-xl">
+        <div class="text-center px-3 border-r border-[#DDDCD5]">
+          <span class="block text-xl font-bold text-[#5052C9] font-mono">1,203</span>
+          <span class="text-xs text-[#747683] uppercase tracking-wider font-semibold">Vitest Tests</span>
+        </div>
+        <div class="text-center px-3 border-r border-[#DDDCD5]">
+          <span class="block text-xl font-bold text-[#2E8F86] font-mono">92/92</span>
+          <span class="text-xs text-[#747683] uppercase tracking-wider font-semibold">pgTAP RLS</span>
+        </div>
+        <div class="text-center px-3 border-r border-[#DDDCD5]">
+          <span class="block text-xl font-bold text-[#24283A] font-mono">265</span>
+          <span class="text-xs text-[#747683] uppercase tracking-wider font-semibold">App Routes</span>
+        </div>
+        <div class="text-center px-3">
+          <span class="block text-xl font-bold text-[#5052C9] font-mono">32</span>
+          <span class="text-xs text-[#747683] uppercase tracking-wider font-semibold">Migrations</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Layer Filters -->
+    <div class="mt-6 pt-5 border-t border-[#DDDCD5] flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2 overflow-x-auto pb-1" id="filter-buttons">
+        <button onclick="filterLayer('all')" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#5052C9] text-white shadow-sm transition" data-layer="all">
+          Complete Overview
+        </button>
+        <button onclick="filterLayer('clients')" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#FBFAF7] text-[#24283A] border border-[#B8B6AC] hover:border-[#5052C9] transition" data-layer="clients">
+          1. Client Portals
+        </button>
+        <button onclick="filterLayer('appserver')" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#FBFAF7] text-[#24283A] border border-[#B8B6AC] hover:border-[#5052C9] transition" data-layer="appserver">
+          2. Next.js 15 Server
+        </button>
+        <button onclick="filterLayer('gate')" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#FBFAF7] text-[#24283A] border border-[#B8B6AC] hover:border-[#5052C9] transition" data-layer="gate">
+          3. Security & Access Gate
+        </button>
+        <button onclick="filterLayer('database')" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#FBFAF7] text-[#24283A] border border-[#B8B6AC] hover:border-[#5052C9] transition" data-layer="database">
+          4. Supabase DB & Storage
+        </button>
+        <button onclick="filterLayer('external')" class="filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#FBFAF7] text-[#24283A] border border-[#B8B6AC] hover:border-[#5052C9] transition" data-layer="external">
+          5. External Cloud Integrations
+        </button>
+      </div>
+
+      <div class="text-xs text-[#747683] font-medium flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-[#2E8F86] animate-pulse"></span>
+        Click any node to view deep architectural specification
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Architecture Container -->
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+    <!-- Topology Visual Canvas (8 Columns) -->
+    <div class="lg:col-span-8 space-y-8" id="topology-container">
+
+      <!-- ================= LAYER 1: CLIENT ACCESS & PRESENTATION LAYER ================= -->
+      <section class="layer-section bg-[#F8F7F3] border-2 border-[#DDDCD5] rounded-2xl p-6 shadow-sm" data-layer="clients">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-[#5052C9] text-white font-bold text-xs">L1</span>
+            <h2 class="text-xl font-bold text-[#24283A]">Client & Presentation Layer</h2>
+          </div>
+          <span class="text-xs font-mono text-[#747683] uppercase">Route Group Boundaries</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Card 1: Placement Cell Portal -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('client-placement')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-primary px-2 py-0.5 rounded">Institutional Hub</span>
+              <span class="text-[11px] font-mono text-[#747683]">/dashboard/*</span>
+            </div>
+            <h3 class="font-bold text-base text-[#24283A]">Placement Cell Portal</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1 mb-3">Head, Staff, and Trainer workflows for drives, question banks, and student records.</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">Placement Head</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">Placement Staff</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">Trainer</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Student Candidate Portal -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('client-student')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-teal px-2 py-0.5 rounded">Candidate Hub</span>
+              <span class="text-[11px] font-mono text-[#747683]">/student/*</span>
+            </div>
+            <h3 class="font-bold text-base text-[#24283A]">Student Portal</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1 mb-3">Drive applications, proctored tests, mistake remediation, and Socratic AI tutor.</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">SRN/USN Bound</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">DriveFit 0-100%</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">AI Tutor</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Platform Super Admin -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('client-superadmin')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-amber px-2 py-0.5 rounded">Control Plane</span>
+              <span class="text-[11px] font-mono text-[#747683]">/preritrd/*</span>
+            </div>
+            <h3 class="font-bold text-base text-[#24283A]">Super Admin Portal</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1 mb-3">Tenant onboarding, plans catalogue, global billing, and 1-168h emergency overrides.</p>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">Strict Option A</span>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-white border border-[#DDDCD5] text-[#24283A]">AAL2 TOTP MFA</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= LAYER 2: APPLICATION SERVER & ORCHESTRATION ================= -->
+      <section class="layer-section bg-[#F8F7F3] border-2 border-[#DDDCD5] rounded-2xl p-6 shadow-sm" data-layer="appserver">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-[#5052C9] text-white font-bold text-xs">L2</span>
+            <h2 class="text-xl font-bold text-[#24283A]">Next.js 15 App Router Server Core</h2>
+          </div>
+          <span class="text-xs font-mono text-[#747683]">React 19 Server Components & Actions</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Card 4: Edge Middleware & Session Guards -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('server-middleware')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-primary px-2 py-0.5 rounded">Security Boundary</span>
+              <span class="text-[11px] font-mono text-[#747683]">src/middleware.ts</span>
+            </div>
+            <h3 class="font-bold text-base text-[#24283A]">Edge Middleware & Session Resolver</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">Extracts SSR cookies via <code class="font-mono text-[#5052C9]">@supabase/ssr</code>, enforces route boundaries, and completely ignores client-side <code class="font-mono">user_metadata</code>.</p>
+          </div>
+
+          <!-- Card 5: Placement Intelligence Services -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('server-intelligence')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-teal px-2 py-0.5 rounded">Core Engines</span>
+              <span class="text-[11px] font-mono text-[#747683]">src/lib/*</span>
+            </div>
+            <h3 class="font-bold text-base text-[#24283A]">Placement Engine & Assessment Runners</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">DriveFit semantic matcher, QuestionBank auto-build algorithm, 30s proctoring auto-save loop, and spaced repetition queues.</p>
+          </div>
+        </div>
+
+        <!-- Micro Services Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+          <div class="p-3 bg-white border border-[#DDDCD5] rounded-lg text-center" onclick="showNodeDetails('subservice-drivefit')">
+            <span class="block text-xs font-bold text-[#5052C9]">DriveFit AI</span>
+            <span class="text-[11px] text-[#747683]">Semantic JD Parser</span>
+          </div>
+          <div class="p-3 bg-white border border-[#DDDCD5] rounded-lg text-center" onclick="showNodeDetails('subservice-qsentinel')">
+            <span class="block text-xs font-bold text-[#5052C9]">QB Sentinel</span>
+            <span class="text-[11px] text-[#747683]">Test Pool Curator</span>
+          </div>
+          <div class="p-3 bg-white border border-[#DDDCD5] rounded-lg text-center" onclick="showNodeDetails('subservice-proctor')">
+            <span class="block text-xs font-bold text-[#5052C9]">Assessment Run</span>
+            <span class="text-[11px] text-[#747683]">30s Auto-Save RPC</span>
+          </div>
+          <div class="p-3 bg-white border border-[#DDDCD5] rounded-lg text-center" onclick="showNodeDetails('subservice-pdf')">
+            <span class="block text-xs font-bold text-[#5052C9]">PDFKit & ExcelJS</span>
+            <span class="text-[11px] text-[#747683]">GST Invoices & Rosters</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= LAYER 3: SECURITY & SUBSCRIPTION ACCESS GATE ================= -->
+      <section class="layer-section bg-[#F8F7F3] border-2 border-[#5052C9] rounded-2xl p-6 shadow-sm relative overflow-hidden" data-layer="gate">
+        <div class="absolute top-0 right-0 px-3 py-1 bg-[#5052C9] text-white text-[11px] font-bold uppercase rounded-bl-lg">
+          Zero-Trust Access Gate
+        </div>
+
+        <div class="flex items-center gap-3 mb-4">
+          <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-[#5052C9] text-white font-bold text-xs">L3</span>
+          <h2 class="text-xl font-bold text-[#24283A]">Security, RBAC & Subscription Gate</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Gate 1: One Person = One College -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('gate-onecollege')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-red px-2 py-0.5 rounded">Strict Invariant</span>
+              <span class="text-[11px] font-mono text-[#747683]">PostgreSQL DB</span>
+            </div>
+            <h3 class="font-bold text-sm text-[#24283A]">One Person = One College</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">Unique constraint <code class="font-mono text-xs">uq_tenant_memberships_user_id</code> forbids multi-college membership.</p>
+          </div>
+
+          <!-- Gate 2: Option C Fail-Closed -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('gate-optionc')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-amber px-2 py-0.5 rounded">Fail-Closed Gate</span>
+              <span class="text-[11px] font-mono text-[#747683]">Option C Flow</span>
+            </div>
+            <h3 class="font-bold text-sm text-[#24283A]">Subscription State Gate</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">No subscription or PENDING_PAYMENT blocks all 4 roles from operational APIs.</p>
+          </div>
+
+          <!-- Gate 3: 7-Day Grace & Overrides -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('gate-grace')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-teal px-2 py-0.5 rounded">Business Continuity</span>
+              <span class="text-[11px] font-mono text-[#747683]">Grace & Override</span>
+            </div>
+            <h3 class="font-bold text-sm text-[#24283A]">7-Day Grace & Overrides</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">100% operational access during 7-day grace. 1-168h overrides with mandatory audited reason.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= LAYER 4: SUPABASE DATABASE & STORAGE ================= -->
+      <section class="layer-section bg-[#F8F7F3] border-2 border-[#DDDCD5] rounded-2xl p-6 shadow-sm" data-layer="database">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-[#5052C9] text-white font-bold text-xs">L4</span>
+            <h2 class="text-xl font-bold text-[#24283A]">Supabase / PostgreSQL Multi-Tenant Store</h2>
+          </div>
+          <span class="text-xs font-mono text-[#747683]">32 Migrations • 100% RLS Coverage</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Tenant Partition Store -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('db-tenants')">
+            <span class="text-xs font-semibold badge-primary px-2 py-0.5 rounded block w-fit mb-2">Multi-Tenant Store</span>
+            <h3 class="font-bold text-sm text-[#24283A]">Tenant Partition Tables</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">students, companies, placement_drives, questions, assessments, attempts, mistake_defects.</p>
+            <span class="inline-block mt-3 text-[11px] font-mono text-[#5052C9]">USING (college_id IN TM)</span>
+          </div>
+
+          <!-- Strict Option A Control Plane Store -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('db-controlplane')">
+            <span class="text-xs font-semibold badge-amber px-2 py-0.5 rounded block w-fit mb-2">Control Plane Store</span>
+            <h3 class="font-bold text-sm text-[#24283A]">Strict Option A Store</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">colleges, college_subscriptions, subscription_plans, billing_invoices, college_invitations.</p>
+            <span class="inline-block mt-3 text-[11px] font-mono text-[#B45309]">Super Admin Isolated</span>
+          </div>
+
+          <!-- Append-Only Audit & Storage -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('db-audit')">
+            <span class="text-xs font-semibold badge-teal px-2 py-0.5 rounded block w-fit mb-2">SOC-2 Observability</span>
+            <h3 class="font-bold text-sm text-[#24283A]">Immutable Audit & Storage</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1"><code class="font-mono text-xs">public.audit_logs</code> (REVOKE UPDATE/DELETE). Storage buckets with verified owner RLS.</p>
+            <span class="inline-block mt-3 text-[11px] font-mono text-[#2E8F86]">owner = auth.uid()</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= LAYER 5: EXTERNAL CLOUD SERVICES ================= -->
+      <section class="layer-section bg-[#F8F7F3] border-2 border-[#DDDCD5] rounded-2xl p-6 shadow-sm" data-layer="external">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-[#5052C9] text-white font-bold text-xs">L5</span>
+            <h2 class="text-xl font-bold text-[#24283A]">External Cloud & Integration Services</h2>
+          </div>
+          <span class="text-xs font-mono text-[#747683]">Resilient Third-Party Boundary</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Google GenAI -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('ext-gemini')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-primary px-2 py-0.5 rounded">Google GenAI</span>
+              <span class="text-[11px] font-mono text-[#747683]">@google/genai</span>
+            </div>
+            <h3 class="font-bold text-sm text-[#24283A]">Gemini 2.5 Flash / Pro</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">DriveFit semantic scoring, Socratic AI Tutor, and question pool generation. Emergency kill-switch enabled.</p>
+          </div>
+
+          <!-- Razorpay Gateway -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('ext-razorpay')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-teal px-2 py-0.5 rounded">Payments Engine</span>
+              <span class="text-[11px] font-mono text-[#747683]">razorpay Node SDK</span>
+            </div>
+            <h3 class="font-bold text-sm text-[#24283A]">Razorpay B2B Payments</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">Orders API, HMAC-SHA256 webhook signature verification, 18% GST tax invoicing, and credit notes.</p>
+          </div>
+
+          <!-- Resend / SMTP Email Relay -->
+          <div class="arch-card bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl p-4 shadow-sm" onclick="showNodeDetails('ext-email')">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold badge-amber px-2 py-0.5 rounded">Email Transport</span>
+              <span class="text-[11px] font-mono text-[#747683]">nodemailer</span>
+            </div>
+            <h3 class="font-bold text-sm text-[#24283A]">Transactional Email Relay</h3>
+            <p class="text-xs text-[#292D40] opacity-80 mt-1">College onboarding invitation tokens, 7-day expiration reminders, and billing receipts.</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Interactive Node Inspector Drawer (4 Columns) -->
+    <aside class="lg:col-span-4 sticky top-8">
+      <div class="bg-[#F8F7F3] border-2 border-[#B8B6AC] rounded-2xl p-6 shadow-md" id="inspector-card">
+        <div class="flex items-center justify-between pb-4 border-b border-[#DDDCD5] mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#5052C9]"></span>
+            <span class="text-xs font-bold uppercase tracking-wider text-[#747683]">Component Inspector</span>
+          </div>
+          <span class="text-xs font-mono px-2 py-0.5 rounded bg-[#EDECE7] text-[#24283A]" id="detail-tag">Select Node</span>
+        </div>
+
+        <div id="inspector-content">
+          <div class="text-center py-12">
+            <svg class="w-12 h-12 mx-auto text-[#747683] opacity-40 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+            </svg>
+            <h4 class="font-bold text-base text-[#24283A]">Interactive Architecture Explorer</h4>
+            <p class="text-xs text-[#292D40] opacity-70 mt-1 max-w-xs mx-auto">
+              Click any component card in the topology diagram on the left to inspect its source files, database constraints, security invariants, and test coverage.
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Interactive Inspector Logic -->
+  <script>
+    const nodeDatabase = {
+      'client-placement': {
+        title: 'Institutional Placement Cell Portal',
+        tag: 'CLIENT LAYER • /dashboard/*',
+        badge: 'badge-primary',
+        desc: 'Dedicated enterprise portal for college placement cells. Provides three distinct sub-roles with strict feature boundaries.',
+        sections: [
+          { label: 'Assigned Roles', value: 'PLACEMENT_HEAD (Admin & Billing), PLACEMENT_STAFF (Drives & Students), TRAINER (Assessments & QB)' },
+          { label: 'Key Routes', value: '/dashboard/drives, /dashboard/companies, /dashboard/students, /dashboard/questions, /dashboard/assessments, /dashboard/billing' },
+          { label: 'Security Rules', value: 'Billing restricted exclusively to PLACEMENT_HEAD. Staff & Trainers receive 403 Forbidden on invoices.' },
+          { label: 'Test Coverage', value: 'Scenarios 14, 21, 37, 38 (sa07-end-to-end-integration-and-qa.test.ts)' }
+        ]
+      },
+      'client-student': {
+        title: 'Student Candidate Portal',
+        tag: 'CLIENT LAYER • /student/*',
+        badge: 'badge-teal',
+        desc: 'Personalized preparation and placement portal bound to exactly one college via an official Student Registration Number (SRN/USN).',
+        sections: [
+          { label: 'Assigned Roles', value: 'STUDENT (Authenticated candidate)' },
+          { label: 'Core Features', value: 'DriveFit match evaluation, real-time drive eligibility, proctored examinations, Mistake-to-Mastery review, Socratic AI Tutor' },
+          { label: 'Security Boundary', value: 'Completely barred from administrative endpoints, roster imports, and billing. Cannot alter college CGPA.' },
+          { label: 'Key Files', value: 'src/app/student/*, src/app/api/student/*, src/components/assessment/runner.tsx' }
+        ]
+      },
+      'client-superadmin': {
+        title: 'Platform Super Admin Control Plane',
+        tag: 'CONTROL PLANE • /preritrd/*',
+        badge: 'badge-amber',
+        desc: 'Independent SaaS platform governance console operating under Strict Option A data isolation.',
+        sections: [
+          { label: 'Assigned Roles', value: 'SUPER_ADMIN' },
+          { label: 'MFA Enforcement', value: 'Mandatory TOTP Two-Factor Authentication with AAL2 session claim.' },
+          { label: 'Strict Option A', value: 'Zero access to institutional student PII, assessments, question banks, or company drives.' },
+          { label: 'Privileges', value: 'Generate college invitation tokens, author subscription plans, reconcile offline payments, grant 1-168h overrides.' }
+        ]
+      },
+      'server-middleware': {
+        title: 'Edge Middleware & Auth Guards',
+        tag: 'NEXT.JS CORE • src/middleware.ts',
+        badge: 'badge-primary',
+        desc: 'Next.js 15 edge middleware verifying authentication cookies and delegating authorization to server-side database guards.',
+        sections: [
+          { label: 'Session Management', value: '@supabase/ssr cookie extraction (sb-*-auth-token)' },
+          { label: 'Metadata Rule', value: 'Client user_metadata is completely disregarded for authorization checks.' },
+          { label: 'Key Guard Functions', value: 'requireTenantRole(), assertNoExistingMembership(), requireSuperAdmin(), requireBillingAccess()' },
+          { label: 'Key Files', value: 'src/middleware.ts, src/lib/auth/guards.ts, src/lib/auth/session.ts' }
+        ]
+      },
+      'server-intelligence': {
+        title: 'Placement Intelligence & Assessment Core',
+        tag: 'SERVICES • src/lib/*',
+        badge: 'badge-teal',
+        desc: 'Full-stack business logic engines governing candidate scoring, examination timers, and adaptive mistake reviews.',
+        sections: [
+          { label: 'DriveFit Engine', value: 'Evaluates candidate resume against JD taxonomy using Gemini 2.5 Flash, returning 0-100% score.' },
+          { label: 'Proctoring Runner', value: 'Full-screen examination container logging blur, tab-switch, and window resize events.' },
+          { label: 'Auto-Save Loop', value: 'Submits student responses to POST /api/student/attempts/[id]/save every 30 seconds.' },
+          { label: 'Mistake Taxonomy', value: 'Classifies errors into Conceptual, Calculation, and Speed/Time-Out defects.' }
+        ]
+      },
+      'gate-onecollege': {
+        title: 'One Person = Exactly One College Hard Rule',
+        tag: 'SECURITY INVARIANT • Migration 21',
+        badge: 'badge-red',
+        desc: 'Relational database constraint guaranteeing that an individual user can belong to only one higher education college.',
+        sections: [
+          { label: 'Database Constraint', value: 'CONSTRAINT uq_tenant_memberships_user_id UNIQUE (user_id) ON public.tenant_memberships' },
+          { label: 'PostgreSQL Code', value: '23505 (Unique Violation) thrown if a user attempts to acquire membership in a second college.' },
+          { label: 'Server Enforcement', value: 'assertNoExistingMembership(userId) executes prior to invitation acceptance or college creation.' },
+          { label: 'Verified Coverage', value: '92/92 pgTAP tests + Master SA-07 Scenarios 01-03 passing.' }
+        ]
+      },
+      'gate-optionc': {
+        title: 'Option C Fail-Closed Subscription Gate',
+        tag: 'ACCESS GATE • Option C Protocol',
+        badge: 'badge-amber',
+        desc: 'Approved dual-workflow subscription assignment with complete fail-closed operational access protection.',
+        sections: [
+          { label: 'Workflow 1', value: 'Super Admin assigns published plan during college invite -> created as PENDING_PAYMENT.' },
+          { label: 'Workflow 2', value: 'Super Admin leaves plan unassigned -> Head selects approved published plan post-registration.' },
+          { label: 'Fail-Closed Rule', value: 'Missing subscription or PENDING_PAYMENT blocks all 4 roles from student, drive, QB, and test APIs.' },
+          { label: 'Draft Plan Protection', value: 'Any attempt to select an unapproved draft plan is rejected with HTTP 400 Bad Request.' }
+        ]
+      },
+      'gate-grace': {
+        title: '7-Day Renewal Grace Period & Overrides',
+        tag: 'CONTINUITY GATE • Business Logic',
+        badge: 'badge-teal',
+        desc: 'Ensures campus recruitment drives are never abruptly terminated due to banking delays or administrative approval lags.',
+        sections: [
+          { label: 'Grace Period Rule', value: 'Existing paying colleges retain 100% full operational access for 7 days post-expiration.' },
+          { label: 'Warning UI', value: 'Displays persistent non-dismissible banner indicating remaining hours before suspension.' },
+          { label: 'Emergency Override', value: 'Super Admin can grant 1 to 168 hours of operational access with mandatory >=10 char justification.' },
+          { label: 'Audit Trail', value: 'Override events permanently logged in public.audit_logs with severity SECURITY.' }
+        ]
+      },
+      'db-tenants': {
+        title: 'PostgreSQL Multi-Tenant Relational Store',
+        tag: 'DATABASE • PostgreSQL 15+',
+        badge: 'badge-primary',
+        desc: 'Shared database architecture partitioned by college_id and enforced via PostgreSQL Row Level Security.',
+        sections: [
+          { label: 'Institutional Tables', value: 'students, companies, placement_drives, questions, assessments, attempts, mistake_defects' },
+          { label: 'RLS Predicate', value: 'USING (college_id = (SELECT college_id FROM tenant_memberships WHERE user_id = auth.uid()))' },
+          { label: 'Isolation Proof', value: '92/92 pgTAP tests prove College A cannot read, insert, update, or delete College B records.' },
+          { label: 'Foreign Keys', value: 'Strict ON DELETE RESTRICT on college foreign keys to prevent orphaned academic records.' }
+        ]
+      },
+      'db-controlplane': {
+        title: 'Strict Option A Platform Store',
+        tag: 'CONTROL STORE • Isolated Schema',
+        badge: 'badge-amber',
+        desc: 'Dedicated platform administration tables completely isolated from institutional student and drive data.',
+        sections: [
+          { label: 'Control Plane Tables', value: 'platform_admins, subscription_plans, college_subscriptions, billing_invoices, college_invitations' },
+          { label: 'Strict Option A Rule', value: 'Super Admin session tokens have zero RLS permissions on institutional student/question tables.' },
+          { label: 'Frozen Snapshots', value: 'subscription_snapshots captures immutable JSONB entitlement limits at payment moment.' }
+        ]
+      },
+      'db-audit': {
+        title: 'Immutable Canonical Audit Logging',
+        tag: 'AUDIT & STORAGE • public.audit_logs',
+        badge: 'badge-teal',
+        desc: 'Single append-only repository for compliance, security event monitoring, and storage object ownership.',
+        sections: [
+          { label: 'Table Immutability', value: 'REVOKE UPDATE, DELETE, TRUNCATE ON public.audit_logs FROM PUBLIC, authenticated, service_role' },
+          { label: 'Allowed Actions', value: 'INSERT and SELECT only. Audit history cannot be altered or cleared.' },
+          { label: 'Storage Buckets', value: 'avatars, resumes, drive-attachments, reports. storage.objects requires owner = auth.uid()' }
+        ]
+      },
+      'ext-gemini': {
+        title: 'Google Gemini Artificial Intelligence',
+        tag: 'EXTERNAL AI • @google/genai',
+        badge: 'badge-primary',
+        desc: 'Official Google GenAI SDK interfacing with Gemini 2.5 Flash and Gemini 2.5 Pro models.',
+        sections: [
+          { label: 'gemini-2.5-flash', value: 'High-throughput parsing of Job Descriptions, question difficulty classification, error taxonomy.' },
+          { label: 'gemini-2.5-pro', value: 'Multi-turn interactive student AI tutoring and longitudinal cohort placement trend synthesis.' },
+          { label: 'Structured Output', value: 'Zod schemas enforced via JSON schema constraints to prevent hallucinations.' },
+          { label: 'Emergency Kill-Switch', value: 'Platform kill-switch in /preritrd/configuration allows graceful fallback during outages.' }
+        ]
+      },
+      'ext-razorpay': {
+        title: 'Razorpay Payment Gateway',
+        tag: 'PAYMENTS • razorpay v2.9.8',
+        badge: 'badge-teal',
+        desc: 'B2B subscription payment infrastructure for Indian higher education institutions.',
+        sections: [
+          { label: 'Checkout Workflow', value: 'POST /api/billing/checkout/create-order -> Razorpay Modal -> POST /api/billing/checkout/verify' },
+          { label: 'Webhook Security', value: 'Verifies x-razorpay-signature using HMAC-SHA256 against RAZORPAY_WEBHOOK_SECRET' },
+          { label: 'Tax Compliance', value: 'Calculates 18% GST and produces sequential PDF tax invoices (INV-YYYY-XXXX)' },
+          { label: 'Refunds & Credit Notes', value: 'Issues official credit notes (CN-YYYY-XXXX) for refunded subscription amounts.' }
+        ]
+      },
+      'ext-email': {
+        title: 'Transactional Email Relay (Resend / SMTP)',
+        tag: 'EMAIL • nodemailer v10.2.1',
+        badge: 'badge-amber',
+        desc: 'Reliable email transport for high-priority security tokens, onboarding links, and billing reminders.',
+        sections: [
+          { label: 'Use Cases', value: 'College onboarding invitations (7-day tokens), renewal reminders (14d, 7d, 1d), payment receipts' },
+          { label: 'Transport', value: 'SMTP relay via Resend (smtp.resend.com:587) with HTML branded templates.' },
+          { label: 'Security', value: 'Tokens are cryptographically hashed and automatically invalidated upon single use.' }
+        ]
+      }
+    };
+
+    function showNodeDetails(nodeKey) {
+      const data = nodeDatabase[nodeKey];
+      if (!data) return;
+
+      // Update card active states
+      document.querySelectorAll('.arch-card').forEach(c => c.classList.remove('active-card'));
+      if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active-card');
+      }
+
+      document.getElementById('detail-tag').innerText = data.tag;
+
+      let sectionsHtml = '';
+      data.sections.forEach(s => {
+        sectionsHtml += `
+          <div class="mb-3 pb-3 border-b border-[#DDDCD5] last:border-none">
+            <span class="block text-[11px] font-bold text-[#747683] uppercase tracking-wider mb-0.5">${s.label}</span>
+            <span class="block text-xs font-medium text-[#24283A] font-mono leading-relaxed">${s.value}</span>
+          </div>
+        `;
+      });
+
+      document.getElementById('inspector-content').innerHTML = `
+        <div class="animate-fadeIn">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded ${data.badge}">${data.tag.split('•')[0].trim()}</span>
+          </div>
+          <h3 class="text-lg font-extrabold text-[#24283A] mb-2">${data.title}</h3>
+          <p class="text-xs text-[#292D40] opacity-80 mb-4 leading-relaxed">${data.desc}</p>
+          <div class="bg-[#FBFAF7] border border-[#DDDCD5] rounded-xl p-3.5">
+            ${sectionsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function filterLayer(layerId) {
+      // Update button styles
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.dataset.layer === layerId) {
+          btn.className = 'filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#5052C9] text-white shadow-sm transition';
+        } else {
+          btn.className = 'filter-btn px-4 py-2 rounded-lg text-xs font-semibold bg-[#FBFAF7] text-[#24283A] border border-[#B8B6AC] hover:border-[#5052C9] transition';
+        }
+      });
+
+      // Filter sections
+      const sections = document.querySelectorAll('.layer-section');
+      sections.forEach(sec => {
+        if (layerId === 'all' || sec.dataset.layer === layerId) {
+          sec.style.display = 'block';
+        } else {
+          sec.style.display = 'none';
+        }
+      });
+    }
+
+    // Default selection
+    window.addEventListener('DOMContentLoaded', () => {
+      showNodeDetails('client-placement');
+    });
+  </script>
+</body>
+</html>

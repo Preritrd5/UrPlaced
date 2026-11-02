@@ -16,7 +16,19 @@ export interface AuthContextValue {
   accountCategory: AccountCategory | null;
   isPlatformAdmin: boolean;
   isVerifiedMembership: boolean;
-  tenant: { id: string; name: string; subscriptionStatus?: string | null } | null;
+  tenant: {
+    id: string;
+    name: string;
+    subscriptionStatus?: string | null;
+    isGracePeriod?: boolean;
+    gracePeriodEndsAt?: string | null;
+    canAccessOperational?: boolean;
+    accessDecision?: string | null;
+    planId?: string | null;
+    planName?: string | null;
+    entitlements?: Record<string, boolean> | null;
+    limits?: Record<string, number | null> | null;
+  } | null;
   availableTenants: { id: string; name: string; role: string }[];
   permissions: string[];
   can: (action: PermissionIdentifier) => boolean;
@@ -62,6 +74,10 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
       gracePeriodEndsAt?: string | null;
       canAccessOperational?: boolean;
       accessDecision?: string | null;
+      planId?: string | null;
+      planName?: string | null;
+      entitlements?: Record<string, boolean> | null;
+      limits?: Record<string, number | null> | null;
     } | null;
     availableTenants: { id: string; name: string; role: string }[];
     permissions: string[];
