@@ -18,6 +18,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -192,15 +193,15 @@ export default function PlatformAccountsPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5052C9]">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary">
             Access Governance
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             Platform Administrators
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs text-text-secondary mt-0.5">
             Manage authorized platform super administrator credentials, invitations, and MFA enforcement.
           </p>
         </div>
@@ -211,7 +212,7 @@ export default function PlatformAccountsPage() {
             size="sm"
             onClick={fetchAccounts}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5"
+            className="border-border text-xs h-9 gap-1.5"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
@@ -222,7 +223,7 @@ export default function PlatformAccountsPage() {
               setCreatedInviteLink(null);
               setInviteEmail("");
             }}
-            className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 gap-1.5 shadow-sm"
+            className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 gap-1.5 shadow-sm"
           >
             <PlusCircle className="h-4 w-4" /> Invite Super Admin
           </Button>
@@ -235,14 +236,14 @@ export default function PlatformAccountsPage() {
           className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
             feedback.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-              : "bg-red-50 border-red-200 text-red-900"
+              : "bg-red-50 border-status-danger/30 text-status-danger"
           }`}
         >
           <div className="flex items-center gap-2">
             {feedback.type === "success" ? (
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             ) : (
-              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+              <AlertTriangle className="h-4 w-4 text-status-danger shrink-0" />
             )}
             <span>{feedback.text}</span>
           </div>
@@ -253,19 +254,19 @@ export default function PlatformAccountsPage() {
       )}
 
       {/* Admins Table Card */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl overflow-hidden">
-        <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-          <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+      <Card className="bg-card border-border shadow-xs rounded-2xl overflow-hidden">
+        <CardHeader className="pb-3 border-b border-border/60">
+          <CardTitle className="text-base font-bold font-heading text-text-primary">
             Active Platform Administrators ({admins.length})
           </CardTitle>
-          <CardDescription className="text-xs text-[#292D40]/70">
+          <CardDescription className="text-xs text-text-secondary">
             Accounts holding platform-wide infrastructure control authority
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-[#FBFAF7] text-[#747683] font-mono text-[10px] uppercase border-b border-[#B8B6AC]/30">
+              <thead className="bg-surface text-text-secondary font-mono text-[10px] uppercase border-b border-border/60">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Administrator</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
@@ -274,7 +275,7 @@ export default function PlatformAccountsPage() {
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#B8B6AC]/20">
+              <tbody className="divide-y divide-border/40">
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i}>
@@ -285,12 +286,12 @@ export default function PlatformAccountsPage() {
                   ))
                 ) : admins.length > 0 ? (
                   admins.map((adm) => (
-                    <tr key={adm.id} className="hover:bg-[#FBFAF7] transition-colors">
+                    <tr key={adm.id} className="hover:bg-surface transition-colors">
                       <td className="px-5 py-3.5">
-                        <div className="font-bold font-heading text-[#24283A] text-sm">
+                        <div className="font-bold font-heading text-text-primary text-sm">
                           {adm.fullName || "Super Admin"}
                         </div>
-                        <div className="text-[11px] text-[#747683] font-mono">{adm.email}</div>
+                        <div className="text-[11px] text-text-secondary font-mono">{adm.email}</div>
                       </td>
                       <td className="px-5 py-3.5">
                         <Badge
@@ -312,7 +313,7 @@ export default function PlatformAccountsPage() {
                           <ShieldCheck className="h-3 w-3 mr-1 text-emerald-600" /> AAL2 Mandatory
                         </Badge>
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[#747683]">
+                      <td className="px-5 py-3.5 font-mono text-text-secondary">
                         {adm.lastSignInAt ? new Date(adm.lastSignInAt).toLocaleString() : "Recently active"}
                       </td>
                       <td className="px-5 py-3.5 text-right space-x-1.5">
@@ -321,7 +322,7 @@ export default function PlatformAccountsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => setStatusTarget({ admin: adm, newStatus: "SUSPENDED" })}
-                            className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-50"
+                            className="h-7 text-xs border-status-danger/30 text-status-danger hover:bg-red-50"
                           >
                             <UserX className="h-3 w-3 mr-1" /> Suspend
                           </Button>
@@ -343,17 +344,17 @@ export default function PlatformAccountsPage() {
                             setDeleteConfirmEmail("");
                             setDeleteReason("Administrative permanent deletion via platform Super Admin console");
                           }}
-                          className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+                          className="h-7 text-xs border-status-danger/40 text-status-danger hover:bg-red-50 hover:text-red-800"
                           title="Permanently Delete Admin"
                         >
-                          <Trash2 className="h-3 w-3 mr-1 text-red-600" /> Delete
+                          <Trash2 className="h-3 w-3 mr-1 text-status-danger" /> Delete
                         </Button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-[#747683]">
+                    <td colSpan={5} className="px-5 py-8 text-center text-text-secondary">
                       No administrator accounts found.
                     </td>
                   </tr>
@@ -366,16 +367,16 @@ export default function PlatformAccountsPage() {
 
       {/* Invitations Table Card */}
       {invitations.length > 0 && (
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl overflow-hidden">
-          <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-            <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+        <Card className="bg-card border-border shadow-xs rounded-2xl overflow-hidden">
+          <CardHeader className="pb-3 border-b border-border/60">
+            <CardTitle className="text-base font-bold font-heading text-text-primary">
               Pending Administrator Invitations ({invitations.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-[#FBFAF7] text-[#747683] font-mono text-[10px] uppercase border-b border-[#B8B6AC]/30">
+                <thead className="bg-surface text-text-secondary font-mono text-[10px] uppercase border-b border-border/60">
                   <tr>
                     <th className="px-5 py-3 font-semibold">Invited Email</th>
                     <th className="px-5 py-3 font-semibold">Assigned Role</th>
@@ -383,17 +384,17 @@ export default function PlatformAccountsPage() {
                     <th className="px-5 py-3 font-semibold">Expires At</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#B8B6AC]/20">
+                <tbody className="divide-y divide-border/40">
                   {invitations.map((inv) => (
                     <tr key={inv.id}>
-                      <td className="px-5 py-3 font-mono text-[#24283A]">{inv.email}</td>
-                      <td className="px-5 py-3 font-medium text-[#5052C9]">{inv.role}</td>
+                      <td className="px-5 py-3 font-mono text-text-primary">{inv.email}</td>
+                      <td className="px-5 py-3 font-medium text-primary">{inv.role}</td>
                       <td className="px-5 py-3">
                         <Badge variant="outline" className="text-[10px] font-mono">
                           {inv.status}
                         </Badge>
                       </td>
-                      <td className="px-5 py-3 font-mono text-[#747683]">
+                      <td className="px-5 py-3 font-mono text-text-secondary">
                         {new Date(inv.expiresAt).toLocaleDateString()}
                       </td>
                     </tr>
@@ -407,13 +408,13 @@ export default function PlatformAccountsPage() {
 
       {/* Invite Super Admin Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border/60">
+              <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Invite Super Administrator
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Issue a single-use onboarding credential link with mandatory MFA
               </CardDescription>
             </CardHeader>
@@ -421,36 +422,36 @@ export default function PlatformAccountsPage() {
               {!createdInviteLink ? (
                 <form onSubmit={handleCreateInvite} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A]">
+                    <label className="text-xs font-semibold text-text-primary">
                       Administrator Email Address
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-[#747683]" />
+                      <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-text-secondary" />
                       <Input
                         type="email"
                         required
                         placeholder="newadmin@urplaced.com"
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
-                        className="pl-8 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                        className="pl-8 bg-surface border-border text-xs h-9"
                       />
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setShowInviteModal(false)}
                       disabled={inviteLoading}
-                      className="border-[#B8B6AC] text-xs h-9"
+                      className="border-border text-xs h-9"
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
                       disabled={inviteLoading}
-                      className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9"
+                      className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
                     >
                       {inviteLoading ? "Generating..." : "Generate Invitation"}
                     </Button>
@@ -488,7 +489,7 @@ export default function PlatformAccountsPage() {
                         setShowInviteModal(false);
                         setCreatedInviteLink(null);
                       }}
-                      className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9"
+                      className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
                     >
                       Done
                     </Button>
@@ -502,28 +503,28 @@ export default function PlatformAccountsPage() {
 
       {/* Confirmation Modal for Admin Status Change */}
       {statusTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border/60">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />
                 <span>Confirm Privilege Modification</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
-              <p className="text-xs text-[#24283A] leading-relaxed">
+              <p className="text-xs text-text-primary leading-relaxed">
                 Are you sure you want to change the status of administrator{" "}
                 <span className="font-bold font-mono">{statusTarget.admin.email}</span> to{" "}
-                <span className="font-bold text-[#5052C9]">{statusTarget.newStatus}</span>?
+                <span className="font-bold text-primary">{statusTarget.newStatus}</span>?
               </p>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setStatusTarget(null)}
                   disabled={statusLoading}
-                  className="border-[#B8B6AC] text-xs h-9"
+                  className="border-border text-xs h-9"
                 >
                   Cancel
                 </Button>
@@ -532,7 +533,7 @@ export default function PlatformAccountsPage() {
                   onClick={handleUpdateStatus}
                   disabled={statusLoading}
                   className={`text-white text-xs h-9 ${
-                    statusTarget.newStatus === "SUSPENDED" ? "bg-red-600 hover:bg-red-700" : "bg-[#5052C9] hover:bg-[#4345B0]"
+                    statusTarget.newStatus === "SUSPENDED" ? "bg-status-danger hover:opacity-90" : "bg-primary hover:bg-[var(--color-primary-hover)]"
                   }`}
                 >
                   {statusLoading ? "Updating..." : `Confirm ${statusTarget.newStatus}`}
@@ -545,14 +546,14 @@ export default function PlatformAccountsPage() {
 
       {/* Permanent Administrator Deletion Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <Card className="w-full max-w-lg bg-[#F8F7F3] border-red-300 shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 border-b border-red-200 bg-red-50/60">
-              <CardTitle className="text-base font-bold font-heading text-red-900 flex items-center gap-2">
-                <Trash2 className="h-5 w-5 text-red-600 shrink-0" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-card border-status-danger/40 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-status-danger/30 bg-status-danger-subtle/40">
+              <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-status-danger shrink-0" />
                 <span>Permanently Delete Administrator</span>
               </CardTitle>
-              <CardDescription className="text-xs text-red-700 mt-1">
+              <CardDescription className="text-xs text-status-danger mt-1">
                 P0 Permanent Removal: Supabase Auth credentials, active sessions, and profile records will be permanently deleted.
               </CardDescription>
             </CardHeader>
@@ -568,7 +569,7 @@ export default function PlatformAccountsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#24283A] block">
+                <label className="text-xs font-semibold text-text-primary block">
                   Mandatory Audit Reason (min 5 characters) <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -576,26 +577,26 @@ export default function PlatformAccountsPage() {
                   placeholder="Reason for deletion..."
                   value={deleteReason}
                   onChange={(e) => setDeleteReason(e.target.value)}
-                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                  className="bg-surface border-border text-xs h-9"
                   disabled={deleteLoading}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#24283A] block">
-                  Type <span className="font-mono font-bold text-red-600">{deleteTarget.email}</span> to confirm:
+                <label className="text-xs font-semibold text-text-primary block">
+                  Type <span className="font-mono font-bold text-status-danger">{deleteTarget.email}</span> to confirm:
                 </label>
                 <Input
                   type="text"
                   placeholder={deleteTarget.email}
                   value={deleteConfirmEmail}
                   onChange={(e) => setDeleteConfirmEmail(e.target.value)}
-                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 font-mono"
+                  className="bg-surface border-border text-xs h-9 font-mono"
                   disabled={deleteLoading}
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-[#B8B6AC]/30">
+              <div className="flex justify-end gap-2 pt-3 border-t border-border/60">
                 <Button
                   type="button"
                   variant="outline"
@@ -605,7 +606,7 @@ export default function PlatformAccountsPage() {
                     setDeleteConfirmEmail("");
                   }}
                   disabled={deleteLoading}
-                  className="border-[#B8B6AC] text-xs h-9"
+                  className="border-border text-xs h-9"
                 >
                   Cancel
                 </Button>
@@ -618,10 +619,10 @@ export default function PlatformAccountsPage() {
                     deleteConfirmEmail.trim().toLowerCase() !== deleteTarget.email.toLowerCase() ||
                     deleteReason.trim().length < 5
                   }
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 font-semibold gap-1.5 shadow-sm disabled:opacity-50"
+                  className="bg-status-danger hover:opacity-90 text-white text-xs h-9 font-semibold gap-1.5 shadow-sm disabled:opacity-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  {deleteLoading ? "Deleting..." : "Permanently Delete Administrator"}
+                  {deleteLoading ? <span className="flex items-center gap-1.5"><BrandLoader size="button" /> Deleting...</span> : "Permanently Delete Administrator"}
                 </Button>
               </div>
             </CardContent>

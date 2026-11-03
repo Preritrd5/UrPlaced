@@ -4,10 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Building2,
-  Users2,
   CreditCard,
-  Receipt,
-  Activity,
   PlusCircle,
   ArrowRight,
   TrendingUp,
@@ -16,6 +13,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Sliders,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -53,15 +51,20 @@ export default function PlatformDashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5052C9]">
-            UrPlaced SaaS Infrastructure
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">
+              UrPlaced Control Plane
+            </span>
+            <Badge variant="outline" className="font-mono text-[10px] bg-secondary/10 text-secondary border-secondary/30">
+              Platform Overview
+            </Badge>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             Platform Overview
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
             Real-time control plane metrics, institutional onboarding status, and subscription activity.
           </p>
         </div>
@@ -72,11 +75,11 @@ export default function PlatformDashboardPage() {
             size="sm"
             onClick={fetchMetrics}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5"
+            className="border-border text-xs h-9 gap-1.5"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          <Button asChild size="sm" className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 gap-1.5 shadow-sm">
+          <Button asChild size="sm" className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 gap-1.5 shadow-xs">
             <Link href="/preritrd/colleges/new">
               <PlusCircle className="h-4 w-4" /> Register College
             </Link>
@@ -86,70 +89,70 @@ export default function PlatformDashboardPage() {
 
       {/* Error state */}
       {error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-status-danger-subtle border border-status-danger/30 text-status-danger text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
+            <AlertTriangle className="h-4 w-4 shrink-0 text-status-danger" />
             <span>{error}</span>
           </div>
-          <Button size="sm" variant="outline" onClick={fetchMetrics} className="h-7 text-xs border-red-300">
+          <Button size="sm" variant="outline" onClick={fetchMetrics} className="h-7 text-xs border-status-danger/40">
             Retry
           </Button>
         </div>
       )}
 
       {/* 1. Core Platform KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Card 1: Registered Colleges */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl">
+        <Card className="bg-card border-border shadow-xs rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-bold text-[#747683] uppercase">
+              <span className="text-[11px] font-mono font-bold text-text-secondary uppercase">
                 Registered Colleges
               </span>
-              <div className="h-8 w-8 rounded-lg bg-[#5052C9]/10 text-[#5052C9] flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                 <Building2 className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-20 bg-gray-200" />
+                <Skeleton className="h-8 w-20 bg-surface" />
               ) : (
-                <div className="text-3xl font-extrabold font-heading text-[#24283A]">
+                <div className="text-3xl font-extrabold font-heading text-text-primary">
                   {metrics?.totalColleges ?? 0}
                 </div>
               )}
             </div>
-            <div className="mt-2 flex items-center gap-2 text-xs text-[#2E8F86] font-medium">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#2E8F86]" />
+            <div className="mt-2 flex items-center gap-2 text-xs text-secondary font-medium font-mono">
+              <span className="inline-block h-2 w-2 rounded-full bg-secondary" />
               <span>{metrics?.activeColleges ?? 0} active</span>
               {metrics?.suspendedColleges ? (
-                <span className="text-red-600">({metrics.suspendedColleges} suspended)</span>
+                <span className="text-status-danger">({metrics.suspendedColleges} suspended)</span>
               ) : null}
             </div>
           </CardContent>
         </Card>
 
         {/* Card 2: Active Subscriptions */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl">
+        <Card className="bg-card border-border shadow-xs rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-bold text-[#747683] uppercase">
+              <span className="text-[11px] font-mono font-bold text-text-secondary uppercase">
                 Active Subscriptions
               </span>
-              <div className="h-8 w-8 rounded-lg bg-[#2E8F86]/10 text-[#2E8F86] flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
                 <CreditCard className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-20 bg-gray-200" />
+                <Skeleton className="h-8 w-20 bg-surface" />
               ) : (
-                <div className="text-3xl font-extrabold font-heading text-[#24283A]">
+                <div className="text-3xl font-extrabold font-heading text-text-primary">
                   {metrics?.activeSubscriptions ?? 0}
                 </div>
               )}
             </div>
-            <div className="mt-2 text-xs text-[#747683] flex items-center gap-1.5">
+            <div className="mt-2 text-xs text-text-secondary flex items-center gap-1.5 font-mono">
               <Clock className="h-3.5 w-3.5 text-amber-600" />
               <span>{metrics?.expiringSubscriptions ?? 0} expiring in &lt; 30d</span>
             </div>
@@ -157,52 +160,52 @@ export default function PlatformDashboardPage() {
         </Card>
 
         {/* Card 3: Platform Revenue */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl">
+        <Card className="bg-card border-border shadow-xs rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-bold text-[#747683] uppercase">
+              <span className="text-[11px] font-mono font-bold text-text-secondary uppercase">
                 Revenue Collected
               </span>
-              <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
                 <TrendingUp className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-28 bg-gray-200" />
+                <Skeleton className="h-8 w-28 bg-surface" />
               ) : (
-                <div className="text-3xl font-extrabold font-heading text-[#24283A]">
+                <div className="text-3xl font-extrabold font-heading text-text-primary">
                   ₹{(metrics?.totalRevenueInr ?? 0).toLocaleString("en-IN")}
                 </div>
               )}
             </div>
-            <div className="mt-2 text-xs text-[#747683] flex items-center gap-1">
-              <span>₹{(metrics?.pendingRevenueInr ?? 0).toLocaleString("en-IN")} pending invoices</span>
+            <div className="mt-2 text-xs text-text-secondary flex items-center gap-1 font-mono">
+              <span>₹{(metrics?.pendingRevenueInr ?? 0).toLocaleString("en-IN")} pending</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Card 4: Platform Onboarding */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl">
+        <Card className="bg-card border-border shadow-xs rounded-2xl">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono font-bold text-[#747683] uppercase">
+              <span className="text-[11px] font-mono font-bold text-text-secondary uppercase">
                 Onboarding Pipeline
               </span>
-              <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                 <Activity className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-16 bg-gray-200" />
+                <Skeleton className="h-8 w-16 bg-surface" />
               ) : (
-                <div className="text-3xl font-extrabold font-heading text-[#24283A]">
+                <div className="text-3xl font-extrabold font-heading text-text-primary">
                   {metrics?.onboardingColleges ?? 0}
                 </div>
               )}
             </div>
-            <div className="mt-2 text-xs text-[#747683]">
+            <div className="mt-2 text-xs text-text-secondary font-mono">
               {metrics?.onboardingStatusFunnel?.completed ?? 0} verified &bull;{" "}
               {metrics?.onboardingStatusFunnel?.invited ?? 0} pending setup
             </div>
@@ -213,110 +216,110 @@ export default function PlatformDashboardPage() {
       {/* 2. Middle Section: Quick Action Shortcuts & Plan Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick Actions Shortcuts */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl lg:col-span-1">
+        <Card className="bg-card border-border shadow-xs rounded-2xl lg:col-span-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+            <CardTitle className="text-base font-bold font-heading text-text-primary">
               Quick Administrative Actions
             </CardTitle>
-            <CardDescription className="text-xs text-[#292D40]/70">
+            <CardDescription className="text-xs text-text-secondary">
               Immediate control plane workflows
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 pt-0 space-y-2.5">
             <Link
               href="/preritrd/colleges/new"
-              className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40 hover:border-[#5052C9] transition-all group"
+              className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-[#5052C9]/10 text-[#5052C9] flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                   <PlusCircle className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[#24283A] group-hover:text-[#5052C9]">
+                  <div className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors">
                     Register New College
                   </div>
-                  <div className="text-[10px] text-[#747683]">Provision institution workspace</div>
+                  <div className="text-[10px] text-text-secondary">Provision institutional workspace</div>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-[#747683] group-hover:text-[#5052C9] transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 text-text-secondary group-hover:text-primary transition-transform group-hover:translate-x-1" />
             </Link>
 
             <Link
               href="/preritrd/colleges"
-              className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40 hover:border-[#5052C9] transition-all group"
+              className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-[#2E8F86]/10 text-[#2E8F86] flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center">
                   <Building2 className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[#24283A] group-hover:text-[#5052C9]">
+                  <div className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors">
                     Manage College Accounts
                   </div>
-                  <div className="text-[10px] text-[#747683]">Activate or suspend tenants</div>
+                  <div className="text-[10px] text-text-secondary">Activate or suspend tenants</div>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-[#747683] group-hover:text-[#5052C9] transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 text-text-secondary group-hover:text-primary transition-transform group-hover:translate-x-1" />
             </Link>
 
             <Link
               href="/preritrd/subscriptions"
-              className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40 hover:border-[#5052C9] transition-all group"
+              className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-[#5052C9]/10 text-[#5052C9] flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                   <CreditCard className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[#24283A] group-hover:text-[#5052C9]">
+                  <div className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors">
                     Subscription Administration
                   </div>
-                  <div className="text-[10px] text-[#747683]">Plans, limits and seat renewals</div>
+                  <div className="text-[10px] text-text-secondary">Plans, limits and seat renewals</div>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-[#747683] group-hover:text-[#5052C9] transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 text-text-secondary group-hover:text-primary transition-transform group-hover:translate-x-1" />
             </Link>
 
             <Link
               href="/preritrd/configuration"
-              className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40 hover:border-[#5052C9] transition-all group"
+              className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-[#747683]/10 text-[#747683] flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-surface border border-border text-text-secondary flex items-center justify-center">
                   <Sliders className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-[#24283A] group-hover:text-[#5052C9]">
+                  <div className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors">
                     Platform Configuration
                   </div>
-                  <div className="text-[10px] text-[#747683]">Maintenance mode &amp; feature switches</div>
+                  <div className="text-[10px] text-text-secondary">Maintenance mode &amp; feature switches</div>
                 </div>
               </div>
-              <ArrowRight className="h-4 w-4 text-[#747683] group-hover:text-[#5052C9] transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="h-4 w-4 text-text-secondary group-hover:text-primary transition-transform group-hover:translate-x-1" />
             </Link>
           </CardContent>
         </Card>
 
         {/* Plan Distribution & Security Invariant */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl lg:col-span-2">
+        <Card className="bg-card border-border shadow-xs rounded-2xl lg:col-span-2">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+              <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Subscription Plan Distribution
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Institutional adoption breakdown by subscribed tier
               </CardDescription>
             </div>
-            <Badge variant="outline" className="border-[#2E8F86]/40 text-[#2E8F86] bg-[#2E8F86]/10 text-xs font-mono">
+            <Badge variant="outline" className="border-secondary/40 text-secondary bg-secondary/10 text-xs font-mono">
               Live Subscriptions
             </Badge>
           </CardHeader>
           <CardContent className="p-5 pt-0 space-y-4">
             {loading ? (
               <div className="space-y-3">
-                <Skeleton className="h-10 w-full bg-gray-200" />
-                <Skeleton className="h-10 w-full bg-gray-200" />
+                <Skeleton className="h-10 w-full bg-surface" />
+                <Skeleton className="h-10 w-full bg-surface" />
               </div>
             ) : metrics?.subscriptionPlanDistribution && metrics.subscriptionPlanDistribution.length > 0 ? (
               <div className="space-y-3">
@@ -325,15 +328,15 @@ export default function PlatformDashboardPage() {
                   const pct = Math.round((plan.count / total) * 100);
                   return (
                     <div key={plan.planId} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-medium text-[#24283A]">
+                      <div className="flex items-center justify-between text-xs font-medium text-text-primary">
                         <span>{plan.planName}</span>
-                        <span className="font-mono text-[#747683] font-bold">
+                        <span className="font-mono text-text-secondary font-bold">
                           {plan.count} colleges ({pct}%)
                         </span>
                       </div>
-                      <div className="h-2 rounded-full bg-[#EDECE7] overflow-hidden">
+                      <div className="h-2 rounded-full bg-surface overflow-hidden border border-border/40">
                         <div
-                          className="h-full bg-gradient-to-r from-[#7779D8] to-[#5052C9] rounded-full transition-all duration-500"
+                          className="h-full bg-primary-gradient rounded-full transition-all duration-500"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -342,14 +345,14 @@ export default function PlatformDashboardPage() {
                 })}
               </div>
             ) : (
-              <div className="text-xs text-[#747683] py-6 text-center">
+              <div className="text-xs text-text-secondary py-6 text-center">
                 No active subscriptions currently recorded.
               </div>
             )}
 
             {/* Strict Option A Isolation Callout */}
-            <div className="mt-4 p-3.5 rounded-xl bg-[#EDECE7] border border-[#B8B6AC]/40 flex items-start gap-3 text-xs text-[#24283A]">
-              <ShieldCheck className="h-4 w-4 text-[#5052C9] shrink-0 mt-0.5" />
+            <div className="mt-4 p-3.5 rounded-xl bg-surface/80 border border-border flex items-start gap-3 text-xs text-text-primary">
+              <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
               <div className="leading-relaxed">
                 <span className="font-bold">Strict Option A Governance:</span> Platform Super Admin operates on the SaaS control plane only. Under no circumstances can administrator sessions access private student profiles, resumes, evaluations, or college-owned question banks.
               </div>
@@ -359,54 +362,54 @@ export default function PlatformDashboardPage() {
       </div>
 
       {/* 3. Recent Platform Audit Events Table */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl overflow-hidden">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between border-b border-[#B8B6AC]/30">
+      <Card className="bg-card border-border shadow-xs rounded-2xl overflow-hidden">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between border-b border-border">
           <div>
-            <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+            <CardTitle className="text-base font-bold font-heading text-text-primary">
               Recent Platform Audit Events
             </CardTitle>
-            <CardDescription className="text-xs text-[#292D40]/70">
+            <CardDescription className="text-xs text-text-secondary">
               Control-plane administrative events (tenant_id = NULL)
             </CardDescription>
           </div>
-          <Button asChild variant="outline" size="sm" className="text-xs h-8 border-[#B8B6AC]">
+          <Button asChild variant="outline" size="sm" className="text-xs h-8 border-border">
             <Link href="/preritrd/audit-logs">View All Logs</Link>
           </Button>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-[#FBFAF7] text-[#747683] font-mono text-[10px] uppercase border-b border-[#B8B6AC]/30">
+              <thead className="bg-surface/80 text-text-secondary font-mono text-[10px] uppercase border-b border-border">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Action</th>
                   <th className="px-5 py-3 font-semibold">Administrator</th>
                   <th className="px-5 py-3 font-semibold">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#B8B6AC]/20">
+              <tbody className="divide-y divide-border/40">
                 {loading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
                       <td colSpan={3} className="px-5 py-3">
-                        <Skeleton className="h-5 w-full bg-gray-200" />
+                        <Skeleton className="h-5 w-full bg-surface" />
                       </td>
                     </tr>
                   ))
                 ) : metrics?.recentPlatformEvents && metrics.recentPlatformEvents.length > 0 ? (
                   metrics.recentPlatformEvents.map((evt) => (
-                    <tr key={evt.id} className="hover:bg-[#FBFAF7] transition-colors">
-                      <td className="px-5 py-3 font-mono font-bold text-[#5052C9]">
+                    <tr key={evt.id} className="hover:bg-surface/50 transition-colors">
+                      <td className="px-5 py-3 font-mono font-bold text-primary">
                         {evt.action}
                       </td>
-                      <td className="px-5 py-3 text-[#24283A]">{evt.actorEmail}</td>
-                      <td className="px-5 py-3 text-[#747683] font-mono">
+                      <td className="px-5 py-3 text-text-primary font-mono">{evt.actorEmail}</td>
+                      <td className="px-5 py-3 text-text-secondary font-mono">
                         {new Date(evt.timestamp).toLocaleString()}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={3} className="px-5 py-8 text-center text-[#747683]">
+                    <td colSpan={3} className="px-5 py-8 text-center text-text-secondary">
                       No recent platform audit events found.
                     </td>
                   </tr>

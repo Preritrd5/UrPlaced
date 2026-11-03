@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   Copy,
   Check,
-  ShieldCheck,
   CreditCard,
   Mail,
   User,
@@ -103,18 +102,26 @@ export default function RegisterCollegePage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Page Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>
           <Link
             href="/preritrd/colleges"
-            className="text-xs font-mono text-[#5052C9] hover:underline inline-flex items-center gap-1 mb-1"
+            className="text-xs font-mono text-primary hover:underline inline-flex items-center gap-1 mb-1 font-semibold"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Colleges
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">
+              Control Plane
+            </span>
+            <Badge variant="outline" className="font-mono text-[10px] bg-secondary/10 text-secondary border-secondary/30">
+              Institutional Provisioning
+            </Badge>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             Register New College Account
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
             Provision an isolated institutional workspace, configure initial subscription tier, and issue onboarding token.
           </p>
         </div>
@@ -122,41 +129,66 @@ export default function RegisterCollegePage() {
 
       {/* Success Banner when registered */}
       {createdCollege && (
-        <Card className="bg-emerald-50 border-emerald-300 shadow-xs rounded-2xl overflow-hidden">
+        <Card className="bg-secondary/10 border-secondary/30 shadow-xs rounded-2xl overflow-hidden">
           <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2.5 text-emerald-900 font-bold font-heading text-lg">
-              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            <div className="flex items-center gap-2.5 text-text-primary font-bold font-heading text-lg">
+              <CheckCircle2 className="h-6 w-6 text-secondary" />
               <span>Institution Successfully Registered</span>
             </div>
 
-            <p className="text-xs text-emerald-800 leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               The institutional account for{" "}
-              <span className="font-bold">{createdCollege.college.name}</span> has been provisioned on the SaaS control plane. An initial subscription and billing record have been generated.
+              <span className="font-bold text-text-primary">{createdCollege.college.name}</span> has been provisioned on the SaaS control plane. An initial subscription and billing record have been generated.
             </p>
 
             {/* Email Delivery Outcome Banner */}
             {createdCollege.emailDelivery?.success ? (
-              <div className="p-3.5 rounded-xl bg-white border border-emerald-300 text-xs text-emerald-900 flex items-center gap-2.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <div className="p-3.5 rounded-xl bg-card border border-secondary/30 text-xs text-text-primary flex items-center gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
                 <div>
                   <span className="font-bold">Invitation Email Sent:</span> An automated account setup email was dispatched to{" "}
-                  <span className="font-mono font-bold text-emerald-950">{createdCollege.college.officialEmail}</span>.
+                  <span className="font-mono font-bold text-primary">{createdCollege.college.officialEmail}</span>.
                 </div>
               </div>
             ) : (
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-900 space-y-1">
-                <div className="flex items-center gap-2 font-bold text-amber-950">
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-100 space-y-1">
+                <div className="flex items-center gap-2 font-bold">
                   <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
                   <span>Email Provider Status: Unconfigured or Delivery Notice</span>
                 </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
+                <p className="text-[11px] text-text-secondary leading-relaxed">
                   The college was provisioned, but automated email delivery was not completed ({createdCollege.emailDelivery?.error || "Credentials unconfigured"}). You may copy the secure invitation link below and share it directly with the Placement Head.
                 </p>
               </div>
             )}
 
+            {/* Onboarding Token Box */}
+            {createdCollege.onboardingToken && (
+              <div className="p-3.5 rounded-xl bg-surface border border-border space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">
+                  Onboarding Token / Setup Link
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/auth/onboard?token=${createdCollege.onboardingToken}`}
+                    className="bg-card border-border text-xs font-mono h-9"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopyToken}
+                    className="h-9 text-xs border-border gap-1 shrink-0"
+                  >
+                    {copiedToken ? <Check className="h-3.5 w-3.5 text-secondary" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedToken ? "Copied" : "Copy Link"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2.5 pt-2">
-              <Button asChild className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9">
+              <Button asChild className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9">
                 <Link href="/preritrd/colleges">View All Colleges</Link>
               </Button>
               <Button
@@ -171,7 +203,7 @@ export default function RegisterCollegePage() {
                   setContactPhone("");
                   setPrimaryDomain("");
                 }}
-                className="border-emerald-300 text-xs h-9"
+                className="border-border text-xs h-9"
               >
                 Register Another College
               </Button>
@@ -182,8 +214,8 @@ export default function RegisterCollegePage() {
 
       {/* Error Banner */}
       {errorMsg && (
-        <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-900 py-3">
-          <AlertCircle className="h-4 w-4 text-red-600" />
+        <Alert variant="destructive" className="bg-status-danger-subtle border-status-danger/30 text-status-danger py-3 rounded-2xl">
+          <AlertCircle className="h-4 w-4 text-status-danger" />
           <AlertTitle className="text-xs font-bold font-heading">Registration Failed</AlertTitle>
           <AlertDescription className="text-xs leading-relaxed">{errorMsg}</AlertDescription>
         </Alert>
@@ -193,20 +225,20 @@ export default function RegisterCollegePage() {
       {!createdCollege && (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section 1: Institution Details */}
-          <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-[#5052C9]" />
+          <Card className="bg-card border-border shadow-xs rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary" />
                 <span>Institution Identity &amp; Identifier</span>
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Official institutional metadata for account registration
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 sm:p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] block">
+                  <label className="text-xs font-semibold text-text-primary block">
                     Official Institution Name *
                   </label>
                   <Input
@@ -214,22 +246,22 @@ export default function RegisterCollegePage() {
                     placeholder="e.g. Sapthagiri NPS University"
                     value={name}
                     onChange={handleNameChange}
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                    className="bg-input border-border text-xs h-9 rounded-xl"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] block">
+                  <label className="text-xs font-semibold text-text-primary block">
                     Institutional Slug (Unique URL Path) *
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-[#747683]" />
+                    <Hash className="absolute left-2.5 top-2.5 h-4 w-4 text-text-secondary" />
                     <Input
                       required
                       placeholder="sapthagiri-university"
                       value={slug}
                       onChange={(e) => setSlug(e.target.value)}
-                      className="pl-8 bg-[#FBFAF7] border-[#B8B6AC] text-xs font-mono h-9"
+                      className="pl-8 bg-input border-border text-xs font-mono h-9 rounded-xl"
                     />
                   </div>
                 </div>
@@ -237,36 +269,36 @@ export default function RegisterCollegePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] block">
+                  <label className="text-xs font-semibold text-text-primary block">
                     Placement Head Institutional Email *
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-[#747683]" />
+                    <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-text-secondary" />
                     <Input
                       type="email"
                       required
                       placeholder="placements.head@sapthagiri.edu.in"
                       value={officialEmail}
                       onChange={(e) => setOfficialEmail(e.target.value)}
-                      className="pl-8 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                      className="pl-8 bg-input border-border text-xs h-9 rounded-xl font-mono"
                     />
                   </div>
-                  <p className="text-[10px] text-[#747683]">
+                  <p className="text-[10px] text-text-secondary">
                     The single-use account setup invitation is bound and dispatched to this address.
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] block">
+                  <label className="text-xs font-semibold text-text-primary block">
                     Primary Domain (Optional)
                   </label>
                   <div className="relative">
-                    <Globe className="absolute left-2.5 top-2.5 h-4 w-4 text-[#747683]" />
+                    <Globe className="absolute left-2.5 top-2.5 h-4 w-4 text-text-secondary" />
                     <Input
                       placeholder="sapthagiri.edu.in"
                       value={primaryDomain}
                       onChange={(e) => setPrimaryDomain(e.target.value)}
-                      className="pl-8 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                      className="pl-8 bg-input border-border text-xs h-9 rounded-xl font-mono"
                     />
                   </div>
                 </div>
@@ -275,20 +307,20 @@ export default function RegisterCollegePage() {
           </Card>
 
           {/* Section 2: Contact Person */}
-          <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-                <User className="h-4 w-4 text-[#2E8F86]" />
+          <Card className="bg-card border-border shadow-xs rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+                <User className="h-4 w-4 text-secondary" />
                 <span>Primary Administrative Contact</span>
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Institutional Placement Head or onboarding coordinator
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 sm:p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] block">
+                  <label className="text-xs font-semibold text-text-primary block">
                     Placement Head Full Name *
                   </label>
                   <Input
@@ -296,24 +328,24 @@ export default function RegisterCollegePage() {
                     placeholder="e.g. Dr. Jack Vance"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                    className="bg-input border-border text-xs h-9 rounded-xl"
                   />
-                  <p className="text-[10px] text-[#747683]">
+                  <p className="text-[10px] text-text-secondary">
                     Authorized administrator of institutional placement operations.
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] block">
+                  <label className="text-xs font-semibold text-text-primary block">
                     Contact Phone (Optional)
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-[#747683]" />
+                    <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-text-secondary" />
                     <Input
                       placeholder="+91 98765 43210"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
-                      className="pl-8 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                      className="pl-8 bg-input border-border text-xs h-9 rounded-xl font-mono"
                     />
                   </div>
                 </div>
@@ -322,13 +354,13 @@ export default function RegisterCollegePage() {
           </Card>
 
           {/* Section 3: Subscription & Capacity */}
-          <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-[#5052C9]" />
+          <Card className="bg-card border-border shadow-xs rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
                 <span>Initial Subscription Plan &amp; Capacity</span>
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Select initial tier and configure student capacity
               </CardDescription>
             </CardHeader>
@@ -338,8 +370,8 @@ export default function RegisterCollegePage() {
                 <label
                   className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
                     initialPlanId === "starter"
-                      ? "bg-[#5052C9]/10 border-[#5052C9] ring-2 ring-[#5052C9]/30"
-                      : "bg-[#FBFAF7] border-[#B8B6AC]/50 hover:border-[#5052C9]/40"
+                      ? "bg-primary/10 border-primary ring-2 ring-primary/30"
+                      : "bg-surface border-border hover:border-primary/40"
                   }`}
                 >
                   <input
@@ -350,9 +382,9 @@ export default function RegisterCollegePage() {
                     onChange={(e) => setInitialPlanId(e.target.value)}
                     className="sr-only"
                   />
-                  <div className="font-bold text-xs text-[#24283A]">Institutional Starter</div>
-                  <div className="text-base font-extrabold font-heading text-[#5052C9] mt-1">₹49,999/yr</div>
-                  <div className="text-[11px] text-[#747683] mt-2 leading-relaxed">
+                  <div className="font-bold text-xs text-text-primary">Institutional Starter</div>
+                  <div className="text-base font-extrabold font-heading text-primary mt-1">₹49,999/yr</div>
+                  <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
                     Up to 500 students &bull; Standard Assessments
                   </div>
                 </label>
@@ -361,8 +393,8 @@ export default function RegisterCollegePage() {
                 <label
                   className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
                     initialPlanId === "growth"
-                      ? "bg-[#5052C9]/10 border-[#5052C9] ring-2 ring-[#5052C9]/30"
-                      : "bg-[#FBFAF7] border-[#B8B6AC]/50 hover:border-[#5052C9]/40"
+                      ? "bg-primary/10 border-primary ring-2 ring-primary/30"
+                      : "bg-surface border-border hover:border-primary/40"
                   }`}
                 >
                   <input
@@ -373,9 +405,9 @@ export default function RegisterCollegePage() {
                     onChange={(e) => setInitialPlanId(e.target.value)}
                     className="sr-only"
                   />
-                  <div className="font-bold text-xs text-[#24283A]">Campus Growth</div>
-                  <div className="text-base font-extrabold font-heading text-[#5052C9] mt-1">₹1,29,999/yr</div>
-                  <div className="text-[11px] text-[#747683] mt-2 leading-relaxed">
+                  <div className="font-bold text-xs text-text-primary">Campus Growth</div>
+                  <div className="text-base font-extrabold font-heading text-primary mt-1">₹1,29,999/yr</div>
+                  <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
                     Up to 2,500 students &bull; DriveFit &bull; Mistake Bank
                   </div>
                 </label>
@@ -384,8 +416,8 @@ export default function RegisterCollegePage() {
                 <label
                   className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
                     initialPlanId === "enterprise"
-                      ? "bg-[#5052C9]/10 border-[#5052C9] ring-2 ring-[#5052C9]/30"
-                      : "bg-[#FBFAF7] border-[#B8B6AC]/50 hover:border-[#5052C9]/40"
+                      ? "bg-primary/10 border-primary ring-2 ring-primary/30"
+                      : "bg-surface border-border hover:border-primary/40"
                   }`}
                 >
                   <input
@@ -396,9 +428,9 @@ export default function RegisterCollegePage() {
                     onChange={(e) => setInitialPlanId(e.target.value)}
                     className="sr-only"
                   />
-                  <div className="font-bold text-xs text-[#24283A]">University Enterprise</div>
-                  <div className="text-base font-extrabold font-heading text-[#5052C9] mt-1">₹2,49,999/yr</div>
-                  <div className="text-[11px] text-[#747683] mt-2 leading-relaxed">
+                  <div className="font-bold text-xs text-text-primary">University Enterprise</div>
+                  <div className="text-base font-extrabold font-heading text-primary mt-1">₹2,49,999/yr</div>
+                  <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
                     Up to 10,000 students &bull; Dedicated SLA &amp; Support
                   </div>
                 </label>
@@ -407,8 +439,8 @@ export default function RegisterCollegePage() {
                 <label
                   className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
                     initialPlanId === "unassigned"
-                      ? "bg-[#2E8F86]/10 border-[#2E8F86] ring-2 ring-[#2E8F86]/30"
-                      : "bg-[#FBFAF7] border-[#B8B6AC]/50 hover:border-[#2E8F86]/40"
+                      ? "bg-secondary/10 border-secondary ring-2 ring-secondary/30"
+                      : "bg-surface border-border hover:border-secondary/40"
                   }`}
                 >
                   <input
@@ -419,16 +451,16 @@ export default function RegisterCollegePage() {
                     onChange={(e) => setInitialPlanId(e.target.value)}
                     className="sr-only"
                   />
-                  <div className="font-bold text-xs text-[#24283A]">Leave Unassigned</div>
-                  <div className="text-base font-extrabold font-heading text-[#2E8F86] mt-1">Option C</div>
-                  <div className="text-[11px] text-[#747683] mt-2 leading-relaxed">
+                  <div className="font-bold text-xs text-text-primary">Leave Unassigned</div>
+                  <div className="text-base font-extrabold font-heading text-secondary mt-1">Option C</div>
+                  <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
                     Placement Head selects approved plan post-registration
                   </div>
                 </label>
               </div>
 
               <div className="space-y-1.5 pt-2">
-                <label className="text-xs font-semibold text-[#24283A] block">
+                <label className="text-xs font-semibold text-text-primary block">
                   Student Seat Limit
                 </label>
                 <Input
@@ -437,9 +469,9 @@ export default function RegisterCollegePage() {
                   max={50000}
                   value={studentSeatLimit}
                   onChange={(e) => setStudentSeatLimit(e.target.value)}
-                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 max-w-xs font-mono"
+                  className="bg-input border-border text-xs h-9 max-w-xs font-mono rounded-xl"
                 />
-                <p className="text-[11px] text-[#747683]">
+                <p className="text-[11px] text-text-secondary">
                   Enforced server-side. Institutional student registration will be bounded by this capacity.
                 </p>
               </div>
@@ -448,13 +480,13 @@ export default function RegisterCollegePage() {
 
           {/* Submit Button */}
           <div className="flex justify-end gap-3 pt-2">
-            <Button asChild variant="outline" className="border-[#B8B6AC] text-xs h-10">
+            <Button asChild variant="outline" className="border-border text-xs h-10 rounded-xl">
               <Link href="/preritrd/colleges">Cancel</Link>
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="bg-[#5052C9] hover:bg-[#4345B0] text-white font-medium text-xs h-10 px-6 shadow-sm"
+              className="bg-primary hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs h-10 px-6 rounded-xl shadow-xs"
             >
               {loading ? (
                 <>

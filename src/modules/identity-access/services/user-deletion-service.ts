@@ -345,6 +345,24 @@ export class UserDeletionService {
     } catch {
       // Table may not have created_by
     }
+    try {
+      await admin
+        .from("questions")
+        .update({ created_by: null, reviewed_by: null })
+        .eq("created_by", targetUserId);
+    } catch {}
+    try {
+      await admin
+        .from("assessments")
+        .update({ created_by: null })
+        .eq("created_by", targetUserId);
+    } catch {}
+    try {
+      await admin
+        .from("drives")
+        .update({ created_by: null })
+        .eq("created_by", targetUserId);
+    } catch {}
 
     // 4. Remove platform_admins record if target was an admin
     try {
@@ -444,13 +462,6 @@ export class UserDeletionService {
         action: "USER_PERMANENTLY_DELETED",
         resource_type: "USER",
         resource_id: targetUserId,
-        metadata: {
-          deletedEmail: targetEmail,
-          deletedFullName: targetFullName,
-          reason: cleanReason,
-          actorRole,
-          details,
-        },
         before_state: {
           email: targetEmail,
           fullName: targetFullName,
@@ -462,6 +473,10 @@ export class UserDeletionService {
           deletedAt: new Date().toISOString(),
           status: "PERMANENTLY_DELETED",
           details,
+          deletedEmail: targetEmail,
+          deletedFullName: targetFullName,
+          reason: cleanReason,
+          actorRole,
         },
       });
     } catch (auditErr) {

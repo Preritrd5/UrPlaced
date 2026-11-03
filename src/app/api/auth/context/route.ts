@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     let subscriptionStatus: string | null = null;
     let isGracePeriod = false;
     let gracePeriodEndsAt: string | null = null;
-    let canAccessOperational = true;
+    let canAccessOperational = accountCategory === "STUDENT" && !activeMembership?.tenants?.id;
     let accessDecision: string | null = null;
     let planId: string | null = null;
     let planName: string | null = null;
@@ -80,7 +80,9 @@ export async function GET(request: Request) {
         entitlements = access.entitlements || null;
         limits = access.limits || null;
       } catch {
-        // Fallback
+        // Fail closed for operational access on unexpected evaluation error
+        canAccessOperational = false;
+        subscriptionStatus = "PENDING_PAYMENT";
       }
     }
 

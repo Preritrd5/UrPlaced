@@ -430,7 +430,7 @@ export default function SuperAdminProfilePage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-4">
         <BrandLoader size="card" className="mx-auto" />
-        <p className="text-xs font-mono text-[#747683]">Loading Platform Super Admin credentials...</p>
+        <p className="text-xs font-mono text-text-secondary">Loading Platform Super Admin credentials...</p>
       </div>
     );
   }
@@ -457,14 +457,14 @@ export default function SuperAdminProfilePage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#5052C9]/10 border border-[#5052C9]/20 text-[#5052C9] text-[11px] font-mono font-bold tracking-wider uppercase mb-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[11px] font-mono font-bold tracking-wider uppercase mb-1.5">
             <ShieldCheck className="w-3.5 h-3.5" />
             Platform Control Plane
           </div>
-          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-[#24283A] tracking-tight">
+          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-text-primary tracking-tight">
             Administrator Profile
           </h1>
-          <p className="text-xs sm:text-sm text-[#747683] mt-0.5">
+          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
             Manage your Super Admin credentials, AAL2 security settings, platform preferences, and audit history.
           </p>
         </div>
@@ -474,7 +474,7 @@ export default function SuperAdminProfilePage() {
             variant="outline"
             size="sm"
             onClick={loadProfile}
-            className="border-[#B8B6AC] bg-[#F8F7F3] hover:bg-[#EDECE7] text-xs gap-1.5"
+            className="border-border bg-card hover:bg-background text-xs gap-1.5"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Refresh</span>
@@ -488,7 +488,7 @@ export default function SuperAdminProfilePage() {
           className={cn(
             "border",
             saveStatus.type === "success"
-              ? "bg-[#2E8F86]/10 border-[#2E8F86]/30 text-[#2E8F86]"
+              ? "bg-secondary/10 border-secondary/30 text-secondary"
               : "bg-red-50 border-red-200 text-red-700"
           )}
         >
@@ -507,7 +507,7 @@ export default function SuperAdminProfilePage() {
       {/* ========================================================================= */}
       {/* SECTION 1: PROMINENT ADMINISTRATOR IDENTITY OVERVIEW CARD               */}
       {/* ========================================================================= */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl overflow-hidden">
+      <Card className="bg-card border-border shadow-xs rounded-2xl overflow-hidden">
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
@@ -519,7 +519,7 @@ export default function SuperAdminProfilePage() {
                   email={adminItem.email}
                   size="xl"
                   alt={adminItem.fullName}
-                  className="ring-4 ring-[#EDECE7] shadow-sm"
+                  className="ring-4 ring-background shadow-sm"
                 />
 
                 {/* Upload Overlay Action */}
@@ -528,7 +528,7 @@ export default function SuperAdminProfilePage() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={avatarUploading}
                   aria-label="Upload profile photo"
-                  className="absolute bottom-0 right-0 p-2 rounded-full bg-[#5052C9] text-white shadow-md hover:bg-[#4345B0] transition-transform active:scale-90"
+                  className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-white shadow-md hover:bg-primary-hover transition-transform active:scale-90"
                 >
                   {avatarUploading ? (
                     <BrandLoader size="button" />
@@ -541,28 +541,28 @@ export default function SuperAdminProfilePage() {
               {/* Identity Metadata */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="font-heading font-extrabold text-xl sm:text-2xl text-[#24283A] tracking-tight">
+                  <h2 className="font-heading font-extrabold text-xl sm:text-2xl text-text-primary tracking-tight">
                     {adminItem.fullName || "Platform Super Admin"}
                   </h2>
-                  <Badge className="bg-[#5052C9] hover:bg-[#5052C9] text-white font-mono text-[10px] font-bold tracking-wider uppercase px-2 py-0.5">
+                  <Badge className="bg-primary hover:bg-primary text-white font-mono text-[10px] font-bold tracking-wider uppercase px-2 py-0.5">
                     SUPER_ADMIN
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="bg-[#2E8F86]/10 text-[#2E8F86] border-[#2E8F86]/30 font-mono text-[10px] font-bold"
+                    className="bg-secondary/10 text-secondary border-secondary/30 font-mono text-[10px] font-bold"
                   >
                     {adminItem.status || "ACTIVE"}
                   </Badge>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-[#747683] font-mono">
-                  <span className="flex items-center gap-1.5 text-[#24283A] font-semibold">
-                    <Mail className="w-3.5 h-3.5 text-[#5052C9]" />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-text-secondary font-mono">
+                  <span className="flex items-center gap-1.5 text-text-primary font-semibold">
+                    <Mail className="w-3.5 h-3.5 text-primary" />
                     {adminItem.email}
                   </span>
-                  <span className="hidden sm:inline text-[#B8B6AC]">&bull;</span>
+                  <span className="hidden sm:inline text-border">&bull;</span>
                   <span className="flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-[#2E8F86]" />
+                    <Building2 className="w-3.5 h-3.5 text-secondary" />
                     UrPlaced Platform Control Plane
                   </span>
                 </div>
@@ -574,9 +574,9 @@ export default function SuperAdminProfilePage() {
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={avatarUploading}
-                    className="h-7 text-xs border-[#B8B6AC] bg-white hover:bg-[#EDECE7] gap-1"
+                    className="h-7 text-xs border-border bg-white hover:bg-background gap-1"
                   >
-                    <Camera className="w-3 h-3 text-[#5052C9]" />
+                    <Camera className="w-3 h-3 text-primary" />
                     <span>Replace Photo</span>
                   </Button>
 
@@ -597,32 +597,32 @@ export default function SuperAdminProfilePage() {
             </div>
 
             {/* Account Readiness Card (Real System Checks) */}
-            <div className="bg-[#FBFAF7] border border-[#B8B6AC]/40 rounded-xl p-4 md:w-72 shrink-0 space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-heading font-bold text-[#24283A]">
+            <div className="bg-surface border border-border rounded-xl p-4 md:w-72 shrink-0 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-heading font-bold text-text-primary">
                 <span>Account Readiness</span>
-                <span className="font-mono text-[#2E8F86] text-[11px]">100% OPERATIONAL</span>
+                <span className="font-mono text-secondary text-[11px]">100% OPERATIONAL</span>
               </div>
 
-              <div className="space-y-1.5 text-xs text-[#24283A]">
+              <div className="space-y-1.5 text-xs text-text-primary">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E8F86] shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
                   <span className="text-[11px]">Identity &amp; Profile Configured</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E8F86] shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
                   <span className="text-[11px]">Email Verification Active</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E8F86] shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
                   <span className="text-[11px]">TOTP Multi-Factor Verified (AAL2)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#2E8F86] shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
                   <span className="text-[11px]">Super Admin Privileges Enforced</span>
                 </div>
               </div>
 
-              <div className="pt-1 border-t border-[#B8B6AC]/30 text-[10px] text-[#747683] font-mono">
+              <div className="pt-1 border-t border-border text-[10px] text-text-secondary font-mono">
                 Created: {adminItem.createdAt ? new Date(adminItem.createdAt).toLocaleDateString() : "Active"}
               </div>
             </div>
@@ -637,18 +637,18 @@ export default function SuperAdminProfilePage() {
         {/* LEFT COLUMN: Personal Info & Preferences (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* CARD 2: PERSONAL INFORMATION */}
-          <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
+          <Card className="bg-card border-border shadow-xs rounded-2xl">
             <CardContent className="p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-[#B8B6AC]/30 pb-3">
+              <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#5052C9]/10 text-[#5052C9] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <User className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-heading font-bold text-base text-[#24283A]">
+                    <h3 className="font-heading font-bold text-base text-text-primary">
                       Personal Information
                     </h3>
-                    <p className="text-xs text-[#747683]">
+                    <p className="text-xs text-text-secondary">
                       Primary administrative identity and professional contact details.
                     </p>
                   </div>
@@ -659,7 +659,7 @@ export default function SuperAdminProfilePage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditingPersonal(true)}
-                    className="border-[#B8B6AC] bg-white hover:bg-[#EDECE7] text-xs"
+                    className="border-border bg-white hover:bg-background text-xs"
                   >
                     Edit Details
                   </Button>
@@ -670,7 +670,7 @@ export default function SuperAdminProfilePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Full Name */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Full Name
                     </label>
                     <Input
@@ -678,7 +678,7 @@ export default function SuperAdminProfilePage() {
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                       placeholder="e.g. Platform Administrator"
-                      className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                      className="bg-surface border-border text-xs h-9"
                       required
                     />
                   </div>
@@ -686,21 +686,21 @@ export default function SuperAdminProfilePage() {
                   {/* Email (Read-Only via Supabase Auth) */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-[#24283A] font-heading">
+                      <label className="text-xs font-semibold text-text-primary font-heading">
                         Email Address
                       </label>
-                      <span className="text-[10px] text-[#747683] font-mono">Supabase Auth</span>
+                      <span className="text-[10px] text-text-secondary font-mono">Supabase Auth</span>
                     </div>
                     <Input
                       disabled
                       value={adminItem.email}
-                      className="bg-[#EDECE7]/60 border-[#B8B6AC] text-xs h-9 font-mono text-[#747683] cursor-not-allowed"
+                      className="bg-background/60 border-border text-xs h-9 font-mono text-text-secondary cursor-not-allowed"
                     />
                   </div>
 
                   {/* Phone */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Contact Phone
                     </label>
                     <Input
@@ -708,13 +708,13 @@ export default function SuperAdminProfilePage() {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="+91 98765 43210"
-                      className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                      className="bg-surface border-border text-xs h-9"
                     />
                   </div>
 
                   {/* Job Title */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Role / Designation
                     </label>
                     <Input
@@ -722,13 +722,13 @@ export default function SuperAdminProfilePage() {
                       value={formData.jobTitle}
                       onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                       placeholder="Platform Security Lead"
-                      className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                      className="bg-surface border-border text-xs h-9"
                     />
                   </div>
 
                   {/* Location */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Location / Region
                     </label>
                     <Input
@@ -736,20 +736,20 @@ export default function SuperAdminProfilePage() {
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       placeholder="Bengaluru, India"
-                      className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                      className="bg-surface border-border text-xs h-9"
                     />
                   </div>
 
                   {/* Timezone */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Primary Timezone
                     </label>
                     <select
                       disabled={!isEditingPersonal}
                       value={formData.timezone}
                       onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                      className="w-full h-9 rounded-md border border-[#B8B6AC] bg-[#FBFAF7] px-3 text-xs text-[#24283A] focus:outline-none focus:ring-2 focus:ring-[#5052C9] disabled:opacity-60"
+                      className="w-full h-9 rounded-md border border-border bg-surface px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
                     >
                       {TIMEZONES.map((tz) => (
                         <option key={tz.value} value={tz.value}>
@@ -762,7 +762,7 @@ export default function SuperAdminProfilePage() {
 
                 {/* Professional Bio */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] font-heading">
+                  <label className="text-xs font-semibold text-text-primary font-heading">
                     Professional Biography
                   </label>
                   <textarea
@@ -771,26 +771,26 @@ export default function SuperAdminProfilePage() {
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                     rows={3}
                     placeholder="Brief description of administrative scope and platform responsibilities."
-                    className="w-full rounded-md border border-[#B8B6AC] bg-[#FBFAF7] p-2.5 text-xs text-[#24283A] focus:outline-none focus:ring-2 focus:ring-[#5052C9] disabled:opacity-60"
+                    className="w-full rounded-md border border-border bg-surface p-2.5 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-60"
                   />
                 </div>
 
                 {/* Edit Action Buttons */}
                 {isEditingPersonal && (
-                  <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#B8B6AC]/20">
+                  <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => setIsEditingPersonal(false)}
-                      className="border-[#B8B6AC] text-xs"
+                      className="border-border text-xs"
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
                       size="sm"
-                      className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs gap-1.5"
+                      className="bg-primary hover:bg-primary-hover text-white text-xs gap-1.5"
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span>Save Changes</span>
@@ -802,17 +802,17 @@ export default function SuperAdminProfilePage() {
           </Card>
 
           {/* CARD 3: PLATFORM ADMINISTRATION PREFERENCES */}
-          <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
+          <Card className="bg-card border-border shadow-xs rounded-2xl">
             <CardContent className="p-6 space-y-4">
-              <div className="flex items-center gap-2 border-b border-[#B8B6AC]/30 pb-3">
-                <div className="w-8 h-8 rounded-lg bg-[#2E8F86]/10 text-[#2E8F86] flex items-center justify-center">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <div className="w-8 h-8 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center">
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-base text-[#24283A]">
+                  <h3 className="font-heading font-bold text-base text-text-primary">
                     Platform Preferences
                   </h3>
-                  <p className="text-xs text-[#747683]">
+                  <p className="text-xs text-text-secondary">
                     Display density, default view, and control plane settings.
                   </p>
                 </div>
@@ -822,13 +822,13 @@ export default function SuperAdminProfilePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Default Landing Page */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Default Landing Page
                     </label>
                     <select
                       value={preferences.landingPage}
                       onChange={(e) => setPreferences({ ...preferences, landingPage: e.target.value })}
-                      className="w-full h-9 rounded-md border border-[#B8B6AC] bg-[#FBFAF7] px-3 text-xs text-[#24283A] focus:outline-none focus:ring-2 focus:ring-[#5052C9]"
+                      className="w-full h-9 rounded-md border border-border bg-surface px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="/preritrd/dashboard">Platform Dashboard</option>
                       <option value="/preritrd/colleges">College Management</option>
@@ -840,13 +840,13 @@ export default function SuperAdminProfilePage() {
 
                   {/* Table Density */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Table Display Density
                     </label>
                     <select
                       value={preferences.tableDensity}
                       onChange={(e: any) => setPreferences({ ...preferences, tableDensity: e.target.value })}
-                      className="w-full h-9 rounded-md border border-[#B8B6AC] bg-[#FBFAF7] px-3 text-xs text-[#24283A] focus:outline-none focus:ring-2 focus:ring-[#5052C9]"
+                      className="w-full h-9 rounded-md border border-border bg-surface px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="comfortable">Comfortable (Standard)</option>
                       <option value="compact">Compact (High Information Density)</option>
@@ -855,13 +855,13 @@ export default function SuperAdminProfilePage() {
 
                   {/* Time Format */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Timestamp Format
                     </label>
                     <select
                       value={preferences.timeFormat}
                       onChange={(e: any) => setPreferences({ ...preferences, timeFormat: e.target.value })}
-                      className="w-full h-9 rounded-md border border-[#B8B6AC] bg-[#FBFAF7] px-3 text-xs text-[#24283A] focus:outline-none focus:ring-2 focus:ring-[#5052C9]"
+                      className="w-full h-9 rounded-md border border-border bg-surface px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="12h">12-Hour (e.g. 02:30 PM)</option>
                       <option value="24h">24-Hour (e.g. 14:30)</option>
@@ -870,13 +870,13 @@ export default function SuperAdminProfilePage() {
 
                   {/* Theme Mode */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-[#24283A] font-heading">
+                    <label className="text-xs font-semibold text-text-primary font-heading">
                       Theme Interface
                     </label>
                     <select
                       value={preferences.theme}
                       onChange={(e: any) => setPreferences({ ...preferences, theme: e.target.value })}
-                      className="w-full h-9 rounded-md border border-[#B8B6AC] bg-[#FBFAF7] px-3 text-xs text-[#24283A] focus:outline-none focus:ring-2 focus:ring-[#5052C9]"
+                      className="w-full h-9 rounded-md border border-border bg-surface px-3 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="light">UrPlaced Warm Light (Default)</option>
                       <option value="dark">UrPlaced Elevated Dark</option>
@@ -889,7 +889,7 @@ export default function SuperAdminProfilePage() {
                   <Button
                     type="submit"
                     size="sm"
-                    className="bg-[#2E8F86] hover:bg-[#267870] text-white text-xs gap-1.5"
+                    className="bg-secondary hover:bg-secondary-hover text-white text-xs gap-1.5"
                   >
                     <span>Save Platform Preferences</span>
                   </Button>
@@ -899,32 +899,32 @@ export default function SuperAdminProfilePage() {
           </Card>
 
           {/* CARD 4: NOTIFICATION PREFERENCES (id="notifications") */}
-          <Card id="notifications" className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl scroll-mt-20">
+          <Card id="notifications" className="bg-card border-border shadow-xs rounded-2xl scroll-mt-20">
             <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#B8B6AC]/30 pb-3">
+              <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#5052C9]/10 text-[#5052C9] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <Bell className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-heading font-bold text-base text-[#24283A]">
+                    <h3 className="font-heading font-bold text-base text-text-primary">
                       Platform Notification Preferences
                     </h3>
-                    <p className="text-xs text-[#747683]">
+                    <p className="text-xs text-text-secondary">
                       Configure delivery channels for the 10 platform control-plane alert domains.
                     </p>
                   </div>
                 </div>
 
                 {notifSaving && (
-                  <span className="text-[10px] text-[#5052C9] font-mono flex items-center gap-1">
+                  <span className="text-[10px] text-primary font-mono flex items-center gap-1">
                     <BrandLoader size="button" className="mr-1" />
                     Saving...
                   </span>
                 )}
               </div>
 
-              <div className="divide-y divide-[#B8B6AC]/20">
+              <div className="divide-y divide-border">
                 {(Object.keys(NOTIFICATION_CATEGORY_LABELS) as PlatformNotificationCategory[]).map((cat) => {
                   const info = NOTIFICATION_CATEGORY_LABELS[cat];
                   const inAppChecked = notificationPrefs.inApp?.[cat] !== false;
@@ -936,33 +936,33 @@ export default function SuperAdminProfilePage() {
                       className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left"
                     >
                       <div className="space-y-0.5">
-                        <div className="text-xs font-semibold text-[#24283A] font-heading">
+                        <div className="text-xs font-semibold text-text-primary font-heading">
                           {info.title}
                         </div>
-                        <div className="text-[11px] text-[#747683]">
+                        <div className="text-[11px] text-text-secondary">
                           {info.desc}
                         </div>
                       </div>
 
                       <div className="flex items-center gap-4 shrink-0">
                         {/* In-App Toggle */}
-                        <label className="flex items-center gap-1.5 text-xs text-[#24283A] cursor-pointer select-none">
+                        <label className="flex items-center gap-1.5 text-xs text-text-primary cursor-pointer select-none">
                           <input
                             type="checkbox"
                             checked={inAppChecked}
                             onChange={() => handleToggleNotification(cat, "inApp")}
-                            className="rounded border-[#B8B6AC] text-[#5052C9] focus:ring-[#5052C9]"
+                            className="rounded border-border text-primary focus:ring-primary"
                           />
                           <span className="text-[11px] font-medium">In-App</span>
                         </label>
 
                         {/* Email Toggle */}
-                        <label className="flex items-center gap-1.5 text-xs text-[#24283A] cursor-pointer select-none">
+                        <label className="flex items-center gap-1.5 text-xs text-text-primary cursor-pointer select-none">
                           <input
                             type="checkbox"
                             checked={emailChecked}
                             onChange={() => handleToggleNotification(cat, "email")}
-                            className="rounded border-[#B8B6AC] text-[#5052C9] focus:ring-[#5052C9]"
+                            className="rounded border-border text-primary focus:ring-primary"
                           />
                           <span className="text-[11px] font-medium">Email</span>
                         </label>
@@ -978,17 +978,17 @@ export default function SuperAdminProfilePage() {
         {/* RIGHT COLUMN: Account & Security, Recent Activity, Quick Links (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* CARD 5: ACCOUNT & SECURITY (id="security") */}
-          <Card id="security" className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl scroll-mt-20">
+          <Card id="security" className="bg-card border-border shadow-xs rounded-2xl scroll-mt-20">
             <CardContent className="p-6 space-y-5">
-              <div className="flex items-center gap-2 border-b border-[#B8B6AC]/30 pb-3">
-                <div className="w-8 h-8 rounded-lg bg-[#2E8F86]/10 text-[#2E8F86] flex items-center justify-center">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <div className="w-8 h-8 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center">
                   <Key className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-heading font-bold text-base text-[#24283A]">
+                  <h3 className="font-heading font-bold text-base text-text-primary">
                     Account &amp; Security
                   </h3>
-                  <p className="text-xs text-[#747683]">
+                  <p className="text-xs text-text-secondary">
                     Password credentials, TOTP MFA, and active session governance.
                   </p>
                 </div>
@@ -1000,7 +1000,7 @@ export default function SuperAdminProfilePage() {
                   className={cn(
                     "border py-2 text-xs",
                     passwordStatus.type === "success"
-                      ? "bg-[#2E8F86]/10 border-[#2E8F86]/30 text-[#2E8F86]"
+                      ? "bg-secondary/10 border-secondary/30 text-secondary"
                       : "bg-red-50 border-red-200 text-red-700"
                   )}
                 >
@@ -1009,36 +1009,36 @@ export default function SuperAdminProfilePage() {
               )}
 
               {/* Multi-Factor Authentication Card */}
-              <div className="p-4 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40 space-y-3">
+              <div className="p-4 rounded-xl bg-surface border border-border space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="w-4 h-4 text-[#5052C9]" />
-                    <span className="text-xs font-bold text-[#24283A] font-heading">
+                    <Smartphone className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-bold text-text-primary font-heading">
                       Two-Factor Authentication
                     </span>
                   </div>
-                  <Badge className="bg-[#2E8F86] hover:bg-[#2E8F86] text-white font-mono text-[9px] font-bold">
+                  <Badge className="bg-secondary hover:bg-secondary text-white font-mono text-[9px] font-bold">
                     AAL2 ENFORCED
                   </Badge>
                 </div>
 
-                <p className="text-xs text-[#747683] leading-relaxed">
+                <p className="text-xs text-text-secondary leading-relaxed">
                   Time-based One-Time Password (TOTP) is cryptographically verified on every platform control-plane session.
                 </p>
 
-                <div className="flex items-center justify-between pt-1 text-[11px] text-[#24283A]">
+                <div className="flex items-center justify-between pt-1 text-[11px] text-text-primary">
                   <span className="font-medium">Authenticator App Status:</span>
-                  <span className="font-mono text-[#2E8F86] font-bold flex items-center gap-1">
+                  <span className="font-mono text-secondary font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Enrolled &amp; Verified
                   </span>
                 </div>
 
-                <div className="pt-2 border-t border-[#B8B6AC]/30 flex items-center justify-between">
-                  <span className="text-[10px] text-[#747683] font-mono">Strict Supabase TOTP MFA</span>
+                <div className="pt-2 border-t border-border flex items-center justify-between">
+                  <span className="text-[10px] text-text-secondary font-mono">Strict Supabase TOTP MFA</span>
                   <Link
                     href="/preritrd/login"
-                    className="text-[11px] text-[#5052C9] hover:underline font-semibold"
+                    className="text-[11px] text-primary hover:underline font-semibold"
                   >
                     MFA Portal
                   </Link>
@@ -1047,41 +1047,41 @@ export default function SuperAdminProfilePage() {
 
               {/* Password Management Form */}
               <form onSubmit={handleChangePassword} className="space-y-3 pt-1">
-                <div className="text-xs font-bold text-[#24283A] font-heading flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-[#5052C9]" />
+                <div className="text-xs font-bold text-text-primary font-heading flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-primary" />
                   <span>Update Password</span>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-[#747683]">Current Password</label>
+                  <label className="text-[11px] font-medium text-text-secondary">Current Password</label>
                   <Input
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter current password"
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-8"
+                    className="bg-surface border-border text-xs h-8"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-[#747683]">New Password (min 8 chars)</label>
+                  <label className="text-[11px] font-medium text-text-secondary">New Password (min 8 chars)</label>
                   <Input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter strong new password"
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-8"
+                    className="bg-surface border-border text-xs h-8"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-[#747683]">Confirm New Password</label>
+                  <label className="text-[11px] font-medium text-text-secondary">Confirm New Password</label>
                   <Input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-8"
+                    className="bg-surface border-border text-xs h-8"
                   />
                 </div>
 
@@ -1089,7 +1089,7 @@ export default function SuperAdminProfilePage() {
                   type="submit"
                   disabled={passwordLoading || !newPassword}
                   size="sm"
-                  className="w-full bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-8 mt-2"
+                  className="w-full bg-primary hover:bg-primary-hover text-white text-xs h-8 mt-2"
                 >
                   {passwordLoading ? (
                     <>
@@ -1103,24 +1103,24 @@ export default function SuperAdminProfilePage() {
               </form>
 
               {/* Active Session Management */}
-              <div className="p-3.5 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40 space-y-2.5">
+              <div className="p-3.5 rounded-xl bg-surface border border-border space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#24283A] font-heading">Current Session</span>
-                  <span className="font-mono text-[10px] text-[#2E8F86] font-bold">ACTIVE</span>
+                  <span className="font-bold text-text-primary font-heading">Current Session</span>
+                  <span className="font-mono text-[10px] text-secondary font-bold">ACTIVE</span>
                 </div>
 
-                <div className="text-[11px] text-[#747683] space-y-1 font-mono">
+                <div className="text-[11px] text-text-secondary space-y-1 font-mono">
                   <div>Assurance Level: AAL2 (Elevated)</div>
                   <div>Last Sign-In: {adminItem.lastSignInAt ? new Date(adminItem.lastSignInAt).toLocaleString() : "Current"}</div>
                 </div>
 
-                <div className="pt-2 border-t border-[#B8B6AC]/30 flex items-center justify-between">
+                <div className="pt-2 border-t border-border flex items-center justify-between">
                   <button
                     type="button"
                     onClick={() => {
                       toast.success("Other active session tokens have been revoked.");
                     }}
-                    className="text-[11px] text-[#5052C9] hover:underline font-medium"
+                    className="text-[11px] text-primary hover:underline font-medium"
                   >
                     Revoke Other Sessions
                   </button>
@@ -1140,18 +1140,18 @@ export default function SuperAdminProfilePage() {
           </Card>
 
           {/* CARD 6: RECENT ADMINISTRATIVE ACTIVITY */}
-          <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
+          <Card className="bg-card border-border shadow-xs rounded-2xl">
             <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#B8B6AC]/30 pb-3">
+              <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#5052C9]/10 text-[#5052C9] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <Activity className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-heading font-bold text-sm text-[#24283A]">
+                    <h3 className="font-heading font-bold text-sm text-text-primary">
                       Recent Administrative Activity
                     </h3>
-                    <p className="text-[11px] text-[#747683]">
+                    <p className="text-[11px] text-text-secondary">
                       Audit history for your Platform Super Admin account.
                     </p>
                   </div>
@@ -1159,7 +1159,7 @@ export default function SuperAdminProfilePage() {
 
                 <Link
                   href="/preritrd/audit-logs"
-                  className="text-xs text-[#5052C9] hover:underline font-semibold flex items-center gap-0.5"
+                  className="text-xs text-primary hover:underline font-semibold flex items-center gap-0.5"
                 >
                   <span>All Logs</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -1171,24 +1171,24 @@ export default function SuperAdminProfilePage() {
                   {profileData.recentActivity.slice(0, 5).map((log: any) => (
                     <div
                       key={log.id}
-                      className="p-2.5 rounded-lg bg-[#FBFAF7] border border-[#B8B6AC]/30 text-xs space-y-1"
+                      className="p-2.5 rounded-lg bg-surface border border-border text-xs space-y-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-[10px] font-bold text-[#5052C9] px-1.5 py-0.2 rounded bg-[#5052C9]/10">
+                        <span className="font-mono text-[10px] font-bold text-primary px-1.5 py-0.2 rounded bg-primary/10">
                           {log.action}
                         </span>
-                        <span className="font-mono text-[10px] text-[#747683]">
+                        <span className="font-mono text-[10px] text-text-secondary">
                           {new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <div className="text-[11px] text-[#24283A] truncate">
+                      <div className="text-[11px] text-text-primary truncate">
                         {log.resourceType || "PLATFORM_CONTROL_PLANE"} &bull; {log.resourceId || "Platform"}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="py-6 text-center text-xs text-[#747683]">
+                <div className="py-6 text-center text-xs text-text-secondary">
                   No recent audit entries recorded for this account.
                 </div>
               )}
@@ -1196,59 +1196,59 @@ export default function SuperAdminProfilePage() {
           </Card>
 
           {/* CARD 7: QUICK WORKFLOW LINKS */}
-          <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
+          <Card className="bg-card border-border shadow-xs rounded-2xl">
             <CardContent className="p-6 space-y-3">
-              <div className="text-xs font-bold text-[#24283A] font-heading uppercase tracking-wider text-[#747683]">
+              <div className="text-xs font-bold text-text-primary font-heading uppercase tracking-wider text-text-secondary">
                 Quick Control-Plane Shortcuts
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <Link
                   href="/preritrd/dashboard"
-                  className="p-2.5 rounded-xl bg-[#FBFAF7] hover:bg-[#EDECE7] border border-[#B8B6AC]/40 text-[#24283A] font-medium flex items-center justify-between transition-colors"
+                  className="p-2.5 rounded-xl bg-surface hover:bg-background border border-border text-text-primary font-medium flex items-center justify-between transition-colors"
                 >
                   <span>Dashboard</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#747683]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-text-secondary" />
                 </Link>
 
                 <Link
                   href="/preritrd/colleges"
-                  className="p-2.5 rounded-xl bg-[#FBFAF7] hover:bg-[#EDECE7] border border-[#B8B6AC]/40 text-[#24283A] font-medium flex items-center justify-between transition-colors"
+                  className="p-2.5 rounded-xl bg-surface hover:bg-background border border-border text-text-primary font-medium flex items-center justify-between transition-colors"
                 >
                   <span>Colleges</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#747683]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-text-secondary" />
                 </Link>
 
                 <Link
                   href="/preritrd/subscriptions"
-                  className="p-2.5 rounded-xl bg-[#FBFAF7] hover:bg-[#EDECE7] border border-[#B8B6AC]/40 text-[#24283A] font-medium flex items-center justify-between transition-colors"
+                  className="p-2.5 rounded-xl bg-surface hover:bg-background border border-border text-text-primary font-medium flex items-center justify-between transition-colors"
                 >
                   <span>Subscriptions</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#747683]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-text-secondary" />
                 </Link>
 
                 <Link
                   href="/preritrd/system-health"
-                  className="p-2.5 rounded-xl bg-[#FBFAF7] hover:bg-[#EDECE7] border border-[#B8B6AC]/40 text-[#24283A] font-medium flex items-center justify-between transition-colors"
+                  className="p-2.5 rounded-xl bg-surface hover:bg-background border border-border text-text-primary font-medium flex items-center justify-between transition-colors"
                 >
                   <span>System Health</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#747683]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-text-secondary" />
                 </Link>
 
                 <Link
                   href="/preritrd/audit-logs"
-                  className="p-2.5 rounded-xl bg-[#FBFAF7] hover:bg-[#EDECE7] border border-[#B8B6AC]/40 text-[#24283A] font-medium flex items-center justify-between transition-colors"
+                  className="p-2.5 rounded-xl bg-surface hover:bg-background border border-border text-text-primary font-medium flex items-center justify-between transition-colors"
                 >
                   <span>Audit Logs</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#747683]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-text-secondary" />
                 </Link>
 
                 <Link
                   href="/preritrd/configuration"
-                  className="p-2.5 rounded-xl bg-[#FBFAF7] hover:bg-[#EDECE7] border border-[#B8B6AC]/40 text-[#24283A] font-medium flex items-center justify-between transition-colors"
+                  className="p-2.5 rounded-xl bg-surface hover:bg-background border border-border text-text-primary font-medium flex items-center justify-between transition-colors"
                 >
                   <span>Configuration</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#747683]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-text-secondary" />
                 </Link>
               </div>
             </CardContent>

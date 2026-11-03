@@ -237,15 +237,15 @@ export default function PlatformBillingPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5052C9]">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary">
             Financial Operations
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             Billing &amp; Invoice Records
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs text-text-secondary mt-0.5">
             Manage institutional invoice statements, track incoming revenue, and verify payment records.
           </p>
         </div>
@@ -260,7 +260,7 @@ export default function PlatformBillingPage() {
               if (statusFilter !== "ALL") params.set("status", statusFilter);
               window.open(`/api/preritrd/billing/export?${params.toString()}`, "_blank");
             }}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer"
+            className="border-border text-xs h-9 gap-1.5 cursor-pointer"
           >
             <Download className="h-3.5 w-3.5" /> Export CSV
           </Button>
@@ -273,7 +273,7 @@ export default function PlatformBillingPage() {
               if (statusFilter !== "ALL") params.set("status", statusFilter);
               window.open(`/api/preritrd/billing/export?${params.toString()}`, "_blank");
             }}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer text-[#2E8F86] hover:bg-emerald-50"
+            className="border-border text-xs h-9 gap-1.5 cursor-pointer text-secondary hover:bg-emerald-50"
           >
             <Download className="h-3.5 w-3.5" /> Export Excel (.xlsx)
           </Button>
@@ -282,7 +282,7 @@ export default function PlatformBillingPage() {
             size="sm"
             onClick={handleRunReconcile}
             disabled={reconciling}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer"
+            className="border-border text-xs h-9 gap-1.5 cursor-pointer"
           >
             <ShieldCheck className={`h-3.5 w-3.5 ${reconciling ? "animate-spin" : ""}`} /> Reconcile
           </Button>
@@ -291,14 +291,14 @@ export default function PlatformBillingPage() {
             size="sm"
             onClick={fetchBillingData}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5 cursor-pointer"
+            className="border-border text-xs h-9 gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
           <Button
             size="sm"
             onClick={() => setShowCreateModal(true)}
-            className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 gap-1.5 shadow-xs cursor-pointer"
+            className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 gap-1.5 shadow-xs cursor-pointer"
           >
             <PlusCircle className="h-4 w-4" /> Generate Invoice
           </Button>
@@ -329,8 +329,8 @@ export default function PlatformBillingPage() {
       )}
 
       {/* Demo Gateway Disclaimer Callout */}
-      <div className="p-4 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/50 flex items-start gap-3 text-xs text-[#24283A]">
-        <Info className="h-4 w-4 text-[#5052C9] shrink-0 mt-0.5" />
+      <div className="p-4 rounded-xl bg-surface border border-border flex items-start gap-3 text-xs text-text-primary">
+        <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <div className="leading-relaxed">
           <span className="font-bold">Payment Gateway Integration Status:</span> Standard bank transfer verification is active. Demonstration payment workflows can be executed for sandbox testing and will be clearly flagged with a{" "}
           <Badge variant="outline" className="text-[9px] font-mono border-amber-300 text-amber-800 bg-amber-50">
@@ -342,45 +342,45 @@ export default function PlatformBillingPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl p-5">
-          <span className="text-[11px] font-mono font-bold text-[#747683] uppercase">
+        <Card className="bg-card border-border shadow-xs rounded-2xl p-5">
+          <span className="text-[11px] font-mono font-bold text-text-secondary uppercase">
             Total Revenue Collected
           </span>
           <div className="text-3xl font-extrabold font-heading text-emerald-800 mt-2">
             ₹{totalCollected.toLocaleString("en-IN")}
           </div>
-          <div className="text-xs text-[#747683] mt-1">Confirmed settlement invoices</div>
+          <div className="text-xs text-text-secondary mt-1">Confirmed settlement invoices</div>
         </Card>
 
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl p-5">
-          <span className="text-[11px] font-mono font-bold text-[#747683] uppercase">
+        <Card className="bg-card border-border shadow-xs rounded-2xl p-5">
+          <span className="text-[11px] font-mono font-bold text-text-secondary uppercase">
             Outstanding / Pending
           </span>
           <div className="text-3xl font-extrabold font-heading text-amber-800 mt-2">
             ₹{totalOutstanding.toLocaleString("en-IN")}
           </div>
-          <div className="text-xs text-[#747683] mt-1">Awaiting institutional remittance</div>
+          <div className="text-xs text-text-secondary mt-1">Awaiting institutional remittance</div>
         </Card>
 
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl p-5">
-          <span className="text-[11px] font-mono font-bold text-[#747683] uppercase">
+        <Card className="bg-card border-border shadow-xs rounded-2xl p-5">
+          <span className="text-[11px] font-mono font-bold text-text-secondary uppercase">
             Total Invoices Issued
           </span>
-          <div className="text-3xl font-extrabold font-heading text-[#24283A] mt-2">
+          <div className="text-3xl font-extrabold font-heading text-text-primary mt-2">
             {invoices.length}
           </div>
-          <div className="text-xs text-[#747683] mt-1">Persisted billing statements</div>
+          <div className="text-xs text-text-secondary mt-1">Persisted billing statements</div>
         </Card>
       </div>
 
       {/* Invoices Table Card */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl overflow-hidden">
-        <CardHeader className="pb-3 border-b border-[#B8B6AC]/30 flex flex-row items-center justify-between">
+      <Card className="bg-card border-border shadow-xs rounded-2xl overflow-hidden">
+        <CardHeader className="pb-3 border-b border-border/60 flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+            <CardTitle className="text-base font-bold font-heading text-text-primary">
               Billing Invoices
             </CardTitle>
-            <CardDescription className="text-xs text-[#292D40]/70">
+            <CardDescription className="text-xs text-text-secondary/70">
               Institutional invoice history and payment reconciliation
             </CardDescription>
           </div>
@@ -388,7 +388,7 @@ export default function PlatformBillingPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-3 py-1.5 text-[#24283A] outline-none"
+              className="bg-surface border border-border text-xs rounded-lg px-3 py-1.5 text-text-primary outline-none"
             >
               <option value="ALL">All Statuses</option>
               <option value="PAID">PAID</option>
@@ -400,7 +400,7 @@ export default function PlatformBillingPage() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-[#FBFAF7] text-[#747683] font-mono text-[10px] uppercase border-b border-[#B8B6AC]/30">
+              <thead className="bg-surface text-text-secondary font-mono text-[10px] uppercase border-b border-border/60">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Invoice #</th>
                   <th className="px-5 py-3 font-semibold">College / Tenant</th>
@@ -411,7 +411,7 @@ export default function PlatformBillingPage() {
                   <th className="px-5 py-3 font-semibold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#B8B6AC]/20">
+              <tbody className="divide-y divide-border/40">
                 {loading ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
@@ -422,8 +422,8 @@ export default function PlatformBillingPage() {
                   ))
                 ) : invoices.length > 0 ? (
                   invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-[#FBFAF7] transition-colors">
-                      <td className="px-5 py-3.5 font-mono font-bold text-[#5052C9]">
+                    <tr key={inv.id} className="hover:bg-surface transition-colors">
+                      <td className="px-5 py-3.5 font-mono font-bold text-primary">
                         {inv.invoiceNumber}
                         {inv.isDemo && (
                           <Badge
@@ -435,12 +435,12 @@ export default function PlatformBillingPage() {
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <div className="font-bold text-[#24283A]">{inv.tenantName}</div>
-                        <div className="text-[10px] text-[#747683] font-mono">{inv.paymentMethod}</div>
+                        <div className="font-bold text-text-primary">{inv.tenantName}</div>
+                        <div className="text-[10px] text-text-secondary font-mono">{inv.paymentMethod}</div>
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[#24283A]">
+                      <td className="px-5 py-3.5 font-mono text-text-primary">
                         <div>₹{inv.totalInr.toLocaleString("en-IN")}</div>
-                        <div className="text-[10px] text-[#747683]">
+                        <div className="text-[10px] text-text-secondary">
                           Base: ₹{inv.amountInr.toLocaleString()} + Tax: ₹{inv.taxInr.toLocaleString()}
                         </div>
                       </td>
@@ -458,10 +458,10 @@ export default function PlatformBillingPage() {
                           {inv.status}
                         </Badge>
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[#747683]">
+                      <td className="px-5 py-3.5 font-mono text-text-secondary">
                         {new Date(inv.issueDate).toLocaleDateString()}
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[#747683]">
+                      <td className="px-5 py-3.5 font-mono text-text-secondary">
                         {new Date(inv.dueDate).toLocaleDateString()}
                       </td>
                       <td className="px-5 py-3.5 text-right">
@@ -480,7 +480,7 @@ export default function PlatformBillingPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => window.open(`/api/billing/invoices/${inv.id}/download`, "_blank")}
-                            className="h-7 text-xs border-[#B8B6AC] text-[#24283A] hover:bg-[#FBFAF7] cursor-pointer"
+                            className="h-7 text-xs border-border text-text-primary hover:bg-surface cursor-pointer"
                           >
                             <FileText className="h-3 w-3 mr-1" /> View
                           </Button>
@@ -503,7 +503,7 @@ export default function PlatformBillingPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-5 py-10 text-center text-[#747683]">
+                    <td colSpan={7} className="px-5 py-10 text-center text-text-secondary">
                       No billing invoices recorded matching filter criteria.
                     </td>
                   </tr>
@@ -516,24 +516,24 @@ export default function PlatformBillingPage() {
 
       {/* Record Payment Modal */}
       {payTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border/60">
+              <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Record Payment for {payTarget.invoiceNumber}
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary/70">
                 {payTarget.tenantName} &bull; Total: ₹{payTarget.totalInr.toLocaleString()}
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleRecordPayment}>
               <CardContent className="p-5 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A]">Payment Method</label>
+                  <label className="text-xs font-semibold text-text-primary">Payment Method</label>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg p-2 text-[#24283A] outline-none"
+                    className="w-full bg-surface border border-border text-xs rounded-lg p-2 text-text-primary outline-none"
                   >
                     <option value="BANK_TRANSFER">Direct Institutional Wire / NEFT</option>
                     <option value="CARD">Credit / Debit Card</option>
@@ -548,39 +548,39 @@ export default function PlatformBillingPage() {
                     id="isDemo"
                     checked={isDemoPayment}
                     onChange={(e) => setIsDemoPayment(e.target.checked)}
-                    className="rounded border-[#B8B6AC]"
+                    className="rounded border-border"
                   />
-                  <label htmlFor="isDemo" className="text-xs text-[#24283A]">
+                  <label htmlFor="isDemo" className="text-xs text-text-primary">
                     Mark as demonstration / sandbox test payment
                   </label>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A]">
+                  <label className="text-xs font-semibold text-text-primary">
                     Payment Notes / Reference No.
                   </label>
                   <Input
                     placeholder="e.g. UTR #1234567890 or Cheque #456"
                     value={paymentNotes}
                     onChange={(e) => setPaymentNotes(e.target.value)}
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                    className="bg-surface border-border text-xs h-9"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
+                <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setPayTarget(null)}
                     disabled={payLoading}
-                    className="border-[#B8B6AC] text-xs h-9"
+                    className="border-border text-xs h-9"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={payLoading}
-                    className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9"
+                    className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
                   >
                     {payLoading ? "Processing..." : "Confirm Payment"}
                   </Button>
@@ -593,22 +593,22 @@ export default function PlatformBillingPage() {
 
       {/* Generate Invoice Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border/60">
+              <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Generate Platform Invoice
               </CardTitle>
             </CardHeader>
             <form onSubmit={handleCreateInvoice}>
               <CardContent className="p-5 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A]">Select College</label>
+                  <label className="text-xs font-semibold text-text-primary">Select College</label>
                   <select
                     required
                     value={createTenantId}
                     onChange={(e) => setCreateTenantId(e.target.value)}
-                    className="w-full bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg p-2 text-[#24283A] outline-none"
+                    className="w-full bg-surface border border-border text-xs rounded-lg p-2 text-text-primary outline-none"
                   >
                     <option value="">Select an institution...</option>
                     {colleges.map((c) => (
@@ -620,43 +620,43 @@ export default function PlatformBillingPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A]">Amount (INR)</label>
+                  <label className="text-xs font-semibold text-text-primary">Amount (INR)</label>
                   <Input
                     type="number"
                     required
                     value={createAmount}
                     onChange={(e) => setCreateAmount(e.target.value)}
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 font-mono"
+                    className="bg-surface border-border text-xs h-9 font-mono"
                   />
-                  <p className="text-[10px] text-[#747683]">
+                  <p className="text-[10px] text-text-secondary">
                     18% GST will be calculated automatically upon invoice issuance.
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A]">Invoice Description</label>
+                  <label className="text-xs font-semibold text-text-primary">Invoice Description</label>
                   <Input
                     placeholder="e.g. Annual campus subscription fee"
                     value={createNotes}
                     onChange={(e) => setCreateNotes(e.target.value)}
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                    className="bg-surface border-border text-xs h-9"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
+                <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setShowCreateModal(false)}
                     disabled={createLoading}
-                    className="border-[#B8B6AC] text-xs h-9"
+                    className="border-border text-xs h-9"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={createLoading}
-                    className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9"
+                    className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
                   >
                     {createLoading ? "Generating..." : "Generate Invoice"}
                   </Button>
@@ -669,21 +669,21 @@ export default function PlatformBillingPage() {
 
       {/* Issue Refund Modal (Q10 & Q20) */}
       {refundTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-lg bg-[#F8F7F3] border-[#B8B6AC] shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-card border-border shadow-xl rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border/60">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <RotateCcw className="h-4 w-4 text-amber-700" />
                 <span>Issue Refund &mdash; {refundTarget.invoiceNumber}</span>
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary/70">
                 {refundTarget.tenantName} &bull; Total Paid: ₹{refundTarget.totalInr.toLocaleString()}
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleIssueRefund}>
               <CardContent className="p-5 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A]">
+                  <label className="text-xs font-semibold text-text-primary">
                     Refund Amount (INR)
                   </label>
                   <Input
@@ -693,15 +693,15 @@ export default function PlatformBillingPage() {
                     value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
                     max={refundTarget.totalInr}
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 font-mono"
+                    className="bg-surface border-border text-xs h-9 font-mono"
                   />
-                  <p className="text-[10px] text-[#747683]">
+                  <p className="text-[10px] text-text-secondary">
                     Maximum refundable amount: ₹{refundTarget.totalInr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A]">
+                  <label className="text-xs font-semibold text-text-primary">
                     Mandatory Refund Reason
                   </label>
                   <Input
@@ -709,12 +709,12 @@ export default function PlatformBillingPage() {
                     required
                     value={refundReason}
                     onChange={(e) => setRefundReason(e.target.value)}
-                    className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                    className="bg-surface border-border text-xs h-9"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#24283A] flex items-center gap-1.5">
+                  <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
                     <span>Subscription Action (Q10)</span>
                     <Badge variant="outline" className="text-[9px] font-mono border-amber-300 bg-amber-50 text-amber-800">
                       Decoupled Action
@@ -723,24 +723,24 @@ export default function PlatformBillingPage() {
                   <select
                     value={subscriptionAction}
                     onChange={(e) => setSubscriptionAction(e.target.value as any)}
-                    className="w-full bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg p-2.5 text-[#24283A] outline-none font-medium"
+                    className="w-full bg-surface border border-border text-xs rounded-lg p-2.5 text-text-primary outline-none font-medium"
                   >
                     <option value="KEEP_ACTIVE">Keep subscription active (Do not cancel)</option>
                     <option value="CANCEL_IMMEDIATELY">Cancel subscription immediately (Immediate lockout)</option>
                     <option value="CANCEL_AT_PERIOD_END">Cancel at end of paid period (Retain access until expiry)</option>
                   </select>
-                  <p className="text-[10px] text-[#747683] leading-relaxed">
+                  <p className="text-[10px] text-text-secondary leading-relaxed">
                     Per UrPlaced financial policy, refunds do not automatically cancel subscriptions. Choose whether this institution retains access.
                   </p>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-[#B8B6AC]/30">
+                <div className="flex justify-end gap-2 pt-3 border-t border-border/60">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setRefundTarget(null)}
                     disabled={refundLoading}
-                    className="border-[#B8B6AC] text-xs h-9 cursor-pointer"
+                    className="border-border text-xs h-9 cursor-pointer"
                   >
                     Cancel
                   </Button>

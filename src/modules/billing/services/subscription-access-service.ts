@@ -262,7 +262,7 @@ export class SubscriptionAccessService {
     if (sub.temporary_override_until) {
       const overrideDate = new Date(sub.temporary_override_until);
       if (nowTime <= overrideDate.getTime()) {
-        const resolvedEntitlements = this.extractSnapshotEntitlements(sub);
+        const resolvedEntitlements = this.extractSnapshotEntitlements(sub, true);
         return {
           decision: "ALLOW",
           allowed: true,
@@ -287,18 +287,57 @@ export class SubscriptionAccessService {
       }
     }
 
-    // 3. Evaluate Status Machine & Business Policies
+    // 3. Evaluate Status Machine & Business Policies with Authoritative Payment Gate
     const rawStatus = (sub.status || "").toUpperCase();
 
+    // Authoritative Initial Payment Verification:
+    // Even if college_subscriptions.status is "ACTIVE" in the database (due to PostgreSQL check constraints
+    // rejecting "PENDING_PAYMENT"), an institution with 0 verified paid invoices and an unpaid initial invoice
+    // MUST be strictly treated as PENDING_PAYMENT. Operational access must NEVER be granted until initial payment is verified!
+    let hasVerifiedPayment = false;
+    let hasPendingInitialInvoice = false;
+
+    try {
+      const { data: invs } = await admin
+        .from("platform_invoices")
+        .select("id, status, notes, invoice_number")
+        .eq("tenant_id", tenantId);
+
+      if (invs && invs.length > 0) {
+        hasVerifiedPayment = invs.some((i: any) => i.status === "PAID");
+        hasPendingInitialInvoice = invs.some((i: any) => {
+          if (i.status !== "PENDING") return false;
+          const notes = (i.notes || "").toLowerCase();
+          const isExplicitInitial = notes.includes("initial") || notes.includes("registration");
+          const isExplicitRenewal = notes.includes("renewal") || notes.includes("renew");
+          if (isExplicitInitial) return true;
+          if (isExplicitRenewal) return false;
+          return !hasVerifiedPayment;
+        });
+      }
+    } catch {
+      // In isolated mock tests where platform_invoices table is not present, rely on rawStatus
+    }
+
+    const isTerminalOrRestricted =
+      rawStatus === "CANCELLED" ||
+      rawStatus === "CANCELED" ||
+      rawStatus === "EXPIRED" ||
+      rawStatus === "SUSPENDED";
+
+    const effectiveStatus = (!isTerminalOrRestricted && !hasVerifiedPayment && hasPendingInitialInvoice)
+      ? "PENDING_PAYMENT"
+      : rawStatus;
+
     // --- CASE A: Initial PENDING_PAYMENT (Q2) ---
-    if (rawStatus === "PENDING_PAYMENT") {
+    if (effectiveStatus === "PENDING_PAYMENT") {
       if (isExempt) {
         return {
           decision: "ALLOW",
           allowed: true,
           tenantId,
           subscriptionId: sub.id,
-          subscriptionStatus: rawStatus,
+          subscriptionStatus: "PENDING_PAYMENT",
           planId: sub.plan_id,
           planName,
           reasonCode: "EXEMPT_PENDING_PAYMENT",
@@ -317,7 +356,7 @@ export class SubscriptionAccessService {
           : "College placement operations are locked until initial subscription payment is verified (PENDING_PAYMENT).",
         {
           subscriptionId: sub.id,
-          subscriptionStatus: rawStatus,
+          subscriptionStatus: "PENDING_PAYMENT",
           planId: sub.plan_id,
           planName,
           canAccessBilling: isBillingAuthorized,
@@ -337,7 +376,7 @@ export class SubscriptionAccessService {
 
       if (isWithinGrace) {
         // Full subscribed access retained during 7-day grace period (Q1)
-        const resolvedEntitlements = this.extractSnapshotEntitlements(sub);
+        const resolvedEntitlements = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
 
         // If specific feature requested, check snapshot
         if (featureKey && !resolvedEntitlements.features[featureKey]) {
@@ -453,7 +492,7 @@ export class SubscriptionAccessService {
         const periodEndDate = new Date(sub.expiry_date);
         if (nowTime <= periodEndDate.getTime()) {
           // Retain paid operational access until effective end date
-          const resolvedEntitlements = this.extractSnapshotEntitlements(sub);
+          const resolvedEntitlements = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
           if (featureKey && !resolvedEntitlements.features[featureKey]) {
             return makeDenial(
               "DENY_ENTITLEMENT",
@@ -520,7 +559,7 @@ export class SubscriptionAccessService {
     // --- CASE E: ACTIVE or TRIALING ---
     if (rawStatus === "ACTIVE" || rawStatus === "TRIALING" || rawStatus === "TRIAL") {
       // 1. Strict Snapshot Immutability Verification
-      const { features, limits, isValid, errorMsg } = this.extractSnapshotEntitlements(sub);
+      const { features, limits, isValid, errorMsg } = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
 
       if (!isValid) {
         return makeDenial(
@@ -600,16 +639,18 @@ export class SubscriptionAccessService {
    * If the schema lacks the entitlements_snapshot column entirely (live database fallback),
    * safely reconstructs canonical snapshot from purchased plan tier.
    */
-  private static extractSnapshotEntitlements(sub: any): {
+  private static extractSnapshotEntitlements(sub: any, hasVerifiedPayment: boolean = false): {
     features: PlanEntitlementsMap;
     limits: PlanLimitsMap;
     isValid: boolean;
     errorMsg?: string;
   } {
-    // If the schema does not have the entitlements_snapshot column (e.g. live database before migration),
-    // sub.entitlements_snapshot is undefined. In that case, reconstruct from sub.plan_id.
+    // If the schema does not have the entitlements_snapshot column (live database before migration),
+    // sub.entitlements_snapshot is undefined. In that case, safely reconstruct from sub.plan_id.
+    // Also, if the college has genuine verified paid invoices (hasVerifiedPayment === true),
+    // safely auto-heal the snapshot from the purchased plan tier so paying institutions are never locked out!
     const isColumnAbsent = !("entitlements_snapshot" in sub) || sub.entitlements_snapshot === undefined;
-    if (isColumnAbsent && sub && sub.plan_id) {
+    if ((isColumnAbsent || hasVerifiedPayment) && sub && sub.plan_id) {
       const tier = (sub.plan_id || "").toLowerCase().includes("enterprise")
         ? "enterprise"
         : (sub.plan_id || "").toLowerCase().includes("growth")

@@ -2,15 +2,11 @@
 
 import * as React from "react";
 import {
-  BarChart3,
-  TrendingUp,
   Building2,
   CreditCard,
-  ShieldCheck,
   RefreshCw,
   PieChart,
-  Calendar,
-  Layers,
+  TrendingUp,
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,15 +45,20 @@ export default function PlatformAnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5052C9]">
-            Aggregate Telemetry
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">
+              Aggregate Telemetry
+            </span>
+            <Badge variant="outline" className="font-mono text-[10px] bg-secondary/10 text-secondary border-secondary/30">
+              Cross-Tenant Intelligence
+            </Badge>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             Platform Analytics &amp; Adoption
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
             Privacy-safe platform growth, subscription tier distribution, and institutional revenue trends.
           </p>
         </div>
@@ -68,7 +69,7 @@ export default function PlatformAnalyticsPage() {
             size="sm"
             onClick={fetchAnalytics}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5"
+            className="border-border text-xs h-9 gap-1.5"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
@@ -76,19 +77,19 @@ export default function PlatformAnalyticsPage() {
       </div>
 
       {/* Strict Privacy Isolation Callout */}
-      <Card className="bg-[#FBFAF7] border-[#5052C9]/30 shadow-xs rounded-2xl overflow-hidden">
+      <Card className="bg-surface/80 border-primary/30 shadow-xs rounded-2xl overflow-hidden">
         <CardContent className="p-5 flex items-start gap-4">
-          <div className="h-10 w-10 rounded-xl bg-[#5052C9]/10 text-[#5052C9] flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Lock className="h-5 w-5" />
           </div>
           <div className="space-y-1">
-            <div className="text-sm font-bold font-heading text-[#24283A] flex items-center gap-2">
+            <div className="text-sm font-bold font-heading text-text-primary flex items-center gap-2">
               <span>Strict Option A &bull; Guaranteed Zero-Knowledge Student Privacy</span>
-              <Badge variant="outline" className="text-[10px] font-mono border-emerald-300 text-emerald-800 bg-emerald-50">
+              <Badge variant="outline" className="text-[10px] font-mono border-secondary/40 text-secondary bg-secondary/10">
                 Active Verification
               </Badge>
             </div>
-            <p className="text-xs text-[#292D40]/80 leading-relaxed">
+            <p className="text-xs text-text-secondary leading-relaxed">
               In accordance with UrPlaced institutional privacy mandates, all analytics displayed below are aggregated scalars at the platform control-plane boundary. Platform Super Admin does not possess access to individual student grades, mistake banks, resumes, interview scores, or recruiter notes. Drill-down into individual institutional records is architecturally blocked.
             </p>
           </div>
@@ -98,45 +99,45 @@ export default function PlatformAnalyticsPage() {
       {/* Analytics Visualizations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Monthly Institutional Growth */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-          <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-            <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-[#5052C9]" />
+        <Card className="bg-card border-border shadow-xs rounded-2xl">
+          <CardHeader className="pb-3 border-b border-border">
+            <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" />
               <span>Campus Adoption Growth (Recent Months)</span>
             </CardTitle>
-            <CardDescription className="text-xs text-[#292D40]/70">
+            <CardDescription className="text-xs text-text-secondary">
               Aggregated monthly registrations of college platform workspaces
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             {loading ? (
-              <Skeleton className="h-48 w-full bg-gray-200" />
+              <Skeleton className="h-48 w-full bg-surface" />
             ) : trends?.collegeGrowth && trends.collegeGrowth.length > 0 ? (
               <div className="space-y-4">
-                <div className="h-44 flex items-end gap-3 pt-4 border-b border-[#B8B6AC]/30 pb-2">
+                <div className="h-44 flex items-end gap-3 pt-4 border-b border-border/60 pb-2">
                   {trends.collegeGrowth.map((g) => {
                     const maxVal = Math.max(...trends.collegeGrowth.map((x) => x.count), 5);
                     const heightPct = Math.max(Math.round((g.count / maxVal) * 100), 10);
                     return (
                       <div key={g.month} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-                        <span className="text-[10px] font-mono font-bold text-[#5052C9]">{g.count}</span>
+                        <span className="text-[10px] font-mono font-bold text-primary">{g.count}</span>
                         <div
-                          className="w-full bg-gradient-to-t from-[#5052C9] to-[#7779D8] rounded-t-md transition-all duration-500"
+                          className="w-full bg-primary-gradient rounded-t-md transition-all duration-500"
                           style={{ height: `${heightPct}%` }}
                         />
-                        <span className="text-[10px] font-mono text-[#747683] truncate w-full text-center">
+                        <span className="text-[10px] font-mono text-text-secondary truncate w-full text-center">
                           {g.month.split(" ")[0]}
                         </span>
                       </div>
                     );
                   })}
                 </div>
-                <div className="text-[11px] text-[#747683] text-center font-mono">
+                <div className="text-[11px] text-text-secondary text-center font-mono">
                   Monthly new college workspaces provisioned
                 </div>
               </div>
             ) : (
-              <div className="py-12 text-center text-xs text-[#747683]">
+              <div className="py-12 text-center text-xs text-text-secondary">
                 No historical growth records available.
               </div>
             )}
@@ -144,44 +145,44 @@ export default function PlatformAnalyticsPage() {
         </Card>
 
         {/* Chart 2: Plan Adoption Distribution */}
-        <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-          <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-            <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-              <PieChart className="h-4 w-4 text-[#2E8F86]" />
+        <Card className="bg-card border-border shadow-xs rounded-2xl">
+          <CardHeader className="pb-3 border-b border-border">
+            <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+              <PieChart className="h-4 w-4 text-secondary" />
               <span>Subscription Tier Distribution</span>
             </CardTitle>
-            <CardDescription className="text-xs text-[#292D40]/70">
+            <CardDescription className="text-xs text-text-secondary">
               Breakdown of institutional accounts by subscription tier
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             {loading ? (
-              <Skeleton className="h-48 w-full bg-gray-200" />
+              <Skeleton className="h-48 w-full bg-surface" />
             ) : trends?.planDistribution && trends.planDistribution.length > 0 ? (
               <div className="space-y-4">
                 {trends.planDistribution.map((p) => (
                   <div key={p.plan} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-semibold text-[#24283A]">
+                    <div className="flex items-center justify-between text-xs font-semibold text-text-primary">
                       <span>{p.plan}</span>
-                      <span className="font-mono text-[#747683]">
+                      <span className="font-mono text-text-secondary">
                         {p.count} accounts &bull; {p.percentage}%
                       </span>
                     </div>
-                    <div className="h-2.5 rounded-full bg-[#EDECE7] overflow-hidden">
+                    <div className="h-2.5 rounded-full bg-surface overflow-hidden border border-border/40">
                       <div
-                        className="h-full bg-gradient-to-r from-[#2E8F86] to-[#5052C9] rounded-full"
+                        className="h-full bg-gradient-to-r from-secondary to-primary rounded-full transition-all duration-500"
                         style={{ width: `${p.percentage}%` }}
                       />
                     </div>
                   </div>
                 ))}
 
-                <div className="pt-2 text-[11px] text-[#747683] text-center font-mono">
+                <div className="pt-2 text-[11px] text-text-secondary text-center font-mono">
                   Calculated against all active college subscriptions
                 </div>
               </div>
             ) : (
-              <div className="py-12 text-center text-xs text-[#747683]">
+              <div className="py-12 text-center text-xs text-text-secondary">
                 No subscription distribution data currently available.
               </div>
             )}
@@ -190,22 +191,22 @@ export default function PlatformAnalyticsPage() {
       </div>
 
       {/* Revenue Trend Over Time */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-        <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-          <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-emerald-700" />
+      <Card className="bg-card border-border shadow-xs rounded-2xl">
+        <CardHeader className="pb-3 border-b border-border">
+          <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-secondary" />
             <span>Platform Revenue &amp; Billing History (INR)</span>
           </CardTitle>
-          <CardDescription className="text-xs text-[#292D40]/70">
+          <CardDescription className="text-xs text-text-secondary">
             Real billing receipts derived from persisted invoices (Paid vs Pending)
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
           {loading ? (
-            <Skeleton className="h-48 w-full bg-gray-200" />
+            <Skeleton className="h-48 w-full bg-surface" />
           ) : trends?.revenueTrends && trends.revenueTrends.length > 0 ? (
             <div className="space-y-4">
-              <div className="h-48 flex items-end gap-4 pt-4 border-b border-[#B8B6AC]/30 pb-2">
+              <div className="h-48 flex items-end gap-4 pt-4 border-b border-border/60 pb-2">
                 {trends.revenueTrends.map((r) => {
                   const maxRev = Math.max(
                     ...trends.revenueTrends.map((x) => x.collectedInr + x.pendingInr),
@@ -219,18 +220,18 @@ export default function PlatformAnalyticsPage() {
                       <div className="w-full flex flex-col items-center gap-0.5 justify-end h-full">
                         {r.pendingInr > 0 && (
                           <div
-                            className="w-full bg-amber-400 rounded-t-sm"
+                            className="w-full bg-amber-500 rounded-t-sm"
                             style={{ height: `${Math.max(pendingPct, 4)}%` }}
                             title={`Pending: ₹${r.pendingInr.toLocaleString()}`}
                           />
                         )}
                         <div
-                          className="w-full bg-emerald-600 rounded-b-sm"
+                          className="w-full bg-secondary rounded-b-sm"
                           style={{ height: `${Math.max(collectedPct, 4)}%` }}
                           title={`Collected: ₹${r.collectedInr.toLocaleString()}`}
                         />
                       </div>
-                      <span className="text-[10px] font-mono text-[#747683] truncate w-full text-center">
+                      <span className="text-[10px] font-mono text-text-secondary truncate w-full text-center">
                         {r.period.split(" ")[0]}
                       </span>
                     </div>
@@ -238,19 +239,19 @@ export default function PlatformAnalyticsPage() {
                 })}
               </div>
 
-              <div className="flex justify-center items-center gap-6 text-xs text-[#24283A] font-medium pt-2">
+              <div className="flex justify-center items-center gap-6 text-xs text-text-primary font-medium pt-2">
                 <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-xs bg-emerald-600" />
+                  <span className="h-3 w-3 rounded-xs bg-secondary" />
                   <span>Collected Revenue</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-xs bg-amber-400" />
+                  <span className="h-3 w-3 rounded-xs bg-amber-500" />
                   <span>Pending / Outstanding Invoices</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center text-xs text-[#747683]">
+            <div className="py-12 text-center text-xs text-text-secondary">
               No revenue records found.
             </div>
           )}

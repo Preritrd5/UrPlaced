@@ -1,9 +1,8 @@
-
 "use client";
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -15,105 +14,107 @@ import {
   Users2,
   FileText,
   Activity,
-  LogOut,
   ShieldCheck,
   Menu,
   X,
-  ChevronRight,
-  ExternalLink,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import { PlatformNotificationBell } from "./platform-notification-bell";
 import { PlatformUserAccountMenu } from "./platform-user-account-menu";
-import { createClient } from "@/lib/supabase/client";
 
 export interface PlatformNavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
+  exactMatch?: boolean;
 }
 
 export const PLATFORM_NAVIGATION: {
   section: string;
   items: PlatformNavItem[];
 }[] = [
-    {
-      section: "Control Plane",
-      items: [
-        {
-          title: "Platform Dashboard",
-          href: "/preritrd/dashboard",
-          icon: LayoutDashboard,
-        },
-        {
-          title: "College Management",
-          href: "/preritrd/colleges",
-          icon: Building2,
-        },
-        {
-          title: "Register College",
-          href: "/preritrd/colleges/new",
-          icon: PlusCircle,
-          badge: "Onboarding",
-        },
-      ],
-    },
-    {
-      section: "Subscriptions & Billing",
-      items: [
-        {
-          title: "Subscription Plans",
-          href: "/preritrd/subscriptions",
-          icon: CreditCard,
-        },
-        {
-          title: "Billing & Invoices",
-          href: "/preritrd/billing",
-          icon: Receipt,
-        },
-      ],
-    },
-    {
-      section: "Intelligence & Settings",
-      items: [
-        {
-          title: "Platform Analytics",
-          href: "/preritrd/analytics",
-          icon: BarChart3,
-        },
-        {
-          title: "Configuration",
-          href: "/preritrd/configuration",
-          icon: Sliders,
-        },
-        {
-          title: "Super Admins",
-          href: "/preritrd/accounts",
-          icon: Users2,
-        },
-      ],
-    },
-    {
-      section: "Operations & Governance",
-      items: [
-        {
-          title: "Platform Audit Logs",
-          href: "/preritrd/audit-logs",
-          icon: FileText,
-        },
-        {
-          title: "System Health",
-          href: "/preritrd/system-health",
-          icon: Activity,
-          badge: "Live",
-        },
-      ],
-    },
-  ];
+  {
+    section: "Control Plane",
+    items: [
+      {
+        title: "Platform Dashboard",
+        href: "/preritrd/dashboard",
+        icon: LayoutDashboard,
+        exactMatch: true,
+      },
+      {
+        title: "College Management",
+        href: "/preritrd/colleges",
+        icon: Building2,
+      },
+      {
+        title: "Register College",
+        href: "/preritrd/colleges/new",
+        icon: PlusCircle,
+        badge: "Onboarding",
+        exactMatch: true,
+      },
+    ],
+  },
+  {
+    section: "Subscriptions & Billing",
+    items: [
+      {
+        title: "Subscription Plans",
+        href: "/preritrd/subscriptions",
+        icon: CreditCard,
+      },
+      {
+        title: "Billing & Invoices",
+        href: "/preritrd/billing",
+        icon: Receipt,
+      },
+    ],
+  },
+  {
+    section: "Intelligence & Settings",
+    items: [
+      {
+        title: "Platform Analytics",
+        href: "/preritrd/analytics",
+        icon: BarChart3,
+      },
+      {
+        title: "Configuration",
+        href: "/preritrd/configuration",
+        icon: Sliders,
+      },
+      {
+        title: "Super Admins",
+        href: "/preritrd/accounts",
+        icon: Users2,
+      },
+    ],
+  },
+  {
+    section: "Operations & Governance",
+    items: [
+      {
+        title: "Platform Audit Logs",
+        href: "/preritrd/audit-logs",
+        icon: FileText,
+      },
+      {
+        title: "System Health",
+        href: "/preritrd/system-health",
+        icon: Activity,
+        badge: "Live",
+      },
+    ],
+  },
+];
 
 export function PlatformSidebar({
   adminEmail,
@@ -123,7 +124,6 @@ export function PlatformSidebar({
   adminName: string;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   async function handleLogout() {
@@ -140,52 +140,95 @@ export function PlatformSidebar({
       // non-fatal
     }
 
-    window.location.replace("/preritrd/login");
+    window.location.href = "/preritrd/login";
   }
 
-  const navContent = (
-    <div className="flex flex-col h-full bg-[#F8F7F3] border-r border-[#B8B6AC] text-[#24283A] w-64 select-none">
+  return (
+    <>
+      {/* Mobile Top Navigation Header */}
+      <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-40">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 mr-2">
+          <UrPlacedLogo size="sm" className="h-8 w-8 shrink-0" />
+          <span className="font-heading font-bold text-base sm:text-lg text-text-primary shrink-0">
+            UrPlaced
+          </span>
+          <span className="hidden xs:inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--color-primary-subtle)] text-primary truncate max-w-[120px] font-mono">
+            Super Admin
+          </span>
+        </div>
 
-      {/* Platform Branding */}
-      <div className="p-5 border-b border-[#B8B6AC]/40 flex items-center justify-between">
-        <Link
-          href="/preritrd/dashboard"
-          className="flex items-center gap-2.5"
-        >
-          <img
-            src="/assets/logo.png"
-            alt="UrPlaced Logo"
-            className="h-9 w-9 rounded-xl object-contain shadow-sm"
-          />
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <ThemeToggle size="sm" />
+          <PlatformNotificationBell size="sm" />
+          <PlatformUserAccountMenu size="sm" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileOpen}
+            className="h-9 w-9 p-0"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
+      </header>
 
-          <div>
-            <div className="font-heading font-extrabold text-base tracking-tight text-[#24283A]">
-              UrPlaced
-            </div>
-          </div>
-        </Link>
-
-        <button
+      {/* Mobile Drawer Backdrop */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-[rgba(36,40,58,0.40)] backdrop-blur-sm z-40 transition-opacity"
           onClick={() => setMobileOpen(false)}
-          className="lg:hidden p-1.5 rounded-lg text-[#747683] hover:bg-[#EDECE7]"
-          aria-label="Close menu"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Nav Link Groups */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {PLATFORM_NAVIGATION.map((group) => (
-          <div key={group.section} className="space-y-1">
-
-            <div className="px-3 text-[10px] font-mono font-bold uppercase tracking-wider text-[#747683]">
-              {group.section}
+      {/* Sidebar: Desktop persistent sticky, Mobile slide-over drawer */}
+      <aside
+        className={cn(
+          "fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-64 shrink-0 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-screen",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Brand Header */}
+        <div className="h-16 flex items-center justify-between px-5 border-b border-border shrink-0">
+          <Link href="/preritrd/dashboard" className="flex items-center gap-2.5 min-w-0">
+            <UrPlacedLogo size="md" className="h-9 w-9 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <span className="font-heading font-bold text-base tracking-tight text-text-primary block leading-none truncate">
+                UrPlaced Super Admin
+              </span>
             </div>
+          </Link>
 
-            <div className="space-y-0.5 pt-1">
+          {mobileOpen && (
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="md:hidden text-text-secondary hover:text-text-primary p-1"
+              aria-label="Close menu"
+              suppressHydrationWarning
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Navigation Content */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+          {PLATFORM_NAVIGATION.map((group) => (
+            <div key={group.section} className="space-y-1">
+              {/* Section Header Pill */}
+              <div className="px-3 pb-1">
+                <div className="inline-flex items-center rounded-full border border-gray-800/40 bg-white/50 dark:border-white/20 dark:bg-white/10 dark:text-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-black backdrop-blur-md shadow-xs font-mono">
+                  {group.section}
+                </div>
+              </div>
+
+              {/* Menu Items */}
               {group.items.map((item) => {
-                const isActive = pathname === item.href;
+                const isActive = item.exactMatch
+                  ? pathname === item.href
+                  : pathname === item.href || (pathname.startsWith(item.href + "/") && item.href !== "/preritrd/dashboard");
                 const Icon = item.icon;
 
                 return (
@@ -194,32 +237,24 @@ export function PlatformSidebar({
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors",
+                      "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
                       isActive
-                        ? "bg-[#5052C9] text-white shadow-xs font-semibold"
-                        : "text-[#292D40] hover:bg-[#EDECE7] hover:text-[#24283A]"
+                        ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
+                        : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] dark:hover:bg-white/5 hover:text-text-primary"
                     )}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3 min-w-0">
                       <Icon
                         className={cn(
-                          "h-4 w-4",
-                          isActive ? "text-white" : "text-[#747683]"
+                          "h-4 w-4 shrink-0",
+                          isActive ? "text-primary" : "text-text-secondary"
                         )}
                       />
-
-                      <span>{item.title}</span>
+                      <span className="truncate">{item.title}</span>
                     </div>
 
                     {item.badge && (
-                      <span
-                        className={cn(
-                          "px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider",
-                          isActive
-                            ? "bg-white/20 text-white"
-                            : "bg-[#2E8F86]/15 text-[#2E8F86] border border-[#2E8F86]/30"
-                        )}
-                      >
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary text-white ml-2">
                         {item.badge}
                       </span>
                     )}
@@ -227,84 +262,28 @@ export function PlatformSidebar({
                 );
               })}
             </div>
+          ))}
+        </nav>
+
+        {/* Sidebar Footer — Super Admin Control Plane Indicator & Sign Out */}
+        <div className="border-t border-border bg-card p-3 space-y-2">
+          <div className="flex items-center gap-2 text-[10px] text-text-secondary px-1 pt-1 font-mono">
+            <ShieldCheck className="h-3.5 w-3.5 text-secondary shrink-0" />
+            <span className="leading-tight truncate">
+              Super Admin Control Plane
+            </span>
           </div>
-        ))}
-      </div>
-
-      {/* Administrator Account & Sign Out in Sidebar */}
-      <div className="p-4 border-t border-[#B8B6AC]/40 bg-[#FBFAF7]/60 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-[#5052C9]/15 text-[#5052C9] flex items-center justify-center font-bold font-mono text-xs border border-[#5052C9]/30">
-            {adminEmail ? adminEmail.slice(0, 2).toUpperCase() : "SA"}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs font-bold text-[#24283A] truncate font-heading">
-              {adminName || "Super Admin"}
-            </div>
-            <div className="text-[10px] text-[#747683] truncate font-mono">{adminEmail}</div>
-          </div>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLogout}
-          className="w-full text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-8 justify-start gap-2"
-        >
-          <LogOut className="h-3.5 w-3.5" /> Sign Out
-        </Button>
-      </div>
-
-    </div>
-  );
-
-  return (
-    <>
-      {/* Mobile Top Toggle Bar */}
-      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#F8F7F3] border-b border-[#B8B6AC] sticky top-0 z-30">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-[#5052C9] text-white flex items-center justify-center font-heading font-extrabold text-xs">
-            UP
-          </div>
-          <span className="font-heading font-extrabold text-sm text-[#24283A]">
-            UrPlaced Super Admin
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <PlatformNotificationBell size="sm" />
-          <PlatformUserAccountMenu size="sm" />
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => setMobileOpen(true)}
-            className="h-8 px-2 border-[#B8B6AC]"
+            onClick={handleLogout}
+            className="w-full justify-start text-xs text-text-secondary hover:text-text-primary hover:bg-surface gap-2 h-8"
           >
-            <Menu className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5 text-text-secondary" />
+            <span>Sign Out</span>
           </Button>
         </div>
-      </div>
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:block shrink-0 sticky top-0 h-screen z-20">
-        {navContent}
       </aside>
-
-      {/* Mobile Drawer Overlay */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
-            onClick={() => setMobileOpen(false)}
-          />
-
-          <div className="relative z-50 h-full">
-            {navContent}
-          </div>
-
-        </div>
-      )}
     </>
   );
 }
@@ -318,26 +297,14 @@ export function PlatformTopNavbar({
 }) {
   const pathname = usePathname();
 
-  // ========================================================
-  // HYDRATION FIX — THEME TOGGLE
-  // Render the same placeholder on the server and first
-  // client render. Mount ThemeToggle after hydration.
-  // ========================================================
-
-  const [themeToggleMounted, setThemeToggleMounted] =
-    React.useState(false);
-
-  React.useEffect(() => {
-    setThemeToggleMounted(true);
-  }, []);
-
   // Derive current page title from pathname
   const currentTitle = React.useMemo(() => {
     for (const group of PLATFORM_NAVIGATION) {
-      const match = group.items.find(
-        (item) => item.href === pathname
+      const match = group.items.find((item) =>
+        item.exactMatch
+          ? item.href === pathname
+          : pathname === item.href || pathname.startsWith(item.href + "/")
       );
-
       if (match) return match.title;
     }
 
@@ -357,32 +324,35 @@ export function PlatformTopNavbar({
   }, [pathname]);
 
   return (
-    <header className="bg-[#F8F7F3] border-b border-[#B8B6AC]/40 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-10">
-
-      <div className="flex items-center gap-2 text-xs text-[#747683]">
-        <span className="font-bold text-[#24283A] font-heading text-sm">
-          {currentTitle}
-        </span>
+    <header className="hidden md:flex items-center justify-between h-16 px-6 lg:px-10 bg-card/85 backdrop-blur-sm border-b border-border sticky top-0 z-30 shrink-0">
+      {/* Left: Control Plane Context Breadcrumb */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 text-sm text-text-secondary truncate">
+          <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+          <span className="font-semibold text-text-primary truncate">
+            Control Plane
+          </span>
+          <span className="text-border">&bull;</span>
+          <Badge
+            variant="outline"
+            className="text-[10px] px-2 py-0.5 text-secondary border-secondary/60 font-mono"
+          >
+            {currentTitle}
+          </Badge>
+          <Badge
+            variant="outline"
+            className="hidden sm:inline-flex text-[10px] px-2 py-0.5 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 bg-emerald-500/10 font-mono"
+          >
+            Strict Option A Enforced
+          </Badge>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2.5 sm:gap-3">
-
-        {/* Theme Control — Hydration Safe */}
-        {themeToggleMounted ? (
-          <ThemeToggle size="sm" />
-        ) : (
-          <div
-            aria-hidden="true"
-            className="h-8 w-8 rounded-full border border-[#B8B6AC] bg-[#F8F7F3]"
-          />
-        )}
-
-        {/* Platform Control-Plane Notification Bell */}
+      {/* Right: Theme Toggle, Notifications, Account Menu */}
+      <div className="flex items-center gap-3">
+        <ThemeToggle size="default" />
         <PlatformNotificationBell size="default" />
-
-        {/* Super Admin Profile Avatar & Rich Account Dropdown */}
         <PlatformUserAccountMenu size="default" />
-
       </div>
     </header>
   );

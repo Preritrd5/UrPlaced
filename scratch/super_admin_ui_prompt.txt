@@ -1,0 +1,955 @@
+<USER_REQUEST>
+# MASTER ANTIGRAVITY EXECUTION PROMPT
+# URPLACED — GLOBAL SUPER ADMIN PORTAL UI/UX CONSISTENCY & DESIGN SYSTEM ALIGNMENT
+
+**Priority:** High  
+**Scope:** Entire Platform Super Admin Portal (`/preritrd/`)  
+**Reference:** Existing College Portal and Student Portal  
+**Execution:** Full UI Audit, Design Alignment, Component Refactoring, Responsive Improvements and Visual Verification  
+**Production Deployment:** NOT AUTHORIZED
+
+---
+
+# 1. PRIMARY OBJECTIVE
+
+The current UrPlaced Super Admin Portal has noticeable visual inconsistencies compared with the existing College Portal and Student Portal.
+
+The current interface has problems involving:
+
+- Sidebar typography.
+- Font sizes and font weights.
+- Menu spacing and alignment.
+- Section-heading consistency.
+- Content positioning.
+- Page margins and padding.
+- Card dimensions.
+- Table styling.
+- Button sizing.
+- Modal and dialog layouts.
+- Overall visual hierarchy.
+- Responsive behaviour.
+
+The objective is to bring the entire Super Admin Portal into visual alignment with the already implemented College Portal and Student Portal.
+
+**The College Portal and Student Portal are the established design references.**
+
+Do not create a new design system.
+
+Do not independently redesign the Super Admin Portal.
+
+Do not introduce a different font family, random spacing values or a new visual language.
+
+Reuse the existing UrPlaced design tokens, shared components, layout conventions and styling patterns wherever possible.
+
+The final Super Admin Portal must look and behave like another consistent part of the same UrPlaced product.
+
+---
+
+# 2. PHASE 01 — INSPECT THE EXISTING DESIGN REFERENCES FIRST
+
+Before changing the Super Admin Portal, inspect the actual College Portal and Student Portal source code.
+
+Do not rely only on screenshots or visual assumptions.
+
+Inspect:
+
+- College Portal root layout.
+- Student Portal root layout.
+- Shared application shell.
+- Sidebar components.
+- Navbar/header components.
+- Dashboard page layouts.
+- Page containers.
+- Section headings.
+- Cards and panels.
+- Tables.
+- Forms and input controls.
+- Buttons.
+- Dropdowns.
+- Tabs.
+- Dialogs and confirmation modals.
+- Badges and status indicators.
+- Tooltips.
+- Loading states.
+- Empty states.
+- Error states.
+- Responsive navigation.
+- Dark mode and light mode styling.
+
+Inspect the actual implementations and identify:
+
+1. Which shared components are already used across the College and Student Portals.
+2. Which design tokens control typography.
+3. How page containers are structured.
+4. How spacing is established.
+5. How sidebar dimensions and menu items are styled.
+6. How cards and tables maintain consistent dimensions.
+7. How components behave at different breakpoints.
+8. How theme switching is implemented.
+
+### Important
+
+Do not assume that the College Portal and Student Portal use identical layouts in every component.
+
+Identify their common design language and reuse it appropriately in the Super Admin environment.
+
+Use the actual source implementation as the authority.
+
+---
+
+# 3. PHASE 02 — ESTABLISH ONE CONSISTENT DESIGN FOUNDATION
+
+Inspect the existing design tokens and shared styling infrastructure.
+
+UrPlaced's established design references include:
+
+### Colour tokens
+
+- Primary: `#5052C9`
+- Secondary accent: `#2E8F86`
+- Background: `#EDECE7`
+- Card background: `#F8F7F3`
+- Input background: `#FBFAF7`
+- Primary text: `#24283A`
+- Secondary text: `#292D40`
+- Primary gradient: `linear-gradient(135deg, #7779D8 0%, #5052C9 100%)`
+
+### Typography
+
+- Heading font: Outfit.
+- Body/UI font: Inter.
+- Monospace font: JetBrains Mono.
+
+Verify that these values are still the canonical values used by the existing portals.
+
+Do not create duplicate tokens.
+
+Do not introduce arbitrary new hex colours.
+
+Do not hardcode different font stacks in individual Super Admin pages.
+
+Use the existing theme variables and design tokens.
+
+If the current College or Student Portal has newer approved shared values, follow the actual current implementation rather than creating conflicting alternatives.
+
+### Design foundation requirements
+
+Establish consistency for:
+
+- Typography scales.
+- Heading hierarchy.
+- Body text.
+- Secondary descriptions.
+- Navigation typography.
+- Monospace labels.
+- Spacing.
+- Borders.
+- Border radius.
+- Shadows.
+- Background surfaces.
+- Input heights.
+- Button dimensions.
+- Icon sizes.
+- Focus states.
+- Disabled states.
+- Status badges.
+
+Use existing shared infrastructure wherever possible.
+
+Do not create another independent Super Admin theme.
+
+---
+
+# 4. PHASE 03 — GLOBAL SUPER ADMIN APPLICATION SHELL
+
+The Super Admin application shell must match the structural quality and visual consistency of the College and Student Portal shells.
+
+Inspect and improve:
+
+- Main application layout.
+- Sidebar.
+- Top navigation bar.
+- Main content region.
+- Page container.
+- Responsive layout.
+- Scrolling behaviour.
+- Theme handling.
+
+### A. Sidebar
+
+The current sidebar is visually inconsistent.
+
+Correct:
+
+- Font family.
+- Font size.
+- Font weight.
+- Text colour.
+- Menu-item height.
+- Icon dimensions.
+- Icon-to-label spacing.
+- Horizontal padding.
+- Vertical spacing.
+- Group heading style.
+- Group heading spacing.
+- Active menu background.
+- Active text colour.
+- Hover state.
+- Focus state.
+- Disabled state.
+- Nested navigation alignment.
+- Sidebar width.
+- Logo placement.
+- Scrollbar appearance.
+- Footer/account section.
+
+The navigation must be readable and visually balanced.
+
+Avoid tiny typography.
+
+Do not use excessive monospace typography for regular navigation labels.
+
+Use the existing College/Student Portal navigation typography conventions.
+
+Preserve the current Super Admin navigation structure and all existing routes.
+
+### B. Navbar
+
+Align the Super Admin navbar with the existing College and Student Portal navbar conventions.
+
+Verify:
+
+- Height.
+- Logo treatment.
+- Page title alignment.
+- User avatar.
+- Notification icon.
+- Theme toggle.
+- Horizontal padding.
+- Vertical centring.
+- Responsive behaviour.
+
+Preserve the Super Admin-specific functionality.
+
+### C. Main content container
+
+Correct:
+
+- Left and right page margins.
+- Maximum content width.
+- Top spacing.
+- Section spacing.
+- Header positioning.
+- Horizontal alignment.
+- Consistent page padding.
+- Responsive container behaviour.
+
+Avoid unnecessarily narrow content areas or excessive empty spaces.
+
+The dashboard must use the available viewport space intelligently.
+
+---
+
+# 5. PHASE 04 — STANDARDIZE TYPOGRAPHY THROUGHOUT SUPER ADMIN
+
+Inspect every Super Admin page.
+
+Establish a consistent hierarchy based on the existing College and Student Portals.
+
+Align:
+
+### Page titles
+
+- Font family.
+- Font size.
+- Font weight.
+- Line height.
+- Letter spacing.
+- Bottom spacing.
+
+### Section headings
+
+- Consistent size.
+- Consistent weight.
+- Correct line height.
+- Proper spacing above and below.
+
+### Body text
+
+- Readable font size.
+- Appropriate line height.
+- Consistent secondary-text colour.
+
+### Navigation
+
+- Consistent font size.
+- Appropriate font weight.
+- Clear active and inactive states.
+
+### Metadata and labels
+
+- Use the existing visual language.
+- Maintain readable contrast.
+- Reserve monospace typography for appropriate technical metadata and compact labels.
+
+### Form labels and helper text
+
+- Correct font size.
+- Consistent spacing.
+- Clear hierarchy.
+- Readable validation errors.
+
+Do not make all text the same size.
+
+Use the same meaningful hierarchy established by the existing portals.
+
+---
+
+# 6. PHASE 05 — STANDARDIZE CARDS, PANELS AND DASHBOARD COMPONENTS
+
+The current Super Admin dashboard contains cards and panels that need better alignment and visual balance.
+
+Inspect and align:
+
+- KPI cards.
+- Dashboard summary cards.
+- Subscription distribution panels.
+- Quick administrative action cards.
+- Analytics cards.
+- College summary panels.
+- Billing summary cards.
+- System health panels.
+- Other existing cards.
+
+Requirements:
+
+- Consistent card padding.
+- Consistent header height.
+- Consistent border radius.
+- Consistent borders.
+- Appropriate shadow usage.
+- Correct icon alignment.
+- Proper title and description hierarchy.
+- Consistent internal spacing.
+- Consistent card dimensions where components serve the same purpose.
+- Responsive grid behaviour.
+
+Do not force unrelated cards to have identical heights when their content differs.
+
+Use sensible layout constraints rather than arbitrary fixed heights.
+
+Avoid:
+- Cramped content.
+- Excessive empty card space.
+- Random card radii.
+- Uneven internal alignment.
+- Inconsistent heading spacing.
+
+---
+
+# 7. PHASE 06 — TABLES AND MANAGEMENT INTERFACES
+
+Inspect all Super Admin tables and management pages.
+
+Align the following with the College and Student Portal standards:
+
+- Table container.
+- Table headers.
+- Row height.
+- Cell padding.
+- Typography.
+- Column alignment.
+- Borders and dividers.
+- Search fields.
+- Filter dropdowns.
+- Pagination.
+- Action buttons.
+- Status badges.
+- Empty states.
+- Loading states.
+- Horizontal scrolling on mobile.
+
+Prioritize:
+
+- College Management.
+- Subscription Plans.
+- Billing & Invoices.
+- Super Admin Management.
+- Platform Audit Logs.
+- Platform Analytics.
+- Other existing administrative data tables.
+
+### Action columns
+
+Ensure that row actions are aligned consistently.
+
+Use clear spacing between:
+
+- View Details.
+- Edit.
+- Activate/Suspend.
+- Archive.
+- Delete.
+- Other existing actions.
+
+Do not make action buttons visually oversized or excessively compressed.
+
+Preserve all actual action functionality and authorization.
+
+Do not change business logic while improving the presentation.
+
+---
+
+# 8. PHASE 07 — FORMS, INPUTS AND ADMINISTRATIVE ACTIONS
+
+Standardize all administrative forms.
+
+Inspect:
+
+- Register College.
+- Subscription Plan creation/editing.
+- Billing settings.
+- Configuration forms.
+- Super Admin user-management forms.
+- College detail forms.
+- Search and filter inputs.
+- Other existing administrative forms.
+
+Ensure:
+
+- Consistent input height.
+- Consistent label positioning.
+- Consistent padding.
+- Appropriate border radius.
+- Correct focus appearance.
+- Clear placeholder styling.
+- Correct validation feedback.
+- Consistent disabled appearance.
+- Accessible spacing.
+
+Buttons must follow the established UrPlaced standards.
+
+Align:
+
+- Primary buttons.
+- Secondary buttons.
+- Outline buttons.
+- Destructive buttons.
+- Icon buttons.
+- Loading buttons.
+
+Do not change their underlying operations or business meaning.
+
+---
+
+# 9. PHASE 08 — MODALS, DIALOGS AND CONFIRMATION SCREENS
+
+Inspect every modal and dialog throughout the Super Admin Portal.
+
+Examples include:
+
+- Register College modal.
+- Delete College confirmation.
+- Permanent Delete confirmation.
+- Archive & Lockout confirmation.
+- Refund modal.
+- Subscription management.
+- Plan creation.
+- Plan editing.
+- Super Admin account management.
+- Configuration dialogs.
+- Other existing administrative modals.
+
+Apply consistent:
+
+- Maximum width.
+- Internal padding.
+- Header layout.
+- Body spacing.
+- Footer alignment.
+- Button placement.
+- Typography.
+- Border radius.
+- Responsive height.
+- Scrolling behaviour.
+- Keyboard accessibility.
+- Focus management.
+
+Preserve the distinction between destructive and non-destructive actions.
+
+Destructive operations must remain visually identifiable.
+
+Do not weaken typed confirmation, mandatory reason validation or other safeguards.
+
+Never remove existing deletion security simply to simplify a modal.
+
+---
+
+# 10. PHASE 09 — APPLY CONSISTENCY ACROSS THE ENTIRE SUPER ADMIN PORTAL
+
+This is a global task.
+
+Do not stop after correcting the dashboard and sidebar.
+
+Audit and align every existing Super Admin route.
+
+## A. Control Plane
+
+- Platform Dashboard.
+- College Management.
+- Register College.
+
+## B. Subscriptions & Billing
+
+- Subscription Plans.
+- Billing & Invoices.
+- Plan details.
+- Plan creation and editing.
+- Payment and refund interfaces.
+- Subscription management.
+
+## C. Intelligence & Settings
+
+- Platform Analytics.
+- Configuration.
+- Other existing intelligence and settings pages.
+
+## D. Administration
+
+- Super Admin Management.
+- Account-related management interfaces.
+
+## E. Operations & Governance
+
+- Platform Audit Logs.
+- System Health.
+- Other existing governance screens.
+
+## F. All additional routes
+
+Search the entire `/preritrd/` route tree and include:
+
+- Detail pages.
+- Nested pages.
+- Forms.
+- Tables.
+- Dialogs.
+- Empty states.
+- Error states.
+- Loading states.
+
+Do not leave older pages using unrelated styles.
+
+Every page should look like it belongs to the same UrPlaced design system.
+
+---
+
+# 11. PHASE 10 — SHARED COMPONENT REUSE
+
+Before creating new components, inspect the existing shared College and Student Portal components.
+
+Reuse existing components wherever suitable.
+
+Examples:
+
+- Buttons.
+- Cards.
+- Input fields.
+- Labels.
+- Select controls.
+- Badges.
+- Tables.
+- Dialogs.
+- Page containers.
+- Headers.
+- Sidebar elements.
+- Empty states.
+- Loading indicators.
+
+If an existing shared component needs a reusable improvement, improve it without introducing regressions in the College or Student Portal.
+
+Avoid duplicating the same visual component with separate styling in Super Admin.
+
+Do not create a parallel design system.
+
+Where Super Admin requires role-specific or data-specific behaviour, preserve that functionality while maintaining the shared visual standard.
+
+Avoid unnecessary component rewrites.
+
+---
+
+# 12. PHASE 11 — LOADING, EMPTY, ERROR AND SUCCESS STATES
+
+Inspect all existing states and align them with the College and Student Portals.
+
+### Loading
+
+Preserve existing shaded, shimmer and skeleton loading effects exactly as they are.
+
+For ordinary circular spinners and text-only loading indicators, use the approved original UrPlaced branded loader.
+
+Reuse the existing BrandLoader implementation if already available.
+
+Do not introduce unnecessary full-page loading screens.
+
+### Empty states
+
+Standardize:
+
+- Empty messages.
+- Icons.
+- Content alignment.
+- Action buttons.
+- Typography.
+- Spacing.
+
+### Error states
+
+Standardize:
+
+- Error banners.
+- Validation errors.
+- Retry actions.
+- Empty-data handling.
+- Network error presentation.
+
+Do not suppress actual errors.
+
+### Success states
+
+Use consistent:
+
+- Success notifications.
+- Status badges.
+- Confirmation dialogs.
+- Completion messages.
+
+Do not change underlying operation results.
+
+---
+
+# 13. PHASE 12 — RESPONSIVE DESIGN AND ACCESSIBILITY
+
+Inspect the complete Super Admin Portal at:
+
+- Large desktop.
+- Standard desktop.
+- Laptop.
+- Tablet.
+- Mobile.
+
+Verify:
+
+### Sidebar
+
+- Responsive collapse.
+- Mobile drawer behaviour.
+- Text readability.
+- Menu-item alignment.
+- Scroll behaviour.
+
+### Main content
+
+- No unintended horizontal overflow.
+- Responsive page width.
+- Correct grid collapse.
+- Consistent padding.
+
+### Tables
+
+- Appropriate horizontal scrolling or responsive treatment.
+- Accessible actions.
+- Readable data.
+
+### Dialogs
+
+- Fit within the viewport.
+- Internal scrolling where required.
+- No clipped buttons.
+- Correct focus behaviour.
+
+### Accessibility
+
+- Semantic headings.
+- Keyboard navigation.
+- Visible focus indicators.
+- Accessible icon buttons.
+- Appropriate contrast.
+- Clear form labels.
+- Screen-reader-friendly status messages.
+
+Preserve existing dark and light themes.
+
+Ensure the design remains consistent in both modes.
+
+---
+
+# 14. PHASE 13 — DESIGN SYSTEM AND FUNCTIONALITY PRESERVATION
+
+This is a visual consistency task.
+
+Do not modify unrelated business logic.
+
+Preserve:
+
+- Strict Option A.
+- Super Admin authorization.
+- One Person = One College.
+- Tenant isolation.
+- Billing RBAC.
+- Subscription logic.
+- Payment verification.
+- Refund functionality.
+- College deletion behaviour.
+- Permanent user deletion behaviour.
+- Append-only audit logs.
+- Existing API contracts.
+- Existing database schema.
+- Existing navigation routes.
+
+Do not remove or weaken:
+
+- Delete confirmations.
+- Mandatory reasons.
+- Typed confirmations.
+- Permission checks.
+- RLS policies.
+- Financial safeguards.
+- Session validation.
+
+Do not modify the College Portal or Student Portal visually as an unintended side effect.
+
+If a shared component needs an adjustment, verify both reference portals after the change.
+
+---
+
+# 15. PHASE 14 — VISUAL QUALITY ASSURANCE
+
+Perform a proper before-and-after visual audit.
+
+Use the actual College Portal and Student Portal as side-by-side design references.
+
+Capture screenshots of representative pages from all three portals.
+
+### Required screenshots
+
+1. College Portal dashboard.
+2. Student Portal dashboard.
+3. Super Admin dashboard.
+4. Super Admin sidebar.
+5. College Management.
+6. Register College.
+7. Subscription Plans.
+8. Billing & Invoices.
+9. Platform Analytics.
+10. Configuration.
+11. Super Admin Management.
+12. Platform Audit Logs.
+13. System Health.
+14. Representative modal.
+15. Representative form.
+16. Representative table.
+
+Verify that Super Admin aligns with the references in:
+
+- Typography.
+- Sidebar.
+- Content alignment.
+- Spacing.
+- Cards.
+- Tables.
+- Forms.
+- Buttons.
+- Modals.
+- Theme.
+- Responsive behaviour.
+
+Do not merely claim consistency because the same colour tokens are used.
+
+Actual layouts and components must be inspected visually.
+
+---
+
+# 16. PHASE 15 — CODE QUALITY AND REGRESSION TESTING
+
+Run the existing project checks:
+
+- TypeScript strict compilation.
+- ESLint.
+- Existing unit tests.
+- Existing integration tests.
+- Production build.
+
+Check for:
+
+- Broken imports.
+- Duplicate CSS.
+- Unused styles.
+- Unnecessary component duplication.
+- Layout regressions.
+- Broken navigation.
+- Broken administrative actions.
+- Broken responsive layouts.
+
+Verify that:
+
+- All Super Admin routes still function.
+- All College Portal routes still function.
+- All Student Portal routes still function.
+- No authorization or security regressions occur.
+
+Do not remove tests to achieve a passing build.
+
+Do not claim tests passed unless they were actually executed.
+
+---
+
+# 17. FINAL IMPLEMENTATION REPORT
+
+Provide one comprehensive report.
+
+## A. Design reference audit
+
+Explain which existing College and Student Portal components and tokens were used as the reference.
+
+## B. Global UI changes
+
+Document improvements to:
+
+- Sidebar.
+- Navbar.
+- Typography.
+- Main page layout.
+- Spacing.
+- Cards.
+- Tables.
+- Forms.
+- Buttons.
+- Modals.
+- Responsive layouts.
+- Loading and error states.
+
+## C. Page coverage
+
+Provide a table:
+
+| Super Admin area | Pages audited | Pages aligned | Remaining issues |
+|---|---:|---:|---:|
+| Platform Dashboard | | | |
+| College Management | | | |
+| Register College | | | |
+| Subscription Plans | | | |
+| Billing & Invoices | | | |
+| Platform Analytics | | | |
+| Configuration | | | |
+| Super Admin Management | | | |
+| Platform Audit Logs | | | |
+| System Health | | | |
+| Other routes | | | |
+
+Use actual inspected page counts.
+
+## D. Reusable components
+
+List shared components reused, improved or created.
+
+## E. Files changed
+
+List all created and modified files with explanations.
+
+## F. Regression verification
+
+Report actual:
+
+- TypeScript results.
+- ESLint results.
+- Test counts.
+- Build result.
+- Navigation verification.
+- Functional verification.
+
+## G. Visual evidence
+
+Provide before-and-after screenshots at representative desktop, tablet and mobile sizes.
+
+## H. Final status
+
+Choose one:
+
+- COMPLETE — entire Super Admin Portal visually aligned and verified.
+- PARTIALLY COMPLETE — specific pages remain.
+- BLOCKED — specific dependency prevents completion.
+
+Never declare completion after changing only the dashboard and sidebar.
+
+---
+
+# 18. EXECUTION ORDER
+
+Follow the sequence:
+
+**PHASE 01 — Inspect College and Student Portal design references.**
+
+**PHASE 02 — Audit the complete Super Admin route tree.**
+
+**PHASE 03 — Identify and align design tokens and shared components.**
+
+**PHASE 04 — Correct global Super Admin shell, sidebar and navbar.**
+
+**PHASE 05 — Standardize typography and spacing.**
+
+**PHASE 06 — Align cards, panels and dashboard layouts.**
+
+**PHASE 07 — Align tables, forms and administrative controls.**
+
+**PHASE 08 — Align modals and dialogs.**
+
+**PHASE 09 — Apply changes across every Super Admin page.**
+
+**PHASE 10 — Verify loading, empty, error and success states.**
+
+**PHASE 11 — Complete responsive and accessibility verification.**
+
+**PHASE 12 — Run regression tests and production build.**
+
+**PHASE 13 — Produce visual evidence and final report.**
+
+Do not stop after Phase 04.
+
+The objective is consistency throughout the entire Super Admin Portal.
+
+---
+
+# FINAL NON-NEGOTIABLE INSTRUCTIONS
+
+1. College Portal and Student Portal are the design references.
+2. Do not create a new design system.
+3. Reuse existing shared components wherever possible.
+4. Correct typography throughout Super Admin.
+5. Correct sidebar typography, sizing and alignment.
+6. Correct page layouts and spacing.
+7. Correct card and table consistency.
+8. Correct form and modal layouts.
+9. Apply improvements across every Super Admin route.
+10. Preserve all existing functionality.
+11. Preserve security, RBAC, RLS and tenant isolation.
+12. Preserve the existing UrPlaced branding and design tokens.
+13. Preserve both light and dark themes.
+14. Do not modify unrelated College or Student Portal functionality.
+15. Verify representative screens visually.
+16. Run the full applicable regression checks.
+17. Do not push commits or deploy to production.
+
+**FINAL SUCCESS CRITERION:**
+
+When moving between the College Portal, Student Portal and Super Admin Portal, the user must experience one cohesive UrPlaced product.
+
+The typography, sidebar, navigation, alignment, spacing, cards, tables, controls, modals and responsive behaviour must follow the same established design standards.
+
+The Super Admin Portal must not look like a separately designed application.
+
+**Inspect the reference portals first. Reuse their established design. Align the entire Super Admin Portal. Verify every page. Report honestly.**
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-03T06:26:36+05:30.
+</ADDITIONAL_METADATA>

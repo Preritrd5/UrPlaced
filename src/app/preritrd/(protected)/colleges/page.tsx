@@ -5,26 +5,19 @@ import Link from "next/link";
 import {
   Building2,
   Search,
-  Filter,
   PlusCircle,
   RefreshCw,
   AlertTriangle,
   CheckCircle2,
   Ban,
   Play,
-  Calendar,
   Users,
-  ExternalLink,
   ShieldAlert,
   Mail,
   RotateCcw,
   XCircle,
   Eye,
-  Info,
-  Copy,
-  Check,
   User,
-  Clock,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,7 +49,6 @@ export default function PlatformCollegesPage() {
   const [detailsTarget, setDetailsTarget] = React.useState<CollegeListItem | null>(null);
   const [resendingId, setResendingId] = React.useState<string | null>(null);
   const [revokingId, setRevokingId] = React.useState<string | null>(null);
-  const [copiedInvite, setCopiedInvite] = React.useState(false);
 
   // Decommission / Delete Modal State
   const [deleteTarget, setDeleteTarget] = React.useState<CollegeListItem | null>(null);
@@ -212,15 +204,20 @@ export default function PlatformCollegesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5052C9]">
-            Tenant Governance
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">
+              Tenant Governance
+            </span>
+            <Badge variant="outline" className="font-mono text-[10px] bg-secondary/10 text-secondary border-secondary/30">
+              Institutional Registry
+            </Badge>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             College Account Management
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
             Administer institutional subscriptions, onboarding progress, and operational access states.
           </p>
         </div>
@@ -231,11 +228,11 @@ export default function PlatformCollegesPage() {
             size="sm"
             onClick={fetchColleges}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5"
+            className="border-border text-xs h-9 gap-1.5"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          <Button asChild size="sm" className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 gap-1.5 shadow-sm">
+          <Button asChild size="sm" className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 gap-1.5 shadow-xs">
             <Link href="/preritrd/colleges/new">
               <PlusCircle className="h-4 w-4" /> Register College
             </Link>
@@ -246,37 +243,37 @@ export default function PlatformCollegesPage() {
       {/* Notifications */}
       {feedback && (
         <div
-          className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
+          className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between ${
             feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-              : "bg-red-50 border-red-200 text-red-900"
+              ? "bg-secondary/10 border-secondary/30 text-secondary"
+              : "bg-status-danger-subtle border-status-danger/30 text-status-danger"
           }`}
         >
           <div className="flex items-center gap-2">
             {feedback.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
             ) : (
-              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+              <AlertTriangle className="h-4 w-4 text-status-danger shrink-0" />
             )}
             <span>{feedback.text}</span>
           </div>
-          <button onClick={() => setFeedback(null)} className="text-xs font-bold px-2">
+          <button onClick={() => setFeedback(null)} className="text-xs font-bold px-2 cursor-pointer">
             &times;
           </button>
         </div>
       )}
 
       {/* Filter and Search Bar */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl">
+      <Card className="bg-card border-border shadow-xs rounded-2xl">
         <CardContent className="p-4 flex flex-col sm:flex-row gap-3" suppressHydrationWarning>
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#747683]" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-text-secondary" />
             <Input
               type="text"
               placeholder="Search by college name, slug, or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 focus:ring-2 focus:ring-[#5052C9]/30"
+              className="pl-9 bg-input border-border text-xs h-9 focus:ring-2 focus:ring-primary/25"
               suppressHydrationWarning
             />
           </div>
@@ -285,7 +282,7 @@ export default function PlatformCollegesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-3 py-1.5 text-[#24283A] outline-none focus:ring-2 focus:ring-[#5052C9]/30"
+              className="bg-input border border-border text-xs rounded-xl px-3 py-1.5 text-text-primary outline-none focus:ring-2 focus:ring-primary/25"
               suppressHydrationWarning
             >
               <option value="ALL">All Statuses</option>
@@ -297,7 +294,7 @@ export default function PlatformCollegesPage() {
             <select
               value={planFilter}
               onChange={(e) => setPlanFilter(e.target.value)}
-              className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-3 py-1.5 text-[#24283A] outline-none focus:ring-2 focus:ring-[#5052C9]/30"
+              className="bg-input border border-border text-xs rounded-xl px-3 py-1.5 text-text-primary outline-none focus:ring-2 focus:ring-primary/25"
               suppressHydrationWarning
             >
               <option value="ALL">All Plans</option>
@@ -310,11 +307,11 @@ export default function PlatformCollegesPage() {
       </Card>
 
       {/* Colleges Table */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl overflow-hidden">
+      <Card className="bg-card border-border shadow-xs rounded-2xl overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-[#FBFAF7] text-[#747683] font-mono text-[10px] uppercase border-b border-[#B8B6AC]/30">
+              <thead className="bg-surface/80 text-text-secondary font-mono text-[10px] uppercase border-b border-border">
                 <tr>
                   <th className="px-5 py-3 font-semibold">College / Tenant</th>
                   <th className="px-5 py-3 font-semibold">Placement Head</th>
@@ -324,37 +321,37 @@ export default function PlatformCollegesPage() {
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#B8B6AC]/20">
+              <tbody className="divide-y divide-border/40">
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
                       <td colSpan={6} className="px-5 py-4">
-                        <Skeleton className="h-5 w-full bg-gray-200" />
+                        <Skeleton className="h-5 w-full bg-surface" />
                       </td>
                     </tr>
                   ))
                 ) : colleges.length > 0 ? (
                   colleges.map((col) => (
-                    <tr key={col.id} className="hover:bg-[#FBFAF7] transition-colors">
+                    <tr key={col.id} className="hover:bg-surface/50 transition-colors">
                       {/* Name & Slug */}
                       <td className="px-5 py-3.5">
-                        <div className="font-bold font-heading text-[#24283A] text-sm">
+                        <div className="font-bold font-heading text-text-primary text-sm">
                           {col.name}
                         </div>
-                        <div className="text-[11px] text-[#747683] font-mono">
+                        <div className="text-[11px] text-text-secondary font-mono">
                           slug: {col.slug}
                         </div>
-                        <div className="text-[10px] text-[#747683] font-mono mt-0.5">
+                        <div className="text-[10px] text-text-secondary font-mono mt-0.5">
                           Registered: {new Date(col.createdAt).toLocaleDateString()}
                         </div>
                       </td>
 
                       {/* Placement Head Identity */}
                       <td className="px-5 py-3.5">
-                        <div className="font-semibold text-[#24283A] text-xs">
+                        <div className="font-semibold text-text-primary text-xs">
                           {col.contactName || "—"}
                         </div>
-                        <div className="text-[11px] text-[#5052C9] font-mono truncate max-w-[200px]">
+                        <div className="text-[11px] text-primary font-mono truncate max-w-[200px]">
                           {col.officialEmail || "No institutional email"}
                         </div>
                       </td>
@@ -362,19 +359,13 @@ export default function PlatformCollegesPage() {
                       {/* Account Status */}
                       <td className="px-5 py-3.5">
                         <Badge
-                          variant={
-                            col.status === "ACTIVE"
-                              ? "default"
-                              : col.status === "SUSPENDED"
-                              ? "danger"
-                              : "secondary"
-                          }
+                          variant="outline"
                           className={
                             col.status === "ACTIVE"
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-mono text-[10px]"
+                              ? "bg-secondary/10 text-secondary border-secondary/30 font-mono text-[10px]"
                               : col.status === "SUSPENDED"
-                              ? "bg-red-100 text-red-800 border border-red-300 font-mono text-[10px]"
-                              : "bg-gray-100 text-gray-800 font-mono text-[10px]"
+                              ? "bg-status-danger-subtle text-status-danger border-status-danger/30 font-mono text-[10px]"
+                              : "bg-surface text-text-secondary border-border font-mono text-[10px]"
                           }
                         >
                           {col.status}
@@ -384,23 +375,23 @@ export default function PlatformCollegesPage() {
                       {/* Subscription Plan, Status & Seat Limit */}
                       <td className="px-5 py-3.5 space-y-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-[#24283A]">
+                          <span className="font-medium text-text-primary">
                             {col.subscriptionPlan?.name || "Unassigned Plan"}
                           </span>
                           <Badge
                             variant="outline"
                             className={
                               col.subscriptionPlan?.status === "ACTIVE"
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[9px]"
+                                ? "bg-secondary/10 text-secondary border-secondary/30 font-mono text-[9px]"
                                 : col.subscriptionPlan?.status === "PENDING_PAYMENT"
-                                ? "bg-amber-50 text-amber-800 border-amber-300 font-mono text-[9px]"
-                                : "bg-gray-50 text-gray-700 border-gray-300 font-mono text-[9px]"
+                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-mono text-[9px]"
+                                : "bg-surface text-text-secondary border-border font-mono text-[9px]"
                             }
                           >
                             {col.subscriptionPlan?.status || "NO_SUB"}
                           </Badge>
                         </div>
-                        <div className="text-[11px] text-[#747683] flex items-center gap-1 font-mono">
+                        <div className="text-[11px] text-text-secondary flex items-center gap-1 font-mono">
                           <Users className="h-3 w-3" />
                           <span>{col.studentSeatLimit.toLocaleString()} student seats</span>
                         </div>
@@ -412,10 +403,10 @@ export default function PlatformCollegesPage() {
                           variant="outline"
                           className={
                             col.onboardingStatus === "COMPLETED"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-mono"
+                              ? "bg-secondary/10 text-secondary border-secondary/30 text-[10px] font-mono"
                               : col.onboardingStatus === "INVITED"
-                              ? "bg-blue-50 text-blue-800 border-blue-300 text-[10px] font-mono"
-                              : "bg-amber-50 text-amber-800 border-amber-300 text-[10px] font-mono"
+                              ? "bg-primary/10 text-primary border-primary/30 text-[10px] font-mono"
+                              : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10px] font-mono"
                           }
                         >
                           {col.onboardingStatus}
@@ -429,7 +420,7 @@ export default function PlatformCollegesPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => setDetailsTarget(col)}
-                          className="h-7 text-xs text-[#5052C9] hover:bg-[#5052C9]/10 cursor-pointer"
+                          className="h-8 text-xs text-primary hover:bg-surface cursor-pointer"
                         >
                           <Eye className="h-3.5 w-3.5 mr-1" /> Details
                         </Button>
@@ -442,7 +433,7 @@ export default function PlatformCollegesPage() {
                               variant="outline"
                               onClick={() => handleResendInvite(col)}
                               disabled={resendingId === col.id}
-                              className="h-7 text-xs border-[#5052C9]/30 text-[#5052C9] hover:bg-[#5052C9]/5 cursor-pointer"
+                              className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/5 cursor-pointer"
                               title="Generate replacement invitation and email Placement Head"
                             >
                               <RotateCcw className={`h-3 w-3 mr-1 ${resendingId === col.id ? "animate-spin" : ""}`} />
@@ -455,7 +446,7 @@ export default function PlatformCollegesPage() {
                                 variant="outline"
                                 onClick={() => handleRevokeInvite(col)}
                                 disabled={revokingId === col.id}
-                                className="h-7 text-xs border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer"
+                                className="h-8 text-xs border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/5 cursor-pointer"
                                 title="Revoke pending invitation link"
                               >
                                 <XCircle className="h-3 w-3 mr-1" />
@@ -476,7 +467,7 @@ export default function PlatformCollegesPage() {
                                 newStatus: "SUSPENDED",
                               })
                             }
-                            className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-50 cursor-pointer"
+                            className="h-8 text-xs border-status-danger/30 text-status-danger hover:bg-status-danger-subtle cursor-pointer"
                           >
                             <Ban className="h-3 w-3 mr-1" /> Suspend
                           </Button>
@@ -490,7 +481,7 @@ export default function PlatformCollegesPage() {
                                 newStatus: "ACTIVE",
                               })
                             }
-                            className="h-7 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50 cursor-pointer"
+                            className="h-8 text-xs border-secondary/30 text-secondary hover:bg-secondary/10 cursor-pointer"
                           >
                             <Play className="h-3 w-3 mr-1" /> Activate
                           </Button>
@@ -507,7 +498,7 @@ export default function PlatformCollegesPage() {
                             setConfirmTypedName("");
                             setConfirmChecked(false);
                           }}
-                          className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400 cursor-pointer"
+                          className="h-8 text-xs border-status-danger/40 text-status-danger hover:bg-status-danger-subtle cursor-pointer"
                           title="Delete or decommission institution"
                         >
                           <Trash2 className="h-3 w-3 mr-1" /> Delete
@@ -517,7 +508,7 @@ export default function PlatformCollegesPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-[#747683]">
+                    <td colSpan={6} className="px-5 py-12 text-center text-text-secondary">
                       No college accounts found matching the filter criteria.
                     </td>
                   </tr>
@@ -530,49 +521,49 @@ export default function PlatformCollegesPage() {
 
       {/* Onboarding Details Modal */}
       {detailsTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-lg bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-card border-border shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-border">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#5052C9]" />
+                <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
                   <span>College Onboarding &amp; Identity Profile</span>
                 </CardTitle>
                 <button
                   onClick={() => setDetailsTarget(null)}
-                  className="text-xs text-[#747683] hover:text-[#24283A] font-bold p-1"
+                  className="text-xs text-text-secondary hover:text-text-primary font-bold p-1 cursor-pointer"
                 >
                   &times;
                 </button>
               </div>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Institutional metadata and administrative onboarding tracking
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 space-y-4 text-xs">
               {/* Institution Identity */}
-              <div className="p-3 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
-                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
+              <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">
                   Institution Information
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-[#747683]">Name:</span>{" "}
-                    <span className="font-semibold text-[#24283A]">{detailsTarget.name}</span>
+                    <span className="text-text-secondary">Name:</span>{" "}
+                    <span className="font-semibold text-text-primary">{detailsTarget.name}</span>
                   </div>
                   <div>
-                    <span className="text-[#747683]">Slug:</span>{" "}
-                    <span className="font-mono text-[#5052C9]">{detailsTarget.slug}</span>
+                    <span className="text-text-secondary">Slug:</span>{" "}
+                    <span className="font-mono text-primary">{detailsTarget.slug}</span>
                   </div>
                   <div>
-                    <span className="text-[#747683]">Status:</span>{" "}
+                    <span className="text-text-secondary">Status:</span>{" "}
                     <Badge variant="outline" className="font-mono text-[10px]">
                       {detailsTarget.status}
                     </Badge>
                   </div>
                   <div>
-                    <span className="text-[#747683]">Registered:</span>{" "}
-                    <span className="text-[#24283A]">
+                    <span className="text-text-secondary">Registered:</span>{" "}
+                    <span className="text-text-primary font-mono">
                       {new Date(detailsTarget.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -580,21 +571,21 @@ export default function PlatformCollegesPage() {
               </div>
 
               {/* Placement Head Identity */}
-              <div className="p-3 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
-                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
+              <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">
                   Placement Head &amp; Bound Contact
                 </div>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex items-center gap-2">
-                    <User className="h-3.5 w-3.5 text-[#2E8F86]" />
-                    <span className="font-semibold text-[#24283A]">{detailsTarget.contactName || "—"}</span>
+                    <User className="h-3.5 w-3.5 text-secondary" />
+                    <span className="font-semibold text-text-primary">{detailsTarget.contactName || "—"}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Mail className="h-3.5 w-3.5 text-[#5052C9]" />
-                    <span className="font-mono text-[#24283A]">{detailsTarget.officialEmail || "—"}</span>
+                    <Mail className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-mono text-text-primary">{detailsTarget.officialEmail || "—"}</span>
                   </div>
                   {detailsTarget.contactPhone && (
-                    <div className="flex items-center gap-2 text-[#747683]">
+                    <div className="flex items-center gap-2 text-text-secondary font-mono">
                       <span>Phone: {detailsTarget.contactPhone}</span>
                     </div>
                   )}
@@ -602,35 +593,35 @@ export default function PlatformCollegesPage() {
               </div>
 
               {/* Onboarding Lifecycle */}
-              <div className="p-3 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
-                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
+              <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">
                   Onboarding Lifecycle State
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-[#747683]">Status:</span>{" "}
+                    <span className="text-text-secondary">Status:</span>{" "}
                     <Badge
                       variant="outline"
                       className={
                         detailsTarget.onboardingStatus === "COMPLETED"
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[10px]"
-                          : "bg-blue-50 text-blue-800 border-blue-300 font-mono text-[10px]"
+                          ? "bg-secondary/10 text-secondary border-secondary/30 font-mono text-[10px]"
+                          : "bg-primary/10 text-primary border-primary/30 font-mono text-[10px]"
                       }
                     >
                       {detailsTarget.onboardingStatus}
                     </Badge>
                   </div>
                   <div>
-                    <span className="text-[#747683]">Completed:</span>{" "}
-                    <span className="text-[#24283A]">
+                    <span className="text-text-secondary">Completed:</span>{" "}
+                    <span className="text-text-primary font-mono">
                       {detailsTarget.onboardingCompletedAt
                         ? new Date(detailsTarget.onboardingCompletedAt).toLocaleString()
                         : "Pending Setup"}
                     </span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[#747683]">Subscription Plan:</span>{" "}
-                    <span className="font-semibold text-[#24283A]">
+                    <span className="text-text-secondary">Subscription Plan:</span>{" "}
+                    <span className="font-semibold text-text-primary">
                       {detailsTarget.subscriptionPlan?.name || "Standard Plan"} ({detailsTarget.subscriptionPlan?.status || "PENDING_PAYMENT"})
                     </span>
                   </div>
@@ -638,7 +629,7 @@ export default function PlatformCollegesPage() {
               </div>
 
               {/* Modal Actions */}
-              <div className="flex items-center justify-between pt-2 border-t border-[#B8B6AC]/30">
+              <div className="flex items-center justify-between pt-2 border-t border-border">
                 <div className="flex gap-2">
                   {detailsTarget.onboardingStatus !== "COMPLETED" && (
                     <>
@@ -650,7 +641,7 @@ export default function PlatformCollegesPage() {
                           setDetailsTarget(null);
                           await handleResendInvite(col);
                         }}
-                        className="text-xs h-8 gap-1 border-[#5052C9]/30 text-[#5052C9]"
+                        className="text-xs h-8 gap-1 border-primary/30 text-primary"
                       >
                         <RotateCcw className="h-3 w-3" /> Resend Invite
                       </Button>
@@ -663,7 +654,7 @@ export default function PlatformCollegesPage() {
                             setDetailsTarget(null);
                             await handleRevokeInvite(col);
                           }}
-                          className="text-xs h-8 gap-1 border-amber-300 text-amber-800"
+                          className="text-xs h-8 gap-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
                         >
                           <XCircle className="h-3 w-3" /> Revoke Invite
                         </Button>
@@ -688,30 +679,30 @@ export default function PlatformCollegesPage() {
 
       {/* Confirmation Modal for Suspend/Activate */}
       {actionTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-md bg-card border-border shadow-xl rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
                 <span>Confirm Status Modification</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
-              <p className="text-xs text-[#24283A] leading-relaxed">
+              <p className="text-xs text-text-primary leading-relaxed">
                 You are about to change the status of{" "}
                 <span className="font-bold">{actionTarget.college.name}</span> to{" "}
-                <span className="font-bold text-[#5052C9]">{actionTarget.newStatus}</span>.
+                <span className="font-bold text-primary">{actionTarget.newStatus}</span>.
                 {actionTarget.newStatus === "SUSPENDED"
                   ? " This will immediately block college staff and student workspace access."
                   : " This will restore operational access for this institution."}
               </p>
 
-              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-900 dark:text-amber-100 leading-relaxed">
                 <strong>Important:</strong> Activating an institutional account restores administrative access, but does not bypass subscription payment requirements. Operational capabilities remain locked until an approved subscription plan is paid and verified.
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#24283A]">
+                <label className="text-xs font-semibold text-text-primary">
                   Administrative Reason (Logged in Platform Audit)
                 </label>
                 <Input
@@ -719,17 +710,17 @@ export default function PlatformCollegesPage() {
                   placeholder="e.g. Terms review, subscription renewal pending"
                   value={actionReason}
                   onChange={(e) => setActionReason(e.target.value)}
-                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                  className="bg-input border-border text-xs h-9"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setActionTarget(null)}
                   disabled={actionLoading}
-                  className="border-[#B8B6AC] text-xs h-9"
+                  className="border-border text-xs h-9"
                 >
                   Cancel
                 </Button>
@@ -739,8 +730,8 @@ export default function PlatformCollegesPage() {
                   disabled={actionLoading}
                   className={`text-white text-xs h-9 ${
                     actionTarget.newStatus === "SUSPENDED"
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "bg-[#5052C9] hover:bg-[#4345B0]"
+                      ? "bg-status-danger hover:opacity-90"
+                      : "bg-primary hover:bg-[var(--color-primary-hover)]"
                   }`}
                 >
                   {actionLoading ? "Updating..." : `Confirm ${actionTarget.newStatus}`}
@@ -753,27 +744,27 @@ export default function PlatformCollegesPage() {
 
       {/* Confirmation Modal for College Deletion */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-lg bg-[#F8F7F3] border-red-300 shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30 bg-red-50/60">
-              <CardTitle className="text-base font-bold font-heading text-red-950 flex items-center gap-2">
-                <Trash2 className="h-5 w-5 text-red-600" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-card border-status-danger/40 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="pb-3 border-b border-border bg-status-danger-subtle/40">
+              <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-status-danger" />
                 <span>Delete College Account</span>
               </CardTitle>
-              <CardDescription className="text-xs text-red-800">
+              <CardDescription className="text-xs text-text-secondary">
                 Administrative removal of institutional workspace and associated accounts.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
-              <div className="p-3.5 rounded-xl bg-white border border-[#DDDCD5] space-y-1.5">
-                <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">Target Institution</div>
-                <div className="text-sm font-bold font-heading text-[#24283A]">{deleteTarget.name}</div>
-                <div className="text-[11px] font-mono text-[#5052C9]">Slug: {deleteTarget.slug}</div>
+              <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1.5">
+                <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">Target Institution</div>
+                <div className="text-sm font-bold font-heading text-text-primary">{deleteTarget.name}</div>
+                <div className="text-[11px] font-mono text-primary">Slug: {deleteTarget.slug}</div>
               </div>
 
               {/* Deletion Mode */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-[#24283A]">
+                <label className="text-xs font-semibold text-text-primary">
                   Choose Deletion Action:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -781,21 +772,21 @@ export default function PlatformCollegesPage() {
                     onClick={() => setDeleteMode("permanent")}
                     className={`p-3 rounded-xl border cursor-pointer transition-all ${
                       deleteMode === "permanent"
-                        ? "border-red-500 bg-red-50/50 shadow-xs"
-                        : "border-[#DDDCD5] bg-white hover:bg-stone-50"
+                        ? "border-status-danger bg-status-danger-subtle/50 shadow-xs"
+                        : "border-border bg-surface hover:bg-surface/80"
                     }`}
                   >
-                    <div className="flex items-center gap-2 font-bold text-red-900">
+                    <div className="flex items-center gap-2 font-bold text-status-danger">
                       <input
                         type="radio"
                         name="deleteMode"
                         checked={deleteMode === "permanent"}
                         onChange={() => setDeleteMode("permanent")}
-                        className="text-red-600 focus:ring-red-500"
+                        className="text-status-danger focus:ring-status-danger"
                       />
                       <span>Permanent Delete</span>
                     </div>
-                    <p className="text-[11px] text-[#747683] mt-1">
+                    <p className="text-[11px] text-text-secondary mt-1">
                       Completely removes the college and student records from the database. Recommended for test accounts.
                     </p>
                   </div>
@@ -804,21 +795,21 @@ export default function PlatformCollegesPage() {
                     onClick={() => setDeleteMode("archive")}
                     className={`p-3 rounded-xl border cursor-pointer transition-all ${
                       deleteMode === "archive"
-                        ? "border-[#5052C9] bg-[#5052C9]/5 shadow-xs"
-                        : "border-[#DDDCD5] bg-white hover:bg-stone-50"
+                        ? "border-primary bg-primary/10 shadow-xs"
+                        : "border-border bg-surface hover:bg-surface/80"
                     }`}
                   >
-                    <div className="flex items-center gap-2 font-bold text-[#24283A]">
+                    <div className="flex items-center gap-2 font-bold text-text-primary">
                       <input
                         type="radio"
                         name="deleteMode"
                         checked={deleteMode === "archive"}
                         onChange={() => setDeleteMode("archive")}
-                        className="text-[#5052C9] focus:ring-[#5052C9]"
+                        className="text-primary focus:ring-primary"
                       />
                       <span>Archive &amp; Lockout</span>
                     </div>
-                    <p className="text-[11px] text-[#747683] mt-1">
+                    <p className="text-[11px] text-text-secondary mt-1">
                       Revokes logins and cancels subscriptions, but preserves historical invoices and audit logs.
                     </p>
                   </div>
@@ -826,7 +817,7 @@ export default function PlatformCollegesPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#24283A]">
+                <label className="text-xs font-semibold text-text-primary">
                   Administrative Reason (Audit Recorded)
                 </label>
                 <Input
@@ -834,38 +825,38 @@ export default function PlatformCollegesPage() {
                   placeholder="e.g. Administrative removal via Super Admin portal"
                   value={deleteReason}
                   onChange={(e) => setDeleteReason(e.target.value)}
-                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+                  className="bg-input border-border text-xs h-9"
                 />
               </div>
 
               {/* Confirmation Controls */}
-              <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
                     id="confirmDeleteCheck"
                     checked={confirmChecked}
                     onChange={(e) => setConfirmChecked(e.target.checked)}
-                    className="mt-0.5 rounded text-red-600 focus:ring-red-500 cursor-pointer"
+                    className="mt-0.5 rounded text-status-danger focus:ring-status-danger cursor-pointer"
                   />
-                  <label htmlFor="confirmDeleteCheck" className="text-xs text-[#24283A] font-medium cursor-pointer leading-tight">
+                  <label htmlFor="confirmDeleteCheck" className="text-xs text-text-primary font-medium cursor-pointer leading-tight">
                     I confirm that I want to {deleteMode === "permanent" ? "permanently delete" : "archive"}{" "}
-                    <strong className="text-red-700">{deleteTarget.name}</strong>.
+                    <strong className="text-status-danger">{deleteTarget.name}</strong>.
                   </label>
                 </div>
-                <div className="text-[11px] text-[#747683]">
-                  Or type <strong className="font-mono text-[#24283A]">DELETE</strong> below:
+                <div className="text-[11px] text-text-secondary">
+                  Or type <strong className="font-mono text-text-primary">DELETE</strong> below:
                 </div>
                 <Input
                   type="text"
                   placeholder="Type DELETE to confirm"
                   value={confirmTypedName}
                   onChange={(e) => setConfirmTypedName(e.target.value)}
-                  className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-8"
+                  className="bg-input border-border text-xs h-8"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <Button
                   variant="outline"
                   size="sm"
@@ -876,7 +867,7 @@ export default function PlatformCollegesPage() {
                     setConfirmChecked(false);
                   }}
                   disabled={deleteLoading}
-                  className="border-[#B8B6AC] text-xs h-9 cursor-pointer"
+                  className="border-border text-xs h-9 cursor-pointer"
                 >
                   Cancel
                 </Button>
@@ -889,7 +880,7 @@ export default function PlatformCollegesPage() {
                       confirmTypedName.trim().toUpperCase() !== "DELETE" &&
                       confirmTypedName.trim().toLowerCase() !== deleteTarget.name.toLowerCase())
                   }
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 disabled:opacity-50 cursor-pointer font-semibold"
+                  className="bg-status-danger hover:opacity-90 text-white text-xs h-9 disabled:opacity-50 cursor-pointer font-semibold"
                 >
                   {deleteLoading ? (
                     <span className="flex items-center gap-1.5">

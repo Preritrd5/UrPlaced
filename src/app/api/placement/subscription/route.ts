@@ -123,28 +123,41 @@ export async function GET(request: NextRequest) {
       if (planData) plan = planData;
     }
 
-    // Query latest platform invoice for this tenant:
-    // Prioritize any outstanding PENDING invoice so it is always surfaced to the Placement Head
-    const { data: pendingInvoice } = await admin
+    // Query all invoices for this tenant to establish authoritative payment verification
+    const { data: allInvoices } = await admin
       .from("platform_invoices")
       .select("id, invoice_number, amount_inr, tax_inr, currency, status, due_date, issue_date, paid_at, payment_method, notes")
       .eq("tenant_id", targetTenantId)
-      .eq("status", "PENDING")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
 
-    const { data: latestInvoice } = pendingInvoice
-      ? { data: pendingInvoice }
-      : await admin
-          .from("platform_invoices")
-          .select("id, invoice_number, amount_inr, tax_inr, currency, status, due_date, issue_date, paid_at, payment_method, notes")
-          .eq("tenant_id", targetTenantId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    const paidInvoices = allInvoices?.filter((i: any) => i.status === "PAID") || [];
+    const hasPaidInitialInvoice = paidInvoices.length > 0;
+    const pendingInvoice = allInvoices?.find((i: any) => i.status === "PENDING") || null;
+    const latestInvoice = allInvoices?.[0] || null;
 
     const activeInv = pendingInvoice || latestInvoice;
+
+    let invoiceType: "INITIAL_SUBSCRIPTION" | "RENEWAL" | "UPGRADE" = "RENEWAL";
+    if (activeInv) {
+      const notes = (activeInv.notes || "").toLowerCase();
+      const isExplicitInitial = notes.includes("initial") || notes.includes("registration");
+      const isExplicitRenewal = notes.includes("renewal") || notes.includes("renew");
+
+      if (
+        activeInv.invoice_number?.startsWith("INV-UPG-") ||
+        activeInv.notes?.includes("[UPGRADE:")
+      ) {
+        invoiceType = "UPGRADE";
+      } else if (isExplicitInitial) {
+        invoiceType = "INITIAL_SUBSCRIPTION";
+      } else if (isExplicitRenewal) {
+        invoiceType = "RENEWAL";
+      } else if (!hasPaidInitialInvoice) {
+        invoiceType = "INITIAL_SUBSCRIPTION";
+      } else {
+        invoiceType = "RENEWAL";
+      }
+    }
 
     let invoiceData = activeInv
       ? {
@@ -160,9 +173,32 @@ export async function GET(request: NextRequest) {
           paidAt: activeInv.paid_at,
           paymentMethod: activeInv.payment_method || "RAZORPAY",
           notes: activeInv.notes,
+          type: invoiceType,
           razorpayOrderId: (activeInv as any).razorpay_order_id || null,
         }
       : null;
+
+    // Determine authoritative subscription status:
+    // If the college is not in an explicit terminal/restricted state (CANCELLED, EXPIRED, SUSPENDED),
+    // but has an unpaid initial subscription invoice, its effective status is strictly PENDING_PAYMENT.
+    const rawStatus = (sub?.status || "").toUpperCase();
+    const isTerminalOrRestricted =
+      rawStatus === "CANCELLED" ||
+      rawStatus === "CANCELED" ||
+      rawStatus === "EXPIRED" ||
+      rawStatus === "SUSPENDED" ||
+      tenant.status === "DECOMMISSIONED" ||
+      tenant.status === "ARCHIVED";
+
+    const hasPendingInitialInvoice = Boolean(
+      pendingInvoice && (invoiceType === "INITIAL_SUBSCRIPTION" || !hasPaidInitialInvoice)
+    );
+
+    const effectiveSubStatus = isTerminalOrRestricted
+      ? (sub?.status || "CANCELLED")
+      : hasPendingInitialInvoice
+      ? "PENDING_PAYMENT"
+      : (sub?.status || "ACTIVE");
 
     // Option C / Workflow A: If college has preassigned plan in PENDING_PAYMENT but no invoice exists yet,
     // automatically generate the initial invoice so the Placement Head can immediately Pay Now!
@@ -202,6 +238,7 @@ export async function GET(request: NextRequest) {
           paidAt: null,
           paymentMethod: createdInv.payment_method || "RAZORPAY",
           notes: createdInv.notes,
+          type: "INITIAL_SUBSCRIPTION",
           razorpayOrderId: null,
         };
       }
@@ -227,10 +264,13 @@ export async function GET(request: NextRequest) {
       contactPhone: tenant.contact_phone,
       studentSeatLimit: tenant.student_seat_limit,
       hasPreassignedPlan: Boolean(sub?.plan_id),
+      hasPaidInitialInvoice,
       subscription: sub
         ? {
             id: sub.id,
-            status: sub.status,
+            status: effectiveSubStatus,
+            effectiveStatus: effectiveSubStatus,
+            canAccessOperational: hasPaidInitialInvoice,
             startDate: sub.start_date || sub.created_at,
             expiryDate: sub.expiry_date || sub.renewal_date,
             renewalDate: sub.renewal_date,

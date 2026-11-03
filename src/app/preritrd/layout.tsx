@@ -12,7 +12,7 @@ export default function PlatformRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#EDECE7] text-[#24283A] font-sans antialiased selection:bg-[#5052C9] selection:text-white">
+    <div className="min-h-screen bg-background text-text-primary font-sans antialiased selection:bg-primary selection:text-white">
       {children}
     </div>
   );

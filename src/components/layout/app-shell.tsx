@@ -49,9 +49,9 @@ export function AppShell({ children }: AppShellProps) {
     if (!auth.isAuthenticated && !auth.isLoading) {
       return [];
     }
-    // Option C: When tenant operational access is denied or missing active subscription, pass "NO_SUBSCRIPTION" to lock nav
+    // Option C: When tenant operational access is denied or subscription is PENDING_PAYMENT, pass "NO_SUBSCRIPTION" to lock nav
     const effectiveSubStatus =
-      canAccessOperational === false
+      canAccessOperational === false || subStatus === "PENDING_PAYMENT"
         ? "NO_SUBSCRIPTION"
         : (subStatus || "ACTIVE");
     return getAuthorizedNavigation(role, auth.isPlatformAdmin, auth.permissions, effectiveSubStatus, isGracePeriod);
@@ -82,6 +82,7 @@ export function AppShell({ children }: AppShellProps) {
     !auth.isPlatformAdmin &&
     (
       canAccessOperational === false ||
+      subStatus === "PENDING_PAYMENT" ||
       (subStatus && subStatus !== "ACTIVE" && subStatus !== "TRIALING" && !isProtectedByGrace)
     )
   );

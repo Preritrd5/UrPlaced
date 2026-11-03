@@ -301,10 +301,25 @@ export class PlatformAuthService {
           source: "PLATFORM_SUPER_ADMIN_PORTAL",
           timestamp: new Date().toISOString(),
         },
-        metadata,
       });
       if (error) {
-        console.warn("[PlatformAuthService] Warning recording platform audit log:", error.message);
+        if (error.code === "23503" || error.message?.includes("foreign key") || error.message?.includes("actor_id")) {
+          await adminClient.from("audit_logs").insert({
+            tenant_id: null,
+            actor_id: null,
+            action,
+            resource_type: resourceType,
+            resource_id: resourceId || "PLATFORM_CONTROL_PLANE",
+            after_state: {
+              ...metadata,
+              originalActorId: actorId,
+              source: "PLATFORM_SUPER_ADMIN_PORTAL",
+              timestamp: new Date().toISOString(),
+            },
+          });
+        } else {
+          console.warn("[PlatformAuthService] Warning recording platform audit log:", error.message);
+        }
       }
     } catch (err) {
       console.warn("[PlatformAuthService] Warning recording platform audit log:", err);

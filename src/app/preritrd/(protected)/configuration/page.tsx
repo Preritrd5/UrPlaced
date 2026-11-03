@@ -3,23 +3,18 @@
 import * as React from "react";
 import {
   Sliders,
-  ShieldCheck,
   RefreshCw,
   Save,
   CheckCircle2,
   AlertTriangle,
-  Info,
   Lock,
   Power,
-  Layers,
-  Bell,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { PlatformSettingItem } from "@/modules/platform-admin/services/platform-config-service";
 
 export default function PlatformConfigurationPage() {
@@ -98,15 +93,20 @@ export default function PlatformConfigurationPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5052C9]">
-            System Control Plane
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">
+              System Control Plane
+            </span>
+            <Badge variant="outline" className="font-mono text-[10px] bg-secondary/10 text-secondary border-secondary/30">
+              Global Platform Switches
+            </Badge>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             Platform Configuration
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
             Manage global platform feature flags, maintenance broadcast status, and security policies.
           </p>
         </div>
@@ -117,7 +117,7 @@ export default function PlatformConfigurationPage() {
             size="sm"
             onClick={fetchSettings}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5"
+            className="border-border text-xs h-9 gap-1.5"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
@@ -127,54 +127,54 @@ export default function PlatformConfigurationPage() {
       {/* Notifications */}
       {feedback && (
         <div
-          className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
+          className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between ${
             feedback.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-              : "bg-red-50 border-red-200 text-red-900"
+              ? "bg-secondary/10 border-secondary/30 text-secondary"
+              : "bg-status-danger-subtle border-status-danger/30 text-status-danger"
           }`}
         >
           <div className="flex items-center gap-2">
             {feedback.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
             ) : (
-              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+              <AlertTriangle className="h-4 w-4 text-status-danger shrink-0" />
             )}
             <span>{feedback.text}</span>
           </div>
-          <button onClick={() => setFeedback(null)} className="text-xs font-bold px-2">
+          <button onClick={() => setFeedback(null)} className="text-xs font-bold px-2 cursor-pointer">
             &times;
           </button>
         </div>
       )}
 
       {/* Card 1: Maintenance Mode & Announcements */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-        <CardHeader className="pb-3 border-b border-[#B8B6AC]/30 flex flex-row items-center justify-between">
+      <Card className="bg-card border-border shadow-xs rounded-2xl">
+        <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-              <Power className={`h-4 w-4 ${maintenance.enabled ? "text-red-600" : "text-[#747683]"}`} />
+            <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+              <Power className={`h-4 w-4 ${maintenance.enabled ? "text-status-danger" : "text-text-secondary"}`} />
               <span>Maintenance Mode &amp; Global Broadcast</span>
             </CardTitle>
-            <CardDescription className="text-xs text-[#292D40]/70">
+            <CardDescription className="text-xs text-text-secondary">
               Temporarily restrict portal access during scheduled maintenance windows
             </CardDescription>
           </div>
           <Badge
-            variant={maintenance.enabled ? "danger" : "outline"}
+            variant="outline"
             className={
               maintenance.enabled
-                ? "bg-red-100 text-red-800 border-red-300 font-mono text-[10px]"
-                : "bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[10px]"
+                ? "bg-status-danger-subtle text-status-danger border-status-danger/30 font-mono text-[10px]"
+                : "bg-secondary/10 text-secondary border-secondary/30 font-mono text-[10px]"
             }
           >
             {maintenance.enabled ? "MAINTENANCE ACTIVE" : "SYSTEM OPERATIONAL"}
           </Badge>
         </CardHeader>
         <CardContent className="p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">
             <div>
-              <div className="text-xs font-bold text-[#24283A]">Enable Maintenance Mode</div>
-              <div className="text-[11px] text-[#747683]">
+              <div className="text-xs font-bold text-text-primary">Enable Maintenance Mode</div>
+              <div className="text-[11px] text-text-secondary">
                 When enabled, student and college sessions will see the maintenance announcement.
               </div>
             </div>
@@ -185,19 +185,19 @@ export default function PlatformConfigurationPage() {
                 onChange={(e) => setMaintenance({ ...maintenance, enabled: e.target.checked })}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600" />
+              <div className="w-11 h-6 bg-border/60 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-status-danger" />
             </label>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-[#24283A] block">
+            <label className="text-xs font-semibold text-text-primary block">
               Maintenance Announcement Message
             </label>
             <Input
               value={maintenance.message}
               onChange={(e) => setMaintenance({ ...maintenance, message: e.target.value })}
               placeholder="e.g. Scheduled database maintenance in progress. Services resume at 04:00 UTC."
-              className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9"
+              className="bg-input border-border text-xs h-9 rounded-xl"
             />
           </div>
 
@@ -206,7 +206,7 @@ export default function PlatformConfigurationPage() {
               size="sm"
               onClick={() => handleSaveSetting("maintenance_mode", maintenance, "Maintenance Mode")}
               disabled={savingKey === "maintenance_mode"}
-              className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-8 gap-1.5 shadow-sm"
+              className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 gap-1.5 shadow-xs rounded-xl"
             >
               <Save className="h-3.5 w-3.5" />
               {savingKey === "maintenance_mode" ? "Saving..." : "Save Maintenance Settings"}
@@ -216,70 +216,70 @@ export default function PlatformConfigurationPage() {
       </Card>
 
       {/* Card 2: Platform Feature Switches */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-        <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-          <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#5052C9]" />
+      <Card className="bg-card border-border shadow-xs rounded-2xl">
+        <CardHeader className="pb-3 border-b border-border">
+          <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
             <span>Global Platform Feature Flags</span>
           </CardTitle>
-          <CardDescription className="text-xs text-[#292D40]/70">
+          <CardDescription className="text-xs text-text-secondary">
             Control feature accessibility across institutional tenants
           </CardDescription>
         </CardHeader>
         <CardContent className="p-5 sm:p-6 space-y-3">
           {/* Switch 1: AI Question Generation */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">
             <div>
-              <div className="text-xs font-bold text-[#24283A]">AI Question &amp; Curriculum Generation</div>
-              <div className="text-[11px] text-[#747683]">Enables Google Gemini AI integration for question sets and study tutors.</div>
+              <div className="text-xs font-bold text-text-primary">AI Question &amp; Curriculum Generation</div>
+              <div className="text-[11px] text-text-secondary">Enables Google Gemini AI integration for question sets and study tutors.</div>
             </div>
             <input
               type="checkbox"
               checked={features.enableAiGeneration}
               onChange={(e) => setFeatures({ ...features, enableAiGeneration: e.target.checked })}
-              className="rounded border-[#B8B6AC] text-[#5052C9] h-4 w-4"
+              className="rounded border-border text-primary h-4 w-4 accent-primary"
             />
           </div>
 
           {/* Switch 2: Mistake Bank */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">
             <div>
-              <div className="text-xs font-bold text-[#24283A]">Mistake-to-Mastery Engine</div>
-              <div className="text-[11px] text-[#747683]">Activates adaptive revision tracking and student defect recording.</div>
+              <div className="text-xs font-bold text-text-primary">Mistake-to-Mastery Engine</div>
+              <div className="text-[11px] text-text-secondary">Activates adaptive revision tracking and student defect recording.</div>
             </div>
             <input
               type="checkbox"
               checked={features.enableMistakeBank}
               onChange={(e) => setFeatures({ ...features, enableMistakeBank: e.target.checked })}
-              className="rounded border-[#B8B6AC] text-[#5052C9] h-4 w-4"
+              className="rounded border-border text-primary h-4 w-4 accent-primary"
             />
           </div>
 
           {/* Switch 3: DriveFit */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">
             <div>
-              <div className="text-xs font-bold text-[#24283A]">DriveFit Recruitment Intelligence</div>
-              <div className="text-[11px] text-[#747683]">Allows campus recruiters to evaluate readiness against drive requirements.</div>
+              <div className="text-xs font-bold text-text-primary">DriveFit Recruitment Intelligence</div>
+              <div className="text-[11px] text-text-secondary">Allows campus recruiters to evaluate readiness against drive requirements.</div>
             </div>
             <input
               type="checkbox"
               checked={features.enableDriveFit}
               onChange={(e) => setFeatures({ ...features, enableDriveFit: e.target.checked })}
-              className="rounded border-[#B8B6AC] text-[#5052C9] h-4 w-4"
+              className="rounded border-border text-primary h-4 w-4 accent-primary"
             />
           </div>
 
           {/* Switch 4: Self-service student registration */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">
             <div>
-              <div className="text-xs font-bold text-[#24283A]">Self-Service Student SRN Claiming</div>
-              <div className="text-[11px] text-[#747683]">Allows eligible students on official college rosters to claim accounts.</div>
+              <div className="text-xs font-bold text-text-primary">Self-Service Student SRN Claiming</div>
+              <div className="text-[11px] text-text-secondary">Allows eligible students on official college rosters to claim accounts.</div>
             </div>
             <input
               type="checkbox"
               checked={features.enableSelfServiceSignup}
               onChange={(e) => setFeatures({ ...features, enableSelfServiceSignup: e.target.checked })}
-              className="rounded border-[#B8B6AC] text-[#5052C9] h-4 w-4"
+              className="rounded border-border text-primary h-4 w-4 accent-primary"
             />
           </div>
 
@@ -288,7 +288,7 @@ export default function PlatformConfigurationPage() {
               size="sm"
               onClick={() => handleSaveSetting("feature_switches", features, "Feature Switches")}
               disabled={savingKey === "feature_switches"}
-              className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-8 gap-1.5 shadow-sm"
+              className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 gap-1.5 shadow-xs rounded-xl"
             >
               <Save className="h-3.5 w-3.5" />
               {savingKey === "feature_switches" ? "Saving..." : "Save Feature Switches"}
@@ -298,20 +298,20 @@ export default function PlatformConfigurationPage() {
       </Card>
 
       {/* Card 3: Security & Session Constraints */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl">
-        <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
-          <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-            <Lock className="h-4 w-4 text-[#2E8F86]" />
+      <Card className="bg-card border-border shadow-xs rounded-2xl">
+        <CardHeader className="pb-3 border-b border-border">
+          <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+            <Lock className="h-4 w-4 text-secondary" />
             <span>Platform Security Constraints</span>
           </CardTitle>
-          <CardDescription className="text-xs text-[#292D40]/70">
+          <CardDescription className="text-xs text-text-secondary">
             Administrative authentication, session timeout, and MFA policy
           </CardDescription>
         </CardHeader>
         <CardContent className="p-5 sm:p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-[#24283A] block">
+              <label className="text-xs font-semibold text-text-primary block">
                 Session Timeout (Minutes)
               </label>
               <Input
@@ -320,12 +320,12 @@ export default function PlatformConfigurationPage() {
                 max={480}
                 value={security.sessionTimeoutMinutes}
                 onChange={(e) => setSecurity({ ...security, sessionTimeoutMinutes: Number(e.target.value) })}
-                className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 font-mono"
+                className="bg-input border-border text-xs h-9 font-mono rounded-xl"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-[#24283A] block">
+              <label className="text-xs font-semibold text-text-primary block">
                 Max Failed Login Attempts Before Lockout
               </label>
               <Input
@@ -334,15 +334,15 @@ export default function PlatformConfigurationPage() {
                 max={10}
                 value={security.maxFailedLogins}
                 onChange={(e) => setSecurity({ ...security, maxFailedLogins: Number(e.target.value) })}
-                className="bg-[#FBFAF7] border-[#B8B6AC] text-xs h-9 font-mono"
+                className="bg-input border-border text-xs h-9 font-mono rounded-xl"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#FBFAF7] border border-[#B8B6AC]/40">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border">
             <div>
-              <div className="text-xs font-bold text-[#24283A]">Enforce MFA for All Super Admins</div>
-              <div className="text-[11px] text-[#747683]">
+              <div className="text-xs font-bold text-text-primary">Enforce MFA for All Super Admins</div>
+              <div className="text-[11px] text-text-secondary">
                 Mandates AAL2 verification for all accounts entering the /preritrd/ control plane.
               </div>
             </div>
@@ -350,7 +350,7 @@ export default function PlatformConfigurationPage() {
               type="checkbox"
               checked={security.enforceMfaForAdmins}
               onChange={(e) => setSecurity({ ...security, enforceMfaForAdmins: e.target.checked })}
-              className="rounded border-[#B8B6AC] text-[#5052C9] h-4 w-4"
+              className="rounded border-border text-primary h-4 w-4 accent-primary"
             />
           </div>
 
@@ -359,7 +359,7 @@ export default function PlatformConfigurationPage() {
               size="sm"
               onClick={() => handleSaveSetting("security_settings", security, "Security Settings")}
               disabled={savingKey === "security_settings"}
-              className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-8 gap-1.5 shadow-sm"
+              className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 gap-1.5 shadow-xs rounded-xl"
             >
               <Save className="h-3.5 w-3.5" />
               {savingKey === "security_settings" ? "Saving..." : "Save Security Settings"}

@@ -14,7 +14,7 @@ export default async function PlatformProtectedLayout({
   let admin = null;
   try {
     admin = await PlatformAuthService.requireSuperAdmin();
-  } catch (err: any) {
+  } catch {
     redirect("/preritrd/login");
   }
 
@@ -24,14 +24,14 @@ export default async function PlatformProtectedLayout({
 
   return (
     <PlatformAdminProvider initialAdmin={admin}>
-      <div className="min-h-screen bg-[#EDECE7] flex flex-col lg:flex-row font-sans selection:bg-[#5052C9] selection:text-white">
+      <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row font-sans selection:bg-primary selection:text-white">
         {/* Platform Navigation Sidebar */}
         <PlatformSidebar adminEmail={admin.email} adminName={admin.fullName} />
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <PlatformTopNavbar adminEmail={admin.email} adminName={admin.fullName} />
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+          <main className="flex-1 py-4 sm:py-8 px-3.5 sm:px-6 lg:px-10 max-w-7xl w-full mx-auto space-y-6">
             {children}
           </main>
         </div>

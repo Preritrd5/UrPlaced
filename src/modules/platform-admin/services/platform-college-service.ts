@@ -4,6 +4,8 @@ import { PlatformAuthService } from "./platform-auth-service";
 import { EmailAdapter, type EmailDeliveryResult } from "@/modules/identity-access/services/email-adapter";
 import { PlatformNotificationService } from "./platform-notification-service";
 import { PlatformSubscriptionService } from "./platform-subscription-service";
+import { UserDeletionService } from "@/modules/identity-access/services/user-deletion-service";
+import { AvatarStorageService } from "@/modules/identity-access/services/avatar-storage-service";
 
 export interface CollegeListItem {
   id: string;
@@ -403,75 +405,93 @@ export class PlatformCollegeService {
       let subData: any = null;
       let subErr: any = null;
 
-      const fullPayload = {
+      // 1. Prepare base payload using columns supported across all PostgreSQL schema versions
+      const basePayload: any = {
         tenant_id: tenant.id,
         plan_id: planRecord.id,
-        plan_version: planRecord.version || 1,
         status: "PENDING_PAYMENT",
         student_seat_limit: Number(studentSeatLimit || planRecord.student_limit || 1000),
         staff_seat_limit: Number(
           planRecord.staff_limit || (planRecord.id === "enterprise" ? 100 : planRecord.id === "growth" ? 25 : 5)
         ),
-        entitlements_snapshot: snapshot,
         start_date: new Date().toISOString(),
         expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         renewal_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       };
 
+      // 2. Prepare extended payload if schema supports versioning and snapshot columns
+      const extendedPayload: any = {
+        ...basePayload,
+        plan_version: planRecord.version || 1,
+        entitlements_snapshot: snapshot,
+      };
+
+      // Attempt 1: Try inserting with extended schema (snapshot and plan_version)
       try {
-        const subInsertQuery = admin.from("college_subscriptions").insert(fullPayload);
+        const subInsertQuery = admin.from("college_subscriptions").insert(extendedPayload);
         if (typeof (subInsertQuery as any).select === "function") {
-          const res = await (subInsertQuery as any).select().single();
-          subData = res.data;
-          subErr = res.error;
+          const selectObj = (subInsertQuery as any).select();
+          const res = typeof selectObj.maybeSingle === "function"
+            ? await selectObj.maybeSingle()
+            : typeof selectObj.single === "function"
+            ? await selectObj.single()
+            : await selectObj;
+          if (!res?.error && res?.data) {
+            subData = res.data;
+          } else {
+            subErr = res?.error;
+          }
         } else {
           await subInsertQuery;
           subData = {
-            id: "sub-init-01",
-            ...fullPayload,
+            id: `sub-${tenant.id}`,
+            ...extendedPayload,
           };
         }
       } catch (err: any) {
         subErr = err;
       }
 
-      if (subErr || !subData) {
-        // Fallback 1: Base schema without entitlements_snapshot / plan_version columns
-        const basePayload = {
-          tenant_id: tenant.id,
-          plan_id: planRecord.id,
-          status: "PENDING_PAYMENT",
-          student_seat_limit: Number(studentSeatLimit || planRecord.student_limit || 1000),
-          staff_seat_limit: Number(
-            planRecord.staff_limit || (planRecord.id === "enterprise" ? 100 : planRecord.id === "growth" ? 25 : 5)
-          ),
-          start_date: new Date().toISOString(),
-          expiry_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-          renewal_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        };
-
-        const retryBase = await (admin.from("college_subscriptions").insert(basePayload) as any).select().maybeSingle();
-        if (retryBase && !retryBase.error && retryBase.data) {
-          subData = retryBase.data;
-        } else {
-          // Fallback 2: If check constraint rejects PENDING_PAYMENT, fallback to valid ACTIVE status (while invoice remains PENDING)
-          const activeFallbackPayload = {
-            ...basePayload,
-            status: "ACTIVE",
-          };
-          const retryActive = await (admin.from("college_subscriptions").insert(activeFallbackPayload) as any).select().maybeSingle();
-          if (retryActive && !retryActive.error && retryActive.data) {
-            subData = retryActive.data;
-          } else if (retryActive && !retryActive.error) {
-            subData = { id: "sub-init-01", ...activeFallbackPayload };
+      // Attempt 2: If extended schema failed (e.g. PGRST204 column missing), fallback to base schema
+      if (!subData) {
+        try {
+          const baseInsertQuery = admin.from("college_subscriptions").insert(basePayload);
+          if (typeof (baseInsertQuery as any).select === "function") {
+            const selectObj = (baseInsertQuery as any).select();
+            const res = typeof selectObj.maybeSingle === "function"
+              ? await selectObj.maybeSingle()
+              : typeof selectObj.single === "function"
+              ? await selectObj.single()
+              : await selectObj;
+            if (!res?.error && res?.data) {
+              subData = res.data;
+              subErr = null;
+            } else if (!res?.error) {
+              subData = { id: `sub-${tenant.id}`, ...basePayload };
+              subErr = null;
+            } else {
+              subErr = res.error;
+            }
           } else {
-            throw new Error(
-              `Failed to create initial college subscription: ${
-                retryActive?.error?.message || retryBase?.error?.message || subErr?.message || "Unknown database error"
-              }`
-            );
+            await baseInsertQuery;
+            subData = { id: `sub-${tenant.id}`, ...basePayload };
+            subErr = null;
           }
+        } catch (err: any) {
+          subErr = err;
         }
+      }
+
+      if (!subData) {
+        // Rollback tenant creation to avoid orphaned tenant or slug collision on retry
+        if (typeof (admin.from("tenants") as any)?.delete === "function") {
+          try {
+            await (admin.from("tenants") as any).delete().eq("id", tenant.id);
+          } catch {}
+        }
+        throw new Error(
+          `Failed to create initial college subscription: ${subErr?.message || "Database insert error"}`
+        );
       }
 
       subscription = subData;
@@ -1100,7 +1120,144 @@ export class PlatformCollegeService {
     const now = new Date().toISOString();
 
     if (hardDelete) {
-      // 1. Clean up dependent relations in strict topological/leaf-first order
+      // 0. Safeguard: Financial & Legal Retention Guard
+      // If the college has issued PAID invoices, hard deletion of the tenant is blocked to preserve statutory financial records.
+      // The administrator must use 'Archive & Lockout' instead.
+      const { data: paidInvoices } = await admin
+        .from("platform_invoices")
+        .select("id, invoice_number")
+        .eq("tenant_id", tenantId)
+        .eq("status", "PAID");
+
+      if (paidInvoices && paidInvoices.length > 0) {
+        throw new Error(
+          `Cannot permanently delete institution '${tenant.name}' because it contains ${paidInvoices.length} paid tax invoice(s). Statutory financial records must be preserved. Please use 'Archive & Lockout' instead to decommission this institution while preserving financial compliance.`
+        );
+      }
+
+      // 1. Enumerate ALL associated users belonging to this tenant before deleting database records
+      const userIdsToDelete = new Set<string>();
+
+      // 1a. Staff & Admins in tenant_memberships
+      const { data: memberRows } = await admin
+        .from("tenant_memberships")
+        .select("user_id")
+        .eq("tenant_id", tenantId);
+
+      if (memberRows) {
+        for (const row of memberRows) {
+          if (row.user_id && row.user_id !== adminId) {
+            userIdsToDelete.add(row.user_id);
+          }
+        }
+      }
+
+      // 1b. Students in students roster with user_id
+      const { data: studentRows } = await admin
+        .from("students")
+        .select("user_id")
+        .eq("tenant_id", tenantId);
+
+      if (studentRows) {
+        for (const row of studentRows) {
+          if (row.user_id && row.user_id !== adminId) {
+            userIdsToDelete.add(row.user_id);
+          }
+        }
+      }
+
+      // 2. Perform authoritative hard deletion for all identified college users
+      let deletedUsersCount = 0;
+      for (const userId of userIdsToDelete) {
+        try {
+          // Check if this user belongs to another active college
+          const { data: otherMemberships } = await admin
+            .from("tenant_memberships")
+            .select("id")
+            .eq("user_id", userId)
+            .neq("tenant_id", tenantId);
+
+          if (otherMemberships && otherMemberships.length > 0) {
+            // User belongs to other college(s); only decouple from this tenant
+            continue;
+          }
+
+          // 2a. Immediately revoke active sessions
+          if (typeof (admin.auth?.admin as any)?.signOut === "function") {
+            try {
+              await (admin.auth.admin as any).signOut(userId);
+            } catch (err) {
+              console.warn(`[decommissionCollege] Session revocation notice for user ${userId}:`, err);
+            }
+          }
+
+          // 2b. Clean up user avatar in Supabase Storage
+          try {
+            const { data: avatarFiles } = await admin.storage
+              .from(AvatarStorageService.BUCKET_NAME)
+              .list(userId);
+
+            if (avatarFiles && avatarFiles.length > 0) {
+              const filesToRemove = avatarFiles.map((f: { name: string }) => `${userId}/${f.name}`);
+              await admin.storage
+                .from(AvatarStorageService.BUCKET_NAME)
+                .remove(filesToRemove);
+            }
+          } catch (storageErr) {
+            console.warn(`[decommissionCollege] Storage avatar cleanup notice for user ${userId}:`, storageErr);
+          }
+
+          // 2c. Delete user profile record from public.profiles
+          await admin.from("profiles").delete().eq("id", userId);
+
+          // 2d. Permanently delete from Supabase Auth (auth.users)
+          if (typeof admin.auth?.admin?.deleteUser === "function") {
+            const { error: authErr } = await admin.auth.admin.deleteUser(userId);
+            if (authErr) {
+              const isMissing =
+                authErr.message?.toLowerCase().includes("not found") ||
+                authErr.message?.toLowerCase().includes("does not exist");
+              if (!isMissing) {
+                console.warn(`[decommissionCollege] Auth deletion warning for user ${userId}:`, authErr.message);
+              }
+            }
+          }
+
+          // 2e. Verify Auth deletion
+          if (typeof admin.auth?.admin?.getUserById === "function") {
+            const { data: checkUser } = await admin.auth.admin.getUserById(userId);
+            if (checkUser?.user) {
+              throw new Error(`Post-deletion verification failed: College user '${userId}' still exists in Supabase Auth.`);
+            }
+          }
+
+          deletedUsersCount++;
+        } catch (uErr) {
+          console.error(`[decommissionCollege] Error during user deletion for ${userId}:`, uErr);
+          throw uErr;
+        }
+      }
+
+      // 3. Clean up storage assets for invitations belonging to this tenant
+      try {
+        const { data: invRows } = await admin
+          .from("invitations")
+          .select("token_hash")
+          .eq("tenant_id", tenantId);
+
+        if (invRows && invRows.length > 0) {
+          const invFiles = invRows
+            .filter((i: any) => i.token_hash)
+            .map((i: any) => `${i.token_hash}.json`);
+          if (invFiles.length > 0) {
+            await admin.storage.from("system_invitations").remove(invFiles);
+          }
+        }
+      } catch (invStorageErr) {
+        console.warn("[decommissionCollege] Invitations storage cleanup notice:", invStorageErr);
+      }
+
+      // 4. Clean up dependent relational tables in strict topological leaf-first order
       const dependentTables = [
         "drive_applications",
         "placement_offers",
@@ -1117,31 +1274,45 @@ export class PlatformCollegeService {
         "departments",
         "academic_years",
         "students",
-        "invitations",
         "tenant_invitations",
+        "invitations",
         "tenant_memberships",
-        "payment_transactions",
-        "payment_orders",
-        "platform_invoices",
+        "recurring_mandates",
+        "subscription_renewal_retries",
+        "billing_notifications_log",
+        "payment_discrepancies",
         "college_subscriptions",
-        "audit_logs",
+        "platform_invoices",
+        "payment_orders",
+        "payment_transactions",
       ];
 
       for (const table of dependentTables) {
         try {
           await admin.from(table).delete().eq("tenant_id", tenantId);
         } catch {
-          // Continue if table or column does not exist
+          // Table or column may not exist in this environment
         }
       }
 
-      // 2. Permanently delete tenant record
+      // 5. Permanently delete tenant record
       const { error: delErr } = await admin.from("tenants").delete().eq("id", tenantId);
       if (delErr) {
         throw new Error(`Failed to delete college: ${delErr.message}`);
       }
 
-      // 3. Log high-severity audit event
+      // 6. Post-deletion tenant verification
+      const { data: verifyTenant } = await admin
+        .from("tenants")
+        .select("id")
+        .eq("id", tenantId)
+        .maybeSingle();
+
+      if (verifyTenant) {
+        throw new Error("Post-deletion verification failed: College tenant record still exists in database.");
+      }
+
+      // 7. Log canonical platform audit event (audit_logs is preserved!)
       await PlatformAuthService.logAuditEvent({
         actorId: adminId,
         action: "PLATFORM_COLLEGE_DELETE" as any,
@@ -1152,6 +1323,7 @@ export class PlatformCollegeService {
           slug: tenant.slug,
           reason: reason.trim(),
           deletedAt: now,
+          deletedUsersCount,
           mode: "PERMANENT_DELETE",
         },
         adminClient: admin,
@@ -1161,7 +1333,7 @@ export class PlatformCollegeService {
         success: true,
         tenantId,
         collegeName: tenant.name,
-        message: `College '${tenant.name}' has been permanently deleted from the platform.`,
+        message: `College '${tenant.name}' and all associated user accounts have been permanently deleted from Supabase Auth and database records.`,
       };
     }
 
@@ -1169,14 +1341,25 @@ export class PlatformCollegeService {
       throw new Error(`College '${tenant.name}' is already decommissioned.`);
     }
 
-    // 1. Immediately revoke operational access by setting status to ARCHIVED
-    const { error: updateErr } = await admin
+    // 1. Immediately revoke operational access by setting status to DECOMMISSIONED (with ARCHIVED fallback)
+    let { error: updateErr } = await admin
       .from("tenants")
       .update({
-        status: "ARCHIVED",
+        status: "DECOMMISSIONED",
         updated_at: now,
       })
       .eq("id", tenantId);
+
+    if (updateErr) {
+      const fallbackRes = await admin
+        .from("tenants")
+        .update({
+          status: "ARCHIVED",
+          updated_at: now,
+        })
+        .eq("id", tenantId);
+      updateErr = fallbackRes.error;
+    }
 
     if (updateErr) {
       await admin

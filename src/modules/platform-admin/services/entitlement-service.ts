@@ -216,7 +216,7 @@ export class EntitlementService {
 
       if (!extErr && extendedSub) {
         sub = extendedSub;
-      } else if (extErr && (extErr.code === "42703" || extErr.message?.includes("does not exist"))) {
+      } else {
         const { data: baseSub, error: baseErr } = await admin
           .from("college_subscriptions")
           .select(`
@@ -257,6 +257,20 @@ export class EntitlementService {
       let isSnapshotValid = false;
       let snapshotError: string | undefined = undefined;
 
+      // Check if tenant has verified paid invoice evidence in platform_invoices
+      let hasVerifiedPayment = false;
+      try {
+        const { data: invs } = await admin
+          .from("platform_invoices")
+          .select("id, status")
+          .eq("tenant_id", tenantId);
+        if (invs && invs.length > 0) {
+          hasVerifiedPayment = invs.some((i: any) => i.status === "PAID");
+        }
+      } catch {
+        // Fallback
+      }
+
       const isColumnAbsent = !("entitlements_snapshot" in sub) || sub.entitlements_snapshot === undefined;
 
       if (
@@ -279,8 +293,8 @@ export class EntitlementService {
         planVersion = Number(snapshot.planVersion || sub.plan_version || 1);
         isSnapshotSource = true;
         isSnapshotValid = true;
-      } else if (isColumnAbsent && sub.plan_id) {
-        // Schema fallback for environment where entitlements_snapshot column is absent
+      } else if ((isColumnAbsent || hasVerifiedPayment) && sub.plan_id) {
+        // Schema fallback for environment where entitlements_snapshot column is absent, or auto-heal for verified paying colleges
         const tier = (sub.plan_id || "").toLowerCase().includes("enterprise")
           ? "enterprise"
           : (sub.plan_id || "").toLowerCase().includes("growth")

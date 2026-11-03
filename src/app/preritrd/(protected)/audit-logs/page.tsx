@@ -5,12 +5,8 @@ import {
   FileText,
   ShieldCheck,
   RefreshCw,
-  Search,
   Filter,
   Eye,
-  Calendar,
-  Lock,
-  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -54,15 +50,20 @@ export default function PlatformAuditLogsPage() {
   return (
     <div className="space-y-6 max-w-6xl">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#B8B6AC]/40">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#5052C9]">
-            Governance &amp; Accountability
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-primary">
+              Governance &amp; Accountability
+            </span>
+            <Badge variant="outline" className="font-mono text-[10px] bg-secondary/10 text-secondary border-secondary/30">
+              Immutable Trail
+            </Badge>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-text-primary tracking-tight">
             Platform Audit Trail
           </h1>
-          <p className="text-xs text-[#292D40]/75 mt-0.5">
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
             Immutable, read-only historical log of all control-plane administrative operations.
           </p>
         </div>
@@ -73,7 +74,7 @@ export default function PlatformAuditLogsPage() {
             size="sm"
             onClick={fetchLogs}
             disabled={loading}
-            className="border-[#B8B6AC] text-xs h-9 gap-1.5"
+            className="border-border text-xs h-9 gap-1.5"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
@@ -81,29 +82,29 @@ export default function PlatformAuditLogsPage() {
       </div>
 
       {/* Strict Isolation Notice */}
-      <Card className="bg-[#FBFAF7] border-[#5052C9]/30 shadow-xs rounded-2xl">
-        <CardContent className="p-4 flex items-start gap-3 text-xs text-[#24283A]">
-          <ShieldCheck className="h-5 w-5 text-[#5052C9] shrink-0 mt-0.5" />
+      <Card className="bg-surface/80 border-primary/30 shadow-xs rounded-2xl">
+        <CardContent className="p-4 flex items-start gap-3 text-xs text-text-primary">
+          <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="font-bold">Strict Audit Log Isolation:</span> This view queries only control-plane events where <code className="bg-[#EDECE7] px-1 py-0.5 rounded font-mono text-[11px]">tenant_id IS NULL</code>. Institutional events (student assessment submissions, mistake reviews, interviewer scoring) belong strictly to individual college domains and are forbidden from appearing in platform logs.
+            <span className="font-bold">Strict Audit Log Isolation:</span> This view queries only control-plane events where <code className="bg-surface px-1 py-0.5 rounded font-mono text-[11px] border border-border">tenant_id IS NULL</code>. Institutional events (student assessment submissions, mistake reviews, interviewer scoring) belong strictly to individual college domains and are forbidden from appearing in platform logs.
           </div>
         </CardContent>
       </Card>
 
       {/* Filters Bar */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-xl">
+      <Card className="bg-card border-border shadow-xs rounded-2xl">
         <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-[#747683] font-mono">
-            Showing <span className="font-bold text-[#24283A]">{logs.length}</span> of{" "}
-            <span className="font-bold text-[#24283A]">{total}</span> recorded events
+          <div className="text-xs text-text-secondary font-mono">
+            Showing <span className="font-bold text-text-primary">{logs.length}</span> of{" "}
+            <span className="font-bold text-text-primary">{total}</span> recorded events
           </div>
 
           <div className="flex items-center gap-2" suppressHydrationWarning>
-            <Filter className="h-3.5 w-3.5 text-[#747683]" />
+            <Filter className="h-3.5 w-3.5 text-text-secondary" />
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
-              className="bg-[#FBFAF7] border border-[#B8B6AC] text-xs rounded-lg px-3 py-1.5 text-[#24283A] outline-none"
+              className="bg-input border border-border text-xs rounded-xl px-3 py-1.5 text-text-primary outline-none focus:ring-2 focus:ring-primary/25"
               suppressHydrationWarning
             >
               <option value="ALL">All Event Actions</option>
@@ -125,11 +126,11 @@ export default function PlatformAuditLogsPage() {
       </Card>
 
       {/* Audit Logs Table */}
-      <Card className="bg-[#F8F7F3] border-[#B8B6AC] shadow-xs rounded-2xl overflow-hidden">
+      <Card className="bg-card border-border shadow-xs rounded-2xl overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-[#FBFAF7] text-[#747683] font-mono text-[10px] uppercase border-b border-[#B8B6AC]/30">
+              <thead className="bg-surface/80 text-text-secondary font-mono text-[10px] uppercase border-b border-border">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Action / Event</th>
                   <th className="px-5 py-3 font-semibold">Administrator</th>
@@ -138,35 +139,35 @@ export default function PlatformAuditLogsPage() {
                   <th className="px-5 py-3 font-semibold text-right">Details</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#B8B6AC]/20 font-sans">
+              <tbody className="divide-y divide-border/40 font-sans">
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}>
                       <td colSpan={5} className="px-5 py-4">
-                        <Skeleton className="h-5 w-full bg-gray-200" />
+                        <Skeleton className="h-5 w-full bg-surface" />
                       </td>
                     </tr>
                   ))
                 ) : logs.length > 0 ? (
                   logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-[#FBFAF7] transition-colors">
+                    <tr key={log.id} className="hover:bg-surface/50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <div className="font-mono font-bold text-[#5052C9] text-xs">
+                        <div className="font-mono font-bold text-primary text-xs">
                           {log.action}
                         </div>
-                        <div className="text-[10px] text-[#747683] font-mono">
+                        <div className="text-[10px] text-text-secondary font-mono">
                           ID: {log.id.slice(0, 8)}...
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-[#24283A] font-medium">
+                      <td className="px-5 py-3.5 text-text-primary font-medium font-mono">
                         {log.actorEmail}
                       </td>
                       <td className="px-5 py-3.5">
-                        <Badge variant="outline" className="text-[10px] font-mono border-[#B8B6AC]">
+                        <Badge variant="outline" className="text-[10px] font-mono border-border bg-surface">
                           {log.resourceType || "CONTROL_PLANE"}
                         </Badge>
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[#747683]">
+                      <td className="px-5 py-3.5 font-mono text-text-secondary">
                         {new Date(log.createdAt).toLocaleString()}
                       </td>
                       <td className="px-5 py-3.5 text-right">
@@ -174,16 +175,16 @@ export default function PlatformAuditLogsPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setInspectTarget(log)}
-                          className="h-7 text-xs border-[#B8B6AC] gap-1"
+                          className="h-8 text-xs border-border gap-1"
                         >
-                          <Eye className="h-3 w-3" /> Inspect
+                          <Eye className="h-3.5 w-3.5" /> Inspect
                         </Button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-5 py-12 text-center text-[#747683]">
+                    <td colSpan={5} className="px-5 py-12 text-center text-text-secondary">
                       No platform audit logs recorded matching criteria.
                     </td>
                   </tr>
@@ -196,47 +197,47 @@ export default function PlatformAuditLogsPage() {
 
       {/* Metadata Inspector Modal */}
       {inspectTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-lg bg-[#F8F7F3] border-[#B8B6AC] shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
+          <Card className="w-full max-w-lg bg-card border-border shadow-xl rounded-2xl">
+            <CardHeader className="pb-3 border-b border-border">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold font-heading text-[#24283A]">
+                <CardTitle className="text-base font-bold font-heading text-text-primary">
                   Platform Event Metadata
                 </CardTitle>
-                <Badge variant="outline" className="font-mono text-[10px] text-[#5052C9] border-[#5052C9]/30">
+                <Badge variant="outline" className="font-mono text-[10px] text-primary border-primary/30 bg-primary/10">
                   {inspectTarget.action}
                 </Badge>
               </div>
-              <CardDescription className="text-xs text-[#292D40]/70 font-mono">
+              <CardDescription className="text-xs text-text-secondary font-mono">
                 Event ID: {inspectTarget.id}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-[#747683] block">Actor:</span>
-                  <span className="font-semibold text-[#24283A]">{inspectTarget.actorEmail}</span>
+                  <span className="text-text-secondary block font-mono text-[11px]">Actor:</span>
+                  <span className="font-semibold text-text-primary font-mono">{inspectTarget.actorEmail}</span>
                 </div>
                 <div>
-                  <span className="text-[#747683] block">Timestamp:</span>
-                  <span className="font-mono text-[#24283A]">{new Date(inspectTarget.createdAt).toLocaleString()}</span>
+                  <span className="text-text-secondary block font-mono text-[11px]">Timestamp:</span>
+                  <span className="font-mono text-text-primary">{new Date(inspectTarget.createdAt).toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <span className="text-xs font-semibold text-[#24283A] block">
+                <span className="text-xs font-semibold text-text-primary block">
                   Event Payload / Metadata (JSON)
                 </span>
-                <pre className="p-3 bg-[#FBFAF7] border border-[#B8B6AC] rounded-xl text-[11px] font-mono text-[#24283A] overflow-x-auto max-h-60 leading-relaxed">
+                <pre className="p-3 bg-surface border border-border rounded-xl text-[11px] font-mono text-text-primary overflow-x-auto max-h-60 leading-relaxed">
                   {JSON.stringify(inspectTarget.metadata, null, 2)}
                 </pre>
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-[#B8B6AC]/30">
+              <div className="flex justify-end pt-2 border-t border-border">
                 <Button
                   size="sm"
                   onClick={() => setInspectTarget(null)}
-                  className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-8"
+                  className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 px-4 rounded-xl"
                 >
                   Close
                 </Button>

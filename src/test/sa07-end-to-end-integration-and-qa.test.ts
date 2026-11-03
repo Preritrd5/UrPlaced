@@ -1018,6 +1018,8 @@ describe("URPLACED SA-07: MASTER END-TO-END INTEGRATION, SECURITY VALIDATION & Q
 
       // 6. Verify verified payment activates subscription and grants operational access
       createdSub.status = "ACTIVE";
+      const invoice = mockDb.platform_invoices.find((i) => i.tenant_id === regResult.college.id);
+      if (invoice) invoice.status = "PAID";
       const postPaymentAccess = await SubscriptionAccessService.evaluateAccess({
         tenantId: regResult.college.id,
         userRole: "PLACEMENT_HEAD",

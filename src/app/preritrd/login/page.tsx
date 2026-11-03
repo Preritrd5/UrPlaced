@@ -10,7 +10,6 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle2,
-  Building,
   QrCode,
   Copy,
   Check,
@@ -22,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SuperAdminLoginPage() {
@@ -80,10 +80,8 @@ export default function SuperAdminLoginPage() {
     setLoading(true);
 
     try {
-      // 1. Authenticate with Supabase Auth via browser client
       const supabase = createClient();
       const cleanEmail = email.trim().toLowerCase();
-      // Password is used directly without trimming or transformation
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: password,
@@ -98,15 +96,13 @@ export default function SuperAdminLoginPage() {
         return;
       }
 
-      // 2. Authorize with server-side dual-layer check
-      const res = await fetch("/api/preritrd/auth/login", {
+      setUserId(authData.user.id);
+      setSessionToken(authData.session.access_token);
+
+      const res = await fetch("/api/preritrd/auth/mfa/challenge", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authData.session.access_token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: cleanEmail,
           userId: authData.user.id,
           sessionToken: authData.session.access_token,
         }),
@@ -115,48 +111,37 @@ export default function SuperAdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        // Sign out client session if unauthorized
-        await supabase.auth.signOut();
-        setErrorMsg(data.error || "Authentication failed. Access is restricted to authorized platform personnel.");
+        setErrorMsg(data.error || "MFA validation sequence failed.");
         setLoading(false);
         return;
       }
 
-      setUserId(data.userId);
+      setMfaAction(data.action);
       setFactorId(data.factorId);
       setChallengeId(data.challengeId);
-      setSessionToken(data.sessionToken || authData.session.access_token);
-      setMfaAction(data.mfaAction || "CHALLENGE");
-
-      if (data.mfaAction === "ENROLL") {
-        setTotpSecret(data.totpSecret || null);
-        setQrCode(data.qrCode || null);
-        setSuccessMsg("Primary credentials verified. First-time setup: enroll TOTP using your authenticator app.");
-      } else {
-        setSuccessMsg("Primary credentials verified. Enter the 6-digit TOTP code from your authenticator app.");
-      }
+      if (data.totpSecret) setTotpSecret(data.totpSecret);
+      if (data.qrCode) setQrCode(data.qrCode);
 
       setStep("MFA");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Network error connecting to platform authentication server.";
-      setErrorMsg(msg);
-    } finally {
+      setLoading(false);
+    } catch {
+      setErrorMsg("Network error connecting to platform authentication service.");
       setLoading(false);
     }
   }
 
-  // Handle MFA Reset / Re-enrollment
+  // Handle MFA Reset
   async function handleResetMfa() {
-    if (!userId || !sessionToken) return;
+    if (!userId || !sessionToken) {
+      setErrorMsg("Please enter your credentials first to reset your authenticator.");
+      return;
+    }
     setLoading(true);
     setErrorMsg(null);
     try {
       const res = await fetch("/api/preritrd/auth/mfa/reset", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionToken}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, sessionToken }),
       });
       const data = await res.json();
@@ -166,9 +151,9 @@ export default function SuperAdminLoginPage() {
         setMfaAction("ENROLL");
         setFactorId(data.factorId);
         setChallengeId(data.challengeId);
-        setTotpSecret(data.totpSecret || null);
-        setQrCode(data.qrCode || null);
-        setSuccessMsg("New TOTP factor generated. Scan the QR code below into your authenticator app.");
+        setTotpSecret(data.totpSecret);
+        setQrCode(data.qrCode);
+        setSuccessMsg("Previous authenticator reset. Please scan the new QR code below.");
       }
     } catch {
       setErrorMsg("Network error resetting MFA enrollment.");
@@ -177,18 +162,17 @@ export default function SuperAdminLoginPage() {
     }
   }
 
-  // Handle Step 2: MFA Verification
+  // Handle Step 2: MFA Code Verification
   async function handleMfaSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setErrorMsg(null);
-
     const cleanCode = mfaCode.trim();
-    if (!/^\d{6}$/.test(cleanCode)) {
-      setErrorMsg("Please enter a valid 6-digit numeric authenticator token.");
+    if (!cleanCode || cleanCode.length !== 6) {
+      setErrorMsg("Please enter the complete 6-digit TOTP verification code.");
       return;
     }
 
     setLoading(true);
+    setErrorMsg(null);
 
     try {
       const res = await fetch("/api/preritrd/auth/mfa/verify", {
@@ -211,7 +195,6 @@ export default function SuperAdminLoginPage() {
         return;
       }
 
-      // Establish tab session with elevated AAL2 credentials
       if (data.sessionToken) {
         try {
           const supabase = createClient();
@@ -228,7 +211,6 @@ export default function SuperAdminLoginPage() {
       setLoading(false);
       setSuccessMsg("MFA verified with AAL2 elevation. Opening platform control plane...");
 
-      // Perform clean document navigation to dashboard
       window.location.replace(data.redirectTo || "/preritrd/dashboard");
     } catch {
       setErrorMsg("Network error during MFA token verification.");
@@ -244,35 +226,38 @@ export default function SuperAdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#EDECE7] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-[#5052C9] selection:text-white">
+    <div className="min-h-screen bg-background text-text-primary flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-primary selection:text-white">
       {/* Platform Branding Header */}
       <div className="w-full max-w-md text-center mb-6 space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#5052C9]/10 border border-[#5052C9]/25 text-[#5052C9] text-xs font-semibold font-mono uppercase tracking-wider">
+        <div className="flex justify-center mb-2">
+          <UrPlacedLogo size="lg" className="h-12 w-12" />
+        </div>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-semibold font-mono uppercase tracking-wider">
           <ShieldCheck className="h-4 w-4" />
           <span>Platform Control Plane</span>
         </div>
-        <h1 className="text-3xl font-extrabold font-heading text-[#24283A] tracking-tight">
+        <h1 className="text-3xl font-extrabold font-heading text-text-primary tracking-tight">
           UrPlaced
         </h1>
-        <p className="text-xs text-[#292D40]/80">
+        <p className="text-xs text-text-secondary">
           Super Admin Gateway &bull; Multi-Tenant SaaS Infrastructure
         </p>
       </div>
 
       {/* Main Login Card */}
-      <Card className="w-full max-w-md bg-[#F8F7F3] border-[#B8B6AC] shadow-md rounded-2xl overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-[#7779D8] to-[#5052C9]" />
+      <Card className="w-full max-w-md bg-card border-border shadow-md rounded-2xl overflow-hidden">
+        <div className="h-1.5 bg-primary-gradient" />
 
         <CardContent className="p-6 sm:p-8 space-y-6">
           {/* Header Title */}
           <div className="space-y-1">
-            <h2 className="text-xl font-bold font-heading text-[#24283A] flex items-center justify-between">
+            <h2 className="text-xl font-bold font-heading text-text-primary flex items-center justify-between">
               <span>{step === "CREDENTIALS" ? "Sign In to Control Plane" : mfaAction === "ENROLL" ? "Enroll Authenticator (TOTP)" : "Two-Factor Verification"}</span>
-              <Badge variant="outline" className="text-[10px] border-[#5052C9]/40 text-[#5052C9] bg-[#5052C9]/5 font-mono">
+              <Badge variant="outline" className="text-[10px] border-primary/40 text-primary bg-primary/5 font-mono">
                 {step === "CREDENTIALS" ? "Step 1 of 2" : "AAL2 Enforced"}
               </Badge>
             </h2>
-            <p className="text-xs text-[#292D40]/75">
+            <p className="text-xs text-text-secondary">
               {step === "CREDENTIALS"
                 ? "Enter your platform administrator credentials to proceed."
                 : mfaAction === "ENROLL"
@@ -283,16 +268,16 @@ export default function SuperAdminLoginPage() {
 
           {/* Feedback Alerts */}
           {errorMsg && (
-            <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-900 py-3">
-              <AlertCircle className="h-4 w-4 text-red-600" />
+            <Alert variant="destructive" className="bg-status-danger-subtle border-status-danger/30 text-status-danger py-3 rounded-xl">
+              <AlertCircle className="h-4 w-4 text-status-danger" />
               <AlertTitle className="text-xs font-bold font-heading">Authentication Refused</AlertTitle>
               <AlertDescription className="text-xs leading-relaxed">{errorMsg}</AlertDescription>
             </Alert>
           )}
 
           {successMsg && (
-            <Alert className="bg-emerald-50 border-emerald-200 text-emerald-900 py-3">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <Alert className="bg-secondary/10 border-secondary/30 text-secondary py-3 rounded-xl">
+              <CheckCircle2 className="h-4 w-4 text-secondary" />
               <AlertTitle className="text-xs font-bold font-heading">Authorization Progress</AlertTitle>
               <AlertDescription className="text-xs leading-relaxed">{successMsg}</AlertDescription>
             </Alert>
@@ -302,35 +287,35 @@ export default function SuperAdminLoginPage() {
           {step === "CREDENTIALS" ? (
             <form onSubmit={handleCredentialsSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#24283A] block">
+                <label className="text-xs font-semibold text-text-primary block">
                   Administrator Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-[#747683]" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-text-secondary" />
                   <Input
                     type="email"
                     required
                     placeholder="admin@urplaced.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-10 focus:ring-2 focus:ring-[#5052C9]/30"
+                    className="pl-9 bg-input border-border text-xs h-10 rounded-xl focus:ring-2 focus:ring-primary/25 font-mono"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#24283A] block">
+                <label className="text-xs font-semibold text-text-primary block">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-[#747683]" />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-text-secondary" />
                   <Input
                     type="password"
                     required
                     placeholder="••••••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 bg-[#FBFAF7] border-[#B8B6AC] text-xs h-10 focus:ring-2 focus:ring-[#5052C9]/30"
+                    className="pl-9 bg-input border-border text-xs h-10 rounded-xl focus:ring-2 focus:ring-primary/25"
                   />
                 </div>
               </div>
@@ -338,7 +323,7 @@ export default function SuperAdminLoginPage() {
               <div className="flex justify-between items-center text-xs">
                 <a
                   href="/auth/forgot-password"
-                  className="text-[11px] text-[#5052C9] hover:underline font-medium "
+                  className="text-[11px] text-primary hover:underline font-medium"
                 >
                   Forgot Password?
                 </a>
@@ -347,7 +332,7 @@ export default function SuperAdminLoginPage() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#5052C9] hover:bg-[#4345B0] text-white font-medium text-xs h-10 mt-2 shadow-sm transition-all"
+                className="w-full bg-primary hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs h-10 mt-2 rounded-xl shadow-xs transition-all"
               >
                 {loading ? (
                   <>
@@ -363,14 +348,14 @@ export default function SuperAdminLoginPage() {
             </form>
           ) : isVerified ? (
             <div className="py-8 text-center space-y-4">
-              <div className="mx-auto h-12 w-12 rounded-full bg-[#2E8F86]/15 flex items-center justify-center text-[#2E8F86]">
+              <div className="mx-auto h-12 w-12 rounded-full bg-secondary/15 flex items-center justify-center text-secondary">
                 <CheckCircle2 className="h-7 w-7" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-heading font-bold text-lg text-[#24283A]">
+                <h3 className="font-heading font-bold text-lg text-text-primary">
                   Assurance Level Elevated (AAL2)
                 </h3>
-                <p className="text-xs text-[#747683]">
+                <p className="text-xs text-text-secondary">
                   Opening Platform Super Admin Dashboard...
                 </p>
               </div>
@@ -382,20 +367,20 @@ export default function SuperAdminLoginPage() {
             /* Step 2 Form: MFA Token Challenge or Enrollment */
             <form onSubmit={handleMfaSubmit} className="space-y-4">
               {mfaAction === "ENROLL" && (
-                <div className="p-3.5 bg-white border border-[#B8B6AC]/60 rounded-xl space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#24283A]">
-                    <QrCode className="h-4 w-4 text-[#5052C9]" />
+                <div className="p-3.5 bg-surface border border-border rounded-xl space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
+                    <QrCode className="h-4 w-4 text-primary" />
                     <span>Authenticator App Enrollment</span>
                   </div>
 
                   {qrCode ? (
-                    <div className="flex flex-col items-center justify-center p-2 bg-white rounded-lg border border-[#DDDCD5]">
+                    <div className="flex flex-col items-center justify-center p-2 bg-card rounded-lg border border-border">
                       <img
                         src={qrCode}
                         alt="TOTP Enrollment QR Code"
                         className="w-44 h-44 object-contain"
                       />
-                      <span className="text-[10px] text-[#747683] mt-1 font-mono">
+                      <span className="text-[10px] text-text-secondary mt-1 font-mono">
                         Scan with Google Authenticator or Authy
                       </span>
                     </div>
@@ -403,11 +388,11 @@ export default function SuperAdminLoginPage() {
 
                   {totpSecret && (
                     <div className="space-y-1">
-                      <label className="text-[10px] font-semibold text-[#747683] uppercase tracking-wider block">
+                      <label className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider block">
                         Manual Entry Secret Code
                       </label>
                       <div className="flex items-center gap-1.5">
-                        <code className="flex-1 bg-[#FBFAF7] border border-[#DDDCD5] px-2 py-1.5 rounded text-xs font-mono text-[#24283A] select-all break-all">
+                        <code className="flex-1 bg-input border border-border px-2 py-1.5 rounded text-xs font-mono text-text-primary select-all break-all">
                           {totpSecret}
                         </code>
                         <Button
@@ -415,9 +400,9 @@ export default function SuperAdminLoginPage() {
                           variant="outline"
                           size="sm"
                           onClick={handleCopySecret}
-                          className="h-8 px-2.5 text-xs border-[#B8B6AC]"
+                          className="h-8 px-2.5 text-xs border-border"
                         >
-                          {copiedSecret ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copiedSecret ? <Check className="h-3.5 w-3.5 text-secondary" /> : <Copy className="h-3.5 w-3.5" />}
                         </Button>
                       </div>
                     </div>
@@ -426,11 +411,11 @@ export default function SuperAdminLoginPage() {
               )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#24283A] block">
+                <label className="text-xs font-semibold text-text-primary block">
                   6-Digit Verification Token
                 </label>
                 <div className="relative">
-                  <KeyRound className="absolute left-3 top-3 h-4 w-4 text-[#747683]" />
+                  <KeyRound className="absolute left-3 top-3 h-4 w-4 text-text-secondary" />
                   <Input
                     type="text"
                     required
@@ -439,10 +424,10 @@ export default function SuperAdminLoginPage() {
                     placeholder="123456"
                     value={mfaCode}
                     onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
-                    className="pl-9 bg-[#FBFAF7] border-[#B8B6AC] text-base tracking-[0.3em] font-mono h-11 focus:ring-2 focus:ring-[#5052C9]/30 text-center font-bold"
+                    className="pl-9 bg-input border-border text-base tracking-[0.3em] font-mono h-11 focus:ring-2 focus:ring-primary/25 text-center font-bold rounded-xl text-text-primary"
                   />
                 </div>
-                <p className="text-[11px] text-[#747683] flex items-center gap-1">
+                <p className="text-[11px] text-text-secondary flex items-center gap-1">
                   <Smartphone className="h-3.5 w-3.5" />
                   Enter the current 6-digit code shown in your authenticator app.
                 </p>
@@ -458,14 +443,14 @@ export default function SuperAdminLoginPage() {
                     setSuccessMsg(null);
                     setMfaCode("");
                   }}
-                  className="w-1/3 border-[#B8B6AC] text-xs h-10 text-[#24283A]"
+                  className="w-1/3 border-border text-xs h-10 text-text-primary rounded-xl"
                 >
                   Back
                 </Button>
                 <Button
                   type="submit"
                   disabled={loading || mfaCode.trim().length !== 6}
-                  className="w-2/3 bg-[#5052C9] hover:bg-[#4345B0] text-white font-medium text-xs h-10 shadow-sm transition-all"
+                  className="w-2/3 bg-primary hover:bg-[var(--color-primary-hover)] text-white font-medium text-xs h-10 rounded-xl shadow-xs transition-all"
                 >
                   {loading ? (
                     <>
@@ -480,12 +465,12 @@ export default function SuperAdminLoginPage() {
                 </Button>
               </div>
 
-              <div className="text-center pt-2 border-t border-[#DDDCD5]/60">
+              <div className="text-center pt-2 border-t border-border/60">
                 <button
                   type="button"
                   onClick={handleResetMfa}
                   disabled={loading}
-                  className="text-[11px] text-[#5052C9] hover:underline hover:text-[#4345B0] transition-colors"
+                  className="text-[11px] text-primary hover:underline hover:text-primary-hover transition-colors font-mono"
                 >
                   Need to scan QR code again or lost authenticator? Reset MFA
                 </button>
@@ -494,7 +479,7 @@ export default function SuperAdminLoginPage() {
           )}
 
           {/* Security Notice Footer */}
-          <div className="pt-4 border-t border-[#B8B6AC]/30 text-center space-y-1 text-[11px] text-[#747683]">
+          <div className="pt-4 border-t border-border/40 text-center space-y-1 text-[11px] text-text-secondary font-mono">
             <p>
               Platform Super Admin manages SaaS infrastructure
             </p>

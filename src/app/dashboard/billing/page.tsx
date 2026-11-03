@@ -45,9 +45,12 @@ export interface SubscriptionDetails {
   contactPhone?: string | null;
   studentSeatLimit: number;
   hasPreassignedPlan?: boolean;
+  hasPaidInitialInvoice?: boolean;
   subscription: {
     id: string;
     status: string;
+    effectiveStatus?: string;
+    canAccessOperational?: boolean;
     startDate?: string;
     expiryDate?: string;
     renewalDate: string;
@@ -74,6 +77,7 @@ export interface SubscriptionDetails {
     paidAt?: string | null;
     paymentMethod?: string;
     notes?: string | null;
+    type?: "INITIAL_SUBSCRIPTION" | "RENEWAL" | "UPGRADE";
     razorpayOrderId?: string | null;
   } | null;
   availablePlans?: Array<{
@@ -374,18 +378,54 @@ export default function CollegeBillingPage() {
   // Authoritative State Machine Resolution
   const rawSubStatus = data?.subscription?.status || (auth.tenant as any)?.subscriptionStatus || null;
   const tenantStatus = data?.tenantStatus || (auth.tenant as any)?.status || "ACTIVE";
+  const hasPaidInitialInvoice = data?.hasPaidInitialInvoice ?? (
+    rawSubStatus === "PENDING_PAYMENT" ? false : true
+  );
 
   const isDecommissioned = tenantStatus === "DECOMMISSIONED" || tenantStatus === "ARCHIVED";
   const isSuspended = !isDecommissioned && (tenantStatus === "SUSPENDED" || rawSubStatus === "SUSPENDED");
   const isNoSubscription = !isDecommissioned && !isSuspended && (!data?.subscription || !data.subscription.planId);
-  const isPendingInitialPayment = !isDecommissioned && !isSuspended && !isNoSubscription && rawSubStatus === "PENDING_PAYMENT";
+  
   const hasOutstandingInvoice = Boolean(data?.invoice && data.invoice.status === "PENDING");
   const isUpgradeInvoice = Boolean(
+    data?.invoice?.type === "UPGRADE" ||
     data?.invoice?.invoiceNumber?.startsWith("INV-UPG-") ||
     data?.invoice?.notes?.includes("[UPGRADE:")
   );
-  const isActiveWithPendingInvoice = !isDecommissioned && !isSuspended && rawSubStatus === "ACTIVE" && hasOutstandingInvoice;
-  const isActiveNoOutstandingInvoice = !isDecommissioned && !isSuspended && rawSubStatus === "ACTIVE" && !hasOutstandingInvoice;
+  const isInitialInvoice = Boolean(
+    data?.invoice?.type === "INITIAL_SUBSCRIPTION" ||
+    (!hasPaidInitialInvoice && hasOutstandingInvoice) ||
+    data?.invoice?.notes?.toLowerCase().includes("initial") ||
+    data?.invoice?.notes?.toLowerCase().includes("registration")
+  );
+
+  const effectiveSubStatus =
+    isDecommissioned ? "DECOMMISSIONED" :
+    isSuspended ? "SUSPENDED" :
+    isNoSubscription ? "NO_SUBSCRIPTION" :
+    (!hasPaidInitialInvoice && hasOutstandingInvoice) || rawSubStatus === "PENDING_PAYMENT" || isInitialInvoice
+      ? "PENDING_PAYMENT"
+      : "ACTIVE";
+
+  const isPendingInitialPayment =
+    !isDecommissioned &&
+    !isSuspended &&
+    !isNoSubscription &&
+    (effectiveSubStatus === "PENDING_PAYMENT" || isInitialInvoice);
+
+  const isActiveWithPendingInvoice =
+    !isDecommissioned &&
+    !isSuspended &&
+    !isPendingInitialPayment &&
+    effectiveSubStatus === "ACTIVE" &&
+    hasOutstandingInvoice;
+
+  const isActiveNoOutstandingInvoice =
+    !isDecommissioned &&
+    !isSuspended &&
+    !isPendingInitialPayment &&
+    effectiveSubStatus === "ACTIVE" &&
+    !hasOutstandingInvoice;
 
   // Header Status Badge
   const headerBadgeLabel = isDecommissioned
@@ -917,12 +957,12 @@ export default function CollegeBillingPage() {
                   <Badge
                     variant="outline"
                     className={
-                      data.subscription.status === "ACTIVE"
+                      effectiveSubStatus === "ACTIVE"
                         ? "bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[10px]"
                         : "bg-amber-50 text-amber-800 border-amber-300 font-mono text-[10px]"
                     }
                   >
-                    {data.subscription.status}
+                    {effectiveSubStatus === "PENDING_PAYMENT" ? "PENDING PAYMENT" : effectiveSubStatus}
                   </Badge>
                 </div>
               </div>
