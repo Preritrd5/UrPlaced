@@ -644,7 +644,7 @@ export default function MyProfilePage() {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-6">
               {isEditing ? (
                 /* Edit Form */
                 <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -1284,9 +1284,9 @@ export default function MyProfilePage() {
       {/* PASSWORD CHANGE MODAL */}
       {/* ========================================================= */}
       {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-4">
-          <Card className="max-w-md w-full bg-card border-border shadow-xl">
-            <CardHeader className="pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-heading flex items-center gap-2">
                   <Key className="h-4 w-4 text-primary" /> Change Password
@@ -1370,9 +1370,9 @@ export default function MyProfilePage() {
       {/* PRIVACY & DATA ISOLATION MODAL */}
       {/* ========================================================= */}
       {showPrivacyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-4">
-          <Card className="max-w-lg w-full bg-card border-border shadow-xl">
-            <CardHeader className="pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-heading flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-secondary" /> Privacy &amp; Tenant Isolation
@@ -1389,7 +1389,7 @@ export default function MyProfilePage() {
                 How UrPlaced guarantees data protection and multi-tenant security.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-4 text-xs leading-relaxed text-text-secondary">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs leading-relaxed text-text-secondary">
               <div className="p-3 bg-surface rounded-lg border border-border">
                 <h4 className="font-bold text-text-primary mb-1 flex items-center gap-1.5">
                   <Lock className="h-3.5 w-3.5 text-primary" /> Row-Level Security (RLS)
@@ -1417,12 +1417,12 @@ export default function MyProfilePage() {
                 </p>
               </div>
 
-              <div className="flex justify-end pt-2">
-                <Button variant="primary" size="sm" onClick={() => setShowPrivacyModal(false)}>
+              </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+              <Button variant="primary" size="sm" onClick={() => setShowPrivacyModal(false)}>
                   Close
                 </Button>
-              </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}

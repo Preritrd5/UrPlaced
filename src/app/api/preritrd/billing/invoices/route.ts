@@ -23,7 +23,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to load invoices";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const status = msg.includes("UNAUTHORIZED") || msg.includes("Session missing") || msg.includes("No active session")
+      ? 401
+      : msg.includes("FORBIDDEN") || msg.includes("MFA_REQUIRED") || msg.includes("NOT_PLATFORM_ADMIN")
+      ? 403
+      : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }
 
@@ -57,6 +62,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to create invoice";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const status = msg.includes("UNAUTHORIZED")
+      ? 401
+      : msg.includes("FORBIDDEN") || msg.includes("MFA_REQUIRED")
+      ? 403
+      : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

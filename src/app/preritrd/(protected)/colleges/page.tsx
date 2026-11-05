@@ -521,9 +521,9 @@ export default function PlatformCollegesPage() {
 
       {/* Onboarding Details Modal */}
       {detailsTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-lg bg-card border-border shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-primary" />
@@ -540,7 +540,7 @@ export default function PlatformCollegesPage() {
                 Institutional metadata and administrative onboarding tracking
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5 space-y-4 text-xs">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
               {/* Institution Identity */}
               <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
                 <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">
@@ -628,66 +628,67 @@ export default function PlatformCollegesPage() {
                 </div>
               </div>
 
-              {/* Modal Actions */}
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <div className="flex gap-2">
-                  {detailsTarget.onboardingStatus !== "COMPLETED" && (
-                    <>
+            </CardContent>
+
+            {/* Modal Actions */}
+            <div className="shrink-0 p-3 sm:p-4 border-t border-border bg-surface/50 flex items-center justify-between gap-2">
+              <div className="flex gap-2">
+                {detailsTarget.onboardingStatus !== "COMPLETED" && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        const col = detailsTarget;
+                        setDetailsTarget(null);
+                        await handleResendInvite(col);
+                      }}
+                      className="text-xs h-8 gap-1 border-primary/30 text-primary"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Resend Invite
+                    </Button>
+                    {detailsTarget.onboardingStatus !== "ACTION_REQUIRED" && (
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={async () => {
                           const col = detailsTarget;
                           setDetailsTarget(null);
-                          await handleResendInvite(col);
+                          await handleRevokeInvite(col);
                         }}
-                        className="text-xs h-8 gap-1 border-primary/30 text-primary"
+                        className="text-xs h-8 gap-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
                       >
-                        <RotateCcw className="h-3 w-3" /> Resend Invite
+                        <XCircle className="h-3 w-3" /> Revoke Invite
                       </Button>
-                      {detailsTarget.onboardingStatus !== "ACTION_REQUIRED" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={async () => {
-                            const col = detailsTarget;
-                            setDetailsTarget(null);
-                            await handleRevokeInvite(col);
-                          }}
-                          className="text-xs h-8 gap-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
-                        >
-                          <XCircle className="h-3 w-3" /> Revoke Invite
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setDetailsTarget(null)}
-                  className="text-xs h-8"
-                >
-                  Close
-                </Button>
+                    )}
+                  </>
+                )}
               </div>
-            </CardContent>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setDetailsTarget(null)}
+                className="text-xs h-8"
+              >
+                Close
+              </Button>
+            </div>
           </Card>
         </div>
       )}
 
       {/* Confirmation Modal for Suspend/Activate */}
       {actionTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-card border-border shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
                 <span>Confirm Status Modification</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               <p className="text-xs text-text-primary leading-relaxed">
                 You are about to change the status of{" "}
                 <span className="font-bold">{actionTarget.college.name}</span> to{" "}
@@ -713,40 +714,39 @@ export default function PlatformCollegesPage() {
                   className="bg-input border-border text-xs h-9"
                 />
               </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActionTarget(null)}
-                  disabled={actionLoading}
-                  className="border-border text-xs h-9"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleStatusChange}
-                  disabled={actionLoading}
-                  className={`text-white text-xs h-9 ${
-                    actionTarget.newStatus === "SUSPENDED"
-                      ? "bg-status-danger hover:opacity-90"
-                      : "bg-primary hover:bg-[var(--color-primary-hover)]"
-                  }`}
-                >
-                  {actionLoading ? "Updating..." : `Confirm ${actionTarget.newStatus}`}
-                </Button>
-              </div>
             </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActionTarget(null)}
+                disabled={actionLoading}
+                className="border-border text-xs h-9"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleStatusChange}
+                disabled={actionLoading}
+                className={`text-white text-xs h-9 ${
+                  actionTarget.newStatus === "SUSPENDED"
+                    ? "bg-status-danger hover:opacity-90"
+                    : "bg-primary hover:bg-[var(--color-primary-hover)]"
+                }`}
+              >
+                {actionLoading ? "Updating..." : `Confirm ${actionTarget.newStatus}`}
+              </Button>
+            </div>
           </Card>
         </div>
       )}
 
       {/* Confirmation Modal for College Deletion */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-lg bg-card border-status-danger/40 shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 border-b border-border bg-status-danger-subtle/40">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border bg-status-danger-subtle/40">
               <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-status-danger" />
                 <span>Delete College Account</span>
@@ -755,7 +755,7 @@ export default function PlatformCollegesPage() {
                 Administrative removal of institutional workspace and associated accounts.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1.5">
                 <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">Target Institution</div>
                 <div className="text-sm font-bold font-heading text-text-primary">{deleteTarget.name}</div>
@@ -855,43 +855,42 @@ export default function PlatformCollegesPage() {
                   className="bg-input border-border text-xs h-8"
                 />
               </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setDeleteTarget(null);
-                    setDeleteReason("Administrative deletion via Super Admin portal");
-                    setConfirmTypedName("");
-                    setConfirmChecked(false);
-                  }}
-                  disabled={deleteLoading}
-                  className="border-border text-xs h-9 cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleDelete}
-                  disabled={
-                    deleteLoading ||
-                    (!confirmChecked &&
-                      confirmTypedName.trim().toUpperCase() !== "DELETE" &&
-                      confirmTypedName.trim().toLowerCase() !== deleteTarget.name.toLowerCase())
-                  }
-                  className="bg-status-danger hover:opacity-90 text-white text-xs h-9 disabled:opacity-50 cursor-pointer font-semibold"
-                >
-                  {deleteLoading ? (
-                    <span className="flex items-center gap-1.5">
-                      <BrandLoader size="button" /> Deleting...
-                    </span>
-                  ) : (
-                    `Confirm & Delete`
-                  )}
-                </Button>
-              </div>
             </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteReason("Administrative deletion via Super Admin portal");
+                  setConfirmTypedName("");
+                  setConfirmChecked(false);
+                }}
+                disabled={deleteLoading}
+                className="border-border text-xs h-9 cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleDelete}
+                disabled={
+                  deleteLoading ||
+                  (!confirmChecked &&
+                    confirmTypedName.trim().toUpperCase() !== "DELETE" &&
+                    confirmTypedName.trim().toLowerCase() !== deleteTarget.name.toLowerCase())
+                }
+                className="bg-status-danger hover:opacity-90 text-white text-xs h-9 disabled:opacity-50 cursor-pointer font-semibold"
+              >
+                {deleteLoading ? (
+                  <span className="flex items-center gap-1.5">
+                    <BrandLoader size="button" /> Deleting...
+                  </span>
+                ) : (
+                  `Confirm & Delete`
+                )}
+              </Button>
+            </div>
           </Card>
         </div>
       )}

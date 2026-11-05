@@ -47,7 +47,11 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
-    from: mockAdminFrom,
+    from: (table: string) => {
+      const res = mockAdminFrom(table);
+      if (res !== undefined) return res;
+      return mockServerFrom(table);
+    },
     rpc: mockRpc,
     auth: {
       admin: {

@@ -82,37 +82,40 @@ export class PlatformAuthService {
     } = {}
   ): Promise<AuthenticatedSuperAdmin> {
     const requireAal2 = options.requireAal2 ?? true;
-    let token: string | undefined;
+    const adminClient = options.adminClient || createAdminClient();
+
+    let bearerToken: string | undefined;
+    let cookieToken: string | undefined;
 
     if (request) {
       const authHeader = request.headers?.get?.("authorization");
       if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
-        token = authHeader.substring(7).trim();
+        bearerToken = authHeader.substring(7).trim();
       }
-      if (!token && request.cookies?.get) {
-        token = await this.extractTokenFromCookieStore(
+      if (request.cookies?.get) {
+        cookieToken = await this.extractTokenFromCookieStore(
           (name) => request.cookies?.get?.(name)?.value,
           () => request.cookies?.getAll?.() || []
         );
       }
     }
 
-    if (!token) {
+    if (!bearerToken) {
       try {
         const headerStore = await headers();
         const authHeader = headerStore.get("authorization");
         if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
-          token = authHeader.substring(7).trim();
+          bearerToken = authHeader.substring(7).trim();
         }
       } catch {
         // Outside Next.js request context
       }
     }
 
-    if (!token) {
+    if (!cookieToken) {
       try {
         const cookieStore = await cookies();
-        token = await this.extractTokenFromCookieStore(
+        cookieToken = await this.extractTokenFromCookieStore(
           (name) => cookieStore.get(name)?.value,
           () => cookieStore.getAll()
         );
@@ -121,7 +124,48 @@ export class PlatformAuthService {
       }
     }
 
-    const adminClient = options.adminClient || createAdminClient();
+    const candidateTokens: string[] = [];
+    if (bearerToken) candidateTokens.push(bearerToken);
+    if (cookieToken && cookieToken !== bearerToken) candidateTokens.push(cookieToken);
+
+    if (candidateTokens.length === 0) {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    let lastError: Error | null = null;
+
+    for (let i = 0; i < candidateTokens.length; i++) {
+      const token = candidateTokens[i];
+      const isLast = i === candidateTokens.length - 1;
+
+      try {
+        const admin = await this.verifyAdminSession(token, adminClient, requireAal2, options);
+        return admin;
+      } catch (err: any) {
+        lastError = err;
+        const msg = String(err?.message || "");
+        // If a candidate token failed because it is not a platform admin (e.g. stale student/staff
+        // token in browser tab storage) or expired, and we have a fallback cookie token, try the next candidate!
+        if ((msg.includes("NOT_PLATFORM_ADMIN") || msg.includes("UNAUTHORIZED")) && !isLast) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw lastError || new Error("UNAUTHORIZED");
+  }
+
+  /**
+   * Cryptographically and authoritatively validates an individual session token
+   * against public.profiles and public.platform_admins with AAL2 MFA enforcement.
+   */
+  private static async verifyAdminSession(
+    token: string,
+    adminClient: ReturnType<typeof createAdminClient>,
+    requireAal2: boolean,
+    options: { adminClient?: ReturnType<typeof createAdminClient> }
+  ): Promise<AuthenticatedSuperAdmin> {
     const supabase = await createClient(token);
 
     let user: any = null;
@@ -196,13 +240,9 @@ export class PlatformAuthService {
     }
 
     // 3. Enforce cryptographic MFA assurance (AAL2)
-    // Cryptographically verified against Supabase Auth:
-    // Only tokens whose signature was verified by adminClient.auth.getUser(token) can be inspected.
-    // Client-editable user_metadata and custom unverified cookies are strictly rejected.
     let mfaVerified = false;
 
     // A. Check verified Supabase JWT top-level payload claim (aal === 'aal2')
-    // Cryptographic assurance requires active session elevation; historical AMR methods alone do not grant AAL2.
     if (token) {
       try {
         const parts = token.split(".");

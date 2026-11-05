@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import { createClient } from "@/lib/supabase/client";
+import { getTabStorageKey, tabSessionStorage } from "@/lib/auth/auth-tab";
 
 export default function SuperAdminLoginPage() {
   const router = useRouter();
@@ -99,10 +100,14 @@ export default function SuperAdminLoginPage() {
       setUserId(authData.user.id);
       setSessionToken(authData.session.access_token);
 
-      const res = await fetch("/api/preritrd/auth/mfa/challenge", {
+      const res = await fetch("/api/preritrd/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authData.session.access_token}`,
+        },
         body: JSON.stringify({
+          email: cleanEmail,
           userId: authData.user.id,
           sessionToken: authData.session.access_token,
         }),
@@ -111,12 +116,13 @@ export default function SuperAdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
+        await supabase.auth.signOut();
         setErrorMsg(data.error || "MFA validation sequence failed.");
         setLoading(false);
         return;
       }
 
-      setMfaAction(data.action);
+      setMfaAction(data.action || data.mfaAction || "CHALLENGE");
       setFactorId(data.factorId);
       setChallengeId(data.challengeId);
       if (data.totpSecret) setTotpSecret(data.totpSecret);
@@ -124,8 +130,8 @@ export default function SuperAdminLoginPage() {
 
       setStep("MFA");
       setLoading(false);
-    } catch {
-      setErrorMsg("Network error connecting to platform authentication service.");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Network error connecting to platform authentication service.");
       setLoading(false);
     }
   }
@@ -197,6 +203,14 @@ export default function SuperAdminLoginPage() {
 
       if (data.sessionToken) {
         try {
+          const storageKey = getTabStorageKey();
+          tabSessionStorage.setItem(
+            storageKey,
+            JSON.stringify({
+              access_token: data.sessionToken,
+              refresh_token: data.refreshToken || "",
+            })
+          );
           const supabase = createClient();
           await supabase.auth.setSession({
             access_token: data.sessionToken,

@@ -408,9 +408,9 @@ export default function PlatformAccountsPage() {
 
       {/* Invite Super Admin Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/60">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Invite Super Administrator
               </CardTitle>
@@ -418,7 +418,7 @@ export default function PlatformAccountsPage() {
                 Issue a single-use onboarding credential link with mandatory MFA
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               {!createdInviteLink ? (
                 <form onSubmit={handleCreateInvite} className="space-y-4">
                   <div className="space-y-1.5">
@@ -503,9 +503,9 @@ export default function PlatformAccountsPage() {
 
       {/* Confirmation Modal for Admin Status Change */}
       {statusTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/60">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />
                 <span>Confirm Privilege Modification</span>
@@ -518,11 +518,12 @@ export default function PlatformAccountsPage() {
                 <span className="font-bold text-primary">{statusTarget.newStatus}</span>?
               </p>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setStatusTarget(null)}
+              </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setStatusTarget(null)}
                   disabled={statusLoading}
                   className="border-border text-xs h-9"
                 >
@@ -538,17 +539,16 @@ export default function PlatformAccountsPage() {
                 >
                   {statusLoading ? "Updating..." : `Confirm ${statusTarget.newStatus}`}
                 </Button>
-              </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}
 
       {/* Permanent Administrator Deletion Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-lg bg-card border-status-danger/40 shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="pb-3 border-b border-status-danger/30 bg-status-danger-subtle/40">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-status-danger/30 bg-status-danger-subtle/40">
               <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-status-danger shrink-0" />
                 <span>Permanently Delete Administrator</span>
@@ -596,13 +596,14 @@ export default function PlatformAccountsPage() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-border/60">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setDeleteTarget(null);
+              </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setDeleteTarget(null);
                     setDeleteConfirmEmail("");
                   }}
                   disabled={deleteLoading}
@@ -624,8 +625,7 @@ export default function PlatformAccountsPage() {
                   <Trash2 className="h-3.5 w-3.5" />
                   {deleteLoading ? <span className="flex items-center gap-1.5"><BrandLoader size="button" /> Deleting...</span> : "Permanently Delete Administrator"}
                 </Button>
-              </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}

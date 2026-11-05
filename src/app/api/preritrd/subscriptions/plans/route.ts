@@ -30,7 +30,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to load plans";
-    const status = msg.includes("UNAUTHORIZED") ? 401 : msg.includes("FORBIDDEN") ? 403 : 500;
+    const status = msg.includes("UNAUTHORIZED")
+      ? 401
+      : msg.includes("FORBIDDEN") || msg.includes("MFA_REQUIRED")
+      ? 403
+      : 500;
     return NextResponse.json({ error: msg }, { status });
   }
 }

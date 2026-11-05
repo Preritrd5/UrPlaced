@@ -248,6 +248,18 @@ export type BehavioralCategory =
   | "GROUP_DISCUSSION"
   | "SITUATIONAL";
 
+export type AssessmentViolationType =
+  | "TAB_SWITCH"
+  | "DOCUMENT_HIDDEN"
+  | "WINDOW_FOCUS_LOST"
+  | "WINDOW_BLUR"
+  | "FULLSCREEN_EXIT"
+  | "NAVIGATION_AWAY"
+  | "PAGE_HIDDEN"
+  | "DEVTOOLS_ATTEMPT"
+  | "COPY_PASTE_ATTEMPT"
+  | "OTHER_CONFIGURED_VIOLATION";
+
 // Phase 08: Mistake Bank & Mistake-to-Mastery Engine
 export type MistakePrimaryReason =
   | "INCORRECT_ANSWER"
@@ -1621,6 +1633,9 @@ export interface Database {
           score_percentage: number;
           is_passed: boolean;
           scoring_status: AttemptScoringStatus;
+          submission_reason: string | null;
+          violation_count: number;
+          is_fullscreen_enforced: boolean;
           client_meta: Json;
           created_at: string;
           updated_at: string;
@@ -1641,11 +1656,39 @@ export interface Database {
           score_percentage?: number;
           is_passed?: boolean;
           scoring_status?: AttemptScoringStatus;
+          submission_reason?: string | null;
+          violation_count?: number;
+          is_fullscreen_enforced?: boolean;
           client_meta?: Json;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["assessment_attempts"]["Insert"]>;
+      };
+      assessment_violations: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          attempt_id: string;
+          assessment_id: string;
+          student_id: string;
+          violation_type: AssessmentViolationType;
+          metadata: Json;
+          triggered_submission: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          attempt_id: string;
+          assessment_id: string;
+          student_id: string;
+          violation_type: AssessmentViolationType;
+          metadata?: Json;
+          triggered_submission?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["assessment_violations"]["Insert"]>;
       };
       attempt_responses: {
         Row: {
@@ -2199,6 +2242,7 @@ export type QuestionSetItemRow = Database["public"]["Tables"]["question_set_item
 export type AssessmentRow = Database["public"]["Tables"]["assessments"]["Row"];
 export type AssessmentAssignmentRow = Database["public"]["Tables"]["assessment_assignments"]["Row"];
 export type AssessmentAttemptRow = Database["public"]["Tables"]["assessment_attempts"]["Row"];
+export type AssessmentViolationRow = Database["public"]["Tables"]["assessment_violations"]["Row"];
 export type AttemptResponseRow = Database["public"]["Tables"]["attempt_responses"]["Row"];
 export type PreparationPracticeSessionRow = Database["public"]["Tables"]["preparation_practice_sessions"]["Row"];
 export type StudentBehavioralResponseRow = Database["public"]["Tables"]["student_behavioral_responses"]["Row"];

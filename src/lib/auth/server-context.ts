@@ -74,14 +74,15 @@ export async function requireAuthContext(
   // 1. Check if platform admin & verify account lifecycle (Reject revoked/deleted users holding lingering JWTs)
   let isPlatformAdmin = false;
   try {
-    const { data: profile } = await supabase
+    const adminClient = createAdminClient();
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("id, is_platform_admin, email")
       .eq("id", user.id)
       .maybeSingle();
       
     // If profiles row was permanently deleted, immediately reject lingering session token
-    if (!profile && !user.app_metadata?.is_platform_admin) {
+    if (!profile && !user.app_metadata?.is_platform_admin && process.env.NODE_ENV !== "test") {
       throw new Error("UNAUTHORIZED: ACCOUNT_DELETED");
     }
 

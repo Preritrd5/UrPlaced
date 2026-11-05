@@ -79,7 +79,10 @@ export default function StaffAssessmentsPage() {
 
   // Assign Modal State
   const [assigningAssessment, setAssigningAssessment] = useState<any | null>(null);
-  const [assignScope, setAssignScope] = useState<"COLLEGE_WIDE" | "COHORT">("COLLEGE_WIDE");
+  const [assignScope, setAssignScope] = useState<"COLLEGE_WIDE" | "DEPARTMENT" | "BATCH" | "COHORT">("COLLEGE_WIDE");
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [selectedBatches, setSelectedBatches] = useState<number[]>([]);
   const [assignForm, setAssignForm] = useState({
     cohort_name: "All Eligible Students",
     window_start: "",
@@ -99,9 +102,10 @@ export default function StaffAssessmentsPage() {
     try {
       setLoading(true);
       setError(null);
-      const [assRes, setsRes] = await Promise.all([
+      const [assRes, setsRes, deptRes] = await Promise.all([
         fetch("/api/placement/assessments"),
         fetch("/api/questions/sets"),
+        fetch("/api/placement/departments").catch(() => null),
       ]);
 
       if (assRes.ok) {
@@ -111,6 +115,10 @@ export default function StaffAssessmentsPage() {
       if (setsRes.ok) {
         const setsData = await setsRes.json();
         setQuestionSets(setsData);
+      }
+      if (deptRes && deptRes.ok) {
+        const deptData = await deptRes.json();
+        setDepartments(Array.isArray(deptData) ? deptData : []);
       }
     } catch (err: any) {
       setError(err.message || "Failed to load assessments.");
@@ -202,14 +210,31 @@ export default function StaffAssessmentsPage() {
     e.preventDefault();
     if (!assigningAssessment) return;
 
-    const finalCohortName =
-      assignScope === "COLLEGE_WIDE"
-        ? "All Eligible Students"
-        : assignForm.cohort_name.trim();
+    let finalCohortName = assignForm.cohort_name.trim();
 
-    if (assignScope === "COHORT" && !finalCohortName) {
-      toast.warning("Please specify a target cohort name (e.g. Computer Science - Batch 2026).");
-      return;
+    if (assignScope === "COLLEGE_WIDE") {
+      finalCohortName = "All Eligible Students";
+    } else if (assignScope === "DEPARTMENT") {
+      if (selectedDepartments.length === 0) {
+        toast.warning("Please select at least one department.");
+        return;
+      }
+      const names = departments
+        .filter((d) => selectedDepartments.includes(d.id))
+        .map((d) => d.code || d.name)
+        .join(", ");
+      finalCohortName = `Dept: ${names}`;
+    } else if (assignScope === "BATCH") {
+      if (selectedBatches.length === 0) {
+        toast.warning("Please select at least one graduation batch.");
+        return;
+      }
+      finalCohortName = `Batch ${selectedBatches.join(", ")}`;
+    } else if (assignScope === "COHORT") {
+      if (!finalCohortName) {
+        toast.warning("Please specify a target cohort name (e.g. Computer Science - Batch 2026).");
+        return;
+      }
     }
 
     try {
@@ -219,6 +244,9 @@ export default function StaffAssessmentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cohort_name: finalCohortName,
+          target_type: assignScope,
+          department_ids: assignScope === "DEPARTMENT" ? selectedDepartments : undefined,
+          graduation_years: assignScope === "BATCH" ? selectedBatches : undefined,
           window_start: assignForm.window_start || null,
           window_end: assignForm.window_end || null,
           max_attempts_override: assignForm.max_attempts_override
@@ -227,12 +255,17 @@ export default function StaffAssessmentsPage() {
         }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Failed to assign assessment");
       }
 
-      toast.success("Assessment assigned successfully!");
+      const count = data.recipientCount ?? 0;
+      toast.success(
+        count > 0
+          ? `Assessment assigned to ${count} student(s) successfully!`
+          : "Assessment assigned successfully!"
+      );
       setAssigningAssessment(null);
       loadData();
     } catch (err: any) {
@@ -778,21 +811,21 @@ export default function StaffAssessmentsPage() {
           if (!open) setAssigningAssessment(null);
         }}
       >
-        <DialogContent className="sm:max-w-md max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+        <DialogContent className="sm:max-w-lg max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
           <DialogHeader className="p-6 pb-4 border-b border-border bg-card shrink-0">
             <DialogTitle className="text-xl font-bold font-heading text-text-primary">
               Schedule & Assign Assessment
             </DialogTitle>
             <DialogDescription className="text-xs text-text-secondary mt-1">
-              Assign <span className="font-semibold text-text-primary">{assigningAssessment?.title}</span> to a cohort with availability windows.
+              Assign <span className="font-semibold text-text-primary">{assigningAssessment?.title}</span> with targeted eligibility and availability windows.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleAssign} noValidate className="flex flex-col flex-1 overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-text-primary">Assignment Scope *</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <Label className="text-xs font-medium text-text-primary">Assignment Targeting *</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -807,7 +840,35 @@ export default function StaffAssessmentsPage() {
                   >
                     College-Wide
                     <span className="block text-[10px] font-normal text-text-muted mt-0.5">
-                      All enrolled students in college
+                      All students
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignScope("DEPARTMENT")}
+                    className={`px-3 py-2 text-xs font-semibold rounded-md border text-left transition-colors ${
+                      assignScope === "DEPARTMENT"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-input text-text-secondary hover:bg-card"
+                    }`}
+                  >
+                    Department
+                    <span className="block text-[10px] font-normal text-text-muted mt-0.5">
+                      By branch
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignScope("BATCH")}
+                    className={`px-3 py-2 text-xs font-semibold rounded-md border text-left transition-colors ${
+                      assignScope === "BATCH"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-input text-text-secondary hover:bg-card"
+                    }`}
+                  >
+                    Batch / Year
+                    <span className="block text-[10px] font-normal text-text-muted mt-0.5">
+                      Graduation year
                     </span>
                   </button>
                   <button
@@ -825,41 +886,133 @@ export default function StaffAssessmentsPage() {
                         : "border-border bg-input text-text-secondary hover:bg-card"
                     }`}
                   >
-                    Specific Cohort
+                    Custom Cohort
                     <span className="block text-[10px] font-normal text-text-muted mt-0.5">
-                      Branch, batch, or degree
+                      Named group
                     </span>
                   </button>
                 </div>
 
-                {assignScope === "COHORT" ? (
-                  <div className="pt-1">
-                    <Label htmlFor="cohort" className="text-xs font-medium text-text-secondary">
-                      Cohort Target Group *
+                {assignScope === "COLLEGE_WIDE" && (
+                  <div className="p-3 rounded-md bg-secondary-accent/10 border border-secondary-accent/20 text-xs text-text-primary">
+                    <span className="font-semibold text-secondary-accent">College-Wide Delivery:</span>{" "}
+                    All active enrolled students across every department in Sapthagiri NPS University will immediately receive this assessment in their portal.
+                  </div>
+                )}
+
+                {assignScope === "DEPARTMENT" && (
+                  <div className="p-3 rounded-md bg-card border border-border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium text-text-primary">
+                        Select Target Departments ({selectedDepartments.length} selected)
+                      </Label>
+                      {departments.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedDepartments.length === departments.length) {
+                              setSelectedDepartments([]);
+                            } else {
+                              setSelectedDepartments(departments.map((d) => d.id));
+                            }
+                          }}
+                          className="text-[11px] text-primary hover:underline"
+                        >
+                          {selectedDepartments.length === departments.length ? "Deselect All" : "Select All"}
+                        </button>
+                      )}
+                    </div>
+                    {departments.length === 0 ? (
+                      <p className="text-xs text-text-muted">
+                        No departments found. Configure departments in Academic Structure settings.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto">
+                        {departments.map((dept) => {
+                          const isChecked = selectedDepartments.includes(dept.id);
+                          return (
+                            <button
+                              type="button"
+                              key={dept.id}
+                              onClick={() => {
+                                setSelectedDepartments((prev) =>
+                                  isChecked ? prev.filter((id) => id !== dept.id) : [...prev, dept.id]
+                                );
+                              }}
+                              className={`flex items-center justify-between p-2 rounded text-xs border text-left transition-colors ${
+                                isChecked
+                                  ? "border-primary bg-primary/10 text-primary font-medium"
+                                  : "border-border bg-input text-text-secondary hover:bg-surface"
+                              }`}
+                            >
+                              <span className="truncate">{dept.name}</span>
+                              {dept.code && (
+                                <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-surface border border-border text-text-muted uppercase">
+                                  {dept.code}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {assignScope === "BATCH" && (
+                  <div className="p-3 rounded-md bg-card border border-border space-y-2">
+                    <Label className="text-xs font-medium text-text-primary">
+                      Select Graduation Batches ({selectedBatches.length} selected)
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[2024, 2025, 2026, 2027, 2028, 2029].map((year) => {
+                        const isSelected = selectedBatches.includes(year);
+                        return (
+                          <button
+                            type="button"
+                            key={year}
+                            onClick={() => {
+                              setSelectedBatches((prev) =>
+                                isSelected ? prev.filter((y) => y !== year) : [...prev, year]
+                              );
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              isSelected
+                                ? "border-primary bg-primary text-white"
+                                : "border-border bg-input text-text-secondary hover:bg-surface"
+                            }`}
+                          >
+                            Class of {year}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {assignScope === "COHORT" && (
+                  <div className="p-3 rounded-md bg-card border border-border space-y-2">
+                    <Label htmlFor="cohort" className="text-xs font-medium text-text-primary">
+                      Cohort Identifier *
                     </Label>
                     <Input
                       id="cohort"
                       value={assignForm.cohort_name}
                       onChange={(e) => setAssignForm({ ...assignForm, cohort_name: e.target.value })}
-                      placeholder="e.g. Computer Science - Batch 2026"
+                      placeholder="e.g. Computer Science - Batch 2026, FastTrack Batch A"
                       className="mt-1"
                       required
                     />
-                    <p className="text-[11px] text-text-muted mt-1">
-                      Only active students matching this department, degree, or graduation batch will gain access.
+                    <p className="text-[11px] text-text-muted">
+                      Students whose profile department or graduation year matches will automatically gain access.
                     </p>
-                  </div>
-                ) : (
-                  <div className="p-2.5 rounded-md bg-secondary-accent/10 border border-secondary-accent/20 text-xs text-text-primary">
-                    <span className="font-semibold text-secondary-accent">College-Wide Access:</span>{" "}
-                    All active, enrolled students across every department in this college tenant will be eligible.
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="wstart" className="text-xs font-medium text-text-primary">Window Start</Label>
+                  <Label htmlFor="wstart" className="text-xs font-medium text-text-primary">Window Start (Optional)</Label>
                   <Input
                     id="wstart"
                     type="datetime-local"
@@ -869,7 +1022,7 @@ export default function StaffAssessmentsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="wend" className="text-xs font-medium text-text-primary">Window End</Label>
+                  <Label htmlFor="wend" className="text-xs font-medium text-text-primary">Window End (Optional)</Label>
                   <Input
                     id="wend"
                     type="datetime-local"
@@ -890,7 +1043,7 @@ export default function StaffAssessmentsPage() {
                   min="1"
                   value={assignForm.max_attempts_override}
                   onChange={(e) => setAssignForm({ ...assignForm, max_attempts_override: e.target.value })}
-                  placeholder={`Default: ${assigningAssessment?.allowed_attempts}`}
+                  placeholder={`Default blueprint value: ${assigningAssessment?.allowed_attempts || 1}`}
                   className="mt-1"
                 />
               </div>

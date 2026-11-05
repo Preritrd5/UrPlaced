@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     if (err.message === "UNAUTHORIZED" || err.message?.includes("MFA_REQUIRED")) {
       return NextResponse.json({ error: err.message }, { status: 401 });
     }
-    if (err.message?.includes("FORBIDDEN")) {
+    if (err.message?.includes("FORBIDDEN") || err.message?.includes("MFA_REQUIRED")) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
     return NextResponse.json(

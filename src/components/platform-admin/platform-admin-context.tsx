@@ -20,6 +20,26 @@ export function PlatformAdminProvider({
 }) {
   const [admin, setAdmin] = React.useState<AuthenticatedSuperAdmin>(initialAdmin);
 
+  React.useEffect(() => {
+    // If the active tab storage still holds a non-super-admin session token, clear it
+    if (typeof window !== "undefined") {
+      try {
+        const { getTabStorageKey, tabSessionStorage } = require("@/lib/auth/auth-tab");
+        const key = getTabStorageKey();
+        const raw = tabSessionStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const userId = parsed?.user?.id || parsed?.currentSession?.user?.id;
+          if (userId && userId !== initialAdmin.id) {
+            tabSessionStorage.removeItem(key);
+          }
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+  }, [initialAdmin.id]);
+
   const updateAdminProfile = React.useCallback(
     (partial: Partial<AuthenticatedSuperAdmin>) => {
       setAdmin((prev) => ({

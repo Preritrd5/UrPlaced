@@ -1173,8 +1173,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 1: CREATE PLAN MODAL */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
-          <Card className="w-full max-w-3xl bg-card border-border shadow-xl rounded-2xl max-h-[90vh] flex flex-col my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-3xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold font-heading text-text-primary">
@@ -1442,8 +1442,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 2: EDIT PLAN MODAL */}
       {editingPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
-          <Card className="w-full max-w-3xl bg-card border-border shadow-xl rounded-2xl max-h-[90vh] flex flex-col my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-3xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -1704,8 +1704,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 3: VIEW PLAN DETAILS & ENTITLEMENTS MODAL */}
       {viewingPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto">
-          <Card className="w-full max-w-2xl bg-card border-border shadow-xl rounded-2xl max-h-[85vh] flex flex-col my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-2xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -1818,9 +1818,9 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 4: CHANGE COLLEGE PLAN MODAL */}
       {changePlanSub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-card border-border shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/30">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Change Subscription Plan
               </CardTitle>
@@ -1829,8 +1829,8 @@ export default function PlatformSubscriptionsPage() {
               </CardDescription>
             </CardHeader>
 
-            <form onSubmit={handleChangeCollegePlan}>
-              <CardContent className="p-5 space-y-4">
+            <form onSubmit={handleChangeCollegePlan} className="flex-1 flex flex-col overflow-hidden">
+              <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
                 {/* Security Invariant Notice */}
                 {changePlanSub.status === "PENDING_PAYMENT" && (
                   <div className="p-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-xs flex items-start gap-2">
@@ -1927,7 +1927,8 @@ export default function PlatformSubscriptionsPage() {
                   </label>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-border/30">
+                </CardContent>
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -1951,8 +1952,7 @@ export default function PlatformSubscriptionsPage() {
                       ? "Schedule for Renewal"
                       : "Confirm Plan Change"}
                   </Button>
-                </div>
-              </CardContent>
+              </div>
             </form>
           </Card>
         </div>
@@ -1960,8 +1960,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 5: VIEW SNAPSHOT ENTITLEMENTS MODAL */}
       {viewingSnapshot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-lg bg-card border-border shadow-xl rounded-2xl max-h-[85vh] flex flex-col">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -2042,9 +2042,9 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 6: ARCHIVE CONFLICT MODAL */}
       {archiveConflict && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-card border-red-300 shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-red-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-red-300 shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-red-200 bg-card">
               <div className="flex items-center gap-2 text-red-700">
                 <ShieldAlert className="h-5 w-5" />
                 <CardTitle className="text-base font-bold font-heading">
@@ -2056,7 +2056,7 @@ export default function PlatformSubscriptionsPage() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="p-5 space-y-3">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
               <p className="text-xs text-text-primary leading-relaxed">
                 By platform safety rule, subscription plans with active or pending subscribers cannot be archived. Reassign these colleges to another published plan before archiving this tier.
               </p>
@@ -2072,23 +2072,23 @@ export default function PlatformSubscriptionsPage() {
                 </ul>
               </div>
 
-              <div className="flex justify-end pt-2">
-                <Button
-                  onClick={() => setArchiveConflict(null)}
+              </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-red-200 bg-surface/50 flex justify-end gap-2">
+              <Button
+                onClick={() => setArchiveConflict(null)}
                   className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-8"
                 >
                   Understood
                 </Button>
-              </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}
       {/* MODAL 7: ARCHIVE CONFIRMATION MODAL */}
       {planToArchive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-card border-border shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/30">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center gap-2 text-amber-700">
                 <AlertTriangle className="h-5 w-5" />
                 <CardTitle className="text-base font-bold font-heading">
@@ -2100,15 +2100,16 @@ export default function PlatformSubscriptionsPage() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               <p className="text-xs text-text-primary leading-relaxed">
                 Are you sure you want to archive <strong>{planToArchive.name}</strong>? If any colleges are actively subscribed to this plan, platform safety checks will prevent this action.
               </p>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-border/30">
-                <Button
-                  variant="outline"
-                  onClick={() => setPlanToArchive(null)}
+              </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPlanToArchive(null)}
                   disabled={actionLoading}
                   className="border-border text-xs h-9"
                 >
@@ -2121,17 +2122,16 @@ export default function PlatformSubscriptionsPage() {
                 >
                   {actionLoading ? "Archiving..." : "Confirm Archive"}
                 </Button>
-              </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}
 
       {/* MODAL 8: SYNC VERSION CONFIRMATION MODAL */}
       {subToSync && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <Card className="w-full max-w-md bg-card border-border shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/30">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center gap-2 text-primary">
                 <History className="h-5 w-5" />
                 <CardTitle className="text-base font-bold font-heading">
@@ -2148,10 +2148,11 @@ export default function PlatformSubscriptionsPage() {
                 This college is currently on <strong>v{subToSync.planVersion}</strong> snapshot. Synchronizing will apply the latest limits, quotas, and feature entitlements defined in <strong>v{subToSync.currentPlanVersion}</strong>.
               </p>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-border/30">
-                <Button
-                  variant="outline"
-                  onClick={() => setSubToSync(null)}
+              </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSubToSync(null)}
                   disabled={actionLoading}
                   className="border-border text-xs h-9"
                 >
@@ -2164,8 +2165,7 @@ export default function PlatformSubscriptionsPage() {
                 >
                   {actionLoading ? "Synchronizing..." : "Confirm & Sync Version"}
                 </Button>
-              </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}

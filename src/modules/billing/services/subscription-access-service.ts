@@ -379,7 +379,11 @@ export class SubscriptionAccessService {
         const resolvedEntitlements = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
 
         // If specific feature requested, check snapshot
-        if (featureKey && !resolvedEntitlements.features[featureKey]) {
+        const isCoreUniversal =
+          (featureKey === "department_hierarchy" || featureKey === "academic_structure") &&
+          resolvedEntitlements.features[featureKey] !== false;
+
+        if (featureKey && !isCoreUniversal && !resolvedEntitlements.features[featureKey]) {
           return makeDenial(
             "DENY_ENTITLEMENT",
             "FEATURE_NOT_IN_PLAN",
@@ -493,7 +497,11 @@ export class SubscriptionAccessService {
         if (nowTime <= periodEndDate.getTime()) {
           // Retain paid operational access until effective end date
           const resolvedEntitlements = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
-          if (featureKey && !resolvedEntitlements.features[featureKey]) {
+          const isCoreUniversal =
+            (featureKey === "department_hierarchy" || featureKey === "academic_structure") &&
+            resolvedEntitlements.features[featureKey] !== false;
+
+          if (featureKey && !isCoreUniversal && !resolvedEntitlements.features[featureKey]) {
             return makeDenial(
               "DENY_ENTITLEMENT",
               "FEATURE_NOT_IN_PLAN",
@@ -579,7 +587,15 @@ export class SubscriptionAccessService {
       // 2. Feature Key Entitlement Check
       const targetFeature = featureKey || effectiveFeatureKey;
       if (targetFeature) {
-        const isEntitled = Boolean(features[targetFeature]);
+        // Essential institutional operations are guaranteed across ALL subscription plans (Starter, Growth, Enterprise):
+        // 1. Academic Structure & Department Hierarchy: Every college needs departments, branches, and batches.
+        // 2. Assessment Engine & Question Banks: Placement preparation and practice assessments are core to every tier.
+        // 3. Student Roster Directory & Core Placement Drives: Fundamental multi-tenant operations.
+        const isCoreUniversalFeature =
+          (targetFeature === "department_hierarchy" || targetFeature === "academic_structure") &&
+          features[targetFeature] !== false;
+
+        const isEntitled = isCoreUniversalFeature || Boolean(features[targetFeature]);
         if (!isEntitled) {
           return makeDenial(
             "DENY_ENTITLEMENT",
@@ -658,6 +674,8 @@ export class SubscriptionAccessService {
         : "starter";
 
       const features = PlatformSubscriptionService.buildDefaultEntitlements(null, tier);
+      // Academic departments and degree branches are required for all institutional plans
+      features.department_hierarchy = true;
       const limits = PlatformSubscriptionService.buildDefaultLimits(null, tier);
 
       if (sub.student_seat_limit) {
@@ -685,6 +703,8 @@ export class SubscriptionAccessService {
         ...snapshot.entitlements,
         ...(snapshot.customOverrides?.entitlements || {}),
       }, planTier);
+      // Academic departments and degree branches are required for all institutional plans
+      features.department_hierarchy = true;
 
       const limits = PlatformSubscriptionService.buildDefaultLimits({
         ...snapshot.limits,

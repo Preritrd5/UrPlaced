@@ -65,6 +65,14 @@ export function AppShell({ children }: AppShellProps) {
     return <>{children}</>;
   }
 
+  // Distraction-Free Active Examination Environment:
+  // When an active assessment is being taken (/dashboard/student/assessments/[id]/take),
+  // strictly hide Student Portal sidebar, top navbar, breadcrumbs, AI tutor, and floating chatbot.
+  const isAssessmentTaking = /^\/dashboard\/student\/assessments\/[^/]+\/take/.test(pathname);
+  if (isAssessmentTaking) {
+    return <div className="min-h-screen bg-background text-text-primary antialiased">{children}</div>;
+  }
+
   // SA-03 / SA-06 / SA-07 Option C: Strict Subscription Entitlement Enforcement:
   // If subscription is not ACTIVE (e.g. NO_SUBSCRIPTION, PENDING_PAYMENT, EXPIRED, CANCELED),
   // operational features are locked unless protected by 7-day grace period (Q1).

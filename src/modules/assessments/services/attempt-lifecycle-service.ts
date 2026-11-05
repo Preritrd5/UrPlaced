@@ -13,6 +13,7 @@ import {
   AttemptStatus,
   QuestionVersionRow,
   QuestionType,
+  AssessmentViolationType,
 } from "@/types/database";
 import { QuestionService } from "@/modules/question-bank/services/question-service";
 import { AssessmentScoringService } from "./assessment-scoring-service";
@@ -21,6 +22,7 @@ import {
   StudentCohortProfile,
 } from "./assignment-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface StartAttemptResult {
   success: boolean;
@@ -87,7 +89,7 @@ export class AttemptLifecycleService {
     assessmentId: string,
     clientMeta: Record<string, any> = {}
   ): Promise<StartAttemptResult> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const now = new Date();
 
     // 0. Verify candidate is an active, non-archived student in this college tenant
@@ -281,21 +283,69 @@ export class AttemptLifecycleService {
     const newAttemptNumber = takenCount + 1;
 
     // 6. Insert new attempt
-    const { data: newAttempt, error: insErr } = await supabase
-      .from("assessment_attempts")
-      .insert({
-        tenant_id: tenantId,
-        assessment_id: assessmentId,
-        assignment_id: matchedAssignmentId,
-        student_id: studentId,
-        attempt_number: newAttemptNumber,
-        status: "IN_PROGRESS",
-        started_at: startedAt,
-        expires_at: expiresAt,
-        client_meta: clientMeta,
-      })
-      .select("*")
-      .single();
+    const baseAttemptPayload: any = {
+      tenant_id: tenantId,
+      assessment_id: assessmentId,
+      assignment_id: matchedAssignmentId,
+      student_id: studentId,
+      attempt_number: newAttemptNumber,
+      status: "IN_PROGRESS",
+      started_at: startedAt,
+      expires_at: expiresAt,
+      client_meta: {
+        ...clientMeta,
+        fullscreen_enforced: true,
+        is_fullscreen_enforced: true,
+        violation_count: 0,
+        submission_reason: null,
+      },
+    };
+
+    let newAttempt: any = null;
+    let insErr: any = null;
+
+    // Try extended schema with top-level security columns first
+    try {
+      const res1 = await supabase
+        .from("assessment_attempts")
+        .insert({
+          ...baseAttemptPayload,
+          is_fullscreen_enforced: true,
+          violation_count: 0,
+          submission_reason: null,
+        })
+        .select("*")
+        .single();
+
+      if (!res1.error && res1.data) {
+        newAttempt = res1.data;
+      } else {
+        // Fallback to base canonical schema (storing security flags in client_meta)
+        const res2 = await supabase
+          .from("assessment_attempts")
+          .insert(baseAttemptPayload)
+          .select("*")
+          .single();
+
+        if (!res2.error && res2.data) {
+          newAttempt = res2.data;
+        } else {
+          insErr = res2.error || res1.error;
+        }
+      }
+    } catch (e: any) {
+      const res2 = await supabase
+        .from("assessment_attempts")
+        .insert(baseAttemptPayload)
+        .select("*")
+        .single();
+
+      if (!res2.error && res2.data) {
+        newAttempt = res2.data;
+      } else {
+        insErr = res2.error || e;
+      }
+    }
 
     if (insErr || !newAttempt) {
       return { success: false, error: insErr?.message || "Failed to initialize attempt." };
@@ -396,7 +446,7 @@ export class AttemptLifecycleService {
     studentId: string,
     attemptId: string
   ): Promise<{ success: boolean; state?: AttemptWorkspaceState; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const now = new Date();
 
     const { data: attempt, error: attErr } = await supabase
@@ -537,17 +587,23 @@ export class AttemptLifecycleService {
   /**
    * Finalizes and submits an assessment attempt, triggering automatic scoring.
    */
+  /**
+   * Finalizes and submits an assessment attempt, triggering automatic scoring.
+   * Fully idempotent: returns the finalized attempt if already submitted.
+   */
   public static async submitAttempt(
     tenantId: string,
     studentId: string,
-    attemptId: string
-  ): Promise<{ success: boolean; attempt?: AssessmentAttemptRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    attemptId: string,
+    submissionReason: string = "MANUAL",
+    metadata: Record<string, any> = {}
+  ): Promise<{ success: boolean; attempt?: AssessmentAttemptRow; alreadySubmitted?: boolean; error?: string }> {
+    const supabase = createAdminClient();
     const now = new Date();
 
     const { data: attempt, error: attErr } = await supabase
       .from("assessment_attempts")
-      .select("id, status, expires_at, student_id")
+      .select("*")
       .eq("tenant_id", tenantId)
       .eq("id", attemptId)
       .single();
@@ -560,26 +616,81 @@ export class AttemptLifecycleService {
       return { success: false, error: "Unauthorized: not your attempt." };
     }
 
+    // Idempotency: If attempt is already submitted/expired/scored, return existing record
     if (attempt.status !== "IN_PROGRESS") {
       return {
-        success: false,
-        error: `Attempt has already been submitted or closed (status: ${attempt.status}).`,
+        success: true,
+        attempt,
+        alreadySubmitted: true,
       };
     }
 
     const isExpired = attempt.expires_at && new Date(attempt.expires_at) < now;
     const finalStatus: AttemptStatus = isExpired ? "EXPIRED" : "SUBMITTED";
+    const effectiveReason = isExpired && submissionReason === "MANUAL" ? "TIMEOUT" : submissionReason;
 
-    const { data: updatedAttempt, error: upErr } = await supabase
-      .from("assessment_attempts")
-      .update({
-        status: finalStatus,
-        submitted_at: now.toISOString(),
-        updated_at: now.toISOString(),
-      })
-      .eq("id", attemptId)
-      .select("*")
-      .single();
+    const existingMeta =
+      typeof attempt.client_meta === "object" && attempt.client_meta !== null
+        ? (attempt.client_meta as Record<string, any>)
+        : {};
+
+    const baseUpdatePayload: any = {
+      status: finalStatus,
+      submitted_at: now.toISOString(),
+      updated_at: now.toISOString(),
+      client_meta: {
+        ...existingMeta,
+        ...metadata,
+        submission_reason: effectiveReason,
+        final_submission_reason: effectiveReason,
+        finalized_at: now.toISOString(),
+      },
+    };
+
+    let updatedAttempt: any = null;
+    let upErr: any = null;
+
+    try {
+      const upRes1 = await supabase
+        .from("assessment_attempts")
+        .update({
+          ...baseUpdatePayload,
+          submission_reason: effectiveReason,
+        })
+        .eq("id", attemptId)
+        .select("*")
+        .single();
+
+      if (!upRes1.error && upRes1.data) {
+        updatedAttempt = upRes1.data;
+      } else {
+        const upRes2 = await supabase
+          .from("assessment_attempts")
+          .update(baseUpdatePayload)
+          .eq("id", attemptId)
+          .select("*")
+          .single();
+
+        if (!upRes2.error && upRes2.data) {
+          updatedAttempt = upRes2.data;
+        } else {
+          upErr = upRes2.error || upRes1.error;
+        }
+      }
+    } catch {
+      const upRes2 = await supabase
+        .from("assessment_attempts")
+        .update(baseUpdatePayload)
+        .eq("id", attemptId)
+        .select("*")
+        .single();
+
+      if (!upRes2.error && upRes2.data) {
+        updatedAttempt = upRes2.data;
+      } else {
+        upErr = upRes2.error;
+      }
+    }
 
     if (upErr || !updatedAttempt) {
       return { success: false, error: upErr?.message || "Failed to submit attempt." };
@@ -599,6 +710,165 @@ export class AttemptLifecycleService {
   }
 
   /**
+   * Records an examination security violation and optionally triggers immediate auto-submission.
+   */
+  public static async recordViolation(
+    tenantId: string,
+    studentId: string,
+    input: {
+      attemptId: string;
+      violationType: AssessmentViolationType;
+      metadata?: Record<string, any>;
+      autoSubmit?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    violationId?: string;
+    autoSubmitted?: boolean;
+    attempt?: AssessmentAttemptRow;
+    alreadySubmitted?: boolean;
+    error?: string;
+  }> {
+    const supabase = createAdminClient();
+    const now = new Date();
+
+    // 1. Fetch attempt and verify ownership
+    const { data: attempt, error: attErr } = await supabase
+      .from("assessment_attempts")
+      .select("id, tenant_id, assessment_id, student_id, status, client_meta")
+      .eq("tenant_id", tenantId)
+      .eq("id", input.attemptId)
+      .single();
+
+    if (attErr || !attempt) {
+      return { success: false, error: "Attempt not found." };
+    }
+
+    if (attempt.student_id !== studentId) {
+      return { success: false, error: "Unauthorized: not your attempt." };
+    }
+
+    // If attempt is already submitted/closed, avoid duplicate violations & submissions
+    if (attempt.status !== "IN_PROGRESS") {
+      return {
+        success: true,
+        alreadySubmitted: true,
+        autoSubmitted: false,
+        attempt: attempt as any,
+      };
+    }
+
+    // Configured violations that trigger automatic submission
+    const AUTO_SUBMIT_VIOLATIONS: AssessmentViolationType[] = [
+      "TAB_SWITCH",
+      "DOCUMENT_HIDDEN",
+      "WINDOW_FOCUS_LOST",
+      "WINDOW_BLUR",
+      "FULLSCREEN_EXIT",
+      "NAVIGATION_AWAY",
+      "PAGE_HIDDEN",
+    ];
+
+    const shouldAutoSubmit =
+      input.autoSubmit === true || AUTO_SUBMIT_VIOLATIONS.includes(input.violationType);
+
+    const existingMeta =
+      typeof attempt.client_meta === "object" && attempt.client_meta !== null
+        ? (attempt.client_meta as Record<string, any>)
+        : {};
+    const existingViolations = Array.isArray(existingMeta.violations) ? existingMeta.violations : [];
+    const currentCount = Number(existingMeta.violation_count || existingViolations.length || 0) + 1;
+
+    let violationId: string = crypto.randomUUID();
+
+    // 2. Insert violation record (if assessment_violations table exists in remote DB)
+    try {
+      const { data: vData } = await supabase
+        .from("assessment_violations")
+        .insert({
+          tenant_id: tenantId,
+          attempt_id: input.attemptId,
+          assessment_id: attempt.assessment_id,
+          student_id: studentId,
+          violation_type: input.violationType,
+          metadata: input.metadata || {},
+          triggered_submission: shouldAutoSubmit,
+        })
+        .select("id")
+        .single();
+      if (vData?.id) {
+        violationId = vData.id;
+      }
+    } catch {
+      // Table may not exist in remote DB; violation is safely recorded in client_meta
+    }
+
+    // 3. Update violation count and log in client_meta & attempt
+    const updatedMeta = {
+      ...existingMeta,
+      violation_count: currentCount,
+      violations: [
+        ...existingViolations,
+        {
+          id: violationId,
+          violation_type: input.violationType,
+          timestamp: now.toISOString(),
+          metadata: input.metadata || {},
+          triggered_submission: shouldAutoSubmit,
+        },
+      ],
+      last_violation_at: now.toISOString(),
+    };
+
+    try {
+      await supabase
+        .from("assessment_attempts")
+        .update({
+          violation_count: currentCount,
+          client_meta: updatedMeta,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", input.attemptId);
+    } catch {
+      await supabase
+        .from("assessment_attempts")
+        .update({
+          client_meta: updatedMeta,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", input.attemptId);
+    }
+
+    // 4. Trigger auto-submission if required
+    if (shouldAutoSubmit) {
+      const subRes = await this.submitAttempt(
+        tenantId,
+        studentId,
+        input.attemptId,
+        `AUTO:${input.violationType}`,
+        {
+          triggering_violation_id: violationId,
+          violation_type: input.violationType,
+          ...input.metadata,
+        }
+      );
+
+      return {
+        success: true,
+        violationId,
+        autoSubmitted: true,
+        attempt: subRes.attempt,
+      };
+    }
+
+    return {
+      success: true,
+      violationId,
+      autoSubmitted: false,
+    };
+  }
+
+  /**
    * Retrieves results and question-level review while strictly respecting
    * the assessment release policy.
    */
@@ -614,7 +884,7 @@ export class AttemptLifecycleService {
     breakdown?: any;
     error?: string;
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { data: attempt, error: attErr } = await supabase
       .from("assessment_attempts")
@@ -759,6 +1029,25 @@ export class AttemptLifecycleService {
       };
     });
 
+    // Fetch security violations recorded for this attempt
+    let violations: any[] = [];
+    try {
+      const { data: vList } = await supabase
+        .from("assessment_violations")
+        .select("id, violation_type, triggered_submission, created_at, metadata")
+        .eq("tenant_id", tenantId)
+        .eq("attempt_id", attemptId)
+        .order("created_at", { ascending: true });
+      if (vList) violations = vList;
+    } catch {
+      // Table may not exist; fallback to client_meta
+    }
+
+    const clientMeta = (attempt.client_meta && typeof attempt.client_meta === "object") ? attempt.client_meta : {};
+    if (violations.length === 0 && Array.isArray((clientMeta as any).violations)) {
+      violations = (clientMeta as any).violations;
+    }
+
     return {
       success: true,
       isReleased,
@@ -771,6 +1060,9 @@ export class AttemptLifecycleService {
         scorePercentage: Number(attempt.score_percentage ?? 0),
         isPassed: Boolean(attempt.is_passed),
         scoringStatus: attempt.scoring_status,
+        submissionReason: (attempt as any).submission_reason || (clientMeta as any).submission_reason || "MANUAL",
+        violationCount: Number((attempt as any).violation_count ?? (clientMeta as any).violation_count ?? violations.length),
+        violations: violations || [],
         questions: formattedResponses,
       },
     };

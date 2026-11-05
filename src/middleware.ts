@@ -18,28 +18,34 @@ export async function middleware(request: NextRequest) {
 
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
 
-  // Refresh auth session if cookies are present
-  try {
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
-      },
-    });
+  // Refresh auth session only if cookies are present and request is NOT a bearer-authenticated tab request
+  const authHeader = request.headers.get("authorization");
+  const hasBearer = authHeader && authHeader.toLowerCase().startsWith("bearer ");
+  const hasCookies = request.cookies.getAll().length > 0;
 
-    await supabase.auth.getUser();
-  } catch {
-    // Non-blocking session refresh
+  if (!hasBearer && hasCookies) {
+    try {
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+            response = NextResponse.next({
+              request,
+            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      });
+
+      await supabase.auth.getUser();
+    } catch {
+      // Non-blocking session refresh
+    }
   }
 
   // Security Headers

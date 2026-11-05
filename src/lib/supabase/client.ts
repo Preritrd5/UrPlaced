@@ -1,4 +1,3 @@
-import { createBrowserClient } from "@supabase/ssr";
 import { createClient as createSupabaseJsClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseConfig } from "./config";
 import { getTabStorageKey, tabSessionStorage } from "@/lib/auth/auth-tab";
@@ -11,43 +10,55 @@ if (typeof window !== "undefined") {
 
 /**
  * Creates or retrieves the browser-side Supabase client.
- * Uses @supabase/ssr createBrowserClient to guarantee cookie-based session
- * synchronization across Server Components, Route Handlers, Middleware,
- * and page navigations, while syncing with tabSessionStorage for multi-tab
- * bearer token awareness.
+ * Uses @supabase/supabase-js createClient configured with tabSessionStorage,
+ * unique per-tab storageKey, and broadcastTab: false.
+ *
+ * Strict Tab Isolation Guarantees:
+ * 1. Each browser tab maintains its own independent authentication session.
+ * 2. Tabs on the same origin NEVER leak or overwrite each other's credentials.
+ * 3. Token auto-refresh is tab-scoped, eliminating refresh-token reuse race conditions.
+ * 4. Sign-in, sign-out, or user updates in one tab DO NOT broadcast across tabs.
+ * 5. Tab reloads (F5) preserve tab identity via window.sessionStorage.
+ * 6. Closing the tab discards the tab session cleanly.
  */
 export function createClient(): SupabaseClient {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
 
   if (typeof window !== "undefined") {
     const win = window as any;
-    if (win.__urplaced_supabase_client__) {
-      return win.__urplaced_supabase_client__;
+    const tabStorageKey = getTabStorageKey();
+
+    if (!win.__urplaced_clients_by_tab__) {
+      win.__urplaced_clients_by_tab__ = {};
     }
 
-    const client = createBrowserClient(supabaseUrl, supabaseAnonKey);
-
-    // Sync session to tabSessionStorage so tab-scoped bearer interceptor remains populated
-    try {
-      const storageKey = getTabStorageKey();
-      client.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          tabSessionStorage.setItem(storageKey, JSON.stringify(session));
-        }
-      });
-
-      client.auth.onAuthStateChange((_event, session) => {
-        if (session) {
-          tabSessionStorage.setItem(storageKey, JSON.stringify(session));
-        } else {
-          tabSessionStorage.removeItem(storageKey);
-        }
-      });
-    } catch {
-      // Non-blocking sync
+    if (win.__urplaced_clients_by_tab__[tabStorageKey]) {
+      return win.__urplaced_clients_by_tab__[tabStorageKey];
     }
 
+    const client = createSupabaseJsClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: tabSessionStorage,
+        storageKey: tabStorageKey,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
+
+    // Strictly disable cross-tab broadcast notifications so tabs remain completely isolated
+    if ((client.auth as any).broadcastChannel) {
+      try {
+        (client.auth as any).broadcastChannel.close();
+      } catch {
+        // Fallback
+      }
+      (client.auth as any).broadcastChannel = null;
+    }
+
+    win.__urplaced_clients_by_tab__[tabStorageKey] = client;
     win.__urplaced_supabase_client__ = client;
+
     return client as unknown as SupabaseClient;
   }
 

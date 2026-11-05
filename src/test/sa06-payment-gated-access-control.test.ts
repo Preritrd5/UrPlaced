@@ -143,7 +143,7 @@ describe("URPLACED SA-06: Payment-Gated Access Control (All 64 Scenarios)", () =
       ai_question_generator: true,
       ai_tutor_assistant: true,
       ai_evaluation_pipeline: false, // Not in growth plan!
-      department_hierarchy: false,
+      department_hierarchy: true,
       audit_data_export_hub: true,
       dedicated_sla_liaison: false,
     },

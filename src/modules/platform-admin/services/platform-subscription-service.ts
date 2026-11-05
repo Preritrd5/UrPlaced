@@ -150,6 +150,10 @@ export class PlatformSubscriptionService {
     for (const feat of CONTROLLED_FEATURE_CATALOGUE) {
       map[feat.key] = Boolean(tier && (feat.defaultTiers as readonly string[]).includes(tier));
     }
+    // Department & Academic Structure is fundamental to all institutional operations
+    if (tier) {
+      map.department_hierarchy = true;
+    }
     if (!overrides) return map;
     for (const [k, v] of Object.entries(overrides)) {
       if (v !== undefined && v !== null) {
@@ -261,10 +265,19 @@ export class PlatformSubscriptionService {
           ? { ...this.buildDefaultEntitlements(null, planTier), ...p.entitlements }
           : this.buildDefaultEntitlements(null, planTier);
 
-      const featuresList =
+      // Department & Academic Structure is standard across all tiers
+      entitlements.department_hierarchy = true;
+
+      const rawFeaturesList =
         Array.isArray(p.features) && p.features.length > 0
-          ? p.features
+          ? [...p.features]
           : this.entitlementsToStringArray(entitlements);
+
+      if (!rawFeaturesList.some((f: string) => f.toLowerCase().includes("department"))) {
+        rawFeaturesList.push("Department & Academic Structure");
+      }
+
+      const featuresList = rawFeaturesList;
 
       const planStatus: PlanStatus = p.status || (p.is_active ? "PUBLISHED" : "ARCHIVED");
 

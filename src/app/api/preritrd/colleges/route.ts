@@ -87,7 +87,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to register college";
-    const status = msg.includes("already taken") ? 409 : 500;
+    const status = msg.includes("already taken")
+      ? 409
+      : msg.includes("UNAUTHORIZED")
+      ? 401
+      : msg.includes("FORBIDDEN") || msg.includes("MFA_REQUIRED")
+      ? 403
+      : 500;
     return NextResponse.json({ error: msg }, { status });
   }
 }

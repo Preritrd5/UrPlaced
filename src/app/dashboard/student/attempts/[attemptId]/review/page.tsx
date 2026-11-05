@@ -126,8 +126,10 @@ export default function AttemptReviewPage({
               <span className="font-semibold text-text-primary">{attempt.status}</span>
             </div>
             <div>
-              <span className="text-text-muted block text-[10px] uppercase font-mono">Scoring Type</span>
-              <span className="font-semibold text-text-primary">{breakdown.scoringStatus}</span>
+              <span className="text-text-muted block text-[10px] uppercase font-mono">Submission Mode</span>
+              <span className={`font-semibold ${breakdown.submissionReason && breakdown.submissionReason !== "MANUAL" ? "text-amber-700" : "text-text-primary"}`}>
+                {breakdown.submissionReason || "MANUAL"}
+              </span>
             </div>
             <div>
               <span className="text-text-muted block text-[10px] uppercase font-mono">Review Status</span>
@@ -138,6 +140,41 @@ export default function AttemptReviewPage({
           </div>
         </CardContent>
       </Card>
+
+      {/* Security Audit Banner if Auto-Submitted due to Violation or Timeout */}
+      {breakdown.submissionReason && breakdown.submissionReason !== "MANUAL" && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50/80 border border-amber-300 rounded-lg text-xs text-amber-950">
+          <ShieldAlert className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+          <div className="space-y-1 w-full">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-amber-900">
+                {breakdown.submissionReason === "TIMEOUT"
+                  ? "Assessment Finalized: Duration Expired"
+                  : "Assessment Auto-Submitted on Examination Security Trigger"}
+              </h4>
+              <Badge variant="outline" className="text-[10px] border-amber-400 bg-amber-100 text-amber-900 font-mono">
+                {breakdown.submissionReason}
+              </Badge>
+            </div>
+            <p className="text-amber-800 leading-relaxed">
+              {breakdown.submissionReason === "TIMEOUT"
+                ? "The allotted time limit expired during this session. Your responses were automatically finalized and evaluated."
+                : `This attempt was automatically submitted and permanently locked following an examination violation (${breakdown.submissionReason.replace("AUTO:", "")}). All answers saved prior to this event were preserved and scored.`}
+            </p>
+            {breakdown.violations && breakdown.violations.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-amber-200 space-y-1">
+                <span className="text-[10px] font-mono uppercase text-amber-800 block font-semibold">Recorded Audit Events:</span>
+                {breakdown.violations.map((v: any) => (
+                  <div key={v.id} className="flex items-center justify-between text-[11px] font-mono text-amber-900">
+                    <span>{v.violation_type} {v.metadata?.reason ? `— ${v.metadata.reason}` : ""}</span>
+                    <span>{new Date(v.created_at).toLocaleTimeString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Release Policy Notice Banner if Masked */}
       {!isReleased && (

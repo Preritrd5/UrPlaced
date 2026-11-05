@@ -516,9 +516,9 @@ export default function PlatformBillingPage() {
 
       {/* Record Payment Modal */}
       {payTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/60">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Record Payment for {payTarget.invoiceNumber}
               </CardTitle>
@@ -526,8 +526,8 @@ export default function PlatformBillingPage() {
                 {payTarget.tenantName} &bull; Total: ₹{payTarget.totalInr.toLocaleString()}
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleRecordPayment}>
-              <CardContent className="p-5 space-y-4">
+            <form onSubmit={handleRecordPayment} className="flex flex-col flex-1 overflow-hidden">
+              <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">Payment Method</label>
                   <select
@@ -566,26 +566,26 @@ export default function PlatformBillingPage() {
                     className="bg-surface border-border text-xs h-9"
                   />
                 </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setPayTarget(null)}
-                    disabled={payLoading}
-                    className="border-border text-xs h-9"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={payLoading}
-                    className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
-                  >
-                    {payLoading ? "Processing..." : "Confirm Payment"}
-                  </Button>
-                </div>
               </CardContent>
+
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPayTarget(null)}
+                  disabled={payLoading}
+                  className="border-border text-xs h-9"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={payLoading}
+                  className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
+                >
+                  {payLoading ? "Processing..." : "Confirm Payment"}
+                </Button>
+              </div>
             </form>
           </Card>
         </div>
@@ -593,15 +593,15 @@ export default function PlatformBillingPage() {
 
       {/* Generate Invoice Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-md bg-card border-border shadow-lg rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/60">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Generate Platform Invoice
               </CardTitle>
             </CardHeader>
-            <form onSubmit={handleCreateInvoice}>
-              <CardContent className="p-5 space-y-4">
+            <form onSubmit={handleCreateInvoice} className="flex flex-col flex-1 overflow-hidden">
+              <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">Select College</label>
                   <select
@@ -642,26 +642,26 @@ export default function PlatformBillingPage() {
                     className="bg-surface border-border text-xs h-9"
                   />
                 </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-border/60">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCreateModal(false)}
-                    disabled={createLoading}
-                    className="border-border text-xs h-9"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createLoading}
-                    className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
-                  >
-                    {createLoading ? "Generating..." : "Generate Invoice"}
-                  </Button>
-                </div>
               </CardContent>
+
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={createLoading}
+                  className="border-border text-xs h-9"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createLoading}
+                  className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9"
+                >
+                  {createLoading ? "Generating..." : "Generate Invoice"}
+                </Button>
+              </div>
             </form>
           </Card>
         </div>
@@ -669,9 +669,9 @@ export default function PlatformBillingPage() {
 
       {/* Issue Refund Modal (Q10 & Q20) */}
       {refundTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-lg bg-card border-border shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border/60">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <RotateCcw className="h-4 w-4 text-amber-700" />
                 <span>Issue Refund &mdash; {refundTarget.invoiceNumber}</span>
@@ -680,8 +680,8 @@ export default function PlatformBillingPage() {
                 {refundTarget.tenantName} &bull; Total Paid: ₹{refundTarget.totalInr.toLocaleString()}
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleIssueRefund}>
-              <CardContent className="p-5 space-y-4">
+            <form onSubmit={handleIssueRefund} className="flex flex-col flex-1 overflow-hidden">
+              <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">
                     Refund Amount (INR)
@@ -733,26 +733,26 @@ export default function PlatformBillingPage() {
                     Per UrPlaced financial policy, refunds do not automatically cancel subscriptions. Choose whether this institution retains access.
                   </p>
                 </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-border/60">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setRefundTarget(null)}
-                    disabled={refundLoading}
-                    className="border-border text-xs h-9 cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={refundLoading}
-                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-9 cursor-pointer"
-                  >
-                    {refundLoading ? "Processing Refund..." : "Confirm & Process Refund"}
-                  </Button>
-                </div>
               </CardContent>
+
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRefundTarget(null)}
+                  disabled={refundLoading}
+                  className="border-border text-xs h-9 cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={refundLoading}
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-9 cursor-pointer"
+                >
+                  {refundLoading ? "Processing Refund..." : "Confirm & Process Refund"}
+                </Button>
+              </div>
             </form>
           </Card>
         </div>

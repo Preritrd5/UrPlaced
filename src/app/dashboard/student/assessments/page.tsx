@@ -17,6 +17,9 @@ import {
   MessageSquare,
   HelpCircle,
   Users,
+  Maximize2,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +28,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/dialog-system";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function StudentAssessmentsPage() {
   const router = useRouter();
@@ -34,6 +45,11 @@ export default function StudentAssessmentsPage() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
   const [startingAttemptId, setStartingAttemptId] = useState<string | null>(null);
+
+  // Pre-Assessment Fullscreen Confirmation Modal State
+  const [selectedAssessmentForStart, setSelectedAssessmentForStart] = useState<any | null>(null);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+  const [isEnteringFullscreen, setIsEnteringFullscreen] = useState(false);
 
   // Practice Catalogue State
   const [catalogue, setCatalogue] = useState<any | null>(null);
@@ -102,26 +118,75 @@ export default function StudentAssessmentsPage() {
     }
   }
 
-  async function handleStartAssessment(assessmentId: string) {
+  async function handleConfirmAndStart() {
+    if (!selectedAssessmentForStart) return;
+    setFullscreenError(null);
+    setIsEnteringFullscreen(true);
+
     try {
-      setStartingAttemptId(assessmentId);
-      const res = await fetch(`/api/student/assessments/${assessmentId}/start`, {
+      // 1. Request fullscreen mode on document
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      } else if ((document.documentElement as any).webkitRequestFullscreen) {
+        await (document.documentElement as any).webkitRequestFullscreen();
+      } else if ((document.documentElement as any).mozRequestFullScreen) {
+        await (document.documentElement as any).mozRequestFullScreen();
+      } else if ((document.documentElement as any).msRequestFullscreen) {
+        await (document.documentElement as any).msRequestFullscreen();
+      }
+
+      // 2. Verify fullscreen is active
+      const isFullscreen = Boolean(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+
+      if (!isFullscreen) {
+        setFullscreenError(
+          "Fullscreen mode was not granted by your browser. Please allow fullscreen access to proceed with this examination."
+        );
+        setIsEnteringFullscreen(false);
+        return;
+      }
+
+      // 3. Initialize or resume attempt on server
+      const res = await fetch(`/api/student/assessments/${selectedAssessmentForStart.assessmentId}/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          client_meta: {
+            fullscreen_at_start: true,
+            user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+            screen_width: typeof window !== "undefined" ? window.innerWidth : 0,
+            screen_height: typeof window !== "undefined" ? window.innerHeight : 0,
+          },
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Unable to start assessment.");
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen().catch(() => {});
+        }
+        setFullscreenError(data.error || "Failed to initialize assessment on the server.");
+        setIsEnteringFullscreen(false);
         return;
       }
 
-      router.push(`/dashboard/student/assessments/${assessmentId}/take`);
+      // Close modal and navigate to the examination environment
+      const targetAssessmentId = selectedAssessmentForStart.assessmentId;
+      setSelectedAssessmentForStart(null);
+      router.push(`/dashboard/student/assessments/${targetAssessmentId}/take`);
     } catch (err: any) {
-      toast.error(err.message || "Failed to start assessment.");
-    } finally {
-      setStartingAttemptId(null);
+      if (document.fullscreenElement && document.exitFullscreen) {
+        await document.exitFullscreen().catch(() => {});
+      }
+      setFullscreenError(
+        err.message || "Fullscreen permission was denied or interrupted. Please retry."
+      );
+      setIsEnteringFullscreen(false);
     }
   }
 
@@ -300,24 +365,25 @@ export default function StudentAssessmentsPage() {
                           variant="primary"
                           size="sm"
                           className="w-full text-xs"
-                          asChild
+                          onClick={() => {
+                            setSelectedAssessmentForStart(item);
+                            setFullscreenError(null);
+                          }}
                         >
-                          <Link href={`/dashboard/student/assessments/${item.assessmentId}/take`}>
-                            <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Resume In-Progress Attempt
-                          </Link>
+                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Resume In-Progress Attempt
                         </Button>
                       ) : item.canAttempt ? (
                         <Button
                           variant="primary"
                           size="sm"
                           className="w-full text-xs"
-                          onClick={() => handleStartAssessment(item.assessmentId)}
-                          disabled={startingAttemptId === item.assessmentId}
+                          onClick={() => {
+                            setSelectedAssessmentForStart(item);
+                            setFullscreenError(null);
+                          }}
                         >
                           <Play className="h-3.5 w-3.5 mr-1.5" />
-                          {startingAttemptId === item.assessmentId
-                            ? "Preparing Workspace..."
-                            : item.attemptsCount > 0
+                          {item.attemptsCount > 0
                             ? `Retake Assessment (${item.attemptsCount + 1}/${item.allowedAttempts})`
                             : "Start Assessment"}
                         </Button>
@@ -577,6 +643,137 @@ export default function StudentAssessmentsPage() {
           )}
         </div>
       )}
+
+      {/* Pre-Assessment Security & Fullscreen Confirmation Modal */}
+      <Dialog
+        open={Boolean(selectedAssessmentForStart)}
+        onOpenChange={(open) => {
+          if (!open && !isEnteringFullscreen) {
+            setSelectedAssessmentForStart(null);
+            setFullscreenError(null);
+          }
+        }}
+      >
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border rounded-2xl shadow-xl p-0">
+          <DialogHeader className="shrink-0 p-4 sm:p-5 border-b border-border/60 bg-card space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-mono font-semibold uppercase tracking-wider w-fit">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Secure Examination Protocol
+            </div>
+            <DialogTitle className="text-xl font-heading font-extrabold text-text-primary tracking-tight">
+              Pre-Assessment Examination Confirmation
+            </DialogTitle>
+            <DialogDescription className="text-xs text-text-secondary">
+              Please review the mandatory examination environment requirements before initializing your attempt.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAssessmentForStart && (
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              {/* Assessment Context Card */}
+              <div className="p-3.5 rounded-xl bg-surface border border-border flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h4 className="font-heading font-bold text-sm text-text-primary truncate">
+                    {selectedAssessmentForStart.title}
+                  </h4>
+                  <p className="text-[11px] text-text-secondary line-clamp-1 mt-0.5">
+                    {selectedAssessmentForStart.description || "Assigned Institutional Examination"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant="outline" className="font-mono text-[10px] bg-card border-border">
+                    <Clock className="w-3 h-3 mr-1 text-primary" />
+                    {selectedAssessmentForStart.timeLimitMinutes
+                      ? `${selectedAssessmentForStart.timeLimitMinutes} mins`
+                      : "Untimed"}
+                  </Badge>
+                  <Badge variant="outline" className="font-mono text-[10px] bg-card border-border">
+                    Pass: {selectedAssessmentForStart.passPercentage}%
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Security & Violation Rules Card */}
+              <div className="space-y-2.5 p-4 rounded-xl bg-primary/5 border border-primary/20 text-xs">
+                <div className="font-heading font-bold text-text-primary flex items-center gap-2">
+                  <Maximize2 className="w-4 h-4 text-primary" />
+                  Examination Instructions &amp; Security Invariants:
+                </div>
+                <ul className="space-y-2 text-text-secondary">
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-primary font-mono shrink-0">1.</span>
+                    <span>
+                      <strong>Mandatory Fullscreen:</strong> This assessment must be completed strictly in browser fullscreen mode. The test will not start without active fullscreen mode.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-primary font-mono shrink-0">2.</span>
+                    <span>
+                      <strong>Tab-Switching &amp; Minimizing Prohibited:</strong> Navigating away from the examination window or switching browser tabs is treated as an active examination violation.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-primary font-mono shrink-0">3.</span>
+                    <span>
+                      <strong>Automatic Submission:</strong> Exiting fullscreen or navigating away will automatically submit the assessment, finalize your answers, and revoke re-entry.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-primary font-mono shrink-0">4.</span>
+                    <span>
+                      <strong>Authoritative Timer:</strong> The examination timer begins only after fullscreen mode is successfully activated and verified by the server.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold text-primary font-mono shrink-0">5.</span>
+                    <span>
+                      <strong>Continuous Auto-Save:</strong> All selected answers are continuously persisted to the institutional server throughout the assessment.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Fullscreen Error Alert */}
+              {fullscreenError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                  <div>
+                    <span className="font-bold">Fullscreen Entry Failed: </span>
+                    {fullscreenError}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex flex-col sm:flex-row justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isEnteringFullscreen}
+              onClick={() => {
+                setSelectedAssessmentForStart(null);
+                setFullscreenError(null);
+              }}
+              className="border-border text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={isEnteringFullscreen}
+              onClick={handleConfirmAndStart}
+              className="text-xs bg-primary hover:bg-primary-hover gap-1.5"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              {isEnteringFullscreen ? "Entering Fullscreen..." : "Confirm & Enter Fullscreen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

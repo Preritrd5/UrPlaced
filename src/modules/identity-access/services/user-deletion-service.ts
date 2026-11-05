@@ -462,6 +462,13 @@ export class UserDeletionService {
         action: "USER_PERMANENTLY_DELETED",
         resource_type: "USER",
         resource_id: targetUserId,
+        metadata: {
+          deletedEmail: targetEmail,
+          deletedFullName: targetFullName,
+          reason: cleanReason,
+          actorRole,
+          details,
+        },
         before_state: {
           email: targetEmail,
           fullName: targetFullName,

@@ -140,10 +140,10 @@ export const CONTROLLED_FEATURE_CATALOGUE: PlanFeatureDefinition[] = [
   // 5. Institutional Admin
   {
     key: "department_hierarchy",
-    name: "Department & Faculty Scoping",
-    description: "Multi-department scoping with granular trainer and placement staff permissions.",
+    name: "Department & Academic Structure",
+    description: "Academic department management, degree branches, and batch hierarchy.",
     category: "INSTITUTIONAL_ADMIN",
-    defaultTiers: ["enterprise"],
+    defaultTiers: ["starter", "growth", "enterprise"],
   },
   {
     key: "audit_data_export_hub",

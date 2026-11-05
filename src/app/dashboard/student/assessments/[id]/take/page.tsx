@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, use } from "react";
+import React, { useState, useEffect, useRef, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Clock,
@@ -14,6 +14,9 @@ import {
   FileText,
   HelpCircle,
   ShieldCheck,
+  ShieldAlert,
+  Maximize2,
+  Lock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +40,10 @@ export default function AssessmentTakingPage({
   const [error, setError] = useState<string | null>(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
 
+  // Fullscreen state & gate
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+
   // Autosave sequence tracker per question
   const [sequenceMap, setSequenceMap] = useState<Record<string, number>>({});
   const [answersMap, setAnswersMap] = useState<Record<string, any>>({});
@@ -47,10 +54,19 @@ export default function AssessmentTakingPage({
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Submit Modal
+  // Submit Modal & State
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Security Flags & refs to prevent false violations
+  const isSubmittingRef = useRef(false);
+  const hasAutoSubmittedRef = useRef(false);
+  const [autoSubmitNotice, setAutoSubmitNotice] = useState<{
+    violationType: string;
+    message: string;
+  } | null>(null);
+
+  // 1. Initialize Workspace
   useEffect(() => {
     initWorkspace();
     return () => {
@@ -68,12 +84,23 @@ export default function AssessmentTakingPage({
       const res = await fetch(`/api/student/assessments/${assessmentId}/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          client_meta: {
+            fullscreen_requested: true,
+            user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+          },
+        }),
       });
 
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to load assessment.");
+      }
+
+      // If attempt is already submitted/expired, redirect immediately to review
+      if (data.attempt && ["SUBMITTED", "SCORED", "RESULT_RELEASED", "EXPIRED"].includes(data.attempt.status)) {
+        router.push(`/dashboard/student/attempts/${data.attempt.id}/review`);
+        return;
       }
 
       // Fetch full attempt state
@@ -106,19 +133,13 @@ export default function AssessmentTakingPage({
       setFlagsMap(flg);
       setSequenceMap(seq);
 
-      // Setup server timer
       if (stateData.remainingSeconds != null) {
         setRemainingSeconds(stateData.remainingSeconds);
-        timerRef.current = setInterval(() => {
-          setRemainingSeconds((prev) => {
-            if (prev == null || prev <= 1) {
-              clearInterval(timerRef.current!);
-              handleTimeExpired(data.attempt.id);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+      }
+
+      // Check current fullscreen status
+      if (typeof document !== "undefined" && document.fullscreenElement) {
+        setIsFullscreen(true);
       }
     } catch (err: any) {
       setError(err.message || "Failed to initialize workspace.");
@@ -127,27 +148,248 @@ export default function AssessmentTakingPage({
     }
   }
 
-  async function handleTimeExpired(attemptId: string) {
+  // 2. Countdown Timer: ONLY ticks down when isFullscreen is TRUE and workspace is active
+  useEffect(() => {
+    if (loading || !workspace || !isFullscreen || hasAutoSubmittedRef.current || isSubmittingRef.current) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
+    if (remainingSeconds != null && remainingSeconds > 0) {
+      timerRef.current = setInterval(() => {
+        setRemainingSeconds((prev) => {
+          if (prev == null || prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            handleTimeExpired(workspace.attempt.id);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFullscreen, loading, workspace]);
+
+  // 3. Trigger Auto-Submission on Security Violation
+  const handleAutoSubmit = useCallback(
+    async (violationType: string, reasonMessage: string) => {
+      if (isSubmittingRef.current || hasAutoSubmittedRef.current || !workspace) {
+        return;
+      }
+
+      hasAutoSubmittedRef.current = true;
+      isSubmittingRef.current = true;
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      setAutoSubmitNotice({
+        violationType,
+        message: reasonMessage,
+      });
+
+      // Exit fullscreen if still active
+      if (typeof document !== "undefined" && document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch {
+          // ignore error
+        }
+      }
+
+      try {
+        // Send violation report to backend (backend auto-finalizes and scores attempt)
+        await fetch(`/api/student/attempts/${workspace.attempt.id}/violation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            violationType,
+            metadata: {
+              reason: reasonMessage,
+              timestamp: new Date().toISOString(),
+              remainingSeconds,
+            },
+            autoSubmit: true,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to post violation to server:", err);
+      }
+    },
+    [workspace, remainingSeconds]
+  );
+
+  // 4. Fullscreen Request Handler
+  async function requestFullscreenGate() {
     try {
+      setFullscreenError(null);
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      } else if ((document.documentElement as any).webkitRequestFullscreen) {
+        await (document.documentElement as any).webkitRequestFullscreen();
+      } else if ((document.documentElement as any).msRequestFullscreen) {
+        await (document.documentElement as any).msRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } catch (err: any) {
+      setFullscreenError("Browser rejected fullscreen request. Please allow fullscreen permissions in your browser bar and try again.");
+    }
+  }
+
+  // 5. Security & Violation Event Listeners
+  useEffect(() => {
+    if (!workspace || loading) return;
+
+    // Fullscreen change listener
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
+
+      // If exiting fullscreen during active exam (not deliberate submit)
+      if (!active && !isSubmittingRef.current && !hasAutoSubmittedRef.current) {
+        handleAutoSubmit(
+          "FULLSCREEN_EXIT",
+          "Assessment window exited full-screen mode. In accordance with examination security policy, your test has been automatically submitted."
+        );
+      }
+    };
+
+    // Visibility change listener (tab switch or minimization)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        if (!isSubmittingRef.current && !hasAutoSubmittedRef.current) {
+          handleAutoSubmit(
+            "TAB_SWITCH",
+            "Browser tab was switched or minimized during the active assessment session. Your attempt has been automatically finalized."
+          );
+        }
+      }
+    };
+
+    // Window blur listener
+    const handleWindowBlur = () => {
+      if (!isSubmittingRef.current && !hasAutoSubmittedRef.current) {
+        // Window lost focus
+        handleAutoSubmit(
+          "WINDOW_BLUR",
+          "Browser window lost focus. Multi-tasking during active examinations is prohibited."
+        );
+      }
+    };
+
+    // Pagehide / BeforeUnload beacon
+    const handlePageHide = () => {
+      if (!isSubmittingRef.current && !hasAutoSubmittedRef.current && workspace?.attempt?.id) {
+        const payload = JSON.stringify({
+          violationType: "NAVIGATION_AWAY",
+          metadata: { reason: "User navigated away or closed examination window" },
+          autoSubmit: true,
+        });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(
+            `/api/student/attempts/${workspace.attempt.id}/violation`,
+            new Blob([payload], { type: "application/json" })
+          );
+        }
+      }
+    };
+
+    // Clipboard and context menu restrictions
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      toast.warning("Right-click context menu is disabled during the assessment.");
+    };
+
+    const handleCopyCutPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      toast.warning("Clipboard operations (copy/cut/paste) are prohibited during examinations.");
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        ["c", "v", "x", "p", "u", "s"].includes(e.key.toLowerCase())
+      ) {
+        e.preventDefault();
+        toast.warning("Prohibited shortcut disabled during assessment.");
+      }
+      if (e.key === "F12") {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("copy", handleCopyCutPaste);
+    window.addEventListener("cut", handleCopyCutPaste);
+    window.addEventListener("paste", handleCopyCutPaste);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("copy", handleCopyCutPaste);
+      window.removeEventListener("cut", handleCopyCutPaste);
+      window.removeEventListener("paste", handleCopyCutPaste);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [workspace, loading, handleAutoSubmit]);
+
+  // 6. Time Expired Handler
+  async function handleTimeExpired(attemptId: string) {
+    if (isSubmittingRef.current || hasAutoSubmittedRef.current) return;
+    isSubmittingRef.current = true;
+    hasAutoSubmittedRef.current = true;
+
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch {}
+    }
+
+    try {
+      await fetch(`/api/student/attempts/${attemptId}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionReason: "TIMEOUT" }),
+      });
       await alertDialog({
-        title: "Time Limit Expired",
-        description: "Your allotted assessment duration has expired. Your responses have been automatically submitted for scoring.",
-        confirmText: "View Review",
+        title: "Allotted Duration Expired",
+        description: "Your assessment duration has reached zero. Your answers have been safely submitted and evaluated.",
+        confirmText: "View Assessment Results",
         variant: "warning",
       });
-      await fetch(`/api/student/attempts/${attemptId}/submit`, { method: "POST" });
     } finally {
       router.push(`/dashboard/student/attempts/${attemptId}/review`);
     }
   }
 
+  // 7. Answer Autosave Function
   async function saveCurrentAnswer(
     qId: string,
     vId: string,
     newPayload: any,
     isFlagged: boolean
   ) {
-    if (!workspace) return;
+    if (!workspace || isSubmittingRef.current || hasAutoSubmittedRef.current) return;
     const currentSeq = (sequenceMap[qId] || 1) + 1;
     setSequenceMap((prev) => ({ ...prev, [qId]: currentSeq }));
     setAutosaveStatus("SAVING");
@@ -224,12 +466,31 @@ export default function AssessmentTakingPage({
     saveCurrentAnswer(qId, vId, answersMap[qId] || {}, nextFlag);
   }
 
+  // 8. Final Manual Submit Handler
   async function handleFinalSubmit() {
-    if (!workspace) return;
+    if (!workspace || isSubmittingRef.current) return;
     try {
       setSubmitting(true);
+      isSubmittingRef.current = true;
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      // Exit fullscreen mode on intentional submission
+      if (typeof document !== "undefined" && document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch {
+          // ignore
+        }
+      }
+
       const res = await fetch(`/api/student/attempts/${workspace.attempt.id}/submit`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionReason: "MANUAL" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -238,6 +499,7 @@ export default function AssessmentTakingPage({
       router.push(`/dashboard/student/attempts/${workspace.attempt.id}/review`);
     } catch (err: any) {
       toast.error(err.message || "Submission failed.");
+      isSubmittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -255,6 +517,45 @@ export default function AssessmentTakingPage({
         <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/student/assessments")}>
           Return to Hub
         </Button>
+      </div>
+    );
+  }
+
+  // Auto-Submission Violation Modal overlay
+  if (autoSubmitNotice) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <Card className="w-full max-w-lg border-red-500/50 bg-[#F8F7F3] shadow-2xl animate-in fade-in duration-200">
+          <CardHeader className="text-center pb-3">
+            <div className="h-14 w-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+              <ShieldAlert className="h-8 w-8 text-red-600" />
+            </div>
+            <CardTitle className="text-xl font-bold font-heading text-red-900">
+              Assessment Terminated: Security Violation
+            </CardTitle>
+            <p className="text-xs text-text-muted mt-1 uppercase font-mono tracking-wider">
+              Violation Code: {autoSubmitNotice.violationType}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3.5 bg-red-50/80 border border-red-200 rounded-lg text-xs text-red-950 space-y-2 leading-relaxed">
+              <p className="font-medium">{autoSubmitNotice.message}</p>
+              <p className="text-[11px] text-red-800">
+                All answers saved prior to this violation have been securely preserved and submitted for scoring. Re-entry to this assessment attempt is permanently locked.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Button
+                variant="primary"
+                size="default"
+                className="w-full font-semibold"
+                onClick={() => router.push(`/dashboard/student/attempts/${workspace.attempt.id}/review`)}
+              >
+                Proceed to Attempt Review & Breakdown
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -287,7 +588,58 @@ export default function AssessmentTakingPage({
   const isLowTime = remainingSeconds != null && remainingSeconds < 300; // < 5 mins
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-12">
+    <div className="space-y-4 max-w-7xl mx-auto pb-12 select-none" onContextMenu={(e) => e.preventDefault()}>
+      {/* FULLSCREEN GATE OVERLAY: Displayed if browser drops out of fullscreen before exam is submitted */}
+      {!isFullscreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
+          <Card className="w-full max-w-lg border-primary/40 bg-[#F8F7F3] shadow-2xl animate-in zoom-in-95 duration-150">
+            <CardHeader className="text-center pb-2">
+              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <Maximize2 className="h-7 w-7 text-primary" />
+              </div>
+              <CardTitle className="text-xl font-bold font-heading text-text-primary">
+                Full-Screen Mode Required
+              </CardTitle>
+              <p className="text-xs text-text-secondary mt-1">
+                UrPlaced examination security rules require active full-screen mode.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-3.5 bg-input rounded-lg border border-border text-xs text-text-secondary space-y-2">
+                <div className="flex items-center gap-2 text-text-primary font-medium">
+                  <Lock className="h-4 w-4 text-primary" />
+                  <span>Exam Integrity Active</span>
+                </div>
+                <p>
+                  Your assessment timer is paused until full-screen mode is re-engaged. Questions are secured to prevent unauthorized access.
+                </p>
+                <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                  Notice: Once inside the assessment, exiting full-screen or switching tabs will result in automatic submission.
+                </p>
+              </div>
+
+              {fullscreenError && (
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded text-xs text-red-700 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>{fullscreenError}</span>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <Button
+                  variant="primary"
+                  size="default"
+                  onClick={requestFullscreenGate}
+                  className="w-full font-semibold shadow-md"
+                >
+                  <Maximize2 className="h-4 w-4 mr-2" /> Enter Full-Screen to Continue
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Top Navbar */}
       <div className="sticky top-0 z-40 bg-card/95 backdrop-blur border border-border rounded-lg p-3 shadow-sm flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -300,6 +652,10 @@ export default function AssessmentTakingPage({
               <span>Attempt #{workspace.attempt.attempt_number}</span>
               <span>&bull;</span>
               <span>Pass Mark: {workspace.assessment.passPercentage}%</span>
+              <span>&bull;</span>
+              <span className="text-secondary font-medium flex items-center gap-1">
+                <Lock className="h-3 w-3" /> Full-Screen Secured
+              </span>
             </div>
           </div>
         </div>
@@ -384,8 +740,8 @@ export default function AssessmentTakingPage({
               </button>
             </div>
 
-            {/* Prompt Body */}
-            <div className="py-6 text-sm text-text-primary font-body whitespace-pre-wrap leading-relaxed">
+            {/* Prompt Body (Select None protected) */}
+            <div className="py-6 text-sm text-text-primary font-body whitespace-pre-wrap leading-relaxed select-none">
               {currentQ.prompt}
             </div>
 

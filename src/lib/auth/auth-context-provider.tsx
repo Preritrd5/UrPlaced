@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getTabStorageKey, tabSessionStorage } from "@/lib/auth/auth-tab";
 import type { UserRole, PermissionIdentifier } from "@/modules/identity-access/services/policy-engine";
 import type { AccountCategory } from "@/lib/navigation/navigation-config";
 
@@ -198,8 +199,18 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
     if (activeAbortRef.current) {
       activeAbortRef.current.abort();
     }
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // Local signOut fallback
+    }
+    try {
+      const storageKey = getTabStorageKey();
+      tabSessionStorage.removeItem(storageKey);
+    } catch {
+      // Storage fallback
+    }
     setData(INITIAL_STATE);
     setIsLoading(false);
     window.location.href = "/auth/signin";

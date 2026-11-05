@@ -88,10 +88,45 @@ describe("Laptop Responsiveness Architecture & Viewport Adaptability", () => {
     expect(content).toContain("flex flex-col xl:flex-row items-stretch xl:items-center gap-3");
   });
 
-  it("verifies Institutional Analytics KPI grid uses responsive column steps to prevent cramped 4-col layout below lg", () => {
-    const analyticsPath = path.resolve(__dirname, "../app/dashboard/analytics/page.tsx");
-    const content = fs.readFileSync(analyticsPath, "utf-8");
+  it("verifies Super Admin Billing modals pin headers/footers with shrink-0 and enforce max-h-[calc(100dvh-2rem)]", () => {
+    const billingPath = path.resolve(__dirname, "../app/preritrd/(protected)/billing/page.tsx");
+    const content = fs.readFileSync(billingPath, "utf-8");
 
-    expect(content).toContain("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6");
+    // Must enforce viewport bounded height
+    expect(content).toContain("max-h-[calc(100dvh-2rem)]");
+    // Pinned header
+    expect(content).toContain("shrink-0 pb-3 border-b border-border/60 bg-card");
+    // Scrollable body
+    expect(content).toContain("flex-1 overflow-y-auto");
+    // Pinned footer
+    expect(content).toContain("shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2");
+  });
+
+  it("verifies Super Admin Colleges modals enforce resilient viewport pattern and pinned actions", () => {
+    const collegesPath = path.resolve(__dirname, "../app/preritrd/(protected)/colleges/page.tsx");
+    const content = fs.readFileSync(collegesPath, "utf-8");
+
+    expect(content).toContain("max-h-[calc(100dvh-2rem)]");
+    expect(content).toContain("overflow-y-auto");
+    expect(content).toContain("shrink-0");
+  });
+
+  it("verifies Super Admin Subscriptions modals enforce resilient viewport pattern and pinned actions", () => {
+    const subsPath = path.resolve(__dirname, "../app/preritrd/(protected)/subscriptions/page.tsx");
+    const content = fs.readFileSync(subsPath, "utf-8");
+
+    expect(content).toContain("max-h-[calc(100dvh-2rem)]");
+    expect(content).toContain("overflow-y-auto");
+    expect(content).toContain("shrink-0");
+  });
+
+  it("verifies Student Pre-Assessment confirmation modal enforces max-h-[calc(100dvh-2rem)] and pinned controls", () => {
+    const studentAssessPath = path.resolve(__dirname, "../app/dashboard/student/assessments/page.tsx");
+    const content = fs.readFileSync(studentAssessPath, "utf-8");
+
+    expect(content).toContain("max-h-[calc(100dvh-2rem)]");
+    expect(content).toContain("shrink-0 p-4 sm:p-5 border-b border-border/60 bg-card");
+    expect(content).toContain("flex-1 overflow-y-auto");
+    expect(content).toContain("shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50");
   });
 });

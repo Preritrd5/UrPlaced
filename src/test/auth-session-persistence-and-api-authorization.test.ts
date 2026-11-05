@@ -4,6 +4,7 @@ import { GET as getNotifications } from "@/app/api/notifications/route";
 import { GET as getProfile } from "@/app/api/profile/route";
 import { GET as getStudentDashboard } from "@/app/api/student/dashboard/route";
 import { getTabAccessToken } from "@/lib/auth/auth-fetch";
+import { getTabStorageKey } from "@/lib/auth/auth-tab";
 
 // Mock Supabase Server and Admin
 const mockUser = {
@@ -253,29 +254,27 @@ describe("Authentication, Session Persistence & Intermittent API Authorization R
     });
   });
 
-  describe("4. getTabAccessToken Cookie Fallback & Session Persistence", () => {
-    it("falls back to document.cookie sb-access-token when sessionStorage is empty", () => {
+  describe("4. getTabAccessToken Tab Storage Isolation & Non-Leakage", () => {
+    it("returns null when tab sessionStorage is empty even if document.cookie contains auth tokens", () => {
       Object.defineProperty(document, "cookie", {
         writable: true,
-        value: "sb-access-token=fallback-cookie-token; path=/",
+        value: "sb-access-token=shared-origin-cookie-token; path=/",
       });
 
+      // Strict Tab Isolation: An unauthenticated tab must NOT steal or adopt origin cookies
       const token = getTabAccessToken();
-      expect(token).toBe("fallback-cookie-token");
+      expect(token).toBeNull();
     });
 
-    it("falls back to chunked Supabase SSR cookie format when present", () => {
-      const sessionPayload = Buffer.from(
-        JSON.stringify({ access_token: "chunked-ssr-token" })
-      ).toString("base64");
-
-      Object.defineProperty(document, "cookie", {
-        writable: true,
-        value: `sb-testproject-auth-token=base64-${sessionPayload}; path=/`,
-      });
+    it("reads and returns the tab's isolated access token when present in tabSessionStorage", () => {
+      const storageKey = getTabStorageKey();
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({ access_token: "tab-isolated-bearer-token" })
+      );
 
       const token = getTabAccessToken();
-      expect(token).toBe("chunked-ssr-token");
+      expect(token).toBe("tab-isolated-bearer-token");
     });
   });
 });

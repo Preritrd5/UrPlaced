@@ -360,7 +360,7 @@ export class PlatformCollegeService {
             staff_limit: 25,
             billing_interval: "ANNUAL",
             limits: { max_students: 2500, max_staff: 25, max_drives: 100, max_assessments_monthly: 200, ai_credits_monthly: 500 },
-            entitlements: { core_drives_management: true, student_roster_directory: true, company_management: true, standard_assessments: true, subject_question_banks: true, custom_question_sets: true, drivefit_evaluator: true, mistake_to_mastery: true, placement_memory_analytics: true, automated_eligibility_engine: true, ai_question_generator: true, ai_tutor_assistant: true },
+            entitlements: { core_drives_management: true, student_roster_directory: true, company_management: true, standard_assessments: true, subject_question_banks: true, custom_question_sets: true, drivefit_evaluator: true, mistake_to_mastery: true, placement_memory_analytics: true, automated_eligibility_engine: true, ai_question_generator: true, ai_tutor_assistant: true, department_hierarchy: true },
           };
         } else if (cleanPlanId === "starter") {
           planRecord = {
@@ -373,7 +373,7 @@ export class PlatformCollegeService {
             staff_limit: 5,
             billing_interval: "ANNUAL",
             limits: { max_students: 500, max_staff: 5, max_active_drives: 10, max_assessments_monthly: 50, ai_credits_monthly: 0 },
-            entitlements: { core_drives_management: true, student_roster_directory: true, company_management: true, standard_assessments: true, subject_question_banks: true, custom_question_sets: false, drivefit_evaluator: false, mistake_to_mastery: false, placement_memory_analytics: false, automated_eligibility_engine: false, ai_question_generator: false, ai_tutor_assistant: false },
+            entitlements: { core_drives_management: true, student_roster_directory: true, company_management: true, standard_assessments: true, subject_question_banks: true, custom_question_sets: false, drivefit_evaluator: false, mistake_to_mastery: false, placement_memory_analytics: false, automated_eligibility_engine: false, ai_question_generator: false, ai_tutor_assistant: false, department_hierarchy: true },
           };
         } else if (cleanPlanId === "enterprise") {
           planRecord = {
@@ -386,7 +386,7 @@ export class PlatformCollegeService {
             staff_limit: 100,
             billing_interval: "ANNUAL",
             limits: { max_students: 10000, max_staff: 100, max_active_drives: 500, max_assessments_monthly: 1000, ai_credits_monthly: 5000 },
-            entitlements: { core_drives_management: true, student_roster_directory: true, company_management: true, standard_assessments: true, subject_question_banks: true, custom_question_sets: true, drivefit_evaluator: true, mistake_to_mastery: true, placement_memory_analytics: true, automated_eligibility_engine: true, ai_question_generator: true, ai_tutor_assistant: true },
+            entitlements: { core_drives_management: true, student_roster_directory: true, company_management: true, standard_assessments: true, subject_question_banks: true, custom_question_sets: true, drivefit_evaluator: true, mistake_to_mastery: true, placement_memory_analytics: true, automated_eligibility_engine: true, ai_question_generator: true, ai_tutor_assistant: true, department_hierarchy: true },
           };
         } else {
           throw new Error(`Target subscription plan '${cleanPlanId}' does not exist.`);
@@ -426,38 +426,27 @@ export class PlatformCollegeService {
         entitlements_snapshot: snapshot,
       };
 
-      // Attempt 1: Try inserting with extended schema (snapshot and plan_version)
-      try {
-        const subInsertQuery = admin.from("college_subscriptions").insert(extendedPayload);
-        if (typeof (subInsertQuery as any).select === "function") {
-          const selectObj = (subInsertQuery as any).select();
-          const res = typeof selectObj.maybeSingle === "function"
-            ? await selectObj.maybeSingle()
-            : typeof selectObj.single === "function"
-            ? await selectObj.single()
-            : await selectObj;
-          if (!res?.error && res?.data) {
-            subData = res.data;
-          } else {
-            subErr = res?.error;
-          }
-        } else {
-          await subInsertQuery;
-          subData = {
-            id: `sub-${tenant.id}`,
-            ...extendedPayload,
-          };
-        }
-      } catch (err: any) {
-        subErr = err;
-      }
+      // Cascading Insert Strategy for college_subscriptions:
+      // Candidate 1: Extended schema (snapshot & plan_version) with status: "PENDING_PAYMENT"
+      // Candidate 2: Extended schema (snapshot & plan_version) with status: "PAST_DUE" (if live check constraint rejects "PENDING_PAYMENT")
+      // Candidate 3: Base schema (no snapshot, no plan_version) with status: "PENDING_PAYMENT"
+      // Candidate 4: Base schema (no snapshot, no plan_version) with status: "PAST_DUE" (for unmigrated live database check constraint)
+      const candidatePayloads = [
+        { ...extendedPayload, status: "PENDING_PAYMENT" },
+        { ...extendedPayload, status: "TRIALING" },
+        { ...extendedPayload, status: "PAST_DUE" },
+        { ...extendedPayload, status: "ACTIVE" },
+        { ...basePayload, status: "PENDING_PAYMENT" },
+        { ...basePayload, status: "TRIALING" },
+        { ...basePayload, status: "PAST_DUE" },
+        { ...basePayload, status: "ACTIVE" },
+      ];
 
-      // Attempt 2: If extended schema failed (e.g. PGRST204 column missing), fallback to base schema
-      if (!subData) {
+      for (const payload of candidatePayloads) {
         try {
-          const baseInsertQuery = admin.from("college_subscriptions").insert(basePayload);
-          if (typeof (baseInsertQuery as any).select === "function") {
-            const selectObj = (baseInsertQuery as any).select();
+          const subInsertQuery = admin.from("college_subscriptions").insert(payload);
+          if (typeof (subInsertQuery as any).select === "function") {
+            const selectObj = (subInsertQuery as any).select();
             const res = typeof selectObj.maybeSingle === "function"
               ? await selectObj.maybeSingle()
               : typeof selectObj.single === "function"
@@ -466,16 +455,18 @@ export class PlatformCollegeService {
             if (!res?.error && res?.data) {
               subData = res.data;
               subErr = null;
-            } else if (!res?.error) {
-              subData = { id: `sub-${tenant.id}`, ...basePayload };
-              subErr = null;
+              break;
             } else {
-              subErr = res.error;
+              subErr = res?.error;
             }
           } else {
-            await baseInsertQuery;
-            subData = { id: `sub-${tenant.id}`, ...basePayload };
+            await subInsertQuery;
+            subData = {
+              id: `sub-${tenant.id}`,
+              ...payload,
+            };
             subErr = null;
+            break;
           }
         } catch (err: any) {
           subErr = err;

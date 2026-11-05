@@ -12,10 +12,14 @@ import {
   AssignmentStatus,
 } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface AssignAssessmentInput {
   assessment_id: string;
   student_ids?: string[];
+  department_ids?: string[];
+  graduation_years?: number[];
+  target_type?: "COLLEGE_WIDE" | "DEPARTMENT" | "BATCH" | "INDIVIDUAL" | "COHORT";
   cohort_name?: string;
   window_start?: string | null;
   window_end?: string | null;
@@ -217,22 +221,45 @@ export function studentMatchesCohort(
 
 export class AssignmentService {
   /**
-   * Assigns a published assessment to individual students or an entire cohort.
+   * Authoritatively assigns a published assessment to students within an institution.
+   * Resolves eligible student recipients based on targeting criteria (College-wide,
+   * Academic Department, Graduation Year Batch, Cohort label, or explicit Student IDs)
+   * and persists durable recipient records with explicit student_id bindings.
    */
   public static async assignAssessment(
     tenantId: string,
     assignedByUserId: string,
     input: AssignAssessmentInput
-  ): Promise<{ success: boolean; createdCount: number; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+  ): Promise<{ success: boolean; createdCount: number; recipientCount?: number; error?: string }> {
+    let supabase: any = null;
+    try {
+      supabase = await createServerSupabaseClient();
+    } catch {
+      supabase = null;
+    }
+    const admin = createAdminClient();
+    const db = supabase || admin;
 
-    // Verify assessment exists and is PUBLISHED
-    const { data: assessment, error: assErr } = await supabase
+    // 1. Verify assessment exists, belongs to tenant, and is PUBLISHED
+    let { data: assessment, error: assErr } = await db
       .from("assessments")
-      .select("id, status")
+      .select("id, status, title")
       .eq("tenant_id", tenantId)
       .eq("id", input.assessment_id)
       .single();
+
+    if ((assErr || !assessment) && db !== admin) {
+      const { data: fallbackAss } = await admin
+        .from("assessments")
+        .select("id, status, title")
+        .eq("tenant_id", tenantId)
+        .eq("id", input.assessment_id)
+        .single();
+      if (fallbackAss) {
+        assessment = fallbackAss;
+        assErr = null;
+      }
+    }
 
     if (assErr || !assessment) {
       return { success: false, createdCount: 0, error: "Assessment not found." };
@@ -244,6 +271,121 @@ export class AssignmentService {
         createdCount: 0,
         error: "Only published assessments can be assigned to students.",
       };
+    }
+
+    // 2. Resolve eligible student recipients within this college tenant
+    let resolvedStudentIds: string[] = [];
+
+    const isExplicitIndividual =
+      input.target_type === "INDIVIDUAL" ||
+      (Array.isArray(input.student_ids) && input.student_ids.length > 0);
+
+    const isExplicitDepartment =
+      input.target_type === "DEPARTMENT" ||
+      (Array.isArray(input.department_ids) && input.department_ids.length > 0);
+
+    const isExplicitBatch =
+      input.target_type === "BATCH" ||
+      (Array.isArray(input.graduation_years) && input.graduation_years.length > 0);
+
+    if (isExplicitIndividual && Array.isArray(input.student_ids) && input.student_ids.length > 0) {
+      // Validate that all supplied student IDs belong to this tenant, are active and non-archived
+      const { data: validStudents } = await admin
+        .from("students")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("is_archived", false)
+        .eq("academic_status", "ACTIVE")
+        .in("id", input.student_ids);
+
+      resolvedStudentIds = (validStudents || []).map((s: any) => s.id);
+    } else if (isExplicitDepartment && Array.isArray(input.department_ids) && input.department_ids.length > 0) {
+      // Resolve students belonging to selected departments
+      const { data: deptStudents } = await admin
+        .from("students")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("is_archived", false)
+        .eq("academic_status", "ACTIVE")
+        .in("department_id", input.department_ids);
+
+      resolvedStudentIds = (deptStudents || []).map((s: any) => s.id);
+    } else if (isExplicitBatch && Array.isArray(input.graduation_years) && input.graduation_years.length > 0) {
+      // Resolve students belonging to selected graduation batches
+      const { data: batchStudents } = await admin
+        .from("students")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("is_archived", false)
+        .eq("academic_status", "ACTIVE")
+        .in("graduation_year", input.graduation_years);
+
+      resolvedStudentIds = (batchStudents || []).map((s: any) => s.id);
+    } else if (input.cohort_name && !isCollegeWideCohort(input.cohort_name)) {
+      // Cohort string (e.g. "CSE 2026", "Mechanical 2025") — resolve matching students
+      const { data: allActiveStudents } = await admin
+        .from("students")
+        .select(`
+          id,
+          is_archived,
+          academic_status,
+          department_id,
+          graduation_year,
+          degree,
+          department:departments(name, code)
+        `)
+        .eq("tenant_id", tenantId)
+        .eq("is_archived", false)
+        .eq("academic_status", "ACTIVE");
+
+      resolvedStudentIds = (allActiveStudents || [])
+        .filter((s: any) => {
+          const rawDept = s.department;
+          const dept = Array.isArray(rawDept) ? rawDept[0] : rawDept;
+          return studentMatchesCohort(
+            {
+              id: s.id,
+              is_archived: s.is_archived,
+              academic_status: s.academic_status,
+              department_id: s.department_id,
+              graduation_year: s.graduation_year,
+              degree: s.degree,
+              department: dept,
+            },
+            input.cohort_name
+          );
+        })
+        .map((s: any) => s.id);
+    } else {
+      // College-Wide: All active, non-archived enrolled students in this college tenant
+      const { data: allStudents } = await admin
+        .from("students")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("is_archived", false)
+        .eq("academic_status", "ACTIVE");
+
+      resolvedStudentIds = (allStudents || []).map((s: any) => s.id);
+    }
+
+    // 3. Check existing active assignments for this assessment & tenant to prevent duplicates
+    const { data: existingAssignments } = await admin
+      .from("assessment_assignments")
+      .select("id, student_id")
+      .eq("tenant_id", tenantId)
+      .eq("assessment_id", input.assessment_id);
+
+    const existingStudentMap = new Map<string, string>();
+    let hasCohortHeaderRow = false;
+
+    if (existingAssignments) {
+      for (const a of existingAssignments) {
+        if (a.student_id) {
+          existingStudentMap.set(a.student_id, a.id);
+        } else {
+          hasCohortHeaderRow = true;
+        }
+      }
     }
 
     const rowsToInsert: Array<{
@@ -258,13 +400,21 @@ export class AssignmentService {
       assigned_by: string;
     }> = [];
 
-    if (Array.isArray(input.student_ids) && input.student_ids.length > 0) {
-      for (const studentId of input.student_ids) {
+    const effectiveCohortName = input.cohort_name || (
+      isExplicitDepartment ? "Department Assignment" :
+      isExplicitBatch ? "Batch Assignment" :
+      isExplicitIndividual ? "Individual Selection" :
+      "All Eligible Students"
+    );
+
+    // 4. Build durable recipient rows for resolved students
+    for (const sId of resolvedStudentIds) {
+      if (!existingStudentMap.has(sId)) {
         rowsToInsert.push({
           tenant_id: tenantId,
           assessment_id: input.assessment_id,
-          student_id: studentId,
-          cohort_name: input.cohort_name || null,
+          student_id: sId,
+          cohort_name: effectiveCohortName,
           window_start: input.window_start || null,
           window_end: input.window_end || null,
           max_attempts_override: input.max_attempts_override ?? null,
@@ -272,13 +422,16 @@ export class AssignmentService {
           assigned_by: assignedByUserId,
         });
       }
-    } else {
-      // Cohort-wide assignment (student_id is null)
+    }
+
+    // 5. Also insert / ensure parent cohort summary record (student_id = null)
+    // for institutional oversight and historical reporting if none exists
+    if (!hasCohortHeaderRow) {
       rowsToInsert.push({
         tenant_id: tenantId,
         assessment_id: input.assessment_id,
         student_id: null,
-        cohort_name: input.cohort_name || "All Enrolled Students",
+        cohort_name: effectiveCohortName,
         window_start: input.window_start || null,
         window_end: input.window_end || null,
         max_attempts_override: input.max_attempts_override ?? null,
@@ -287,16 +440,28 @@ export class AssignmentService {
       });
     }
 
-    const { data, error } = await supabase
-      .from("assessment_assignments")
-      .insert(rowsToInsert)
-      .select("id");
+    if (rowsToInsert.length > 0) {
+      const { data, error } = await admin
+        .from("assessment_assignments")
+        .insert(rowsToInsert)
+        .select("id");
 
-    if (error) {
-      return { success: false, createdCount: 0, error: error.message };
+      if (error) {
+        return { success: false, createdCount: 0, error: error.message };
+      }
+
+      return {
+        success: true,
+        createdCount: data ? data.length : 0,
+        recipientCount: resolvedStudentIds.length,
+      };
     }
 
-    return { success: true, createdCount: data ? data.length : 0 };
+    return {
+      success: true,
+      createdCount: 0,
+      recipientCount: resolvedStudentIds.length,
+    };
   }
 
   /**
@@ -307,11 +472,11 @@ export class AssignmentService {
     tenantId: string,
     studentId: string
   ): Promise<{ success: boolean; assignments: any[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const admin = createAdminClient();
     const now = new Date();
 
     // 0. Verify candidate is an active, non-archived student in this college tenant
-    const { data: studentRecord, error: studentErr } = await supabase
+    const { data: studentRecord, error: studentErr } = await admin
       .from("students")
       .select(`
         id,
@@ -343,7 +508,7 @@ export class AssignmentService {
     };
 
     // 1. Fetch active assignments matching student directly or cohort-wide
-    const { data: assignments, error: assErr } = await supabase
+    const { data: assignments, error: assErr } = await admin
       .from("assessment_assignments")
       .select(`
         id,
@@ -414,7 +579,7 @@ export class AssignmentService {
 
     let attemptsByAssessment: Record<string, any[]> = {};
     if (assessmentIds.length > 0) {
-      const { data: attempts } = await supabase
+      const { data: attempts } = await admin
         .from("assessment_attempts")
         .select(`
           id,
@@ -503,9 +668,9 @@ export class AssignmentService {
     tenantId: string,
     assessmentId: string
   ): Promise<{ success: boolean; assignments: any[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const admin = createAdminClient();
 
-    const { data: assignments, error } = await supabase
+    const { data: assignments, error } = await admin
       .from("assessment_assignments")
       .select(`
         *,

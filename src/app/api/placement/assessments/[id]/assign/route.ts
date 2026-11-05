@@ -46,6 +46,9 @@ export async function POST(
       {
         assessment_id: id,
         student_ids: body.student_ids,
+        department_ids: body.department_ids,
+        graduation_years: body.graduation_years,
+        target_type: body.target_type,
         cohort_name: body.cohort_name,
         window_start: body.window_start,
         window_end: body.window_end,
@@ -60,6 +63,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       createdCount: result.createdCount,
+      recipientCount: result.recipientCount ?? result.createdCount,
     });
   } catch (err: any) {
     if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {

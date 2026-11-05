@@ -5,12 +5,13 @@ import { AttemptLifecycleService } from "@/modules/assessments/services/attempt-
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authContext = await requireAuthContext(Permissions.ASSESSMENTS_ATTEMPT);
     const { id } = await params;
+    const body = await request.json().catch(() => ({}));
     const supabase = await createClient();
 
     let studentId: string | null = null;
@@ -35,7 +36,9 @@ export async function POST(
     const result = await AttemptLifecycleService.submitAttempt(
       authContext.tenantId,
       studentId,
-      id
+      id,
+      body.submissionReason || "MANUAL",
+      body.metadata || {}
     );
 
     if (!result.success) {

@@ -101,7 +101,7 @@ SET
         "ai_question_generator": false,
         "ai_tutor_assistant": false,
         "ai_evaluation_pipeline": false,
-        "department_hierarchy": false,
+        "department_hierarchy": true,
         "audit_data_export_hub": false,
         "dedicated_sla_liaison": false
     }'::jsonb
@@ -137,7 +137,7 @@ SET
         "ai_question_generator": true,
         "ai_tutor_assistant": true,
         "ai_evaluation_pipeline": false,
-        "department_hierarchy": false,
+        "department_hierarchy": true,
         "audit_data_export_hub": true,
         "dedicated_sla_liaison": false
     }'::jsonb

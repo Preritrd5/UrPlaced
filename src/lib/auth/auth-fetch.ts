@@ -24,30 +24,9 @@ export function getTabAccessToken(): string | null {
       if (token) return token;
     }
 
-    // Fallback: extract token from document.cookie if tab storage has not yet synced
-    if (typeof document !== "undefined" && document.cookie) {
-      const cookies = document.cookie.split(";").map((c) => c.trim());
-      const directTokenCookie = cookies.find((c) => c.startsWith("sb-access-token="));
-      if (directTokenCookie) {
-        return decodeURIComponent(directTokenCookie.substring("sb-access-token=".length));
-      }
-
-      const authCookie = cookies.find((c) => c.includes("-auth-token"));
-      if (authCookie) {
-        const val = decodeURIComponent(authCookie.split("=").slice(1).join("="));
-        let rawVal = val;
-        if (rawVal.startsWith("base64-")) {
-          try {
-            rawVal = atob(rawVal.slice(7));
-          } catch {}
-        }
-        try {
-          const parsed = JSON.parse(rawVal);
-          return parsed?.access_token || parsed?.currentSession?.access_token || null;
-        } catch {}
-      }
-    }
-
+    // Never fall back to document.cookie!
+    // Falling back to cookies would allow an unauthenticated or newly opened tab
+    // to accidentally adopt another tab's session, violating strict session isolation.
     return null;
   } catch {
     return null;
@@ -118,7 +97,24 @@ export function setupTabFetchInterceptor(): void {
         if (!headers.has("Authorization")) {
           const token = getTabAccessToken();
           if (token) {
-            headers.set("Authorization", `Bearer ${token}`);
+            let shouldAttach = true;
+            if (url.includes("/api/preritrd/")) {
+              try {
+                const parts = token.split(".");
+                if (parts.length === 3) {
+                  const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+                  // If token belongs to regular student/staff or has non-admin role, omit header so browser cookies authenticate
+                  if (payload.app_metadata?.role && payload.app_metadata.role !== "SUPER_ADMIN" && !payload.app_metadata.is_platform_admin) {
+                    shouldAttach = false;
+                  }
+                }
+              } catch {
+                // Ignore parse errors
+              }
+            }
+            if (shouldAttach) {
+              headers.set("Authorization", `Bearer ${token}`);
+            }
           }
         }
 

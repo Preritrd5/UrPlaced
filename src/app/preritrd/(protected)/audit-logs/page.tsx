@@ -197,9 +197,9 @@ export default function PlatformAuditLogsPage() {
 
       {/* Metadata Inspector Modal */}
       {inspectTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm">
-          <Card className="w-full max-w-lg bg-card border-border shadow-xl rounded-2xl">
-            <CardHeader className="pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
+          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary">
                   Platform Event Metadata
@@ -212,7 +212,7 @@ export default function PlatformAuditLogsPage() {
                 Event ID: {inspectTarget.id}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-text-secondary block font-mono text-[11px]">Actor:</span>
@@ -233,16 +233,16 @@ export default function PlatformAuditLogsPage() {
                 </pre>
               </div>
 
-              <div className="flex justify-end pt-2 border-t border-border">
-                <Button
+              </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2">
+              <Button
                   size="sm"
                   onClick={() => setInspectTarget(null)}
                   className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 px-4 rounded-xl"
                 >
                   Close
                 </Button>
-              </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       )}

@@ -407,4 +407,100 @@ describe("UrPlaced Cross-Tab Authentication and User Identity Isolation", () => 
       expect(stateUser).toBe("User_B");
     });
   });
+
+  describe("6. Phase 9 Acceptance Scenarios (Test A - Test G)", () => {
+    it("Test A: Two different users in separate tabs retain distinct identities across simulated page refreshes", async () => {
+      // 1. Tab 1 logs in as User A (XYZ Head)
+      const tab1Storage: Record<string, string> = {};
+      const tab1Key = getTabStorageKey("tab_1");
+      tab1Storage[tab1Key] = JSON.stringify({
+        access_token: USERS.xyzHead.token,
+        refresh_token: "refresh-xyz-head",
+      });
+
+      // 2. Tab 2 logs in as User B (ABC Staff) on same browser origin
+      const tab2Storage: Record<string, string> = {};
+      const tab2Key = getTabStorageKey("tab_2");
+      tab2Storage[tab2Key] = JSON.stringify({
+        access_token: USERS.abcStaff.token,
+        refresh_token: "refresh-abc-staff",
+      });
+
+      // 3. Tab 1 is refreshed: reads tab 1 storage
+      const tab1RefreshedToken = JSON.parse(tab1Storage[tab1Key]).access_token;
+      const profile1 = await getCurrentUserProfile(undefined, tab1RefreshedToken);
+      expect(profile1?.id).toBe(USERS.xyzHead.id);
+      expect(profile1?.email).toBe(USERS.xyzHead.email);
+
+      // 4. Tab 2 is refreshed: reads tab 2 storage
+      const tab2RefreshedToken = JSON.parse(tab2Storage[tab2Key]).access_token;
+      const profile2 = await getCurrentUserProfile(undefined, tab2RefreshedToken);
+      expect(profile2?.id).toBe(USERS.abcStaff.id);
+      expect(profile2?.email).toBe(USERS.abcStaff.email);
+
+      // 5. Verify Tab 1 NEVER restored User B, and Tab 2 NEVER restored User A
+      expect(profile1?.id).not.toBe(profile2?.id);
+      expect(profile1?.activeMembership?.tenant_id).toBe("tenant-xyz-college-001");
+      expect(profile2?.activeMembership?.tenant_id).toBe("tenant-abc-university-002");
+    });
+
+    it("Test B: Independent logout in Tab 2 does NOT log out or switch Tab 1", async () => {
+      const tab1Storage: Record<string, string> = {
+        [getTabStorageKey("tab_1")]: JSON.stringify({ access_token: USERS.xyzHead.token }),
+      };
+      const tab2Storage: Record<string, string> = {
+        [getTabStorageKey("tab_2")]: JSON.stringify({ access_token: USERS.abcStaff.token }),
+      };
+
+      // Logout in Tab 2
+      delete tab2Storage[getTabStorageKey("tab_2")];
+
+      // Tab 2 is logged out
+      expect(tab2Storage[getTabStorageKey("tab_2")]).toBeUndefined();
+
+      // Tab 1 remains 100% active and authenticated as User A
+      const tab1Token = JSON.parse(tab1Storage[getTabStorageKey("tab_1")]).access_token;
+      const profile1 = await getCurrentUserProfile(undefined, tab1Token);
+      expect(profile1).not.toBeNull();
+      expect(profile1?.id).toBe(USERS.xyzHead.id);
+    });
+
+    it("Test C: Session expiration in Tab 1 leaves Tab 2 unaffected and fails closed", async () => {
+      // Tab 1 has an expired/invalid token
+      const expiredToken = "expired-token-xyz";
+      const profile1 = await getCurrentUserProfile(undefined, expiredToken);
+      expect(profile1).toBeNull();
+
+      // Tab 2 with valid token continues operating normally
+      const profile2 = await getCurrentUserProfile(undefined, USERS.abcStaff.token);
+      expect(profile2).not.toBeNull();
+      expect(profile2?.id).toBe(USERS.abcStaff.id);
+    });
+
+    it("Test D: Simultaneous concurrent requests across tabs resolve to respective identities without race condition", async () => {
+      const results = await Promise.all([
+        getCurrentUserProfile(undefined, USERS.xyzHead.token),
+        getCurrentUserProfile(undefined, USERS.abcStaff.token),
+        getCurrentUserProfile(undefined, USERS.xyzStudent.token),
+        getCurrentUserProfile(undefined, USERS.abcStudent.token),
+      ]);
+
+      expect(results[0]?.id).toBe(USERS.xyzHead.id);
+      expect(results[1]?.id).toBe(USERS.abcStaff.id);
+      expect(results[2]?.id).toBe(USERS.xyzStudent.id);
+      expect(results[3]?.id).toBe(USERS.abcStudent.id);
+    });
+
+    it("Test E: Cross-tenant isolation invariant (One Person = Exactly One College)", async () => {
+      // User A from XYZ cannot query or acquire active tenant for ABC
+      await expect(
+        requireAuthContext(undefined, "tenant-abc-university-002", USERS.xyzHead.token)
+      ).rejects.toThrow("NO_ACTIVE_TENANT");
+
+      // Student cannot access placement drives administration
+      await expect(
+        requireAuthContext(Permissions.DRIVES_MANAGE, undefined, USERS.xyzStudent.token)
+      ).rejects.toThrow("FORBIDDEN");
+    });
+  });
 });
