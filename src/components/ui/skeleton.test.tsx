@@ -17,7 +17,7 @@ describe("Skeleton Primitives Suite", () => {
     expect(el).toBeInTheDocument();
     expect(el).toHaveAttribute("aria-hidden", "true");
     expect(el.className).toContain("animate-pulse");
-    expect(el.className).toContain("bg-[rgba(36,40,58,0.08)]");
+    expect(el.className).toContain("bg-[rgba(36,40,58,0.14)]");
   });
 
   it("renders shimmer variant when requested", () => {

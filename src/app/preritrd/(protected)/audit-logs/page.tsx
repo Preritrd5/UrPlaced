@@ -144,7 +144,7 @@ export default function PlatformAuditLogsPage() {
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}>
                       <td colSpan={5} className="px-5 py-4">
-                        <Skeleton className="h-5 w-full bg-surface" />
+                        <Skeleton className="h-5 w-full" />
                       </td>
                     </tr>
                   ))

@@ -456,7 +456,9 @@ export default function StaffAssessmentsPage() {
 
       {/* Directory List */}
       {loading ? (
-        <div className="py-12 text-center text-text-muted">Loading assessments...</div>
+        <div className="py-16 flex items-center justify-center">
+          <BrandLoader size="section" aria-label="Loading assessments..." />
+        </div>
       ) : filteredAssessments.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>

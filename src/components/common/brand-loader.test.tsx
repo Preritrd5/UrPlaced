@@ -13,31 +13,31 @@ describe("BrandLoader Component", () => {
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute("src", "/brand/brand-loader.png");
     expect(img).toHaveClass("animate-brand-loader");
+    expect(img).toHaveStyle({ width: "32px", height: "32px" });
+  });
+
+  it("applies the button size preset (24px)", () => {
+    render(<BrandLoader size="button" />);
+    const img = screen.getByRole("status").querySelector("img");
     expect(img).toHaveStyle({ width: "24px", height: "24px" });
   });
 
-  it("applies the button size preset (18px)", () => {
-    render(<BrandLoader size="button" />);
-    const img = screen.getByRole("status").querySelector("img");
-    expect(img).toHaveStyle({ width: "18px", height: "18px" });
-  });
-
-  it("applies the card size preset (36px)", () => {
+  it("applies the card size preset (56px)", () => {
     render(<BrandLoader size="card" />);
     const img = screen.getByRole("status").querySelector("img");
-    expect(img).toHaveStyle({ width: "36px", height: "36px" });
+    expect(img).toHaveStyle({ width: "56px", height: "56px" });
   });
 
-  it("applies the section size preset (48px)", () => {
+  it("applies the section size preset (80px)", () => {
     render(<BrandLoader size="section" />);
     const img = screen.getByRole("status").querySelector("img");
-    expect(img).toHaveStyle({ width: "48px", height: "48px" });
+    expect(img).toHaveStyle({ width: "80px", height: "80px" });
   });
 
-  it("applies the page size preset (56px)", () => {
+  it("applies the page size preset (96px)", () => {
     render(<BrandLoader size="page" />);
     const img = screen.getByRole("status").querySelector("img");
-    expect(img).toHaveStyle({ width: "56px", height: "56px" });
+    expect(img).toHaveStyle({ width: "96px", height: "96px" });
   });
 
   it("applies custom numeric pixel size", () => {

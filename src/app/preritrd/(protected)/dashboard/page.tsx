@@ -115,7 +115,7 @@ export default function PlatformDashboardPage() {
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-20 bg-surface" />
+                <Skeleton className="h-8 w-20" />
               ) : (
                 <div className="text-3xl font-extrabold font-heading text-text-primary">
                   {metrics?.totalColleges ?? 0}
@@ -145,7 +145,7 @@ export default function PlatformDashboardPage() {
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-20 bg-surface" />
+                <Skeleton className="h-8 w-20" />
               ) : (
                 <div className="text-3xl font-extrabold font-heading text-text-primary">
                   {metrics?.activeSubscriptions ?? 0}
@@ -172,7 +172,7 @@ export default function PlatformDashboardPage() {
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-28 bg-surface" />
+                <Skeleton className="h-8 w-28" />
               ) : (
                 <div className="text-3xl font-extrabold font-heading text-text-primary">
                   ₹{(metrics?.totalRevenueInr ?? 0).toLocaleString("en-IN")}
@@ -198,7 +198,7 @@ export default function PlatformDashboardPage() {
             </div>
             <div className="mt-3">
               {loading ? (
-                <Skeleton className="h-8 w-16 bg-surface" />
+                <Skeleton className="h-8 w-16" />
               ) : (
                 <div className="text-3xl font-extrabold font-heading text-text-primary">
                   {metrics?.onboardingColleges ?? 0}
@@ -318,8 +318,8 @@ export default function PlatformDashboardPage() {
           <CardContent className="p-5 pt-0 space-y-4">
             {loading ? (
               <div className="space-y-3">
-                <Skeleton className="h-10 w-full bg-surface" />
-                <Skeleton className="h-10 w-full bg-surface" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
               </div>
             ) : metrics?.subscriptionPlanDistribution && metrics.subscriptionPlanDistribution.length > 0 ? (
               <div className="space-y-3">
@@ -384,7 +384,7 @@ export default function PlatformDashboardPage() {
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
                       <td colSpan={3} className="px-5 py-3">
-                        <Skeleton className="h-5 w-full bg-surface" />
+                        <Skeleton className="h-5 w-full" />
                       </td>
                     </tr>
                   ))

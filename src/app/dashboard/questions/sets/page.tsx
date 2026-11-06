@@ -381,7 +381,9 @@ export default function QuestionSetsPage() {
           </CardHeader>
           <CardContent className="p-0 divide-y divide-border">
             {loading ? (
-              <p className="p-4 text-xs text-text-secondary">Loading question sets...</p>
+              <div className="py-12 flex items-center justify-center">
+                <BrandLoader size="card" aria-label="Loading question sets..." />
+              </div>
             ) : sets.length === 0 ? (
               <p className="p-4 text-xs text-text-secondary">No question sets found. Create your first set.</p>
             ) : (
@@ -415,8 +417,8 @@ export default function QuestionSetsPage() {
         {/* Set Details & Item Builder (2 cols) */}
         <div className="md:col-span-2 space-y-6">
           {detailLoading ? (
-            <Card className="p-8 text-center text-sm text-text-secondary">
-              Loading set details and questions...
+            <Card className="py-16 flex items-center justify-center">
+              <BrandLoader size="section" aria-label="Loading set details and questions..." />
             </Card>
           ) : !activeSetDetail?.set ? (
             <Card className="p-8 text-center text-sm text-text-secondary">

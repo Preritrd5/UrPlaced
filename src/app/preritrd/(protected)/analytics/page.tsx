@@ -111,7 +111,7 @@ export default function PlatformAnalyticsPage() {
           </CardHeader>
           <CardContent className="p-6">
             {loading ? (
-              <Skeleton className="h-48 w-full bg-surface" />
+              <Skeleton className="h-48 w-full" />
             ) : trends?.collegeGrowth && trends.collegeGrowth.length > 0 ? (
               <div className="space-y-4">
                 <div className="h-44 flex items-end gap-3 pt-4 border-b border-border/60 pb-2">
@@ -157,7 +157,7 @@ export default function PlatformAnalyticsPage() {
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             {loading ? (
-              <Skeleton className="h-48 w-full bg-surface" />
+              <Skeleton className="h-48 w-full" />
             ) : trends?.planDistribution && trends.planDistribution.length > 0 ? (
               <div className="space-y-4">
                 {trends.planDistribution.map((p) => (
@@ -203,7 +203,7 @@ export default function PlatformAnalyticsPage() {
         </CardHeader>
         <CardContent className="p-6">
           {loading ? (
-            <Skeleton className="h-48 w-full bg-surface" />
+            <Skeleton className="h-48 w-full" />
           ) : trends?.revenueTrends && trends.revenueTrends.length > 0 ? (
             <div className="space-y-4">
               <div className="h-48 flex items-end gap-4 pt-4 border-b border-border/60 pb-2">

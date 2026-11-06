@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
 
 export default function StudentAnalyticsPage() {
@@ -151,7 +152,9 @@ export default function StudentAnalyticsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-sm text-[#292D40] py-4">Loading attempts...</p>
+            <div className="py-12 flex items-center justify-center">
+              <BrandLoader size="card" aria-label="Loading attempts..." />
+            </div>
           ) : attempts.length === 0 ? (
             <div className="text-center py-8 text-[#292D40] text-sm">
               No recent assessment attempts recorded yet.

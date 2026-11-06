@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -289,9 +290,8 @@ export function DriveIntelligenceTab({
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-text-muted space-y-2">
-        <Sparkles className="h-6 w-6 mx-auto animate-pulse text-primary" />
-        <p className="text-xs">Loading DriveFit Intelligence...</p>
+      <div className="py-16 flex items-center justify-center">
+        <BrandLoader size="section" aria-label="Loading DriveFit Intelligence..." />
       </div>
     );
   }

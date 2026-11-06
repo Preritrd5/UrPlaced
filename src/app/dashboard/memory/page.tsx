@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
 
@@ -169,7 +170,9 @@ export default function PlacementMemoryPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-sm text-[#292D40] py-4">Loading historical records...</p>
+              <div className="py-12 flex items-center justify-center">
+                <BrandLoader size="card" aria-label="Loading historical records..." />
+              </div>
             ) : records.length === 0 ? (
               <div className="text-center py-8 text-[#292D40] text-sm">
                 No historical recruitment records currently archived.

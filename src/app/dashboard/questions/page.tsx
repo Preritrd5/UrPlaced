@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -538,8 +539,8 @@ export default function QuestionsDashboardPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-sm text-text-secondary">
-              Loading question bank repository...
+            <div className="py-16 flex items-center justify-center">
+              <BrandLoader size="card" aria-label="Loading question bank repository..." />
             </div>
           ) : questions.length === 0 ? (
             <div className="p-12 text-center space-y-3">

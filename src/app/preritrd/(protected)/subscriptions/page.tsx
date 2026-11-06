@@ -746,9 +746,9 @@ export default function PlatformSubscriptionsPage() {
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <Card key={i} className="bg-card border-border p-6 space-y-4 rounded-2xl">
-                  <Skeleton className="h-6 w-32 bg-gray-200" />
-                  <Skeleton className="h-10 w-24 bg-gray-200" />
-                  <Skeleton className="h-28 w-full bg-gray-200" />
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-10 w-24" />
+                  <Skeleton className="h-28 w-full" />
                 </Card>
               ))
             ) : filteredPlans.length > 0 ? (
@@ -1028,7 +1028,7 @@ export default function PlatformSubscriptionsPage() {
                       Array.from({ length: 4 }).map((_, i) => (
                         <tr key={i}>
                           <td colSpan={6} className="px-5 py-4">
-                            <Skeleton className="h-5 w-full bg-gray-200" />
+                            <Skeleton className="h-5 w-full" />
                           </td>
                         </tr>
                       ))

@@ -280,7 +280,7 @@ export default function PlatformAccountsPage() {
                   Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i}>
                       <td colSpan={5} className="px-5 py-4">
-                        <Skeleton className="h-5 w-full bg-gray-200" />
+                        <Skeleton className="h-5 w-full" />
                       </td>
                     </tr>
                   ))

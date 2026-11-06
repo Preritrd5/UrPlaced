@@ -193,8 +193,8 @@ export default function StudentSignInPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="h-[100dvh] w-full bg-[#EDECE7] flex items-center justify-center text-xs text-[#292D40]/60">
-          Loading student portal sign in...
+        <div className="h-[100dvh] w-full bg-[#EDECE7] flex items-center justify-center">
+          <BrandLoader size="page" aria-label="Loading student portal sign in..." />
         </div>
       }
     >

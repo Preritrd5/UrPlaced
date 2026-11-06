@@ -16,6 +16,7 @@ import {
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,13 +88,12 @@ export function UserAccountMenu({ className, size = "default" }: UserAccountMenu
 
   if (auth.isLoading) {
     return (
-      <div
+      <Skeleton
         className={cn(
-          "rounded-full bg-surface border border-border animate-pulse shrink-0",
+          "rounded-full shrink-0",
           size === "sm" ? "h-8 w-8" : "h-9 w-9",
           className
         )}
-        aria-hidden="true"
       />
     );
   }

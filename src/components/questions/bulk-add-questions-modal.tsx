@@ -416,9 +416,8 @@ export function BulkAddQuestionsModal({
           {/* Questions Selection List */}
           <div className="border border-[#DDDCD5] rounded-lg divide-y divide-[#DDDCD5] max-h-72 overflow-y-auto bg-white">
             {loading ? (
-              <div className="p-8 text-center text-xs text-[#292D40]/60">
-                <BrandLoader size="inline" className="mx-auto mb-1.5" />
-                Loading eligible questions...
+              <div className="py-12 flex items-center justify-center">
+                <BrandLoader size="card" aria-label="Loading eligible questions..." />
               </div>
             ) : questions.length === 0 ? (
               <div className="p-8 text-center text-xs text-[#292D40]/60">

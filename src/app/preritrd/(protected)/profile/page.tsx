@@ -428,9 +428,9 @@ export default function SuperAdminProfilePage() {
 
   if (loading && !profileData) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 space-y-4">
-        <BrandLoader size="card" className="mx-auto" />
-        <p className="text-xs font-mono text-text-secondary">Loading Platform Super Admin credentials...</p>
+      <div className="flex items-center justify-center py-24 min-h-[400px]">
+        <BrandLoader size="section" aria-label="Loading Platform Super Admin credentials..." />
+
       </div>
     );
   }

@@ -547,8 +547,8 @@ export function AnnouncementCompose({
                     {/* Student List Table */}
                     <div className="border border-[#DDDCD5] rounded-md overflow-hidden max-h-60 overflow-y-auto">
                       {isLoadingStudents ? (
-                        <div className="p-6 text-center text-xs text-[#292D40]/70">
-                          Loading students directory...
+                        <div className="p-8 flex items-center justify-center">
+                          <BrandLoader size="card" aria-label="Loading students directory..." />
                         </div>
                       ) : filteredStudents.length === 0 ? (
                         <div className="p-6 text-center text-xs text-[#292D40]/70">

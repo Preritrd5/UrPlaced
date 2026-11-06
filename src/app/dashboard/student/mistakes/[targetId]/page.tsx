@@ -24,6 +24,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Textarea } from "@/components/ui/textarea";
 import { DetailViewSkeleton } from "@/components/ui/page-skeletons";
 import { toast } from "@/components/ui/dialog-system";
@@ -478,7 +479,9 @@ export default function MistakeTargetDetailPage({
 
         <CardContent className="p-5 space-y-5">
           {loadingPractice ? (
-            <div className="py-8 text-center text-text-muted">Loading new practice questions for this skill...</div>
+            <div className="py-12 flex items-center justify-center">
+              <BrandLoader size="card" aria-label="Loading new practice questions for this skill..." />
+            </div>
           ) : practiceQuestions.length === 0 ? (
             <div className="py-8 text-center space-y-2">
               <CheckCircle2 className="h-8 w-8 text-secondary mx-auto" />

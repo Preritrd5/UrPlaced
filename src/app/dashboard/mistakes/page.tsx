@@ -19,6 +19,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
@@ -244,7 +245,9 @@ export default function PlacementMistakesAnalyticsPage() {
       {activeTab === "SKILLS" && (
         <div className="space-y-4">
           {loading ? (
-            <div className="py-12 text-center text-text-muted">Loading cohort skill analytics...</div>
+            <div className="py-16 flex items-center justify-center">
+              <BrandLoader size="section" aria-label="Loading cohort skill analytics..." />
+            </div>
           ) : !summaryData?.skillGaps || summaryData.skillGaps.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
@@ -334,7 +337,9 @@ export default function PlacementMistakesAnalyticsPage() {
       {activeTab === "DEFECTS" && (
         <div className="space-y-4">
           {loadingDefects ? (
-            <div className="py-12 text-center text-text-muted">Loading question defect tickets...</div>
+            <div className="py-16 flex items-center justify-center">
+              <BrandLoader size="section" aria-label="Loading question defect tickets..." />
+            </div>
           ) : defects.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>

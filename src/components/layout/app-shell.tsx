@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { UserAccountMenu } from "@/components/layout/user-account-menu";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -184,17 +185,17 @@ export function AppShell({ children }: AppShellProps) {
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
           {auth.isLoading ? (
             /* Loading Skeleton to prevent premature unauthorized flash */
-            <div className="space-y-4 px-2 animate-pulse">
-              <div className="h-3 w-20 bg-border/60 rounded" />
+            <div className="space-y-4 px-2">
+              <Skeleton className="h-3 w-20 rounded" />
               <div className="space-y-2">
-                <div className="h-8 bg-surface rounded-lg" />
-                <div className="h-8 bg-surface rounded-lg" />
-                <div className="h-8 bg-surface rounded-lg" />
+                <Skeleton className="h-8 w-full rounded-lg" />
+                <Skeleton className="h-8 w-full rounded-lg" />
+                <Skeleton className="h-8 w-full rounded-lg" />
               </div>
-              <div className="h-3 w-24 bg-border/60 rounded pt-2" />
+              <Skeleton className="h-3 w-24 rounded" />
               <div className="space-y-2">
-                <div className="h-8 bg-surface rounded-lg" />
-                <div className="h-8 bg-surface rounded-lg" />
+                <Skeleton className="h-8 w-full rounded-lg" />
+                <Skeleton className="h-8 w-full rounded-lg" />
               </div>
             </div>
           ) : (

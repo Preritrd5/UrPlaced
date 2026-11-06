@@ -269,10 +269,9 @@ export function QuestionForm({ initialData, isEditing = false }: QuestionFormPro
               </div>
 
               {loadingBanks ? (
-                <div className="h-10 px-3 rounded-md bg-input border border-border text-xs text-text-secondary flex items-center gap-2">
-                  <BrandLoader size="button" className="mr-1.5" />
-                  <span>Loading Question Banks...</span>
-                </div>
+                  <div className="h-10 px-3 rounded-md bg-input border border-border text-xs text-text-secondary flex items-center justify-center">
+                    <BrandLoader size="button" label="Loading Question Banks..." />
+                  </div>
               ) : banksError ? (
                 <div className="p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-700 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-medium">

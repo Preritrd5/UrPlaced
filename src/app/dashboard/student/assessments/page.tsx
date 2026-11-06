@@ -24,6 +24,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandLoader } from "@/components/common/brand-loader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -292,7 +293,9 @@ export default function StudentAssessmentsPage() {
       {activeTab === "ASSIGNED" && (
         <div className="space-y-6">
           {loadingAssignments ? (
-            <div className="py-12 text-center text-text-muted">Loading assigned assessments...</div>
+            <div className="py-16 flex items-center justify-center">
+              <BrandLoader size="section" aria-label="Loading assigned assessments..." />
+            </div>
           ) : assignments.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
@@ -422,7 +425,9 @@ export default function StudentAssessmentsPage() {
       {activeTab === "PRACTICE" && (
         <div className="space-y-6">
           {loadingCatalogue ? (
-            <div className="py-12 text-center text-text-muted">Loading practice catalogue...</div>
+            <div className="py-16 flex items-center justify-center">
+              <BrandLoader size="section" aria-label="Loading practice catalogue..." />
+            </div>
           ) : !catalogue ? (
             <div className="py-12 text-center text-text-muted">Catalogue unavailable.</div>
           ) : (

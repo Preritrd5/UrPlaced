@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PlatformCollegeService } from "@/modules/platform-admin/services/platform-college-service";
 import { PlatformSubscriptionService } from "@/modules/platform-admin/services/platform-subscription-service";
+import { EmailAdapter } from "@/modules/identity-access/services/email-adapter";
 
 describe("SA-11: Dynamic Subscription Plan Pricing on College Registration & Provisioning", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(EmailAdapter, "sendCollegePlacementHeadInvitation").mockResolvedValue({
+      success: true,
+      deliveryMethod: "LOCAL_DEV_SINK",
+      messageId: "mock-email-dyn-01",
+    });
   });
 
   it("should create initial registration invoice reflecting the updated plan price from the database", async () => {

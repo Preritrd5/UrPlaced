@@ -378,8 +378,8 @@ export default function CollegeSignUpPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="h-[100dvh] w-full bg-[#EDECE7] flex items-center justify-center text-xs text-[#292D40]/60">
-          Loading institutional account setup...
+        <div className="h-[100dvh] w-full bg-[#EDECE7] flex items-center justify-center">
+          <BrandLoader size="page" aria-label="Loading institutional account setup..." />
         </div>
       }
     >

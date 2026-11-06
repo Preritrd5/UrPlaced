@@ -17,6 +17,7 @@ import {
 import { useNotifications } from "@/modules/notifications/hooks/use-notifications";
 import type { NotificationRecord } from "@/modules/notifications/types";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface NotificationBellProps {
   className?: string;
@@ -217,11 +218,11 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
               /* Loading Skeleton */
               <div className="p-4 space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-3 animate-pulse">
-                    <div className="w-8 h-8 rounded-full bg-[#EDECE7]" />
+                  <div key={i} className="flex gap-3 items-center">
+                    <Skeleton className="w-8 h-8 rounded-full shrink-0" />
                     <div className="flex-1 space-y-1.5">
-                      <div className="h-3 w-3/4 bg-[#EDECE7] rounded" />
-                      <div className="h-2.5 w-1/2 bg-[#EDECE7] rounded" />
+                      <Skeleton className="h-3 w-3/4" />
+                      <Skeleton className="h-2.5 w-1/2" />
                     </div>
                   </div>
                 ))}

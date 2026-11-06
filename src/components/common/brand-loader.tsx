@@ -4,24 +4,34 @@ import { cn } from "@/lib/utils";
 
 export type BrandLoaderSize =
   | "button"
+  | "xs"
   | "inline"
   | "sm"
   | "small"
   | "card"
+  | "md"
+  | "container"
   | "section"
+  | "lg"
   | "page"
+  | "xl"
   | "fullscreen"
   | number;
 
 const SIZE_PRESETS: Record<string, number> = {
-  button: 18,
-  inline: 24,
-  sm: 28,
-  small: 28,
-  card: 36,
-  section: 48,
-  page: 56,
-  fullscreen: 64,
+  button: 24,
+  xs: 24,
+  inline: 32,
+  sm: 32,
+  small: 32,
+  card: 56,
+  md: 56,
+  container: 56,
+  section: 80,
+  lg: 80,
+  page: 96,
+  xl: 96,
+  fullscreen: 96,
 };
 
 export interface BrandLoaderProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -46,7 +56,7 @@ export const BrandLoader = React.forwardRef<HTMLSpanElement, BrandLoaderProps>(
     },
     ref
   ) => {
-    const pixelSize = typeof size === "number" ? size : SIZE_PRESETS[size] || 24;
+    const pixelSize = typeof size === "number" ? size : SIZE_PRESETS[size] || 32;
     const effectiveLabel = ariaLabel || label;
 
     const imgElement = (
