@@ -1,18 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { CreditCard, CheckCircle2, AlertCircle, ShieldCheck, ExternalLink } from "lucide-react";
+import { CreditCard, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { BrandLoader } from "@/components/common/brand-loader";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { toast } from "@/components/ui/dialog-system";
 
 declare global {
   interface Window {
@@ -30,7 +22,7 @@ interface RazorpayCheckoutButtonProps {
 }
 
 /**
- * Dynamically loads the official Razorpay Standard Checkout SDK from the CDN
+ * Dynamically loads the official Razorpay Standard Checkout script from Razorpay CDN
  */
 function loadRazorpayCheckoutScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -67,43 +59,38 @@ export function RazorpayCheckoutButton({
   officialEmail,
   onPaymentSuccess,
 }: RazorpayCheckoutButtonProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [processingStep, setProcessingStep] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
 
-  // Pre-load checkout script on component mount for instantaneous checkout experience
+  // Pre-load checkout script on component mount for instantaneous modal presentation
   React.useEffect(() => {
     loadRazorpayCheckoutScript().catch(() => {});
   }, []);
-
-  const handleOpenModal = () => {
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    setProcessingStep(null);
-    setIsOpen(true);
-  };
 
   /**
    * Authoritative Razorpay Standard Web Checkout Execution
    */
   const handleInitiatePayment = async () => {
+    // Double-click prevention
+    if (isProcessing) return;
+
     try {
       setIsProcessing(true);
       setErrorMessage(null);
       setSuccessMessage(null);
-      setProcessingStep("Initializing secure checkout order...");
+      setProcessingStep("Initializing secure order...");
 
-      // 1. Ensure Razorpay Standard Checkout script is ready
+      // 1. Ensure Razorpay Standard Checkout SDK is available
       const scriptReady = await loadRazorpayCheckoutScript();
       if (!scriptReady || !window.Razorpay) {
         throw new Error(
-          "Unable to load Razorpay payment gateway script. Please verify your internet connection and try again."
+          "Unable to load Razorpay Checkout gateway. Please check your network connection and try again."
         );
       }
 
-      // 2. Request server-authoritative checkout order (verified server-side from database)
+      // 2. Request server-authoritative checkout order (verified server-side from database records)
       const createRes = await fetch("/api/billing/checkout/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,15 +102,36 @@ export function RazorpayCheckoutButton({
         throw new Error(orderData.error || "Failed to initialize payment order.");
       }
 
-      setProcessingStep("Opening Razorpay Standard Checkout...");
+      setProcessingStep("Opening Razorpay Checkout...");
 
-      // 3. Configure Razorpay Standard Checkout Options
+      // Resolve a safe, publicly accessible logo URL for Razorpay Standard Checkout
+      // In local development (localhost / 127.0.0.1 / non-HTTPS), do NOT pass loopback URLs
+      // to Razorpay's public iframe, preventing browser Private Network Access (PNA) / CORS blocks.
+      let safeLogoUrl: string | undefined = undefined;
+      if (typeof window !== "undefined") {
+        const hostname = window.location.hostname;
+        const isLoopback =
+          hostname === "localhost" ||
+          hostname === "127.0.0.1" ||
+          hostname.endsWith(".localhost") ||
+          window.location.protocol !== "https:";
+
+        const envLogo = process.env.NEXT_PUBLIC_LOGO_URL;
+        if (envLogo && envLogo.startsWith("https://")) {
+          safeLogoUrl = envLogo;
+        } else if (!isLoopback && window.location.origin.startsWith("https://")) {
+          safeLogoUrl = `${window.location.origin}/assets/logo.png`;
+        }
+      }
+
+      // 3. Configure genuine Razorpay Standard Checkout Options
       const options = {
         key: orderData.keyId,
         amount: orderData.amountPaise,
         currency: orderData.currency || "INR",
         name: "UrPlaced",
         description: `Institutional Subscription — ${invoiceNumber}`,
+        image: safeLogoUrl,
         order_id: orderData.orderId,
         prefill: {
           name: contactName || "",
@@ -170,19 +178,19 @@ export function RazorpayCheckoutButton({
               throw new Error(verifyData.error || "Cryptographic payment verification failed.");
             }
 
-            setSuccessMessage("Payment verified and captured! Subscription and institutional entitlements are now active.");
+            setSuccessMessage("Payment verified and captured! Institutional subscription is now active.");
             setProcessingStep(null);
+            toast.success("Payment verified! Subscription and institutional entitlements are now active.");
 
-            setTimeout(async () => {
-              setIsProcessing(false);
-              setIsOpen(false);
-              if (onPaymentSuccess) {
-                await onPaymentSuccess();
-              }
-            }, 1200);
+            if (onPaymentSuccess) {
+              await onPaymentSuccess();
+            }
           } catch (verifyErr: any) {
-            console.error("[Razorpay Checkout Verify Error]:", verifyErr);
-            setErrorMessage(verifyErr.message || "Failed to verify payment with server.");
+            console.warn("[Razorpay Checkout Verify Notice]:", verifyErr?.message || verifyErr);
+            const msg = verifyErr.message || "Failed to verify payment with server.";
+            setErrorMessage(msg);
+            toast.error(msg);
+          } finally {
             setIsProcessing(false);
             setProcessingStep(null);
           }
@@ -195,145 +203,111 @@ export function RazorpayCheckoutButton({
       rzpInstance.on("payment.failed", function (failResponse: any) {
         setIsProcessing(false);
         setProcessingStep(null);
-        const desc =
+        let desc =
           failResponse.error?.description ||
           failResponse.error?.reason ||
           "Payment was declined or failed by the gateway.";
+
+        if (typeof desc === "string" && desc.toLowerCase().includes("maximum amount")) {
+          if (totalInr > 50000) {
+            desc = `Transaction limit reached for ₹${totalInr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}:
+1. UPI Payment Rails (Google Pay, PhonePe, UPI ID) have a strict single-transaction ceiling of ₹50,000 enforced by NPCI and partner banks. Please select Cards (Test Card: 4100 2800 0000 1007, Exp 12/26, CVV 123) or Net Banking.
+2. If Cards also report this error, your Razorpay merchant account has a ₹50,000 default threshold in Razorpay Dashboard. Navigate to Dashboard → Account & Settings → Transaction limits, and increase your per-transaction limit to ₹2,00,000.`;
+          } else {
+            desc = `Amount exceeds Razorpay Test Mode limit (₹1,00,000 max per test transaction). Please test with an amount under ₹1,00,000 or adjust transaction limits in your Razorpay Dashboard.`;
+          }
+        }
         setErrorMessage(desc);
+        toast.error(desc);
       });
 
       rzpInstance.open();
     } catch (err: any) {
-      console.error("[Razorpay Gateway Error]:", err);
-      setErrorMessage(err.message || "An unexpected error occurred during checkout initialization.");
+      console.warn("[Razorpay Gateway Notice]:", err?.message || err);
+      const msg = err.message || "An unexpected error occurred during checkout initialization.";
+      setErrorMessage(msg);
+      toast.error(msg);
       setIsProcessing(false);
       setProcessingStep(null);
     }
   };
 
+  const isTestMode =
+    typeof window !== "undefined"
+      ? (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.startsWith("rzp_test_") ?? false)
+      : false;
+
   return (
-    <>
+    <div className="flex flex-col gap-2.5">
       <Button
-        onClick={handleOpenModal}
-        className="w-full sm:w-auto bg-[#5052C9] hover:bg-[#4345B0] text-white font-medium text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+        type="button"
+        onClick={handleInitiatePayment}
+        disabled={isProcessing}
+        className="w-full sm:w-auto bg-[#5052C9] hover:bg-[#4345B0] text-white font-medium text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
       >
-        <CreditCard className="h-4 w-4 text-white" />
-        <span>
-          Pay ₹{totalInr.toLocaleString("en-IN", { minimumFractionDigits: 2 })} via Razorpay
-        </span>
+        {isProcessing ? (
+          <>
+            <BrandLoader size="button" />
+            <span>{processingStep || "Opening Razorpay..."}</span>
+          </>
+        ) : (
+          <>
+            <CreditCard className="h-4 w-4 text-white" />
+            <span>
+              Pay ₹{totalInr.toLocaleString("en-IN", { minimumFractionDigits: 2 })} via Razorpay
+            </span>
+            <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+          </>
+        )}
       </Button>
 
-      {/* Razorpay Standard Checkout Review & Launch Modal */}
-      <Dialog open={isOpen} onOpenChange={(open) => !isProcessing && setIsOpen(open)}>
-        <DialogContent className="max-w-md bg-[#F8F7F3] border-[#B8B6AC] p-6 rounded-2xl shadow-xl">
-          <DialogHeader className="space-y-1 pb-3 border-b border-[#DDDCD5]">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono uppercase font-bold text-[#5052C9] tracking-wider">
-                Razorpay Standard Checkout
-              </span>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[9px]">
-                TEST MODE
-              </Badge>
-            </div>
-            <DialogTitle className="text-xl font-bold font-heading text-[#24283A]">
-              Pay Institutional Subscription
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#747683]">
-              Review your registration invoice details before proceeding to the official Razorpay Checkout gateway.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Invoice & College Summary */}
-            <div className="p-4 rounded-xl bg-[#FBFAF7] border border-[#DDDCD5] space-y-2.5">
-              <div className="flex items-center justify-between text-xs pb-2 border-b border-[#DDDCD5]/60">
-                <span className="text-[#747683]">Invoice Reference:</span>
-                <span className="font-mono font-bold text-[#24283A]">{invoiceNumber}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs pb-2 border-b border-[#DDDCD5]/60">
-                <span className="text-[#747683]">Institution Contact:</span>
-                <span className="font-medium text-[#24283A] truncate max-w-[200px]">
-                  {contactName || "Placement Head"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs pb-2 border-b border-[#DDDCD5]/60">
-                <span className="text-[#747683]">Billing Email:</span>
-                <span className="font-mono text-[#24283A] truncate max-w-[200px]">
-                  {officialEmail || "billing@institution.edu"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs font-bold text-[#24283A]">Total Amount Due (incl. GST):</span>
-                <span className="text-base font-extrabold font-mono text-[#5052C9]">
-                  ₹{totalInr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
-
-            {/* Test Sandbox Environment Notice */}
-            <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-900 flex items-start gap-2">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-blue-700 mt-0.5" />
-              <div className="text-[11px] leading-relaxed">
-                <strong>Razorpay Test Sandbox:</strong> Standard Web Checkout will open. You can use any test UPI, NetBanking, or card credentials to verify settlement without moving real funds.
-              </div>
-            </div>
-
-            {/* Processing Step Notice */}
-            {processingStep && (
-              <div className="p-3 rounded-xl bg-[#5052C9]/10 border border-[#5052C9]/30 text-xs text-[#5052C9] flex items-center gap-2.5">
-                <BrandLoader size="button" />
-                <span className="font-medium text-[11px]">{processingStep}</span>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {errorMessage && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
-                <div className="flex-1 font-medium">{errorMessage}</div>
-              </div>
-            )}
-
-            {/* Success Message */}
-            {successMessage && (
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-                <div className="flex-1 font-medium">{successMessage}</div>
-              </div>
-            )}
+      {/* Test Mode Simulation Credentials & Payment Rails Guidance */}
+      {isTestMode && (
+        <div className="p-2.5 rounded-xl bg-[#F8F7F3] border border-[#B8B6AC]/40 text-[11px] text-[#292D40] space-y-1">
+          <div className="flex items-center gap-1.5 font-semibold text-[#5052C9]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2E8F86]" />
+            Razorpay Test Mode Helper
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[10.5px]">
+            <div>
+              <span className="text-[#747683]">Test Card: </span>
+              <code className="font-mono bg-[#FBFAF7] px-1 py-0.5 rounded border border-[#B8B6AC]/30 font-medium">
+                4100 2800 0000 1007
+              </code>{" "}
+              <span className="text-[#747683]">(CVV 123, Exp 12/26)</span>
+            </div>
+            <div>
+              <span className="text-[#747683]">UPI ID: </span>
+              <code className="font-mono bg-[#FBFAF7] px-1 py-0.5 rounded border border-[#B8B6AC]/30 font-medium">
+                test@razorpay
+              </code>{" "}
+              <span className="text-[#747683]">(NPCI cap: &le;₹50,000)</span>
+            </div>
+          </div>
+          {totalInr > 50000 && (
+            <div className="pt-1 border-t border-[#B8B6AC]/20 text-[10.5px] text-[#292D40] leading-relaxed">
+              <span className="font-semibold text-amber-800">Notice for ₹{totalInr.toLocaleString("en-IN")}: </span>
+              NPCI caps single UPI payments at ₹50,000. Please select <span className="font-semibold text-[#5052C9]">Cards</span> or <span className="font-semibold text-[#5052C9]">Netbanking</span> in the Razorpay modal.
+            </div>
+          )}
+        </div>
+      )}
 
-          <DialogFooter className="pt-3 border-t border-[#DDDCD5] flex flex-col sm:flex-row gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsOpen(false)}
-              disabled={isProcessing}
-              className="text-xs h-9 border-[#DDDCD5] cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleInitiatePayment}
-              disabled={isProcessing}
-              className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 font-medium px-4 rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-2"
-            >
-              {isProcessing ? (
-                <>
-                  <BrandLoader size="button" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <span>Open Razorpay Checkout</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      {/* Error Message Notice */}
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+          <div className="flex-1 font-medium leading-relaxed">{errorMessage}</div>
+        </div>
+      )}
+
+      {/* Success Message Notice */}
+      {successMessage && (
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+          <div className="flex-1 font-medium leading-relaxed">{successMessage}</div>
+        </div>
+      )}
+    </div>
   );
 }

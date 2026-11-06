@@ -1174,7 +1174,7 @@ export default function PlatformSubscriptionsPage() {
       {/* MODAL 1: CREATE PLAN MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-3xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold font-heading text-text-primary">
@@ -1193,7 +1193,7 @@ export default function PlatformSubscriptionsPage() {
             </CardHeader>
 
             <form onSubmit={handleCreatePlan} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 pb-8">
               {/* Section 1: Basic Identity */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold font-mono text-primary uppercase tracking-wider">
@@ -1300,29 +1300,53 @@ export default function PlatformSubscriptionsPage() {
                 <h4 className="text-xs font-bold font-mono text-primary uppercase tracking-wider">
                   2. Institutional Limits &amp; Quotas
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                   {CONTROLLED_LIMIT_KEYS.map((lim) => (
-                    <div key={lim.key} className="space-y-1 bg-surface p-2.5 rounded-xl border border-border/40">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-text-primary">{lim.name}</label>
-                        <span className="text-[10px] font-mono text-text-secondary">({lim.unit})</span>
+                    <div
+                      key={lim.key}
+                      className="flex flex-col justify-between p-3 rounded-xl bg-surface border border-border/50 hover:border-primary/40 transition-colors shadow-xs space-y-2.5"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs font-semibold text-text-primary leading-snug line-clamp-1" title={lim.name}>
+                            {lim.name}
+                          </label>
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-mono font-medium px-1.5 py-0 h-4 border-border/60 text-text-secondary shrink-0 bg-white"
+                          >
+                            {lim.unit}
+                          </Badge>
+                        </div>
+                        <p className="text-[10px] text-text-secondary line-clamp-1 leading-normal" title={lim.description}>
+                          {lim.description}
+                        </p>
                       </div>
-                      <Input
-                        type="number"
-                        placeholder="Leave empty for Unlimited"
-                        value={planForm.limits[lim.key] ?? ""}
-                        onChange={(e) => {
-                          const val = e.target.value === "" ? null : Number(e.target.value);
-                          setPlanForm({
-                            ...planForm,
-                            limits: { ...planForm.limits, [lim.key]: val },
-                          });
-                        }}
-                        className="bg-white border-border text-xs h-8 font-mono"
-                      />
-                      <span className="text-[10px] text-text-secondary">
-                        {planForm.limits[lim.key] === null ? "Unlimited quota" : `${planForm.limits[lim.key]} ${lim.unit}`}
-                      </span>
+
+                      <div className="space-y-1 pt-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Leave empty for Unlimited"
+                          value={planForm.limits[lim.key] ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? null : Number(e.target.value);
+                            setPlanForm({
+                              ...planForm,
+                              limits: { ...planForm.limits, [lim.key]: val },
+                            });
+                          }}
+                          className="bg-white border-border text-xs h-9 font-mono focus:border-primary"
+                        />
+                        <div className="flex items-center justify-between text-[10px] font-mono text-text-secondary pt-0.5 px-0.5">
+                          <span>Status:</span>
+                          <span className={`font-semibold ${planForm.limits[lim.key] === null ? "text-primary" : "text-text-primary"}`}>
+                            {planForm.limits[lim.key] === null
+                              ? "Unlimited"
+                              : `${planForm.limits[lim.key]?.toLocaleString()} ${lim.unit}`}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1445,7 +1469,7 @@ export default function PlatformSubscriptionsPage() {
       {/* MODAL 2: EDIT PLAN MODAL */}
       {editingPlan && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-3xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -1469,7 +1493,7 @@ export default function PlatformSubscriptionsPage() {
             </CardHeader>
 
             <form onSubmit={handleSaveEditedPlan} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 pb-8">
               {/* Version Bump Warning */}
               {editingPlan.status === "PUBLISHED" && (
                 <div className="p-3.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-xs flex items-start gap-2.5">
@@ -1566,29 +1590,53 @@ export default function PlatformSubscriptionsPage() {
                 <h4 className="text-xs font-bold font-mono text-primary uppercase tracking-wider">
                   2. Institutional Limits &amp; Quotas
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                   {CONTROLLED_LIMIT_KEYS.map((lim) => (
-                    <div key={lim.key} className="space-y-1 bg-surface p-2.5 rounded-xl border border-border/40">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold text-text-primary">{lim.name}</label>
-                        <span className="text-[10px] font-mono text-text-secondary">({lim.unit})</span>
+                    <div
+                      key={lim.key}
+                      className="flex flex-col justify-between p-3 rounded-xl bg-surface border border-border/50 hover:border-primary/40 transition-colors shadow-xs space-y-2.5"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs font-semibold text-text-primary leading-snug line-clamp-1" title={lim.name}>
+                            {lim.name}
+                          </label>
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-mono font-medium px-1.5 py-0 h-4 border-border/60 text-text-secondary shrink-0 bg-white"
+                          >
+                            {lim.unit}
+                          </Badge>
+                        </div>
+                        <p className="text-[10px] text-text-secondary line-clamp-1 leading-normal" title={lim.description}>
+                          {lim.description}
+                        </p>
                       </div>
-                      <Input
-                        type="number"
-                        placeholder="Unlimited"
-                        value={planForm.limits[lim.key] ?? ""}
-                        onChange={(e) => {
-                          const val = e.target.value === "" ? null : Number(e.target.value);
-                          setPlanForm({
-                            ...planForm,
-                            limits: { ...planForm.limits, [lim.key]: val },
-                          });
-                        }}
-                        className="bg-white border-border text-xs h-8 font-mono"
-                      />
-                      <span className="text-[10px] text-text-secondary">
-                        {planForm.limits[lim.key] === null ? "Unlimited quota" : `${planForm.limits[lim.key]} ${lim.unit}`}
-                      </span>
+
+                      <div className="space-y-1 pt-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="Leave empty for Unlimited"
+                          value={planForm.limits[lim.key] ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? null : Number(e.target.value);
+                            setPlanForm({
+                              ...planForm,
+                              limits: { ...planForm.limits, [lim.key]: val },
+                            });
+                          }}
+                          className="bg-white border-border text-xs h-9 font-mono focus:border-primary"
+                        />
+                        <div className="flex items-center justify-between text-[10px] font-mono text-text-secondary pt-0.5 px-0.5">
+                          <span>Status:</span>
+                          <span className={`font-semibold ${planForm.limits[lim.key] === null ? "text-primary" : "text-text-primary"}`}>
+                            {planForm.limits[lim.key] === null
+                              ? "Unlimited"
+                              : `${planForm.limits[lim.key]?.toLocaleString()} ${lim.unit}`}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1709,7 +1757,7 @@ export default function PlatformSubscriptionsPage() {
       {/* MODAL 3: VIEW PLAN DETAILS & ENTITLEMENTS MODAL */}
       {viewingPlan && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-2xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -1733,17 +1781,24 @@ export default function PlatformSubscriptionsPage() {
               </button>
             </CardHeader>
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5 pb-8">
               {/* Quotas & Limits */}
               <div>
                 <h4 className="text-xs font-bold font-mono text-primary uppercase tracking-wider mb-2">
                   Institutional Resource Limits
                 </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {CONTROLLED_LIMIT_KEYS.map((lim) => (
-                    <div key={lim.key} className="bg-surface p-2.5 rounded-xl border border-border/40">
-                      <div className="text-[10px] text-text-secondary font-mono">{lim.name}</div>
-                      <div className="font-bold text-xs text-text-primary font-mono mt-0.5">
+                    <div key={lim.key} className="bg-surface p-3 rounded-xl border border-border/40 space-y-1">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="text-[11px] text-text-secondary font-mono line-clamp-1" title={lim.name}>
+                          {lim.name}
+                        </span>
+                        <Badge variant="outline" className="text-[9px] font-mono px-1 py-0 h-3.5 border-border/60 text-text-secondary bg-white shrink-0">
+                          {lim.unit}
+                        </Badge>
+                      </div>
+                      <div className="font-bold text-xs text-text-primary font-mono">
                         {viewingPlan.limits[lim.key] !== null
                           ? `${viewingPlan.limits[lim.key]?.toLocaleString()} ${lim.unit}`
                           : "Unlimited"}

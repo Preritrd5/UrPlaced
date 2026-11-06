@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
       invoiceNumber: order.invoiceNumber,
     });
   } catch (error: any) {
-    console.error("[Checkout Create Order API Error]:", error);
     const msg = error.message || "Failed to initialize payment checkout.";
 
     if (msg.includes("UNAUTHORIZED")) {
@@ -66,7 +65,18 @@ export async function POST(request: NextRequest) {
     if (msg.includes("already been fully paid") || msg.includes("Cannot pay invoice") || msg.includes("not found")) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
+    if (msg.includes("Authentication failed")) {
+      console.warn("[Checkout Create Order Gateway Auth Notice]: Razorpay rejected credentials (401).");
+      return NextResponse.json(
+        {
+          error:
+            "Payment gateway authentication failed: The configured Razorpay Test API Key ID or Secret in .env is invalid or expired. Please update RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET with active credentials from the Razorpay Dashboard.",
+        },
+        { status: 502 }
+      );
+    }
 
+    console.error("[Checkout Create Order API Error]:", error);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

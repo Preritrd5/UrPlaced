@@ -499,14 +499,44 @@ export class PlatformSubscriptionService {
       updated_at: now,
     };
 
-    const { data, error } = await admin
+    const { data: rawCreated, error: createErr } = await admin
       .from("subscription_plans")
       .insert(insertPayload)
       .select()
       .single();
 
-    if (error || !data) {
-      throw new Error(`Failed to create plan: ${error?.message || "Database insert error"}`);
+    let data = rawCreated;
+
+    if (createErr || !data) {
+      // Fallback for base schema without version/limits/entitlements/status columns
+      const basePayload = {
+        id: planId,
+        name: name.trim(),
+        slug: cleanSlug,
+        description: description?.trim() || null,
+        price_inr: Number(priceInr),
+        billing_cycle: billingInterval === "MONTHLY" ? "MONTHLY" : "ANNUAL",
+        student_limit: Number(limits.max_students || 1000),
+        staff_limit: Number(limits.max_staff || 10),
+        storage_limit_gb: Number(limits.max_storage_gb || 20),
+        features: legacyFeatures,
+        is_active: isActive,
+        created_at: now,
+        updated_at: now,
+      };
+
+      const fallbackRes = await admin
+        .from("subscription_plans")
+        .insert(basePayload)
+        .select()
+        .single();
+
+      if (fallbackRes.error || !fallbackRes.data) {
+        throw new Error(
+          `Failed to create plan: ${fallbackRes.error?.message || createErr?.message || "Database insert error"}`
+        );
+      }
+      data = fallbackRes.data;
     }
 
     await PlatformAuthService.logAuditEvent({
@@ -793,15 +823,56 @@ export class PlatformSubscriptionService {
       updatePayload.features = legacyFeatures;
     }
 
-    const { data, error } = await admin
+    const { data: rawUpdated, error: updateErr } = await admin
       .from("subscription_plans")
       .update(updatePayload)
       .eq("id", id)
       .select()
       .single();
 
-    if (error || !data) {
-      throw new Error(`Failed to update plan: ${error?.message || "Database update error"}`);
+    let data = rawUpdated;
+
+    if (updateErr || !data) {
+      // Fallback for base schema without version/limits/entitlements/display_order columns
+      const basePayload: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (name !== undefined) basePayload.name = name.trim();
+      if (description !== undefined) basePayload.description = description.trim() || null;
+      if (priceInr !== undefined) basePayload.price_inr = Number(priceInr);
+      if (billingInterval !== undefined) {
+        basePayload.billing_cycle = billingInterval === "MONTHLY" ? "MONTHLY" : "ANNUAL";
+      }
+      if (limitsParam !== undefined) {
+        if (updatedLimits.max_students !== undefined && updatedLimits.max_students !== null) {
+          basePayload.student_limit = Number(updatedLimits.max_students);
+        }
+        if (updatedLimits.max_staff !== undefined && updatedLimits.max_staff !== null) {
+          basePayload.staff_limit = Number(updatedLimits.max_staff);
+        }
+        if (updatedLimits.max_storage_gb !== undefined && updatedLimits.max_storage_gb !== null) {
+          basePayload.storage_limit_gb = Number(updatedLimits.max_storage_gb);
+        }
+      }
+      if (entitlementsParam !== undefined) {
+        basePayload.features = legacyFeatures;
+      }
+
+      const fallbackRes = await admin
+        .from("subscription_plans")
+        .update(basePayload)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (fallbackRes.error || !fallbackRes.data) {
+        throw new Error(
+          `Failed to update plan: ${fallbackRes.error?.message || updateErr?.message || "Database update error"}`
+        );
+      }
+
+      data = fallbackRes.data;
     }
 
     await PlatformAuthService.logAuditEvent({
@@ -823,21 +894,21 @@ export class PlatformSubscriptionService {
       name: data.name,
       slug: data.slug,
       description: data.description,
-      displayOrder: Number(data.display_order),
-      status: data.status,
-      priceInr: Number(data.price_inr),
-      currency: data.currency,
-      billingInterval: data.billing_interval,
-      billingCycle: data.billing_cycle,
-      discountPercentage: Number(data.discount_percentage),
-      studentLimit: Number(data.student_limit),
-      staffLimit: Number(data.staff_limit),
-      storageLimitGb: Number(data.storage_limit_gb),
+      displayOrder: Number(data.display_order ?? displayOrder ?? 0),
+      status: data.status || (data.is_active ? "PUBLISHED" : "ARCHIVED"),
+      priceInr: Number(data.price_inr ?? priceInr ?? 0),
+      currency: data.currency || currency || "INR",
+      billingInterval: (data.billing_interval || data.billing_cycle || billingInterval || "ANNUAL") as BillingInterval,
+      billingCycle: data.billing_cycle || (billingInterval === "MONTHLY" ? "MONTHLY" : "ANNUAL"),
+      discountPercentage: Number(data.discount_percentage ?? discountPercentage ?? 0),
+      studentLimit: Number(data.student_limit || updatedLimits.max_students || 1000),
+      staffLimit: Number(data.staff_limit || updatedLimits.max_staff || 10),
+      storageLimitGb: Number(data.storage_limit_gb || updatedLimits.max_storage_gb || 20),
       limits: data.limits || updatedLimits,
       entitlements: data.entitlements || updatedEntitlements,
-      features: data.features || legacyFeatures,
-      version: Number(data.version),
-      isActive: data.status === "PUBLISHED",
+      features: Array.isArray(data.features) ? data.features : legacyFeatures,
+      version: Number(data.version || newVersion || 1),
+      isActive: data.status ? data.status === "PUBLISHED" : Boolean(data.is_active),
       subscribersCount: existing.subscribersCount,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
@@ -857,7 +928,7 @@ export class PlatformSubscriptionService {
       return existing;
     }
 
-    const { data, error } = await admin
+    const { data: rawPub, error: pubErr } = await admin
       .from("subscription_plans")
       .update({
         status: "PUBLISHED",
@@ -868,8 +939,23 @@ export class PlatformSubscriptionService {
       .select()
       .single();
 
-    if (error || !data) {
-      throw new Error(`Failed to publish plan: ${error?.message || "Update error"}`);
+    let data = rawPub;
+
+    if (pubErr || !data) {
+      const fallbackPub = await admin
+        .from("subscription_plans")
+        .update({
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", planId)
+        .select()
+        .single();
+
+      if (fallbackPub.error || !fallbackPub.data) {
+        throw new Error(`Failed to publish plan: ${fallbackPub.error?.message || pubErr?.message || "Update error"}`);
+      }
+      data = fallbackPub.data;
     }
 
     await PlatformAuthService.logAuditEvent({
@@ -934,7 +1020,7 @@ export class PlatformSubscriptionService {
       );
     }
 
-    const { data, error } = await admin
+    const { data: rawArch, error: archErr } = await admin
       .from("subscription_plans")
       .update({
         status: "ARCHIVED",
@@ -945,8 +1031,23 @@ export class PlatformSubscriptionService {
       .select()
       .single();
 
-    if (error || !data) {
-      throw new Error(`Failed to archive plan: ${error?.message || "Update error"}`);
+    let data = rawArch;
+
+    if (archErr || !data) {
+      const fallbackArch = await admin
+        .from("subscription_plans")
+        .update({
+          is_active: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", planId)
+        .select()
+        .single();
+
+      if (fallbackArch.error || !fallbackArch.data) {
+        throw new Error(`Failed to archive plan: ${fallbackArch.error?.message || archErr?.message || "Update error"}`);
+      }
+      data = fallbackArch.data;
     }
 
     await PlatformAuthService.logAuditEvent({

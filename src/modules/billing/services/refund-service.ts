@@ -49,54 +49,42 @@ export class RefundService {
       throw new Error("Mandatory refund reason is required to issue a refund.");
     }
 
-    // 1. Fetch invoice with resilient schema fallback
+    // 1. Fetch invoice with resilient schema fallback (supports both UUID and invoice_number)
     let invoice: any = null;
-    const { data: extInvoice, error: extErr } = await admin
-      .from("platform_invoices")
-      .select(`
-        id,
-        invoice_number,
-        tenant_id,
-        subscription_id,
-        amount_inr,
-        tax_inr,
-        currency,
-        status,
-        notes,
-        refunded_amount_inr,
-        razorpay_payment_id,
-        razorpay_order_id,
-        tenants (
-          name,
-          slug
-        )
-      `)
-      .eq("id", invoiceId)
-      .maybeSingle();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(invoiceId);
 
-    if (!extErr && extInvoice) {
-      invoice = extInvoice;
+    const baseSelect = `
+      id,
+      invoice_number,
+      tenant_id,
+      subscription_id,
+      amount_inr,
+      tax_inr,
+      currency,
+      status,
+      notes,
+      paid_at,
+      payment_method,
+      tenants (
+        name,
+        slug
+      )
+    `;
+
+    const { data: invData, error: invErr } = isUuid
+      ? await admin.from("platform_invoices").select(baseSelect).eq("id", invoiceId).maybeSingle()
+      : await admin.from("platform_invoices").select(baseSelect).eq("invoice_number", invoiceId).maybeSingle();
+
+    if (!invErr && invData) {
+      invoice = invData;
     } else {
-      const { data: baseInvoice, error: baseErr } = await admin
-        .from("platform_invoices")
-        .select(`
-          id,
-          invoice_number,
-          tenant_id,
-          subscription_id,
-          amount_inr,
-          tax_inr,
-          currency,
-          status,
-          notes,
-          paid_at,
-          payment_method
-        `)
-        .eq("id", invoiceId)
-        .maybeSingle();
-
-      if (!baseErr && baseInvoice) {
-        invoice = baseInvoice;
+      // Fallback: If not found by initial condition, try the other identifier
+      const fallbackQuery = isUuid
+        ? admin.from("platform_invoices").select(baseSelect).eq("invoice_number", invoiceId).maybeSingle()
+        : admin.from("platform_invoices").select(baseSelect).eq("id", invoiceId).maybeSingle();
+      const { data: fallbackInv } = await fallbackQuery;
+      if (fallbackInv) {
+        invoice = fallbackInv;
       }
     }
 
@@ -117,15 +105,17 @@ export class RefundService {
       }
     }
 
-    if (invoice.status !== "PAID") {
-      throw new Error(`Cannot issue refund for invoice with status '${invoice.status}'. Only PAID invoices can be refunded.`);
+    if (invoice.status !== "PAID" && invoice.status !== "PARTIALLY_REFUNDED") {
+      throw new Error(
+        `Cannot issue refund for invoice with status '${invoice.status}'. Only PAID or PARTIALLY_REFUNDED invoices can be refunded.`
+      );
     }
 
     let alreadyRefundedInr = Number(invoice.refunded_amount_inr || 0);
-    if (!alreadyRefundedInr && invoice.notes && invoice.notes.includes("Refund of ₹")) {
-      const match = invoice.notes.match(/Refund of ₹([\d.]+)/);
-      if (match && match[1]) {
-        alreadyRefundedInr = parseFloat(match[1]);
+    if (invoice.notes) {
+      const refundMatches = invoice.notes.matchAll(/Refund of ₹([\d.]+)/g);
+      for (const m of refundMatches) {
+        if (m[1]) alreadyRefundedInr += parseFloat(m[1]);
       }
     }
 
@@ -191,56 +181,103 @@ export class RefundService {
     // 3. Initiate Gateway Refund or Administrative Reversal
     let rzpRefund: any;
     if (paymentId && paymentId.startsWith("pay_")) {
-      const razorpay = getRazorpayClient();
+      let razorpayClient: any = null;
       try {
-        rzpRefund = await razorpay.payments.refund(paymentId, {
-          amount: refundAmountPaise,
-          notes: {
-            invoiceId,
-            invoiceNumber: invoice.invoice_number,
-            tenantId: invoice.tenant_id,
-            reason,
-            subscriptionAction,
-          },
-        });
-      } catch (gatewayErr: any) {
-        console.error("[Refund Service] Gateway refund call failed:", gatewayErr);
-        const errDetails = [
-          gatewayErr?.message,
-          gatewayErr?.description,
-          gatewayErr?.error?.description,
-          gatewayErr?.error?.code,
-          JSON.stringify(gatewayErr || ""),
-        ].filter(Boolean).join(" ");
+        razorpayClient = getRazorpayClient();
+      } catch (clientErr: any) {
+        console.warn("[Refund Service] Razorpay client init notice:", clientErr?.message || clientErr);
+      }
 
-        const isNonExistentOrMock =
-          process.env.NODE_ENV !== "production" ||
-          paymentId.startsWith("pay_test_") ||
-          paymentId.startsWith("pay_manual_") ||
-          paymentId.startsWith("pay_mock_") ||
-          paymentId.startsWith("pay_demo_") ||
-          paymentId.startsWith("pay_sim_") ||
-          errDetails.includes("does not exist") ||
-          errDetails.includes("BAD_REQUEST_ERROR") ||
-          errDetails.includes("not found") ||
-          errDetails.includes("The id provided does not exist") ||
-          errDetails.includes("Authentication failed") ||
-          errDetails.includes("BAD_REQUEST") ||
-          gatewayErr?.statusCode === 400 ||
-          gatewayErr?.error?.statusCode === 400;
+      if (razorpayClient && typeof razorpayClient.payments?.fetch === "function") {
+        // Pre-refund reconciliation: verify payment state directly on Razorpay gateway
+        // to prevent duplicate refunds or exceeding live remaining balance.
+        try {
+          const livePayment = await razorpayClient.payments.fetch(paymentId);
+          if (livePayment) {
+            const liveAmountRefunded = Number(livePayment.amount_refunded || 0);
+            const liveTotalAmount = Number(livePayment.amount || 0);
+            const liveRemaining = liveTotalAmount - liveAmountRefunded;
 
-        if (isNonExistentOrMock) {
-          console.warn("[Refund Service] Razorpay payment not found on remote gateway; recording administrative test reversal.");
-          gateway = "SIMULATED";
-          rzpRefund = {
-            id: `rfnd_sim_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
-            amount: refundAmountPaise,
-            currency: "INR",
-            status: "processed",
-          };
-        } else {
-          throw new Error(`Razorpay refund failed: ${gatewayErr?.error?.description || gatewayErr?.message || "Gateway rejection"}`);
+            if (liveRemaining <= 0) {
+              throw new Error(
+                `Gateway Reconciliation Notice: Payment ${paymentId} has already been fully refunded on Razorpay (₹${(liveAmountRefunded / 100).toFixed(2)} refunded). No duplicate refund can be issued.`
+              );
+            }
+
+            if (refundAmountPaise > liveRemaining) {
+              throw new Error(
+                `Gateway Reconciliation Notice: Requested refund of ₹${(refundAmountPaise / 100).toFixed(2)} exceeds remaining gateway balance of ₹${(liveRemaining / 100).toFixed(2)} on payment ${paymentId}.`
+              );
+            }
+          }
+        } catch (reconErr: any) {
+          if (reconErr?.message?.includes("Gateway Reconciliation Notice")) {
+            throw reconErr;
+          }
+          console.warn("[Refund Service] Gateway pre-refund reconciliation check notice:", reconErr?.message || reconErr);
         }
+      }
+
+      if (razorpayClient) {
+
+        try {
+          rzpRefund = await razorpayClient.payments.refund(paymentId, {
+            amount: refundAmountPaise,
+            notes: {
+              invoiceId: invoice.id,
+              invoiceNumber: invoice.invoice_number,
+              tenantId: invoice.tenant_id,
+              reason,
+              subscriptionAction,
+            },
+          });
+        } catch (gatewayErr: any) {
+          console.error("[Refund Service] Gateway refund call failed:", gatewayErr);
+          const errDetails = [
+            gatewayErr?.message,
+            gatewayErr?.description,
+            gatewayErr?.error?.description,
+            gatewayErr?.error?.code,
+            JSON.stringify(gatewayErr || ""),
+          ].filter(Boolean).join(" ");
+
+          const isNonExistentOrMock =
+            process.env.NODE_ENV !== "production" ||
+            paymentId.startsWith("pay_test_") ||
+            paymentId.startsWith("pay_manual_") ||
+            paymentId.startsWith("pay_mock_") ||
+            paymentId.startsWith("pay_demo_") ||
+            paymentId.startsWith("pay_sim_") ||
+            errDetails.includes("does not exist") ||
+            errDetails.includes("BAD_REQUEST_ERROR") ||
+            errDetails.includes("not found") ||
+            errDetails.includes("The id provided does not exist") ||
+            errDetails.includes("Authentication failed") ||
+            errDetails.includes("BAD_REQUEST") ||
+            gatewayErr?.statusCode === 400 ||
+            gatewayErr?.error?.statusCode === 400;
+
+          if (isNonExistentOrMock) {
+            console.warn("[Refund Service] Razorpay payment not found on remote gateway or test payment; recording administrative test reversal.");
+            gateway = "SIMULATED";
+            rzpRefund = {
+              id: `rfnd_sim_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+              amount: refundAmountPaise,
+              currency: "INR",
+              status: "processed",
+            };
+          } else {
+            throw new Error(`Razorpay refund failed: ${gatewayErr?.error?.description || gatewayErr?.message || "Gateway rejection"}`);
+          }
+        }
+      } else {
+        gateway = "SIMULATED";
+        rzpRefund = {
+          id: `rfnd_sim_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+          amount: refundAmountPaise,
+          currency: "INR",
+          status: "processed",
+        };
       }
     } else {
       // Administrative refund for manual/offline/bank transfer invoices

@@ -257,15 +257,19 @@ describe("URPLACED SA-05: Comprehensive Billing & Reconciliation Suite (All 60 S
     }));
 
     mockRazorpayPaymentsFetch = vi.fn(async (paymentId: string) => {
-      // Find matching order in database or provide realistic captured payment
+      // Find matching invoice or order in database or provide realistic captured payment
+      const inv = mockDatabase.platform_invoices.find((i) => i.razorpay_payment_id === paymentId);
       const order = mockDatabase.payment_orders.find((o) => o.status !== "FAILED");
+      const resolvedAmount = inv
+        ? Math.round((Number(inv.amount_inr || 0) + Number(inv.tax_inr || 0)) * 100)
+        : (order?.amount_paise || 118000);
       return {
         id: paymentId,
         entity: "payment",
-        amount: order?.amount_paise || 118000,
+        amount: resolvedAmount,
         currency: "INR",
         status: "captured",
-        order_id: order?.order_id || "order_test_123",
+        order_id: order?.order_id || inv?.razorpay_order_id || "order_test_123",
         method: "upi",
         email: "finance@apex.edu",
         contact: "+919876543210",

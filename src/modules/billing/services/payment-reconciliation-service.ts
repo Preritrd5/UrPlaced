@@ -183,7 +183,12 @@ export class PaymentReconciliationService {
           .eq("idempotency_key", idempotencyKey)
           .maybeSingle();
 
-        if (existingByKey && existingByKey.status !== "FAILED" && existingByKey.status !== "EXPIRED") {
+        if (
+          existingByKey &&
+          existingByKey.status !== "FAILED" &&
+          existingByKey.status !== "EXPIRED" &&
+          Number(existingByKey.amount_paise) === amountPaise
+        ) {
           return {
             orderId: existingByKey.order_id,
             amountPaise: Number(existingByKey.amount_paise),
@@ -209,7 +214,7 @@ export class PaymentReconciliationService {
         .limit(1)
         .maybeSingle();
 
-      if (existingActiveOrder) {
+      if (existingActiveOrder && Number(existingActiveOrder.amount_paise) === amountPaise) {
         return {
           orderId: existingActiveOrder.order_id,
           amountPaise: Number(existingActiveOrder.amount_paise),
@@ -242,21 +247,10 @@ export class PaymentReconciliationService {
         },
       });
     } catch (rzpErr: any) {
-      console.warn("[Payment Reconciliation] Razorpay order creation warning:", rzpErr?.message || rzpErr);
-      if (config.keyId.startsWith("rzp_test_")) {
-        // Fallback test order in test mode to allow continuous verification
-        rzpOrder = {
-          id: `order_test_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
-          amount: amountPaise,
-          currency: "INR",
-          receipt: invoice.invoice_number.slice(0, 40),
-          status: "created",
-        };
-      } else {
-        throw new Error(
-          `Payment gateway order creation failed: ${rzpErr?.error?.description || rzpErr?.message || "Failed to initialize order with Razorpay."}`
-        );
-      }
+      console.error("[Payment Reconciliation] Razorpay order creation failed:", rzpErr?.message || rzpErr);
+      throw new Error(
+        `Payment gateway order creation failed: ${rzpErr?.error?.description || rzpErr?.message || "Failed to initialize order with Razorpay."}`
+      );
     }
 
     // 7. Persist payment order record in database if table is available
@@ -345,6 +339,10 @@ export class PaymentReconciliationService {
         .maybeSingle();
 
       if (existingTx && existingTx.status === "CAPTURED") {
+        if (callerTenantId && existingTx.tenant_id !== callerTenantId) {
+          throw new Error("Forbidden: You are not authorized to verify a payment for another college.");
+        }
+
         return {
           success: true,
           duplicate: true,
@@ -356,7 +354,8 @@ export class PaymentReconciliationService {
           message: "Payment was previously reconciled and activated.",
         };
       }
-    } catch {
+    } catch (txErr: any) {
+      if (txErr?.message?.includes("Forbidden")) throw txErr;
       // Table may not exist; continue to gate via invoice status below
     }
 
@@ -483,6 +482,11 @@ export class PaymentReconciliationService {
       throw new Error(`Associated invoice not found: ${order.invoice_id}`);
     }
 
+    // Strict tenant isolation check: Reject invoice access belonging to another college
+    if (callerTenantId && invoice.tenant_id !== callerTenantId) {
+      throw new Error("Forbidden: You are not authorized to verify a payment for another college.");
+    }
+
     // 4. Cryptographic Signature Verification
     if (source === "CHECKOUT_VERIFICATION") {
       if (!signature) {
@@ -494,9 +498,7 @@ export class PaymentReconciliationService {
         signature,
       });
       if (!isValid) {
-        if (!orderId.startsWith("order_test_") && !signature.startsWith("test_sig_")) {
-          throw new Error("Cryptographic verification failed: Invalid checkout signature.");
-        }
+        throw new Error("Cryptographic verification failed: Invalid checkout signature.");
       }
     } else if (source === "WEBHOOK" && rawWebhookBody && webhookSignature) {
       const isValid = verifyWebhookSignature({
@@ -513,19 +515,8 @@ export class PaymentReconciliationService {
     try {
       paymentDetails = await razorpay.payments.fetch(paymentId);
     } catch (fetchErr: any) {
-      console.warn("[Payment Reconciliation] Razorpay fetch payment warning:", fetchErr?.message || fetchErr);
-      if (orderId.startsWith("order_test_") || paymentId.startsWith("pay_test_") || paymentId.startsWith("pay_mock_")) {
-        paymentDetails = {
-          id: paymentId,
-          order_id: order.order_id,
-          currency: order.currency || "INR",
-          amount: order.amount_paise,
-          status: "captured",
-          method: "card",
-        };
-      } else {
-        throw new Error(`Failed to verify payment with gateway: ${fetchErr?.message || "Gateway unreachable"}`);
-      }
+      console.error("[Payment Reconciliation] Razorpay fetch payment failed:", fetchErr?.message || fetchErr);
+      throw new Error(`Failed to verify payment with gateway: ${fetchErr?.message || "Gateway unreachable"}`);
     }
 
     // Confirm payment properties match recorded order

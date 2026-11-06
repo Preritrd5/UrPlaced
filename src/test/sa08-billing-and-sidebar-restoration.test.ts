@@ -7,6 +7,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import crypto from "crypto";
+import * as razorpayLib from "@/lib/payment/razorpay";
 import { PlatformCollegeService } from "@/modules/platform-admin/services/platform-college-service";
 import { PlatformSubscriptionService } from "@/modules/platform-admin/services/platform-subscription-service";
 import { PaymentReconciliationService } from "@/modules/billing/services/payment-reconciliation-service";
@@ -155,6 +157,13 @@ describe("URPLACED — College Billing, Super Admin Lifecycle & Sidebar Restorat
             rows.push(insertData);
             return chain;
           }),
+          upsert: vi.fn((data: any) => {
+            isInsert = true;
+            insertData = Array.isArray(data) ? data[0] : data;
+            if (!insertData.id) insertData.id = `gen-${Date.now()}`;
+            rows.push(insertData);
+            return chain;
+          }),
           update: vi.fn((data: any) => {
             pendingUpdate = data;
             return chain;
@@ -190,6 +199,32 @@ describe("URPLACED — College Billing, Super Admin Lifecycle & Sidebar Restorat
         })),
       },
     };
+
+    process.env.RAZORPAY_KEY_ID = "rzp_test_snpsu_mock_key";
+    process.env.RAZORPAY_KEY_SECRET = "mock_secret_snpsu_12345";
+    process.env.RAZORPAY_MODE = "test";
+
+    vi.spyOn(razorpayLib, "getRazorpayClient").mockReturnValue({
+      orders: {
+        create: vi.fn(async (args: any) => ({
+          id: "order_rzp_8142_verified",
+          amount: args.amount,
+          currency: args.currency || "INR",
+          receipt: args.receipt,
+          status: "created",
+        })),
+      },
+      payments: {
+        fetch: vi.fn(async (paymentId: string) => ({
+          id: paymentId,
+          order_id: "order_rzp_8142_verified",
+          amount: 59000000,
+          currency: "INR",
+          status: "captured",
+          method: "card",
+        })),
+      },
+    } as any);
   });
 
   // =========================================================================
@@ -306,10 +341,29 @@ describe("URPLACED — College Billing, Super Admin Lifecycle & Sidebar Restorat
   // =========================================================================
   describe("Post-Payment Entitlement Activation & Access Restoration", () => {
     it("3.1 Verified payment marks invoice PAID and reactivates subscription & tenant atomically", async () => {
+      const orderId = "order_rzp_8142_verified";
+      const paymentId = "pay_rzp_8142_captured";
+
+      // Seed payment order in mockDatabase
+      mockDatabase.payment_orders.push({
+        id: "po-8142",
+        order_id: orderId,
+        tenant_id: "tenant-snpsu-01",
+        invoice_id: "inv-uuid-8142",
+        amount_paise: 59000000,
+        currency: "INR",
+        status: "CREATED",
+      });
+
+      const validSignature = crypto
+        .createHmac("sha256", "mock_secret_snpsu_12345")
+        .update(`${orderId}|${paymentId}`)
+        .digest("hex");
+
       const reconResult = await PaymentReconciliationService.reconcilePayment({
-        orderId: "order_test_8142_verified",
-        paymentId: "pay_test_8142_captured",
-        signature: "test_sig_verified",
+        orderId,
+        paymentId,
+        signature: validSignature,
         source: "CHECKOUT_VERIFICATION",
         admin: mockAdmin,
       });

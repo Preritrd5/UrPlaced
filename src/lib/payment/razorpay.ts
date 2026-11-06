@@ -13,18 +13,13 @@ export interface RazorpayConfig {
 }
 
 let cachedRazorpayClient: Razorpay | null = null;
+let lastCachedKeyId: string | null = null;
+let lastCachedKeySecret: string | null = null;
 
 export function getRazorpayConfig(): RazorpayConfig {
   const keyId = process.env.RAZORPAY_KEY_ID?.replace(/^["']|["']$/g, "").trim();
   const keySecret = process.env.RAZORPAY_KEY_SECRET?.replace(/^["']|["']$/g, "").trim();
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET?.replace(/^["']|["']$/g, "").trim();
-  const mode = (process.env.RAZORPAY_MODE || "test").replace(/^["']|["']$/g, "").trim().toLowerCase();
-
-  if (mode !== "test") {
-    throw new Error(
-      "Safety violation: UrPlaced is configured in Razorpay TEST MODE only. Live mode is strictly prohibited."
-    );
-  }
 
   if (!keyId || !keySecret) {
     throw new Error(
@@ -32,10 +27,10 @@ export function getRazorpayConfig(): RazorpayConfig {
     );
   }
 
-  // Strict constraint: SA-05 Step 01 operates in TEST MODE only
-  if (!keyId.startsWith("rzp_test_")) {
+  // Validate supported Razorpay key identifier prefixes (supports both Test Mode and Live Mode)
+  if (!keyId.startsWith("rzp_test_") && !keyId.startsWith("rzp_live_")) {
     throw new Error(
-      "Safety violation: UrPlaced is configured in Razorpay TEST MODE only. Live key identifiers are strictly prohibited in this phase."
+      "Invalid Razorpay Key ID format. Key ID must start with 'rzp_test_' or 'rzp_live_'."
     );
   }
 
@@ -47,11 +42,14 @@ export function getRazorpayConfig(): RazorpayConfig {
 }
 
 export function getRazorpayClient(): Razorpay {
-  if (cachedRazorpayClient) {
+  const { keyId, keySecret } = getRazorpayConfig();
+
+  if (cachedRazorpayClient && lastCachedKeyId === keyId && lastCachedKeySecret === keySecret) {
     return cachedRazorpayClient;
   }
 
-  const { keyId, keySecret } = getRazorpayConfig();
+  lastCachedKeyId = keyId;
+  lastCachedKeySecret = keySecret;
   cachedRazorpayClient = new Razorpay({
     key_id: keyId,
     key_secret: keySecret,
