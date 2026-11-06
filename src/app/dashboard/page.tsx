@@ -24,6 +24,7 @@ import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DashboardSkeleton } from "@/components/ui/page-skeletons";
 
 export default function DashboardPage() {
   const auth = useAuthContext();
@@ -102,16 +103,7 @@ export default function DashboardPage() {
   }, [auth.isLoading, auth.isAuthenticated, auth.accountCategory, auth.role, router]);
 
   if (auth.isLoading || loading) {
-    return (
-      <div className="space-y-8 animate-pulse">
-        <div className="h-10 bg-card/60 rounded-xl w-1/3" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-card rounded-xl border border-border" />
-          ))}
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const canManageDrives = auth.role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF"].includes(auth.role);

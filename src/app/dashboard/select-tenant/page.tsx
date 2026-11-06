@@ -8,6 +8,7 @@ import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 
 export default function SelectTenantPage() {
   const auth = useAuthContext();
@@ -21,9 +22,9 @@ export default function SelectTenantPage() {
 
   if (auth.isLoading) {
     return (
-      <div className="space-y-6 max-w-xl mx-auto py-8 animate-pulse">
-        <div className="h-8 bg-card/60 rounded-xl w-1/2 mx-auto" />
-        <div className="h-20 bg-card rounded-xl border border-border" />
+      <div className="space-y-6 max-w-xl mx-auto py-8">
+        <Skeleton className="h-8 w-1/2 mx-auto rounded-xl" />
+        <SkeletonCard className="h-24" />
       </div>
     );
   }

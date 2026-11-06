@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BrandLoader } from "@/components/common/brand-loader";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { RazorpayCheckoutButton } from "@/components/billing/razorpay-checkout-button";
 import { toast } from "@/components/ui/dialog-system";
 
@@ -344,12 +345,12 @@ export default function CollegeBillingPage() {
 
   if (loading || auth.isLoading) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-6 animate-pulse">
-        <div className="h-8 bg-card/60 rounded-xl w-1/3" />
-        <div className="h-4 bg-card/40 rounded-lg w-1/2" />
+      <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-6">
+        <Skeleton className="h-8 w-1/3 rounded-xl" />
+        <Skeleton className="h-4 w-1/2 rounded-lg" />
         <div className="grid gap-4 sm:grid-cols-2 mt-6">
-          <div className="h-48 bg-card rounded-2xl border border-border" />
-          <div className="h-48 bg-card rounded-2xl border border-border" />
+          <SkeletonCard className="h-48" />
+          <SkeletonCard className="h-48" />
         </div>
       </div>
     );

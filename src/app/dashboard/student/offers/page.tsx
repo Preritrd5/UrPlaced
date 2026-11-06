@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { BrandLoader } from "@/components/common/brand-loader";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -162,7 +163,7 @@ export default function StudentOffersPage() {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2].map((i) => (
-            <Card key={i} className="h-48 animate-pulse bg-card/60" />
+            <SkeletonCard key={i} className="h-48" />
           ))}
         </div>
       ) : offers.length === 0 ? (

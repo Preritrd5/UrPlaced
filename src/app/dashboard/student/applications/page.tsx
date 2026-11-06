@@ -22,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { confirmDialog, toast } from "@/components/ui/dialog-system";
 
 export default function StudentApplicationsPage() {
@@ -153,7 +154,7 @@ export default function StudentApplicationsPage() {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="h-36 animate-pulse bg-card/60" />
+            <SkeletonCard key={i} className="h-36" />
           ))}
         </div>
       ) : applications.length === 0 ? (

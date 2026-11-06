@@ -14,7 +14,7 @@ function Skeleton({
     <div
       aria-hidden="true"
       className={cn(
-        "rounded-md bg-[rgba(36,40,58,0.14)] dark:bg-white/12",
+        "rounded-md bg-skeleton",
         variant === "shimmer" ? "animate-shimmer" : "animate-pulse",
         className
       )}

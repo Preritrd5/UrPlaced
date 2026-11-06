@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 export default function StudentAnnouncementsPage() {
   const router = useRouter();
@@ -152,7 +153,7 @@ export default function StudentAnnouncementsPage() {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="h-32 animate-pulse bg-card/60" />
+            <SkeletonCard key={i} className="h-32" />
           ))}
         </div>
       ) : filteredAnnouncements.length === 0 ? (

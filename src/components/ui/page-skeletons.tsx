@@ -194,7 +194,7 @@ export function TableSkeleton({
       {/* Table Shell */}
       <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
         {/* Table Head */}
-        <div className="bg-[rgba(36,40,58,0.03)] border-b border-border px-4 py-3 flex items-center justify-between">
+        <div className="bg-surface/80 border-b border-border px-4 py-3 flex items-center justify-between">
           <Skeleton className="h-4 w-32 rounded" />
           <Skeleton className="h-4 w-24 rounded" />
           <Skeleton className="h-4 w-28 rounded hidden md:block" />
@@ -361,7 +361,7 @@ export function AnalyticsSkeleton() {
             <SkeletonBadge width="w-20" />
           </div>
           {/* Chart Graphic Placeholder */}
-          <div className="h-64 flex items-end justify-between gap-3 p-4 bg-surface/30 rounded-lg">
+          <div className="h-64 flex items-end justify-between gap-3 p-4 bg-surface/80 border border-border/60 rounded-lg">
             {[40, 65, 55, 80, 70, 90, 85].map((h, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
                 <Skeleton
@@ -383,7 +383,7 @@ export function AnalyticsSkeleton() {
             <SkeletonBadge width="w-20" />
           </div>
           {/* Chart Graphic Placeholder */}
-          <div className="h-64 flex items-end justify-between gap-3 p-4 bg-surface/30 rounded-lg">
+          <div className="h-64 flex items-end justify-between gap-3 p-4 bg-surface/80 border border-border/60 rounded-lg">
             {[60, 45, 75, 50, 85, 65, 95].map((h, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
                 <Skeleton

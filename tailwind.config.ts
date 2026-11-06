@@ -59,6 +59,12 @@ const config: Config = {
           strong: "var(--color-border-strong)",
         },
         ring: "var(--color-primary-ring)",
+        skeleton: {
+          DEFAULT: "var(--color-skeleton-base)",
+          base: "var(--color-skeleton-base)",
+          shimmer: "var(--color-skeleton-shimmer)",
+          secondary: "var(--color-skeleton-secondary)",
+        },
         status: {
           success: "var(--color-success)",
           "success-subtle": "var(--color-success-subtle)",

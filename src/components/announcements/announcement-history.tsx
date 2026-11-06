@@ -22,6 +22,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { AnnouncementRecord, AnnouncementCategory } from "@/modules/notifications/types";
 
@@ -201,8 +202,8 @@ export function AnnouncementHistory({
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="bg-[#F8F7F3] border-[#DDDCD5] p-5 animate-pulse">
-              <div className="h-4 bg-[#EDECE7] rounded w-1/3 mb-2" />
-              <div className="h-3 bg-[#EDECE7] rounded w-2/3" />
+              <Skeleton className="h-4 w-1/3 mb-2" />
+              <Skeleton className="h-3 w-2/3" />
             </Card>
           ))}
         </div>

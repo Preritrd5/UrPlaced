@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 export default function StudentDrivesPage() {
   const router = useRouter();
@@ -150,7 +151,7 @@ export default function StudentDrivesPage() {
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="h-56 animate-pulse bg-card/60" />
+            <SkeletonCard key={i} className="h-56" />
           ))}
         </div>
       ) : drives.length === 0 ? (

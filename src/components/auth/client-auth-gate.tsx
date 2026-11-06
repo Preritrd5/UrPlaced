@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { DashboardSkeleton } from "@/components/ui/page-skeletons";
 
 interface ClientAuthGateProps {
   redirectTo?: string;
@@ -37,14 +38,8 @@ export function ClientAuthGate({
 
   if (auth.isLoading || (auth.isAuthenticated && !refreshed)) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto p-6 animate-pulse">
-        <div className="h-8 bg-card/60 rounded-xl w-1/4" />
-        <div className="h-4 bg-card/40 rounded-lg w-1/3" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-card rounded-xl border border-border" />
-          ))}
-        </div>
+      <div className="max-w-7xl mx-auto p-6">
+        <DashboardSkeleton />
       </div>
     );
   }

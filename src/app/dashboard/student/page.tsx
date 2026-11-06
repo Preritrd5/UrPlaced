@@ -17,6 +17,7 @@ import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DashboardSkeleton } from "@/components/ui/page-skeletons";
 
 export default function StudentDashboardPage() {
   const auth = useAuthContext();
@@ -83,16 +84,7 @@ export default function StudentDashboardPage() {
   }, [auth.isLoading, auth.isAuthenticated, auth.accountCategory, auth.role, router]);
 
   if (auth.isLoading || loading) {
-    return (
-      <div className="space-y-8 max-w-7xl mx-auto p-4 sm:p-6 animate-pulse">
-        <div className="h-10 bg-card/60 rounded-xl w-1/3" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-card rounded-xl border border-border" />
-          ))}
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const { metrics, attempts } = dashboardData;
