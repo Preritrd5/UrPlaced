@@ -24,6 +24,44 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
+interface PublishedPlan {
+  id: string;
+  name: string;
+  priceInr: number;
+  billingInterval?: string;
+  studentLimit?: number;
+  description?: string;
+  features?: string[];
+  status?: string;
+}
+
+const FALLBACK_PLANS: PublishedPlan[] = [
+  {
+    id: "starter",
+    name: "Institutional Starter",
+    priceInr: 49999,
+    studentLimit: 500,
+    features: ["Up to 500 students", "Standard Assessments"],
+    description: "Up to 500 students • Standard Assessments",
+  },
+  {
+    id: "growth",
+    name: "Campus Growth",
+    priceInr: 129999,
+    studentLimit: 2500,
+    features: ["Up to 2,500 students", "DriveFit", "Mistake Bank"],
+    description: "Up to 2,500 students • DriveFit • Mistake Bank",
+  },
+  {
+    id: "enterprise",
+    name: "University Enterprise",
+    priceInr: 249999,
+    studentLimit: 10000,
+    features: ["Up to 10,000 students", "Dedicated SLA & Support"],
+    description: "Up to 10,000 students • Dedicated SLA & Support",
+  },
+];
+
 export default function RegisterCollegePage() {
   const router = useRouter();
 
@@ -37,10 +75,67 @@ export default function RegisterCollegePage() {
   const [initialPlanId, setInitialPlanId] = React.useState("growth");
   const [studentSeatLimit, setStudentSeatLimit] = React.useState("1000");
 
+  const [plans, setPlans] = React.useState<PublishedPlan[]>(FALLBACK_PLANS);
+  const [loadingPlans, setLoadingPlans] = React.useState(true);
+
   const [loading, setLoading] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [createdCollege, setCreatedCollege] = React.useState<any | null>(null);
   const [copiedToken, setCopiedToken] = React.useState(false);
+
+  // Fetch real-time published subscription plans and current pricing from database
+  React.useEffect(() => {
+    let isMounted = true;
+    async function loadPublishedPlans() {
+      try {
+        setLoadingPlans(true);
+        const res = await fetch("/api/preritrd/subscriptions/plans");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.plans) && data.plans.length > 0) {
+          const published = data.plans
+            .filter(
+              (p: any) =>
+                p.status === "PUBLISHED" ||
+                p.status === undefined ||
+                p.isActive !== false
+            )
+            .map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              priceInr: Number(p.priceInr ?? p.price_inr ?? 0),
+              billingInterval: p.billingInterval || p.billing_cycle || "ANNUAL",
+              studentLimit: Number(p.studentLimit ?? p.student_limit ?? 1000),
+              features: Array.isArray(p.features) ? p.features : [],
+              description: p.description || "",
+              status: p.status,
+            }));
+
+          if (published.length > 0) {
+            setPlans(published);
+          }
+        }
+      } catch {
+        // Fall back gracefully to standard defaults
+      } finally {
+        if (isMounted) setLoadingPlans(false);
+      }
+    }
+
+    loadPublishedPlans();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleSelectPlan = (planId: string) => {
+    setInitialPlanId(planId);
+    if (planId === "unassigned") return;
+    const target = plans.find((p) => p.id === planId);
+    if (target?.studentLimit) {
+      setStudentSeatLimit(target.studentLimit.toString());
+    }
+  };
 
   // Auto-slug generator
   function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -366,74 +461,51 @@ export default function RegisterCollegePage() {
             </CardHeader>
             <CardContent className="p-5 sm:p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Plan 1 */}
-                <label
-                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
-                    initialPlanId === "starter"
-                      ? "bg-primary/10 border-primary ring-2 ring-primary/30"
-                      : "bg-surface border-border hover:border-primary/40"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value="starter"
-                    checked={initialPlanId === "starter"}
-                    onChange={(e) => setInitialPlanId(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div className="font-bold text-xs text-text-primary">Institutional Starter</div>
-                  <div className="text-base font-extrabold font-heading text-primary mt-1">₹49,999/yr</div>
-                  <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
-                    Up to 500 students &bull; Standard Assessments
-                  </div>
-                </label>
+                {plans.map((plan) => {
+                  const isSelected = initialPlanId === plan.id;
+                  const interval = plan.billingInterval === "MONTHLY" ? "mo" : "yr";
+                  const priceLabel = `₹${plan.priceInr.toLocaleString("en-IN")}/${interval}`;
 
-                {/* Plan 2 */}
-                <label
-                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
-                    initialPlanId === "growth"
-                      ? "bg-primary/10 border-primary ring-2 ring-primary/30"
-                      : "bg-surface border-border hover:border-primary/40"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value="growth"
-                    checked={initialPlanId === "growth"}
-                    onChange={(e) => setInitialPlanId(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div className="font-bold text-xs text-text-primary">Campus Growth</div>
-                  <div className="text-base font-extrabold font-heading text-primary mt-1">₹1,29,999/yr</div>
-                  <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
-                    Up to 2,500 students &bull; DriveFit &bull; Mistake Bank
-                  </div>
-                </label>
+                  let summary = "";
+                  if (plan.id === "starter") {
+                    summary = `Up to ${(plan.studentLimit || 500).toLocaleString("en-IN")} students • Standard Assessments`;
+                  } else if (plan.id === "growth") {
+                    summary = `Up to ${(plan.studentLimit || 2500).toLocaleString("en-IN")} students • DriveFit • Mistake Bank`;
+                  } else if (plan.id === "enterprise") {
+                    summary = `Up to ${(plan.studentLimit || 10000).toLocaleString("en-IN")} students • Dedicated SLA & Support`;
+                  } else if (plan.features && plan.features.length > 0) {
+                    summary = `Up to ${(plan.studentLimit || 1000).toLocaleString("en-IN")} students • ${plan.features.slice(0, 2).join(" • ")}`;
+                  } else {
+                    summary = plan.description || `Up to ${(plan.studentLimit || 1000).toLocaleString("en-IN")} students`;
+                  }
 
-                {/* Plan 3 */}
-                <label
-                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
-                    initialPlanId === "enterprise"
-                      ? "bg-primary/10 border-primary ring-2 ring-primary/30"
-                      : "bg-surface border-border hover:border-primary/40"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="plan"
-                    value="enterprise"
-                    checked={initialPlanId === "enterprise"}
-                    onChange={(e) => setInitialPlanId(e.target.value)}
-                    className="sr-only"
-                  />
-                  <div className="font-bold text-xs text-text-primary">University Enterprise</div>
-                  <div className="text-base font-extrabold font-heading text-primary mt-1">₹2,49,999/yr</div>
-                  <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
-                    Up to 10,000 students &bull; Dedicated SLA &amp; Support
-                  </div>
-                </label>
+                  return (
+                    <label
+                      key={plan.id}
+                      className={`p-4 rounded-xl border text-left cursor-pointer transition-all block ${
+                        isSelected
+                          ? "bg-primary/10 border-primary ring-2 ring-primary/30"
+                          : "bg-surface border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="plan"
+                        value={plan.id}
+                        checked={isSelected}
+                        onChange={() => handleSelectPlan(plan.id)}
+                        className="sr-only"
+                      />
+                      <div className="font-bold text-xs text-text-primary">{plan.name}</div>
+                      <div className="text-base font-extrabold font-heading text-primary mt-1">
+                        {priceLabel}
+                      </div>
+                      <div className="text-[11px] text-text-secondary mt-2 leading-relaxed">
+                        {summary}
+                      </div>
+                    </label>
+                  );
+                })}
 
                 {/* Option C: Unassigned Post-Registration Plan Selection */}
                 <label
@@ -448,7 +520,7 @@ export default function RegisterCollegePage() {
                     name="plan"
                     value="unassigned"
                     checked={initialPlanId === "unassigned"}
-                    onChange={(e) => setInitialPlanId(e.target.value)}
+                    onChange={() => handleSelectPlan("unassigned")}
                     className="sr-only"
                   />
                   <div className="font-bold text-xs text-text-primary">Leave Unassigned</div>

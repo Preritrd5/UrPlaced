@@ -1,0 +1,21 @@
+{
+  "name": "UrPlaced — Multi-College Placement Preparation & Management SaaS",
+  "short_name": "UrPlaced",
+  "description": "Enterprise placement preparation and management platform connecting college placement operations with role-specific student skill mastery.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EDECE7",
+  "theme_color": "#5052C9",
+  "icons": [
+    {
+      "src": "/assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

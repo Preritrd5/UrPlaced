@@ -119,18 +119,28 @@ export async function POST(request: NextRequest) {
       entitlements,
     };
 
-    // 2. Check current college subscription
+    // 2. Check current college subscription & payment history
     const { data: existingSub } = await admin
       .from("college_subscriptions")
       .select("*")
       .eq("tenant_id", ctx.tenantId)
       .maybeSingle();
 
-    if (existingSub && existingSub.status === "ACTIVE") {
+    const { data: paidInvoices } = await admin
+      .from("platform_invoices")
+      .select("id")
+      .eq("tenant_id", ctx.tenantId)
+      .eq("status", "PAID")
+      .limit(1);
+
+    const hasPaidInitialInvoice = Boolean(paidInvoices && paidInvoices.length > 0);
+
+    // Only block if the college already has an authoritative, paid active subscription
+    if (existingSub && existingSub.status === "ACTIVE" && hasPaidInitialInvoice) {
       return NextResponse.json(
         {
           error:
-            "College already has an active subscription. Use the upgrade or downgrade workflow to schedule plan modifications.",
+            "College already has an active, paid subscription. Use the upgrade or downgrade workflow to schedule plan modifications.",
         },
         { status: 400 }
       );
@@ -302,7 +312,7 @@ export async function POST(request: NextRequest) {
           status: "PENDING",
           issue_date: new Date().toISOString(),
           due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          payment_method: "ONLINE",
+          payment_method: "RAZORPAY",
           is_demo: false,
           notes: `Initial registration invoice for plan: ${targetPlan.name}`,
         })
@@ -364,10 +374,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     const msg = error.message || "Failed to select subscription plan";
+    console.error("[Select Plan API Error]:", error);
     const status = msg.includes("UNAUTHORIZED")
       ? 401
       : msg.includes("Forbidden")
       ? 403
+      : msg.includes("does not exist")
+      ? 404
+      : msg.includes("active, paid subscription") ||
+        msg.includes("Plan ID is required") ||
+        msg.includes("Only PUBLISHED plans")
+      ? 400
       : 500;
     return NextResponse.json({ error: msg }, { status });
   }

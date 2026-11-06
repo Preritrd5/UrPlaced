@@ -165,9 +165,7 @@ export class BillingNotificationService {
         tenants (
           name,
           official_email,
-          contact_name,
-          billing_contact_email,
-          billing_contact_name
+          contact_name
         )
       `)
       .in("status", ["ACTIVE", "PAST_DUE", "PENDING_PAYMENT"]);

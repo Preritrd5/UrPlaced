@@ -77,34 +77,215 @@ export class InvoiceDocumentService {
   }
 
   /**
+   * Resiliently fetches an invoice and its associated tenant details.
+   * Supports both UUID (id) and human-readable invoice numbers (e.g. INV-2026-2091).
+   * Decouples the invoice query from optional tenant extension columns to prevent
+   * PostgreSQL 42703 undefined_column errors on databases without extended billing columns.
+   */
+  static async fetchInvoiceWithTenant(
+    identifier: string,
+    admin = createAdminClient()
+  ): Promise<{ invoice: any; tenant: any }> {
+    const cleanId = (identifier || "").trim();
+    if (!cleanId) {
+      throw new Error("Invoice identifier is required");
+    }
+
+    // 1. Fetch base invoice record from platform_invoices
+    // Supports UUID, custom ID (e.g. inv-pdf-01), and human-readable invoice numbers (e.g. INV-2026-2091)
+    let invoice: any = null;
+    const isExplicitInvoiceNumber = /^INV-\d{4}-/i.test(cleanId);
+
+    if (isExplicitInvoiceNumber) {
+      const { data: invByNum, error: numErr } = await admin
+        .from("platform_invoices")
+        .select("*")
+        .eq("invoice_number", cleanId)
+        .maybeSingle();
+
+      if (numErr && numErr.code !== "22P02") {
+        console.error(`[InvoiceDocumentService] Database error fetching invoice by number ${cleanId}:`, numErr);
+      }
+      if (invByNum) {
+        invoice = invByNum;
+      }
+    }
+
+    if (!invoice) {
+      // Primary ID lookup
+      const { data: invById, error: idErr } = await admin
+        .from("platform_invoices")
+        .select("*")
+        .eq("id", cleanId)
+        .maybeSingle();
+
+      if (idErr && idErr.code !== "22P02") {
+        console.error(`[InvoiceDocumentService] Database error fetching invoice by id ${cleanId}:`, idErr);
+      }
+
+      if (invById) {
+        invoice = invById;
+      } else if (!isExplicitInvoiceNumber) {
+        // Fallback: try by invoice_number
+        const { data: invByNum } = await admin
+          .from("platform_invoices")
+          .select("*")
+          .eq("invoice_number", cleanId)
+          .maybeSingle();
+        if (invByNum) {
+          invoice = invByNum;
+        }
+      }
+    }
+
+    if (!invoice) {
+      throw new Error(`Invoice not found: ${cleanId}`);
+    }
+
+    // 2. Safely resolve tenant information without failing if billing columns are absent
+    let tenant: any = {};
+    if (invoice.tenant_id) {
+      const { data: baseTenant, error: tenantErr } = await admin
+        .from("tenants")
+        .select("id, name, slug, official_email, contact_name, contact_phone")
+        .eq("id", invoice.tenant_id)
+        .maybeSingle();
+
+      if (!tenantErr && baseTenant) {
+        tenant = { ...baseTenant };
+
+        // Attempt optional extended billing columns if available in the database
+        try {
+          const { data: extData } = await admin
+            .from("tenants")
+            .select("billing_contact_name, billing_contact_email, billing_contact_phone, billing_address, gstin")
+            .eq("id", invoice.tenant_id)
+            .maybeSingle();
+          if (extData) {
+            tenant = { ...tenant, ...extData };
+          }
+        } catch {
+          // Gracefully omit extended fields if columns do not exist
+        }
+      }
+    }
+
+    const invoiceWithTenant = {
+      ...invoice,
+      tenants: tenant,
+    };
+
+    return { invoice: invoiceWithTenant, tenant };
+  }
+
+  /**
+   * Resiliently fetches a credit note, its associated invoice, and tenant details.
+   * Supports both UUID (id) and human-readable credit note numbers.
+   */
+  static async fetchCreditNoteWithRelations(
+    identifier: string,
+    admin = createAdminClient()
+  ): Promise<{ note: any; invoice: any; tenant: any }> {
+    const cleanId = (identifier || "").trim();
+    if (!cleanId) {
+      throw new Error("Credit note identifier is required");
+    }
+
+    // 1. Fetch base credit note record
+    let note: any = null;
+    const isExplicitCnNumber = /^CN-\d{4}-/i.test(cleanId);
+
+    if (isExplicitCnNumber) {
+      const { data: noteByNum, error: numErr } = await admin
+        .from("credit_notes")
+        .select("*")
+        .eq("credit_note_number", cleanId)
+        .maybeSingle();
+
+      if (numErr && numErr.code !== "22P02") {
+        console.error(`[InvoiceDocumentService] Database error fetching credit note by number ${cleanId}:`, numErr);
+      }
+      if (noteByNum) note = noteByNum;
+    }
+
+    if (!note) {
+      const { data: noteById, error: idErr } = await admin
+        .from("credit_notes")
+        .select("*")
+        .eq("id", cleanId)
+        .maybeSingle();
+
+      if (idErr && idErr.code !== "22P02") {
+        console.error(`[InvoiceDocumentService] Database error fetching credit note by id ${cleanId}:`, idErr);
+      }
+
+      if (noteById) {
+        note = noteById;
+      } else if (!isExplicitCnNumber) {
+        const { data: noteByNum } = await admin
+          .from("credit_notes")
+          .select("*")
+          .eq("credit_note_number", cleanId)
+          .maybeSingle();
+        if (noteByNum) note = noteByNum;
+      }
+    }
+
+    if (!note) {
+      throw new Error(`Credit Note not found: ${cleanId}`);
+    }
+
+    let invoice: any = null;
+    if (note.invoice_id) {
+      const { data: invData } = await admin
+        .from("platform_invoices")
+        .select("invoice_number, amount_inr, tax_inr, issue_date")
+        .eq("id", note.invoice_id)
+        .maybeSingle();
+      invoice = invData || null;
+    }
+
+    let tenant: any = {};
+    if (note.tenant_id) {
+      const { data: tData } = await admin
+        .from("tenants")
+        .select("id, name, slug, official_email, contact_name, contact_phone")
+        .eq("id", note.tenant_id)
+        .maybeSingle();
+
+      if (tData) {
+        tenant = { ...tData };
+        try {
+          const { data: extData } = await admin
+            .from("tenants")
+            .select("billing_address, gstin")
+            .eq("id", note.tenant_id)
+            .maybeSingle();
+          if (extData) {
+            tenant = { ...tenant, ...extData };
+          }
+        } catch {
+          // Gracefully omit extended fields if columns do not exist
+        }
+      }
+    }
+
+    const noteWithRelations = {
+      ...note,
+      platform_invoices: invoice,
+      tenants: tenant,
+    };
+
+    return { note: noteWithRelations, invoice, tenant };
+  }
+
+  /**
    * Generates a clean, standalone, printable HTML document for an invoice.
    * Browser printable to PDF with exact margins and branding.
    */
   static async renderInvoiceHtml(invoiceId: string, admin = createAdminClient()): Promise<string> {
-    const { data: invoice, error } = await admin
-      .from("platform_invoices")
-      .select(`
-        *,
-        tenants (
-          name,
-          slug,
-          official_email,
-          contact_name,
-          contact_phone,
-          billing_contact_name,
-          billing_contact_email,
-          billing_address,
-          gstin
-        )
-      `)
-      .eq("id", invoiceId)
-      .single();
+    const { invoice, tenant } = await InvoiceDocumentService.fetchInvoiceWithTenant(invoiceId, admin);
 
-    if (error || !invoice) {
-      throw new Error(`Invoice not found: ${invoiceId}`);
-    }
-
-    const tenant = invoice.tenants || {};
     const amount = Number(invoice.amount_inr);
     const tax = Number(invoice.tax_inr);
     const total = Number((amount + tax).toFixed(2));
@@ -373,31 +554,9 @@ export class InvoiceDocumentService {
    * Generates a printable HTML document for a Credit Note.
    */
   static async renderCreditNoteHtml(creditNoteId: string, admin = createAdminClient()): Promise<string> {
-    const { data: note, error } = await admin
-      .from("credit_notes")
-      .select(`
-        *,
-        platform_invoices (
-          invoice_number,
-          amount_inr,
-          tax_inr,
-          issue_date
-        ),
-        tenants (
-          name,
-          billing_address,
-          gstin
-        )
-      `)
-      .eq("id", creditNoteId)
-      .single();
+    const { note, invoice: relatedInvoice, tenant } = await InvoiceDocumentService.fetchCreditNoteWithRelations(creditNoteId, admin);
 
-    if (error || !note) {
-      throw new Error(`Credit Note not found: ${creditNoteId}`);
-    }
-
-    const tenant = note.tenants || {};
-    const invoice = note.platform_invoices || {};
+    const invoice = relatedInvoice || {};
     const total = Number(note.total_inr);
     const amount = Number(note.amount_inr);
     const tax = Number(note.tax_inr);
@@ -598,30 +757,7 @@ export class InvoiceDocumentService {
    * Fully conforms to PDF-1.3+ specifications starting with %PDF- header.
    */
   static async generateInvoicePdf(invoiceId: string, admin = createAdminClient()): Promise<Buffer> {
-    const { data: invoice, error } = await admin
-      .from("platform_invoices")
-      .select(`
-        *,
-        tenants (
-          name,
-          slug,
-          official_email,
-          contact_name,
-          contact_phone,
-          billing_contact_name,
-          billing_contact_email,
-          billing_address,
-          gstin
-        )
-      `)
-      .eq("id", invoiceId)
-      .single();
-
-    if (error || !invoice) {
-      throw new Error(`Invoice not found: ${invoiceId}`);
-    }
-
-    const tenant = (invoice.tenants as any) || {};
+    const { invoice, tenant } = await InvoiceDocumentService.fetchInvoiceWithTenant(invoiceId, admin);
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 40, size: "A4" });
@@ -740,29 +876,8 @@ export class InvoiceDocumentService {
    * Generates genuine binary PDF bytes for a credit note (Correction C / Q20).
    */
   static async generateCreditNotePdf(creditNoteId: string, admin = createAdminClient()): Promise<Buffer> {
-    const { data: note, error } = await admin
-      .from("credit_notes")
-      .select(`
-        *,
-        tenants (
-          name,
-          slug,
-          billing_address,
-          gstin
-        ),
-        platform_invoices (
-          invoice_number
-        )
-      `)
-      .eq("id", creditNoteId)
-      .single();
-
-    if (error || !note) {
-      throw new Error(`Credit note not found: ${creditNoteId}`);
-    }
-
-    const tenant = (note.tenants as any) || {};
-    const invoice = (note.platform_invoices as any) || {};
+    const { note, tenant, invoice: relatedInvoice } = await InvoiceDocumentService.fetchCreditNoteWithRelations(creditNoteId, admin);
+    const invoice = relatedInvoice || {};
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 40, size: "A4" });

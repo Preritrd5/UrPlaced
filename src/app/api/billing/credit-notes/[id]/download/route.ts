@@ -12,16 +12,43 @@ export async function GET(
   try {
     const ctx = await requireAuthContext();
     const { id } = await params;
+    const cleanId = (id || "").trim();
     const admin = createAdminClient();
 
-    const { data: note } = await admin
-      .from("credit_notes")
-      .select("tenant_id, credit_note_number")
-      .eq("id", id)
-      .maybeSingle();
+    // Verify tenant authorization with dual UUID / ID / credit_note_number support
+    let note: any = null;
+    const isExplicitCnNumber = /^CN-\d{4}-/i.test(cleanId);
+
+    if (isExplicitCnNumber) {
+      const { data: noteByNum, error: numErr } = await admin
+        .from("credit_notes")
+        .select("id, tenant_id, credit_note_number")
+        .eq("credit_note_number", cleanId)
+        .maybeSingle();
+      if (noteByNum) note = noteByNum;
+    }
 
     if (!note) {
-      return NextResponse.json({ error: "Credit note not found" }, { status: 404 });
+      const { data: noteById, error: idErr } = await admin
+        .from("credit_notes")
+        .select("id, tenant_id, credit_note_number")
+        .eq("id", cleanId)
+        .maybeSingle();
+
+      if (noteById) {
+        note = noteById;
+      } else if (!isExplicitCnNumber) {
+        const { data: noteByNum } = await admin
+          .from("credit_notes")
+          .select("id, tenant_id, credit_note_number")
+          .eq("credit_note_number", cleanId)
+          .maybeSingle();
+        if (noteByNum) note = noteByNum;
+      }
+    }
+
+    if (!note) {
+      return NextResponse.json({ error: `Credit note not found: ${cleanId}` }, { status: 404 });
     }
 
     // Reconciled Billing RBAC: Only PLACEMENT_HEAD or platform super admin may download credit notes
@@ -35,18 +62,19 @@ export async function GET(
     const format = request.nextUrl.searchParams.get("format") || "pdf";
 
     if (format === "html") {
-      const htmlContent = await InvoiceDocumentService.renderCreditNoteHtml(id, admin);
+      const htmlContent = await InvoiceDocumentService.renderCreditNoteHtml(note.id, admin);
       return new NextResponse(htmlContent, {
         status: 200,
         headers: {
           "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "private, no-transform, no-store, max-age=0",
         },
       });
     }
 
     // Default: Genuine binary PDF document
-    const pdfBuffer = await InvoiceDocumentService.generateCreditNotePdf(id, admin);
-    const noteNumber = note.credit_note_number || `CN-${id.slice(0, 8)}`;
+    const pdfBuffer = await InvoiceDocumentService.generateCreditNotePdf(note.id, admin);
+    const noteNumber = note.credit_note_number || `CN-${note.id.slice(0, 8)}`;
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
@@ -54,11 +82,19 @@ export async function GET(
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${noteNumber}.pdf"`,
         "Content-Length": String(pdfBuffer.length),
+        "Cache-Control": "private, no-transform, no-store, max-age=0",
       },
     });
   } catch (error: any) {
     const msg = error.message || "Failed to render credit note";
-    const status = msg.includes("UNAUTHORIZED") ? 401 : 500;
+    let status = 500;
+    if (msg.includes("UNAUTHORIZED")) {
+      status = 401;
+    } else if (msg.includes("Forbidden") || msg.includes("FORBIDDEN")) {
+      status = 403;
+    } else if (msg.includes("not found") || msg.includes("NOT_FOUND")) {
+      status = 404;
+    }
     return NextResponse.json({ error: msg }, { status });
   }
 }

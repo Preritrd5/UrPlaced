@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CreditCard, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { CreditCard, CheckCircle2, AlertCircle, ExternalLink, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { toast } from "@/components/ui/dialog-system";
@@ -18,6 +18,7 @@ interface RazorpayCheckoutButtonProps {
   totalInr: number;
   contactName?: string;
   officialEmail?: string;
+  contactPhone?: string;
   onPaymentSuccess?: () => void;
 }
 
@@ -57,17 +58,29 @@ export function RazorpayCheckoutButton({
   totalInr,
   contactName,
   officialEmail,
+  contactPhone,
   onPaymentSuccess,
 }: RazorpayCheckoutButtonProps) {
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [processingStep, setProcessingStep] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
+  const pollingRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const stopStatusPolling = React.useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  }, []);
 
   // Pre-load checkout script on component mount for instantaneous modal presentation
   React.useEffect(() => {
     loadRazorpayCheckoutScript().catch(() => {});
-  }, []);
+    return () => {
+      stopStatusPolling();
+    };
+  }, [stopStatusPolling]);
 
   /**
    * Authoritative Razorpay Standard Web Checkout Execution
@@ -124,6 +137,91 @@ export function RazorpayCheckoutButton({
         }
       }
 
+      // Detect mobile device vs desktop web browser
+      const isMobile =
+        typeof navigator !== "undefined" &&
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+
+      // Documented Razorpay Standard Checkout Display Configuration
+      // On desktop web browsers, configure UPI to use the QR flow ("qr") so that selecting UPI or PhonePe
+      // immediately displays the dynamic scannable QR code rather than attempting an unsupported
+      // phonepe:// deep-link app-launch that fails with "scheme does not have a registered handler".
+      // On mobile devices, allow intent flow ("intent", "qr") for 1-tap app switching.
+      const displayConfig = {
+        blocks: {
+          upi_qr: {
+            name: isMobile ? "UPI / Instant App Pay" : "Pay via UPI QR Code",
+            instruments: isMobile
+              ? [
+                  {
+                    method: "upi",
+                    flow: "intent",
+                    flows: ["intent", "qr"],
+                    apps: ["phonepe", "google_pay", "paytm", "bhim"],
+                  },
+                ]
+              : [
+                  {
+                    method: "upi",
+                    flow: "qr",
+                    flows: ["qr"],
+                    apps: ["phonepe", "google_pay", "paytm", "bhim"],
+                  },
+                ],
+          },
+          cards_netbanking: {
+            name: "Cards, Net Banking & Others",
+            instruments: [
+              { method: "card" },
+              { method: "netbanking" },
+            ],
+          },
+        },
+        sequence: ["block.upi_qr", "block.cards_netbanking"],
+        preferences: {
+          show_default_blocks: true,
+        },
+      };
+
+      let rzpInstance: any = null;
+
+      const handlePaymentCapturedSuccessfully = async () => {
+        stopStatusPolling();
+        try {
+          rzpInstance?.close();
+        } catch {
+          // Ignore close errors if already closed
+        }
+        setSuccessMessage("Payment verified and captured! Institutional subscription is now active.");
+        setProcessingStep(null);
+        setIsProcessing(false);
+        toast.success("Payment verified! Subscription and institutional entitlements are now active.");
+        if (onPaymentSuccess) {
+          await onPaymentSuccess();
+        }
+      };
+
+      const startStatusPolling = (orderId: string, invId: string) => {
+        stopStatusPolling();
+        // Poll status every 3 seconds while payment session is active (e.g. user scans QR via PhonePe on mobile)
+        pollingRef.current = setInterval(async () => {
+          try {
+            const statusRes = await fetch(
+              `/api/billing/checkout/status?orderId=${encodeURIComponent(orderId)}&invoiceId=${encodeURIComponent(invId)}`
+            );
+            if (!statusRes.ok) return;
+            const statusData = await statusRes.json();
+            if (statusData.success && statusData.paid) {
+              await handlePaymentCapturedSuccessfully();
+            }
+          } catch {
+            // Silently ignore background polling jitter
+          }
+        }, 3000);
+      };
+
       // 3. Configure genuine Razorpay Standard Checkout Options
       const options = {
         key: orderData.keyId,
@@ -133,9 +231,14 @@ export function RazorpayCheckoutButton({
         description: `Institutional Subscription — ${invoiceNumber}`,
         image: safeLogoUrl,
         order_id: orderData.orderId,
+        config: {
+          display: displayConfig,
+        },
+        display: displayConfig,
         prefill: {
           name: contactName || "",
           email: officialEmail || "",
+          contact: contactPhone || "",
         },
         notes: {
           invoiceId: orderData.invoiceId || invoiceId,
@@ -145,7 +248,24 @@ export function RazorpayCheckoutButton({
           color: "#5052C9", // Strict UrPlaced Primary Brand Token (GEMINI.md)
         },
         modal: {
-          ondismiss: function () {
+          ondismiss: async function () {
+            // Before concluding user aborted, check if payment actually completed via QR scan on secondary device
+            try {
+              const statusRes = await fetch(
+                `/api/billing/checkout/status?orderId=${encodeURIComponent(orderData.orderId)}&invoiceId=${encodeURIComponent(orderData.invoiceId || invoiceId)}`
+              );
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (statusData.success && statusData.paid) {
+                  await handlePaymentCapturedSuccessfully();
+                  return;
+                }
+              }
+            } catch {
+              // Fall through
+            }
+
+            stopStatusPolling();
             setIsProcessing(false);
             setProcessingStep(null);
             setErrorMessage("Payment was not completed. You can re-open checkout whenever you are ready.");
@@ -158,6 +278,7 @@ export function RazorpayCheckoutButton({
           razorpay_order_id: string;
           razorpay_signature: string;
         }) {
+          stopStatusPolling();
           // 4. On successful checkout callback, perform server-authoritative cryptographic verification
           setIsProcessing(true);
           setProcessingStep("Verifying cryptographic signature & settling invoice...");
@@ -178,13 +299,7 @@ export function RazorpayCheckoutButton({
               throw new Error(verifyData.error || "Cryptographic payment verification failed.");
             }
 
-            setSuccessMessage("Payment verified and captured! Institutional subscription is now active.");
-            setProcessingStep(null);
-            toast.success("Payment verified! Subscription and institutional entitlements are now active.");
-
-            if (onPaymentSuccess) {
-              await onPaymentSuccess();
-            }
+            await handlePaymentCapturedSuccessfully();
           } catch (verifyErr: any) {
             console.warn("[Razorpay Checkout Verify Notice]:", verifyErr?.message || verifyErr);
             const msg = verifyErr.message || "Failed to verify payment with server.";
@@ -198,9 +313,25 @@ export function RazorpayCheckoutButton({
       };
 
       // 4. Open Razorpay Standard Checkout Modal
-      const rzpInstance = new window.Razorpay(options);
+      rzpInstance = new window.Razorpay(options);
 
-      rzpInstance.on("payment.failed", function (failResponse: any) {
+      rzpInstance.on("payment.failed", async function (failResponse: any) {
+        // If payment.failed event fires, check if order succeeded via another instrument or QR scan
+        try {
+          const statusRes = await fetch(
+            `/api/billing/checkout/status?orderId=${encodeURIComponent(orderData.orderId)}&invoiceId=${encodeURIComponent(orderData.invoiceId || invoiceId)}`
+          );
+          if (statusRes.ok) {
+            const statusData = await statusRes.json();
+            if (statusData.success && statusData.paid) {
+              await handlePaymentCapturedSuccessfully();
+              return;
+            }
+          }
+        } catch {
+          // Continue to error reporting
+        }
+
         setIsProcessing(false);
         setProcessingStep(null);
         let desc =
@@ -222,6 +353,8 @@ export function RazorpayCheckoutButton({
       });
 
       rzpInstance.open();
+      // Start real-time payment status polling while checkout session is active
+      startStatusPolling(orderData.orderId, orderData.invoiceId || invoiceId);
     } catch (err: any) {
       console.warn("[Razorpay Gateway Notice]:", err?.message || err);
       const msg = err.message || "An unexpected error occurred during checkout initialization.";
@@ -260,6 +393,14 @@ export function RazorpayCheckoutButton({
           </>
         )}
       </Button>
+
+      {/* Platform & UPI Guidance */}
+      <div className="flex items-center gap-1.5 text-[11px] text-[#24283A]/70 px-1">
+        <Smartphone className="h-3.5 w-3.5 text-[#2E8F86] shrink-0" />
+        <span>
+          <strong>Instant UPI QR &amp; App Pay:</strong> On desktop, a scannable dynamic UPI QR code opens immediately on first attempt for PhonePe, Google Pay, and Paytm without failed retries. On mobile, instant 1-tap app checkout is enabled.
+        </span>
+      </div>
 
       {/* Test Mode Simulation Credentials & Payment Rails Guidance */}
       {isTestMode && (

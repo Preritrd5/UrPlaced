@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Payment gateway authentication failed: The configured Razorpay Test API Key ID or Secret in .env is invalid or expired. Please update RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET with active credentials from the Razorpay Dashboard.",
+            "Payment gateway authentication failed: The configured Razorpay API Key ID or Secret in .env is invalid or expired. Please update RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET with active credentials from the Razorpay Dashboard.",
         },
         { status: 502 }
       );

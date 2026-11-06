@@ -567,6 +567,7 @@ export default function CollegeBillingPage() {
                       totalInr={data.invoice.totalInr}
                       contactName={data.contactName || auth.fullName || undefined}
                       officialEmail={data.officialEmail || auth.email || undefined}
+                      contactPhone={data.contactPhone || undefined}
                       onPaymentSuccess={handlePaymentSuccess}
                     />
                     {data.invoice.paymentMethod === "BANK_TRANSFER" && (
@@ -770,6 +771,7 @@ export default function CollegeBillingPage() {
                           totalInr={data.invoice.totalInr}
                           contactName={data.contactName || auth.fullName || undefined}
                           officialEmail={data.officialEmail || auth.email || undefined}
+                          contactPhone={data.contactPhone || undefined}
                           onPaymentSuccess={handlePaymentSuccess}
                         />
 
@@ -879,6 +881,7 @@ export default function CollegeBillingPage() {
                       totalInr={data.invoice.totalInr}
                       contactName={data.contactName || auth.fullName || undefined}
                       officialEmail={data.officialEmail || auth.email || undefined}
+                      contactPhone={data.contactPhone || undefined}
                       onPaymentSuccess={handlePaymentSuccess}
                     />
 

@@ -328,18 +328,6 @@ export default function PlatformBillingPage() {
         </div>
       )}
 
-      {/* Demo Gateway Disclaimer Callout */}
-      <div className="p-4 rounded-xl bg-surface border border-border flex items-start gap-3 text-xs text-text-primary">
-        <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <span className="font-bold">Payment Gateway Integration Status:</span> Standard bank transfer verification is active. Demonstration payment workflows can be executed for sandbox testing and will be clearly flagged with a{" "}
-          <Badge variant="outline" className="text-[9px] font-mono border-amber-300 text-amber-800 bg-amber-50">
-            DEMO
-          </Badge>{" "}
-          badge. Live payment provider gateway credentials can be attached without altering the core billing record model.
-        </div>
-      </div>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-card border-border shadow-xs rounded-2xl p-5">

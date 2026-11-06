@@ -32,14 +32,40 @@ export async function POST(
 
     const admin = createAdminClient();
 
-    // 1. Fetch invoice
-    const { data: invoice, error: invErr } = await admin
-      .from("platform_invoices")
-      .select("id, invoice_number, tenant_id, status, notes, total_amount, amount_inr")
-      .eq("id", invoiceId)
-      .maybeSingle();
+    // 1. Fetch invoice with dual UUID / ID / invoice_number support
+    const cleanInvId = invoiceId.trim();
+    let invoice: any = null;
+    const isExplicitInvoiceNumber = /^INV-\d{4}-/i.test(cleanInvId);
 
-    if (invErr || !invoice) {
+    if (isExplicitInvoiceNumber) {
+      const { data: invByNum, error: numErr } = await admin
+        .from("platform_invoices")
+        .select("id, invoice_number, tenant_id, status, notes, amount_inr, tax_inr")
+        .eq("invoice_number", cleanInvId)
+        .maybeSingle();
+      if (invByNum) invoice = invByNum;
+    }
+
+    if (!invoice) {
+      const { data: invById, error: idErr } = await admin
+        .from("platform_invoices")
+        .select("id, invoice_number, tenant_id, status, notes, amount_inr, tax_inr")
+        .eq("id", cleanInvId)
+        .maybeSingle();
+
+      if (invById) {
+        invoice = invById;
+      } else if (!isExplicitInvoiceNumber) {
+        const { data: invByNum } = await admin
+          .from("platform_invoices")
+          .select("id, invoice_number, tenant_id, status, notes, amount_inr, tax_inr")
+          .eq("invoice_number", cleanInvId)
+          .maybeSingle();
+        if (invByNum) invoice = invByNum;
+      }
+    }
+
+    if (!invoice) {
       return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
     }
 
