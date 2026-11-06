@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(
   _request: NextRequest,
@@ -10,7 +10,7 @@ export async function GET(
   try {
     const { targetId } = await params;
     const authContext = await requireAuthContext(Permissions.MISTAKE_BANK_MANAGE_OWN);
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // 1. Resolve student profile
     const { data: student } = await supabase

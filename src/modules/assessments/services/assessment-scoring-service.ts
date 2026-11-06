@@ -15,7 +15,7 @@ import {
   AttemptScoringStatus,
 } from "@/types/database";
 import { IsolatedRunnerBoundary } from "./isolated-runner-boundary";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface ItemEvaluationResult {
   questionId: string;
@@ -405,7 +405,7 @@ export class AssessmentScoringService {
     tenantId: string,
     attemptId: string
   ): Promise<{ success: boolean; summary?: AttemptScoringSummary; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch attempt and parent assessment
     const { data: attempt, error: attErr } = await supabase
@@ -573,14 +573,75 @@ export class AssessmentScoringService {
       return { success: false, error: updateErr.message };
     }
 
-    // Ingest into Phase 08 Mistake Bank
+    // Ingest into Phase 08 Mistake Bank & Sync Skill Mastery
     try {
       const { MistakeCaptureService } = await import(
         "@/modules/mistake-mastery/services/mistake-capture-service"
       );
       await MistakeCaptureService.captureFromAttempt(tenantId, attemptId);
+
+      // Record evidence and sync skill mastery for correctly answered items
+      const { data: canonicalSkills } = await supabase
+        .from("canonical_skills")
+        .select("id, name, normalized_name, tags");
+
+      const { MasteryEvaluationService } = await import(
+        "@/modules/mistake-mastery/services/mastery-evaluation-service"
+      );
+
+      const skillsToSync = new Set<string>();
+
+      for (const item of setQuestions) {
+        const studentResp = responseMap.get(item.question_id);
+        if (!studentResp || !studentResp.is_answered) continue;
+
+        const evalItem = evaluatedItems.find((e) => e.questionId === item.question_id);
+        const ver = (item.version as any) as QuestionVersionRow;
+        let skillId = ver.skill_id;
+
+        if (!skillId && canonicalSkills && canonicalSkills.length > 0) {
+          const tags: string[] = Array.isArray(ver.topic_tags) ? ver.topic_tags : [];
+          for (const t of tags) {
+            const match = canonicalSkills.find((cs: any) =>
+              cs.normalized_name?.toLowerCase() === t.toLowerCase() ||
+              cs.name?.toLowerCase().includes(t.toLowerCase()) ||
+              (Array.isArray(cs.tags) && cs.tags.some((cstag: string) => cstag.toLowerCase() === t.toLowerCase()))
+            );
+            if (match) { skillId = match.id; break; }
+          }
+          if (!skillId) {
+            const fallback = canonicalSkills.find((cs: any) =>
+              cs.normalized_name?.includes("logic") || cs.name?.toLowerCase().includes("reasoning")
+            ) || canonicalSkills[0];
+            skillId = fallback?.id || null;
+          }
+        }
+
+        if (skillId) {
+          skillsToSync.add(skillId);
+          if (evalItem && evalItem.isCorrect === true) {
+            await supabase.from("mastery_evidence_records").insert({
+              tenant_id: tenantId,
+              student_id: attempt.student_id,
+              skill_id: skillId,
+              evidence_question_id: item.question_id,
+              evidence_version_id: item.version_id,
+              is_new_question: true,
+              is_correct: true,
+              points_earned: evalItem.pointsAwarded,
+              difficulty: ver.difficulty || "MEDIUM",
+              validity_status: "VALID",
+              recorded_at: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
+      for (const skId of skillsToSync) {
+        await MasteryEvaluationService.evaluateSkillMastery(tenantId, attempt.student_id, skId);
+      }
     } catch {
-      // Non-fatal if mistake capture throws during attempt completion
+      // Non-fatal if mistake capture or mastery sync throws during attempt completion
     }
 
     const summary: AttemptScoringSummary = {
@@ -616,7 +677,7 @@ export class AssessmentScoringService {
     mistakesPurged: number;
     error?: string;
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch attempt and question set items
     const { data: attempt, error: attErr } = await supabase
@@ -880,7 +941,7 @@ export class AssessmentScoringService {
     mistakesPurgedTotal: number;
     results: any[];
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     let query = supabase
       .from("assessment_attempts")

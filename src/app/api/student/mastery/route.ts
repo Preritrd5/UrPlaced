@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
 import { MasteryEvaluationService } from "@/modules/mistake-mastery/services/mastery-evaluation-service";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(_request: NextRequest) {
   try {
     const authContext = await requireAuthContext(Permissions.MISTAKE_BANK_MANAGE_OWN);
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // 1. Resolve student profile
     const { data: student } = await supabase

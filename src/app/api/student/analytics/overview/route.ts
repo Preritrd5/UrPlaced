@@ -38,14 +38,16 @@ export async function GET(_request: NextRequest) {
     // 3. Mistake Bank Targets
     const { data: mistakeTargets } = await supabase
       .from("mistake_review_targets")
-      .select("id, mastery_state")
+      .select("id, status")
       .eq("tenant_id", authContext.tenantId)
       .eq("student_id", studentId);
 
     const mList = mistakeTargets || [];
     const totalMistakes = mList.length;
-    const masteredCount = mList.filter((m) => m.mastery_state === "MASTERED").length;
-    const activeCount = mList.filter((m) => m.mastery_state === "ACTIVE" || m.mastery_state === "IN_PRACTICE").length;
+    const masteredCount = mList.filter((m) => m.status === "MASTERY_DEMONSTRATED").length;
+    const activeCount = mList.filter((m) =>
+      ["NEEDS_REVIEW", "PRACTISING", "IMPROVING", "PROVISIONAL_MASTERY", "REVISION_DUE"].includes(m.status)
+    ).length;
     const resolutionRate = totalMistakes > 0 ? Number(((masteredCount / totalMistakes) * 100).toFixed(1)) : null;
 
     return NextResponse.json({

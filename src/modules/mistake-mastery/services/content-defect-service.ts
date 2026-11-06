@@ -12,7 +12,7 @@ import {
   DefectReportStatus,
   QuestionDefectReportRow,
 } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { MasteryEvaluationService } from "./mastery-evaluation-service";
 
 export interface ReportDefectInput {
@@ -38,7 +38,7 @@ export class ContentDefectService {
     userId: string,
     input: ReportDefectInput
   ): Promise<{ success: boolean; report?: QuestionDefectReportRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     if (!input.description || input.description.trim().length < 5) {
       return { success: false, error: "Please provide a detailed description (at least 5 characters)." };
@@ -90,7 +90,7 @@ export class ContentDefectService {
     invalidatedTargetsCount?: number;
     error?: string;
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
     // 1. Fetch defect report
@@ -200,7 +200,7 @@ export class ContentDefectService {
     tenantId: string,
     filter?: { status?: DefectReportStatus; questionId?: string }
   ): Promise<{ success: boolean; reports?: QuestionDefectReportRow[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     let query = supabase
       .from("question_defect_reports")

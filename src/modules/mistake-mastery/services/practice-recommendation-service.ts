@@ -15,7 +15,7 @@ import {
   QuestionRow,
   QuestionVersionRow,
 } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface RetestQuestionRecommendation {
   question: QuestionRow;
@@ -40,7 +40,7 @@ export class PracticeRecommendationService {
     recommendations?: RetestQuestionRecommendation[];
     error?: string;
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch review target
     const { data: target, error: targetErr } = await supabase
@@ -186,7 +186,7 @@ export class PracticeRecommendationService {
     reasonCategory: StudentReasonCategory,
     reflection: string
   ): Promise<{ success: boolean; target?: MistakeReviewTargetRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
     const { data: updated, error } = await supabase
@@ -229,7 +229,7 @@ export class PracticeRecommendationService {
     studentId: string,
     targetId: string
   ): Promise<{ success: boolean; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
     await supabase
@@ -263,7 +263,7 @@ export class PracticeRecommendationService {
     targetId: string,
     notes?: string
   ): Promise<{ success: boolean; target?: MistakeReviewTargetRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
     const { data: updated, error } = await supabase

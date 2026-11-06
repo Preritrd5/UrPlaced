@@ -13,7 +13,7 @@ import {
   ReviewActionType,
   ReviewTargetStatus,
 } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface SpacedStageConfig {
   stage: number;
@@ -64,7 +64,7 @@ export class RevisionSchedulerService {
     success: boolean,
     notes?: string
   ): Promise<{ success: boolean; target?: MistakeReviewTargetRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const now = new Date();
     const nowIso = now.toISOString();
 
@@ -142,7 +142,7 @@ export class RevisionSchedulerService {
     customDueDate: Date | string,
     notes?: string
   ): Promise<{ success: boolean; target?: MistakeReviewTargetRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const dueAt = typeof customDueDate === "string" ? new Date(customDueDate) : customDueDate;
 
     if (isNaN(dueAt.getTime())) {
@@ -188,7 +188,7 @@ export class RevisionSchedulerService {
     studentId: string,
     options?: { skillId?: string; limit?: number; cutoffDate?: Date }
   ): Promise<{ success: boolean; targets?: MistakeReviewTargetRow[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const cutoffIso = (options?.cutoffDate || new Date()).toISOString();
 
     let query = supabase
@@ -229,7 +229,7 @@ export class RevisionSchedulerService {
     totalActiveCount: number;
     masteredCount: number;
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const now = new Date();
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
     const endOfWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);

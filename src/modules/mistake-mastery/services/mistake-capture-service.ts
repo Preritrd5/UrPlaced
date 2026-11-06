@@ -13,7 +13,7 @@ import {
   MistakePrimaryReason,
   MistakeCaptureReason,
 } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface CaptureResultSummary {
   attemptId: string;
@@ -32,7 +32,7 @@ export class MistakeCaptureService {
     tenantId: string,
     attemptId: string
   ): Promise<{ success: boolean; summary?: CaptureResultSummary; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch attempt and student info
     const { data: attempt, error: attemptErr } = await supabase
@@ -66,7 +66,7 @@ export class MistakeCaptureService {
       const { data: setItems } = await supabase
         .from("question_set_items")
         .select("question_id, version_id")
-        .eq("question_set_id", questionSetId);
+        .eq("set_id", questionSetId);
 
       if (setItems) {
         for (const item of setItems) {
@@ -180,16 +180,72 @@ export class MistakeCaptureService {
       };
     }
 
-    // 6. Fetch skill_id for versions
+    // 6. Fetch skill_id and metadata for versions, resolving canonical skills if missing
     const versionIds = Array.from(new Set(candidates.map((c) => c.versionId)));
     const { data: versions } = await supabase
       .from("question_versions")
-      .select("id, skill_id")
+      .select("id, skill_id, topic_tags, prompt")
       .in("id", versionIds);
+
+    const { data: canonicalSkills } = await supabase
+      .from("canonical_skills")
+      .select("id, name, normalized_name, tags")
+      .order("name", { ascending: true });
 
     const versionSkillMap = new Map<string, string | null>();
     for (const v of versions || []) {
-      versionSkillMap.set(v.id, v.skill_id);
+      let resolvedSkillId = v.skill_id;
+      if (!resolvedSkillId && canonicalSkills && canonicalSkills.length > 0) {
+        const tags: string[] = Array.isArray(v.topic_tags) ? v.topic_tags : [];
+        const promptLower = (v.prompt || "").toLowerCase();
+
+        // Match by topic tags
+        for (const t of tags) {
+          const lowerT = t.toLowerCase().trim();
+          const match = canonicalSkills.find((cs: any) =>
+            cs.normalized_name?.toLowerCase() === lowerT ||
+            cs.name?.toLowerCase().includes(lowerT) ||
+            (Array.isArray(cs.tags) && cs.tags.some((cstag: string) => cstag.toLowerCase() === lowerT))
+          );
+          if (match) {
+            resolvedSkillId = match.id;
+            break;
+          }
+        }
+
+        // Match by prompt keywords
+        if (!resolvedSkillId) {
+          for (const cs of canonicalSkills) {
+            if (Array.isArray(cs.tags)) {
+              for (const cstag of cs.tags) {
+                if (cstag.length > 2 && promptLower.includes(cstag.toLowerCase())) {
+                  resolvedSkillId = cs.id;
+                  break;
+                }
+              }
+            }
+            if (resolvedSkillId) break;
+          }
+        }
+
+        // Deterministic fallback: Logical Reasoning or first canonical skill
+        if (!resolvedSkillId) {
+          const fallback = canonicalSkills.find((cs: any) =>
+            cs.normalized_name?.includes("logic") || cs.name?.toLowerCase().includes("reasoning")
+          ) || canonicalSkills[0];
+          resolvedSkillId = fallback?.id || null;
+        }
+
+        // Persist resolved skillId back to question_versions for future consistency
+        if (resolvedSkillId) {
+          await supabase
+            .from("question_versions")
+            .update({ skill_id: resolvedSkillId })
+            .eq("id", v.id);
+        }
+      }
+
+      versionSkillMap.set(v.id, resolvedSkillId);
     }
 
     let targetsCreated = 0;
@@ -327,7 +383,7 @@ export class MistakeCaptureService {
     reason: MistakePrimaryReason,
     reflection?: string
   ): Promise<{ success: boolean; target?: MistakeReviewTargetRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
     const { data: existingTarget } = await supabase
@@ -386,12 +442,12 @@ export class MistakeCaptureService {
   /**
    * Recalculates mistake counts on the student_skill_mastery record.
    */
-  private static async syncSkillMistakeCounts(
+  public static async syncSkillMistakeCounts(
     tenantId: string,
     studentId: string,
     skillId: string
   ): Promise<void> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { data: targets } = await supabase
       .from("mistake_review_targets")

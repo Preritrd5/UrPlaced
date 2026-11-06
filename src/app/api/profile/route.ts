@@ -45,13 +45,24 @@ export async function GET(request: NextRequest) {
           avgAccuracy = Math.round(totalScore / completedAttempts.length);
         }
 
-        const { data: mistakes } = await supabase
-          .from("mistake_bank_entries")
-          .select("id, mastery_status")
-          .eq("user_id", profile.id);
+        const { data: studentRecord } = await admin
+          .from("students")
+          .select("id")
+          .eq("user_id", profile.id)
+          .maybeSingle();
 
-        const totalMistakes = mistakes?.length || 0;
-        const masteredMistakes = mistakes?.filter((m) => m.mastery_status === "MASTERED").length || 0;
+        let totalMistakes = 0;
+        let masteredMistakes = 0;
+
+        if (studentRecord) {
+          const { data: targets } = await admin
+            .from("mistake_review_targets")
+            .select("id, status")
+            .eq("student_id", studentRecord.id);
+
+          totalMistakes = targets?.length || 0;
+          masteredMistakes = targets?.filter((m) => m.status === "MASTERY_DEMONSTRATED").length || 0;
+        }
 
         studentMetrics = {
           testsAttempted: completedAttempts.length,

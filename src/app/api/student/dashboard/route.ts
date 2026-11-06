@@ -70,9 +70,15 @@ export async function GET(request: NextRequest) {
     // 2. Mistakes
     let mistakes: any[] = [];
     try {
-      const { data: mistakesData } = await supabase
+      const { data: mistakesData } = await adminClient
         .from("mistake_review_targets")
-        .select("id, status, next_due_at, questions(content, subject, topic)")
+        .select(`
+          id,
+          status,
+          next_due_at,
+          questions(id, question_type),
+          question_versions(prompt, topic_tags, difficulty)
+        `)
         .eq("tenant_id", authContext.tenantId)
         .eq("student_id", studentId);
 

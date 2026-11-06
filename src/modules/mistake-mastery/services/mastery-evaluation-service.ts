@@ -15,7 +15,7 @@ import {
   StudentSkillMasteryRow,
   QuestionDifficulty,
 } from "@/types/database";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AssessmentScoringService } from "@/modules/assessments/services/assessment-scoring-service";
 import { RevisionSchedulerService } from "./revision-scheduler-service";
 
@@ -42,7 +42,7 @@ export class MasteryEvaluationService {
     versionId: string,
     responsePayload: Record<string, any>
   ): Promise<{ success: boolean; result?: RetestEvaluationResult; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
     // 1. Fetch the target to know the canonical skill and original question
@@ -171,7 +171,7 @@ export class MasteryEvaluationService {
     studentId: string,
     skillId: string
   ): Promise<{ success: boolean; mastery?: StudentSkillMasteryRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
     // 1. Fetch all VALID evidence records for this student and skill
@@ -331,7 +331,7 @@ export class MasteryEvaluationService {
     };
     error?: string;
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { data: masteries, error } = await supabase
       .from("student_skill_mastery")
