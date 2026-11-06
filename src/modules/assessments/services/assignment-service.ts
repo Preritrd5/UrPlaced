@@ -652,6 +652,28 @@ export class AssignmentService {
       const canAttempt =
         windowStatus === "OPEN" && (attemptsCount < maxAttempts || Boolean(activeAttempt));
 
+      const releasePolicy = ass.release_policy || "IMMEDIATE";
+      const reviewPolicy = ass.review_policy || "IMMEDIATE";
+      const isDeadlinePassed = item.window_end ? now >= new Date(item.window_end) : false;
+
+      let isScoreReleased = false;
+      if (releasePolicy === "IMMEDIATE") {
+        isScoreReleased = atts.some((a) => ["SCORED", "RESULT_RELEASED"].includes(a.status));
+      } else if (releasePolicy === "AFTER_DEADLINE") {
+        isScoreReleased = isDeadlinePassed || atts.some((a) => a.status === "RESULT_RELEASED");
+      } else if (releasePolicy === "MANUAL_STAFF_RELEASE") {
+        isScoreReleased = atts.some((a) => a.status === "RESULT_RELEASED");
+      }
+
+      let isReviewable = false;
+      if (reviewPolicy === "IMMEDIATE") {
+        isReviewable = true;
+      } else if (reviewPolicy === "AFTER_DEADLINE") {
+        isReviewable = isDeadlinePassed || atts.some((a) => a.status === "RESULT_RELEASED");
+      } else if (reviewPolicy === "NEVER") {
+        isReviewable = false;
+      }
+
       const highestScore = atts.reduce(
         (max, a) => Math.max(max, Number(a.score_percentage || 0)),
         0
@@ -660,6 +682,17 @@ export class AssignmentService {
       const latestAttempt = atts.sort(
         (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
       )[0];
+
+      const safeLatestAttempt = latestAttempt
+        ? {
+            ...latestAttempt,
+            score_percentage: isScoreReleased ? latestAttempt.score_percentage : null,
+            earned_points: isScoreReleased ? latestAttempt.earned_points : null,
+            is_passed: isScoreReleased ? latestAttempt.is_passed : null,
+            isScoreReleased,
+            isReviewable,
+          }
+        : null;
 
       return {
         assignmentId: item.id,
@@ -678,8 +711,12 @@ export class AssignmentService {
         canAttempt,
         hasActiveAttempt: Boolean(activeAttempt),
         activeAttemptId: activeAttempt?.id || null,
-        highestScore: attemptsCount > 0 ? highestScore : null,
-        latestAttempt: latestAttempt || null,
+        highestScore: attemptsCount > 0 && isScoreReleased ? highestScore : null,
+        isScoreReleased,
+        isReviewable,
+        reviewPolicy,
+        releasePolicy,
+        latestAttempt: safeLatestAttempt,
         driveId: ass.drive_id,
       };
     });

@@ -69,8 +69,26 @@ export default function AttemptReviewPage({
     );
   }
 
-  const { isReleased, attempt, breakdown } = reviewData;
-  const isPassed = Boolean(breakdown.isPassed);
+  const {
+    isReleased,
+    isScoreReleased: rawScoreReleased,
+    isReviewable: rawReviewable,
+    isAnswerKeyReleased: rawKeyReleased,
+    reviewPolicy: rawReviewPolicy,
+    releasePolicy: rawReleasePolicy,
+    deadline: rawDeadline,
+    attempt,
+    breakdown,
+  } = reviewData;
+
+  const isScoreReleased = rawScoreReleased ?? isReleased ?? true;
+  const isReviewable = rawReviewable ?? (breakdown?.questions && breakdown.questions.length > 0) ?? true;
+  const isAnswerKeyReleased = rawKeyReleased ?? isReleased ?? true;
+  const reviewPolicy = rawReviewPolicy ?? breakdown?.reviewPolicy ?? "IMMEDIATE";
+  const releasePolicy = rawReleasePolicy ?? breakdown?.releasePolicy ?? "IMMEDIATE";
+  const deadline = rawDeadline ?? breakdown?.deadline ?? null;
+  const formattedDeadline = deadline ? new Date(deadline).toLocaleString() : null;
+  const isPassed = breakdown.isPassed !== null && breakdown.isPassed !== undefined ? Boolean(breakdown.isPassed) : null;
 
   const getOptionDisplay = (options: any, rawVal: any): string => {
     if (rawVal === null || rawVal === undefined || rawVal === "") return "None";
@@ -103,9 +121,15 @@ export default function AttemptReviewPage({
           <span className="text-xs font-mono text-text-secondary">Attempt #{attempt.attempt_number}</span>
         </div>
 
-        <Badge variant={isPassed ? "default" : "outline"} className={isPassed ? "bg-secondary text-white" : ""}>
-          {isPassed ? "Assessment Passed" : "Did Not Qualify"}
-        </Badge>
+        {isScoreReleased ? (
+          <Badge variant={isPassed ? "default" : "outline"} className={isPassed ? "bg-secondary text-white" : ""}>
+            {isPassed ? "Assessment Passed" : "Did Not Qualify"}
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="border-amber-400 bg-amber-50 text-amber-900 font-medium flex items-center gap-1">
+            <Clock className="h-3 w-3 text-amber-700" /> Results Pending Release
+          </Badge>
+        )}
       </div>
 
       {/* Score Summary Card */}
@@ -121,14 +145,27 @@ export default function AttemptReviewPage({
               </CardDescription>
             </div>
 
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold font-heading text-text-primary">
-                {breakdown.scorePercentage}%
-              </span>
-              <span className="text-xs text-text-muted">
-                ({breakdown.earnedPoints} / {breakdown.totalPoints} pts)
-              </span>
-            </div>
+            {isScoreReleased ? (
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold font-heading text-text-primary">
+                  {breakdown.scorePercentage}%
+                </span>
+                <span className="text-xs text-text-muted">
+                  ({breakdown.earnedPoints} / {breakdown.totalPoints} pts)
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-start sm:items-end">
+                <div className="flex items-center gap-1.5 text-amber-800 font-bold font-heading text-xl">
+                  <Clock className="h-5 w-5 text-amber-600" /> Results Pending
+                </div>
+                <span className="text-xs text-text-muted mt-0.5">
+                  {releasePolicy === "AFTER_DEADLINE"
+                    ? `Releases after deadline${formattedDeadline ? ` (${formattedDeadline})` : ""}`
+                    : "Awaiting administrative release"}
+                </span>
+              </div>
+            )}
           </div>
         </CardHeader>
 
@@ -151,7 +188,13 @@ export default function AttemptReviewPage({
             <div>
               <span className="text-text-muted block text-[10px] uppercase font-mono">Review Status</span>
               <span className="font-semibold text-text-primary">
-                {isReleased ? "Released" : "Provisional"}
+                {!isScoreReleased
+                  ? "Pending Release"
+                  : !isReviewable
+                  ? "Review Locked"
+                  : isAnswerKeyReleased
+                  ? "Released"
+                  : "Provisional"}
               </span>
             </div>
           </div>
@@ -193,8 +236,23 @@ export default function AttemptReviewPage({
         </div>
       )}
 
-      {/* Release Policy Notice Banner if Masked */}
-      {!isReleased && (
+      {/* Notice Banner: Results / Scores Pending Official Release */}
+      {!isScoreReleased && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50/90 border border-amber-300 rounded-lg text-xs text-amber-900">
+          <Clock className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="font-bold">Assessment Results Pending Official Release</h4>
+            <p className="text-amber-800 leading-relaxed">
+              {releasePolicy === "AFTER_DEADLINE"
+                ? `Your attempt has been scored and safely finalized. In accordance with exam policy, scores, marks, and qualification status will be officially released after the assessment window concludes${formattedDeadline ? ` on ${formattedDeadline}` : ""}.`
+                : "Your attempt has been submitted and is currently awaiting administrative release by placement cell staff."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Notice Banner: Answer Keys & Explanations Masked (when score is released but answer keys are locked) */}
+      {isScoreReleased && !isAnswerKeyReleased && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
           <ShieldAlert className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
           <div className="space-y-1">
@@ -206,138 +264,165 @@ export default function AttemptReviewPage({
         </div>
       )}
 
-      {/* Question Breakdown */}
-      <div className="space-y-4">
-        <h3 className="text-base font-bold text-text-primary font-heading">
-          Question-Level Performance Breakdown
-        </h3>
+      {/* Question-Level Performance Breakdown */}
+      {!isReviewable ? (
+        <Card className="p-8 text-center border-border bg-card space-y-3">
+          <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center mx-auto text-amber-700">
+            <Clock className="h-5 w-5" />
+          </div>
+          <h3 className="text-base font-bold text-text-primary font-heading">
+            {reviewPolicy === "NEVER"
+              ? "Question Review Disabled"
+              : "Question Review Locked During Active Window"}
+          </h3>
+          <p className="text-xs text-text-secondary max-w-lg mx-auto leading-relaxed">
+            {reviewPolicy === "NEVER"
+              ? "Per college examination policy, question-level review and submitted answers are disabled for this assessment."
+              : `Question prompts, response choices, and your submitted answers remain securely locked while the assessment window is active. Review will unlock automatically after the deadline${formattedDeadline ? ` on ${formattedDeadline}` : ""}.`}
+          </p>
+          <div className="pt-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/student/assessments">Back to Assessments</Link>
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <h3 className="text-base font-bold text-text-primary font-heading">
+            Question-Level Performance Breakdown
+          </h3>
 
-        {breakdown.questions.map((q: any, idx: number) => {
-          const isCorrect = q.isCorrect;
-          const isManual = q.scoringStatus === "MANUAL_REVIEW_REQUIRED";
+          {breakdown.questions.map((q: any, idx: number) => {
+            const isCorrect = q.isCorrect;
+            const isManual = q.scoringStatus === "MANUAL_REVIEW_REQUIRED";
 
-          return (
-            <Card key={q.questionId} className="p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-text-muted">
-                    Question {idx + 1}
-                  </span>
-                  <Badge variant="outline" className="text-[10px] font-mono">
-                    {q.questionType}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {isManual ? (
-                    <Badge variant="outline" className="text-[10px] text-amber-700 bg-amber-50 border-amber-300">
-                      Manual Review Pending
-                    </Badge>
-                  ) : isCorrect ? (
-                    <Badge variant="default" className="text-[10px] bg-secondary text-white flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Correct (+{q.pointsAwarded} pts)
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-[10px] text-red-600 border-red-300 bg-red-50 flex items-center gap-1">
-                      <XCircle className="h-3 w-3" /> Incorrect ({q.pointsAwarded} pts)
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Prompt */}
-              <div className="text-xs sm:text-sm text-text-primary whitespace-pre-wrap leading-relaxed">
-                {q.prompt}
-              </div>
-
-              {/* Student Response Display */}
-              <div className="text-xs p-3 rounded-md bg-input border border-border space-y-1">
-                <span className="text-[10px] font-mono uppercase text-text-muted block">Your Answer</span>
-                <div className="text-text-primary font-medium">
-                  {q.questionType === "SINGLE_CHOICE" ? (
-                    <span>
-                      {q.studentAnswerText && q.studentAnswerText !== "None"
-                        ? q.studentAnswerText
-                        : getOptionDisplay(
-                            q.options,
-                            q.studentAnswer?.selected_option ?? q.studentAnswer?.selected_option_id
-                          )}
+            return (
+              <Card key={q.questionId} className="p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-text-muted">
+                      Question {idx + 1}
                     </span>
-                  ) : q.questionType === "MULTIPLE_SELECT" ? (
-                    <span>
-                      {q.studentAnswerText && q.studentAnswerText !== "None"
-                        ? q.studentAnswerText
-                        : Array.isArray(q.studentAnswer?.selected_options) && q.studentAnswer.selected_options.length > 0
-                        ? q.studentAnswer.selected_options.map((opt: string) => getOptionDisplay(q.options, opt)).join(", ")
-                        : "None"}
-                    </span>
-                  ) : q.questionType === "NUMERIC" ? (
-                    <span>Entered: {q.studentAnswer?.numeric_value ?? q.studentAnswer?.value ?? "None"}</span>
-                  ) : q.questionType === "SHORT_ANSWER" ? (
-                    <p className="whitespace-pre-wrap">{q.studentAnswer?.text || "No response submitted."}</p>
-                  ) : q.questionType === "CODING" ? (
-                    <pre className="font-mono text-[11px] whitespace-pre-wrap">{q.studentAnswer?.code || "No code submitted."}</pre>
-                  ) : (
-                    <span>Recorded</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Released Explanations & Correct Keys */}
-              {isReleased && (q.answerKey || q.explanation) && (
-                <div className="text-xs p-3 rounded-md bg-[rgba(80,82,201,0.04)] border border-primary/20 space-y-2">
-                  <div className="flex items-center gap-1.5 text-primary font-semibold">
-                    <CheckCircle2 className="h-4 w-4" /> Authoritative Solution
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      {q.questionType}
+                    </Badge>
                   </div>
-                  <div className="text-text-secondary space-y-1.5">
-                    {q.questionType === "SINGLE_CHOICE" && (
-                      <p>
-                        <span className="font-semibold text-text-primary">Correct Choice: </span>
-                        {q.correctAnswerText ||
-                          getOptionDisplay(
-                            q.options,
-                            q.answerKey?.correct_option_id ?? q.answerKey?.correct_option ?? q.answerKey?.correctOptionId
-                          )}
-                      </p>
+
+                  <div className="flex items-center gap-2">
+                    {!isScoreReleased ? (
+                      <Badge variant="outline" className="text-[10px] text-text-muted bg-input border-border font-mono">
+                        Response Submitted
+                      </Badge>
+                    ) : isManual ? (
+                      <Badge variant="outline" className="text-[10px] text-amber-700 bg-amber-50 border-amber-300">
+                        Manual Review Pending
+                      </Badge>
+                    ) : isCorrect ? (
+                      <Badge variant="default" className="text-[10px] bg-secondary text-white flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Correct (+{q.pointsAwarded} pts)
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] text-red-600 border-red-300 bg-red-50 flex items-center gap-1">
+                        <XCircle className="h-3 w-3" /> Incorrect ({q.pointsAwarded} pts)
+                      </Badge>
                     )}
-                    {q.questionType === "MULTIPLE_SELECT" && (
-                      <p>
-                        <span className="font-semibold text-text-primary">Correct Choices: </span>
-                        {q.correctAnswerText ||
-                          (Array.isArray(q.answerKey?.correct_option_ids)
-                            ? q.answerKey.correct_option_ids
-                            : Array.isArray(q.answerKey?.correct_options)
-                            ? q.answerKey.correct_options
-                            : []
-                          ).map((opt: string) => getOptionDisplay(q.options, opt)).join(", ")}
-                      </p>
+                  </div>
+                </div>
+
+                {/* Prompt */}
+                <div className="text-xs sm:text-sm text-text-primary whitespace-pre-wrap leading-relaxed">
+                  {q.prompt}
+                </div>
+
+                {/* Student Response Display */}
+                <div className="text-xs p-3 rounded-md bg-input border border-border space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-text-muted block">Your Answer</span>
+                  <div className="text-text-primary font-medium">
+                    {q.questionType === "SINGLE_CHOICE" ? (
+                      <span>
+                        {q.studentAnswerText && q.studentAnswerText !== "None"
+                          ? q.studentAnswerText
+                          : getOptionDisplay(
+                              q.options,
+                              q.studentAnswer?.selected_option ?? q.studentAnswer?.selected_option_id
+                            )}
+                      </span>
+                    ) : q.questionType === "MULTIPLE_SELECT" ? (
+                      <span>
+                        {q.studentAnswerText && q.studentAnswerText !== "None"
+                          ? q.studentAnswerText
+                          : Array.isArray(q.studentAnswer?.selected_options) && q.studentAnswer.selected_options.length > 0
+                          ? q.studentAnswer.selected_options.map((opt: string) => getOptionDisplay(q.options, opt)).join(", ")
+                          : "None"}
+                      </span>
+                    ) : q.questionType === "NUMERIC" ? (
+                      <span>Entered: {q.studentAnswer?.numeric_value ?? q.studentAnswer?.value ?? "None"}</span>
+                    ) : q.questionType === "SHORT_ANSWER" ? (
+                      <p className="whitespace-pre-wrap">{q.studentAnswer?.text || "No response submitted."}</p>
+                    ) : q.questionType === "CODING" ? (
+                      <pre className="font-mono text-[11px] whitespace-pre-wrap">{q.studentAnswer?.code || "No code submitted."}</pre>
+                    ) : (
+                      <span>Recorded</span>
                     )}
-                    {q.questionType === "NUMERIC" && (q.answerKey?.value !== undefined || q.answerKey?.correct_value !== undefined) && (
-                      <p>
-                        <span className="font-semibold text-text-primary">Correct Value: </span>
-                        {q.answerKey?.value ?? q.answerKey?.correct_value}
-                        {q.answerKey?.tolerance ? ` (±${q.answerKey.tolerance})` : ""}
-                      </p>
-                    )}
-                    {q.explanation && (
-                      <div className="mt-2 pt-2 border-t border-primary/10 text-text-secondary">
-                        <span className="font-semibold text-text-primary block mb-0.5">Explanation:</span>
-                        <p className="whitespace-pre-wrap">{q.explanation}</p>
+                  </div>
+                </div>
+
+                {/* Released Explanations & Correct Keys */}
+                {isAnswerKeyReleased && (q.answerKey || q.explanation) && (
+                  <div className="text-xs p-3 rounded-md bg-[rgba(80,82,201,0.04)] border border-primary/20 space-y-2">
+                    <div className="flex items-center gap-1.5 text-primary font-semibold">
+                      <CheckCircle2 className="h-4 w-4" /> Authoritative Solution
+                    </div>
+                    <div className="text-text-secondary space-y-1.5">
+                      {q.questionType === "SINGLE_CHOICE" && (
+                        <p>
+                          <span className="font-semibold text-text-primary">Correct Choice: </span>
+                          {q.correctAnswerText ||
+                            getOptionDisplay(
+                              q.options,
+                              q.answerKey?.correct_option_id ?? q.answerKey?.correct_option ?? q.answerKey?.correctOptionId
+                            )}
+                        </p>
+                      )}
+                      {q.questionType === "MULTIPLE_SELECT" && (
+                        <p>
+                          <span className="font-semibold text-text-primary">Correct Choices: </span>
+                          {q.correctAnswerText ||
+                            (Array.isArray(q.answerKey?.correct_option_ids)
+                              ? q.answerKey.correct_option_ids
+                              : Array.isArray(q.answerKey?.correct_options)
+                              ? q.answerKey.correct_options
+                              : []
+                            ).map((opt: string) => getOptionDisplay(q.options, opt)).join(", ")}
+                        </p>
+                      )}
+                      {q.questionType === "NUMERIC" && (q.answerKey?.value !== undefined || q.answerKey?.correct_value !== undefined) && (
+                        <p>
+                          <span className="font-semibold text-text-primary">Correct Value: </span>
+                          {q.answerKey?.value ?? q.answerKey?.correct_value}
+                          {q.answerKey?.tolerance ? ` (±${q.answerKey.tolerance})` : ""}
+                        </p>
+                      )}
+                      {q.explanation && (
+                        <div className="mt-2 pt-2 border-t border-primary/10 text-text-secondary">
+                          <span className="font-semibold text-text-primary block mb-0.5">Explanation:</span>
+                          <p className="whitespace-pre-wrap">{q.explanation}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {!isCorrect && !isManual && (
+                      <div className="pt-2 border-t border-primary/10 text-[11px] text-secondary flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5" /> Flagged for Mistake Bank targeted revision drill.
                       </div>
                     )}
                   </div>
-
-                  {!isCorrect && !isManual && (
-                    <div className="pt-2 border-t border-primary/10 text-[11px] text-secondary flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5" /> Flagged for Mistake Bank targeted revision drill.
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

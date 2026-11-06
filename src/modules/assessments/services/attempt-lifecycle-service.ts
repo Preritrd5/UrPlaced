@@ -880,6 +880,12 @@ export class AttemptLifecycleService {
   ): Promise<{
     success: boolean;
     isReleased: boolean;
+    isScoreReleased?: boolean;
+    isReviewable?: boolean;
+    isAnswerKeyReleased?: boolean;
+    reviewPolicy?: string;
+    releasePolicy?: string;
+    deadline?: string | null;
     attempt?: AssessmentAttemptRow;
     breakdown?: any;
     error?: string;
@@ -930,29 +936,83 @@ export class AttemptLifecycleService {
     }
 
     const assessment = (attempt as any).assessment;
-    const releasePolicy = assessment.release_policy;
+    const releasePolicy = assessment?.release_policy || "IMMEDIATE";
+    const reviewPolicy = assessment?.review_policy || "IMMEDIATE";
 
-    let isReleased = isStaff; // Staff always has access
-    if (!isStaff) {
-      if (releasePolicy === "IMMEDIATE") {
-        isReleased = ["SCORED", "RESULT_RELEASED"].includes(attempt.status);
-      } else if (releasePolicy === "MANUAL_STAFF_RELEASE") {
-        isReleased = attempt.status === "RESULT_RELEASED";
-      } else if (releasePolicy === "AFTER_DEADLINE") {
-        // Check assignment deadline
-        const { data: assignment } = await supabase
-          .from("assessment_assignments")
-          .select("window_end")
-          .eq("id", attempt.assignment_id || "")
-          .maybeSingle();
-
-        if (assignment?.window_end && new Date() >= new Date(assignment.window_end)) {
-          isReleased = true;
-        } else {
-          isReleased = attempt.status === "RESULT_RELEASED";
-        }
+    // Resolve assignment deadline window
+    let assignmentWindowEnd: string | null = null;
+    if (attempt.assignment_id) {
+      const { data: directAss } = await supabase
+        .from("assessment_assignments")
+        .select("window_end")
+        .eq("id", attempt.assignment_id)
+        .maybeSingle();
+      if (directAss?.window_end) {
+        assignmentWindowEnd = directAss.window_end;
       }
     }
+    if (!assignmentWindowEnd && assessment?.id) {
+      try {
+        let q: any = supabase
+          .from("assessment_assignments")
+          .select("window_end")
+          .eq("tenant_id", tenantId)
+          .eq("assessment_id", assessment.id);
+
+        if (typeof q.or === "function") {
+          q = q.or(`student_id.eq.${attempt.student_id},student_id.is.null`);
+        }
+        if (typeof q.order === "function") {
+          q = q.order("student_id", { ascending: false, nullsFirst: false });
+        }
+        if (typeof q.limit === "function") {
+          q = q.limit(1);
+        }
+
+        const res = typeof q.maybeSingle === "function" ? await q.maybeSingle() : await q;
+        const fallbackData = res?.data;
+        if (Array.isArray(fallbackData) && fallbackData[0]?.window_end) {
+          assignmentWindowEnd = fallbackData[0].window_end;
+        } else if (fallbackData?.window_end) {
+          assignmentWindowEnd = fallbackData.window_end;
+        }
+      } catch {
+        // Fallback for mock environments where chained filters are not fully implemented
+      }
+    }
+
+    const now = new Date();
+    const isDeadlinePassed = assignmentWindowEnd ? now >= new Date(assignmentWindowEnd) : false;
+
+    // 1. Release Policy: Governs when scores, marks, and pass/fail metrics are released to candidate
+    let isScoreReleased = isStaff;
+    if (!isStaff) {
+      if (releasePolicy === "IMMEDIATE") {
+        isScoreReleased = ["SCORED", "RESULT_RELEASED"].includes(attempt.status);
+      } else if (releasePolicy === "MANUAL_STAFF_RELEASE") {
+        isScoreReleased = attempt.status === "RESULT_RELEASED";
+      } else if (releasePolicy === "AFTER_DEADLINE") {
+        isScoreReleased = isDeadlinePassed || attempt.status === "RESULT_RELEASED";
+      }
+    }
+
+    // 2. Review Policy: Governs when detailed question-level breakdown and submitted answers can be reviewed
+    let isReviewable = isStaff;
+    if (!isStaff) {
+      if (reviewPolicy === "IMMEDIATE") {
+        isReviewable = true;
+      } else if (reviewPolicy === "AFTER_DEADLINE") {
+        isReviewable = isDeadlinePassed || attempt.status === "RESULT_RELEASED";
+      } else if (reviewPolicy === "NEVER") {
+        isReviewable = false;
+      }
+    }
+
+    // 3. Answer Key Release: Solutions and explanations require BOTH score release and review permission
+    const isAnswerKeyReleased = isStaff || (isScoreReleased && isReviewable);
+
+    // Backward compatibility: isReleased reflects score release
+    const isReleased = isScoreReleased;
 
     // Fetch responses with question and version data
     const { data: responses } = await supabase
@@ -1027,8 +1087,12 @@ export class AttemptLifecycleService {
         studentAnswerText = payload.code || "No code submitted";
       }
 
-      if (!isReleased && !isStaff) {
-        // Mask answer keys and explanations
+      const safePointsAwarded = (isScoreReleased || isStaff) ? r.points_awarded : null;
+      const safeIsCorrect = (isScoreReleased || isStaff) ? r.is_correct : null;
+      const safeScoringStatus = (isScoreReleased || isStaff) ? r.scoring_status : "PENDING_RELEASE";
+
+      if (!isAnswerKeyReleased && !isStaff) {
+        // Mask answer keys and explanations; also mask points if score is not released
         return {
           questionId: r.question_id,
           questionType: q.question_type,
@@ -1038,9 +1102,9 @@ export class AttemptLifecycleService {
           isAnswered: r.is_answered,
           studentAnswer: r.response_payload,
           studentAnswerText,
-          pointsAwarded: r.points_awarded,
-          isCorrect: r.is_correct,
-          scoringStatus: r.scoring_status,
+          pointsAwarded: safePointsAwarded,
+          isCorrect: safeIsCorrect,
+          scoringStatus: safeScoringStatus,
           answerKey: null,
           correctAnswerText: null,
           explanation: null,
@@ -1073,10 +1137,10 @@ export class AttemptLifecycleService {
         isAnswered: r.is_answered,
         studentAnswer: r.response_payload,
         studentAnswerText,
-        pointsAwarded: r.points_awarded,
-        isCorrect: r.is_correct,
-        scoringStatus: r.scoring_status,
-        manualNotes: r.manual_notes,
+        pointsAwarded: safePointsAwarded,
+        isCorrect: safeIsCorrect,
+        scoringStatus: safeScoringStatus,
+        manualNotes: (isStaff || isScoreReleased) ? r.manual_notes : null,
         answerKey: v.answer_key,
         correctAnswerText,
         explanation: v.explanation,
@@ -1104,22 +1168,49 @@ export class AttemptLifecycleService {
       violations = (clientMeta as any).violations;
     }
 
+    // If candidate review is locked or not permitted by review policy, withhold questions array
+    const safeQuestions = (isReviewable || isStaff) ? formattedResponses : [];
+
+    const safeTotalPoints = Number(attempt.total_points ?? 0);
+    const safeEarnedPoints = (isScoreReleased || isStaff) ? Number(attempt.earned_points ?? 0) : null;
+    const safeScorePercentage = (isScoreReleased || isStaff) ? Number(attempt.score_percentage ?? 0) : null;
+    const safeIsPassed = (isScoreReleased || isStaff) ? Boolean(attempt.is_passed) : null;
+    const safeScoringStatus = (isScoreReleased || isStaff) ? attempt.scoring_status : "PENDING_RELEASE";
+
     return {
       success: true,
-      isReleased,
-      attempt,
+      isReleased: isScoreReleased,
+      isScoreReleased,
+      isReviewable,
+      isAnswerKeyReleased,
+      reviewPolicy,
+      releasePolicy,
+      deadline: assignmentWindowEnd,
+      attempt: {
+        ...attempt,
+        earned_points: safeEarnedPoints,
+        score_percentage: safeScorePercentage,
+        is_passed: safeIsPassed,
+        scoring_status: safeScoringStatus,
+      },
       breakdown: {
         assessmentTitle: assessment.title,
         passPercentage: Number(assessment.pass_percentage ?? 60.0),
-        totalPoints: Number(attempt.total_points ?? 0),
-        earnedPoints: Number(attempt.earned_points ?? 0),
-        scorePercentage: Number(attempt.score_percentage ?? 0),
-        isPassed: Boolean(attempt.is_passed),
-        scoringStatus: attempt.scoring_status,
+        totalPoints: safeTotalPoints,
+        earnedPoints: safeEarnedPoints,
+        scorePercentage: safeScorePercentage,
+        isPassed: safeIsPassed,
+        scoringStatus: safeScoringStatus,
+        isScoreReleased,
+        isReviewable,
+        isAnswerKeyReleased,
+        reviewPolicy,
+        releasePolicy,
+        deadline: assignmentWindowEnd,
         submissionReason: (attempt as any).submission_reason || (clientMeta as any).submission_reason || "MANUAL",
         violationCount: Number((attempt as any).violation_count ?? (clientMeta as any).violation_count ?? violations.length),
         violations: violations || [],
-        questions: formattedResponses,
+        questions: safeQuestions,
       },
     };
   }

@@ -356,7 +356,17 @@ export default function StudentAssessmentsPage() {
                       <div>
                         <span className="text-text-muted block text-[10px] uppercase font-mono">Best Score</span>
                         <span className="font-medium text-text-primary">
-                          {item.highestScore !== null ? `${item.highestScore}%` : "—"}
+                          {item.attemptsCount > 0 ? (
+                            item.isScoreReleased === false ? (
+                              <span className="text-amber-800 text-xs font-semibold">Pending</span>
+                            ) : item.highestScore !== null ? (
+                              `${item.highestScore}%`
+                            ) : (
+                              "—"
+                            )
+                          ) : (
+                            "—"
+                          )}
                         </span>
                       </div>
                     </div>
@@ -400,16 +410,33 @@ export default function StudentAssessmentsPage() {
                       )}
 
                       {item.latestAttempt && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-xs text-text-secondary"
-                          asChild
-                        >
-                          <Link href={`/dashboard/student/attempts/${item.latestAttempt.id}/review`}>
-                            <Award className="h-3.5 w-3.5 mr-1.5 text-secondary" /> View Attempt Review
-                          </Link>
-                        </Button>
+                        item.isReviewable ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs text-text-secondary"
+                            asChild
+                          >
+                            <Link href={`/dashboard/student/attempts/${item.latestAttempt.id}/review`}>
+                              <Award className="h-3.5 w-3.5 mr-1.5 text-secondary" /> View Attempt Review
+                            </Link>
+                          </Button>
+                        ) : item.reviewPolicy === "NEVER" ? (
+                          <div className="w-full text-center text-[11px] text-text-muted italic py-1">
+                            Question review disabled
+                          </div>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs text-amber-800 bg-amber-50/70 border border-amber-200/70 hover:bg-amber-100/70"
+                            asChild
+                          >
+                            <Link href={`/dashboard/student/attempts/${item.latestAttempt.id}/review`}>
+                              <Clock className="h-3.5 w-3.5 mr-1.5 text-amber-700" /> Review Locked (Unlocks After Deadline)
+                            </Link>
+                          </Button>
+                        )
                       )}
                     </div>
                   </CardContent>
