@@ -53,7 +53,12 @@ async function rotateCredentials() {
   }
 
   console.log(`[2/4] Found user ID: ${adminUser.id}. Generating secure high-entropy credentials...`);
-  const newPassword = `Admin#${crypto.randomBytes(16).toString("base64url")}!2026`;
+  // const newPassword = `Admin#${crypto.randomBytes(16).toString("base64url")}!2026`;
+  const newPassword = process.env.SUPER_ADMIN_NEW_PASSWORD;
+
+  if (!newPassword || newPassword.length < 16) {
+    throw new Error("Custom password must be at least 16 characters.");
+  }
 
   console.log(`[3/4] Updating password and invalidating prior sessions...`);
   const { error: updateErr } = await supabase.auth.admin.updateUserById(adminUser.id, {

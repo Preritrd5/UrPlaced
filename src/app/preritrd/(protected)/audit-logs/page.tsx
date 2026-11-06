@@ -197,8 +197,8 @@ export default function PlatformAuditLogsPage() {
 
       {/* Metadata Inspector Modal */}
       {inspectTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary">
@@ -212,7 +212,7 @@ export default function PlatformAuditLogsPage() {
                 Event ID: {inspectTarget.id}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-text-secondary block font-mono text-[11px]">Actor:</span>

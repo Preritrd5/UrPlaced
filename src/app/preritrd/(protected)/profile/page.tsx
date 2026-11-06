@@ -547,12 +547,12 @@ export default function SuperAdminProfilePage() {
                   <Badge className="bg-primary hover:bg-primary text-white font-mono text-[10px] font-bold tracking-wider uppercase px-2 py-0.5">
                     SUPER_ADMIN
                   </Badge>
-                  <Badge
+                  {/* <Badge
                     variant="outline"
                     className="bg-secondary/10 text-secondary border-secondary/30 font-mono text-[10px] font-bold"
                   >
                     {adminItem.status || "ACTIVE"}
-                  </Badge>
+                  </Badge> */}
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-text-secondary font-mono">

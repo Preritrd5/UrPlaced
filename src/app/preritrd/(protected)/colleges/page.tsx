@@ -243,11 +243,10 @@ export default function PlatformCollegesPage() {
       {/* Notifications */}
       {feedback && (
         <div
-          className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between ${
-            feedback.type === "success"
+          className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between ${feedback.type === "success"
               ? "bg-secondary/10 border-secondary/30 text-secondary"
               : "bg-status-danger-subtle border-status-danger/30 text-status-danger"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2">
             {feedback.type === "success" ? (
@@ -364,8 +363,8 @@ export default function PlatformCollegesPage() {
                             col.status === "ACTIVE"
                               ? "bg-secondary/10 text-secondary border-secondary/30 font-mono text-[10px]"
                               : col.status === "SUSPENDED"
-                              ? "bg-status-danger-subtle text-status-danger border-status-danger/30 font-mono text-[10px]"
-                              : "bg-surface text-text-secondary border-border font-mono text-[10px]"
+                                ? "bg-status-danger-subtle text-status-danger border-status-danger/30 font-mono text-[10px]"
+                                : "bg-surface text-text-secondary border-border font-mono text-[10px]"
                           }
                         >
                           {col.status}
@@ -384,8 +383,8 @@ export default function PlatformCollegesPage() {
                               col.subscriptionPlan?.status === "ACTIVE"
                                 ? "bg-secondary/10 text-secondary border-secondary/30 font-mono text-[9px]"
                                 : col.subscriptionPlan?.status === "PENDING_PAYMENT"
-                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-mono text-[9px]"
-                                : "bg-surface text-text-secondary border-border font-mono text-[9px]"
+                                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 font-mono text-[9px]"
+                                  : "bg-surface text-text-secondary border-border font-mono text-[9px]"
                             }
                           >
                             {col.subscriptionPlan?.status || "NO_SUB"}
@@ -405,8 +404,8 @@ export default function PlatformCollegesPage() {
                             col.onboardingStatus === "COMPLETED"
                               ? "bg-secondary/10 text-secondary border-secondary/30 text-[10px] font-mono"
                               : col.onboardingStatus === "INVITED"
-                              ? "bg-primary/10 text-primary border-primary/30 text-[10px] font-mono"
-                              : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10px] font-mono"
+                                ? "bg-primary/10 text-primary border-primary/30 text-[10px] font-mono"
+                                : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10px] font-mono"
                           }
                         >
                           {col.onboardingStatus}
@@ -521,8 +520,8 @@ export default function PlatformCollegesPage() {
 
       {/* Onboarding Details Modal */}
       {detailsTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
@@ -540,7 +539,7 @@ export default function PlatformCollegesPage() {
                 Institutional metadata and administrative onboarding tracking
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
               {/* Institution Identity */}
               <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
                 <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">
@@ -680,15 +679,15 @@ export default function PlatformCollegesPage() {
 
       {/* Confirmation Modal for Suspend/Activate */}
       {actionTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
                 <span>Confirm Status Modification</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
               <p className="text-xs text-text-primary leading-relaxed">
                 You are about to change the status of{" "}
                 <span className="font-bold">{actionTarget.college.name}</span> to{" "}
@@ -729,11 +728,10 @@ export default function PlatformCollegesPage() {
                 size="sm"
                 onClick={handleStatusChange}
                 disabled={actionLoading}
-                className={`text-white text-xs h-9 ${
-                  actionTarget.newStatus === "SUSPENDED"
+                className={`text-white text-xs h-9 ${actionTarget.newStatus === "SUSPENDED"
                     ? "bg-status-danger hover:opacity-90"
                     : "bg-primary hover:bg-[var(--color-primary-hover)]"
-                }`}
+                  }`}
               >
                 {actionLoading ? "Updating..." : `Confirm ${actionTarget.newStatus}`}
               </Button>
@@ -744,8 +742,8 @@ export default function PlatformCollegesPage() {
 
       {/* Confirmation Modal for College Deletion */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-status-danger-subtle/40">
               <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-status-danger" />
@@ -755,7 +753,7 @@ export default function PlatformCollegesPage() {
                 Administrative removal of institutional workspace and associated accounts.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
               <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1.5">
                 <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">Target Institution</div>
                 <div className="text-sm font-bold font-heading text-text-primary">{deleteTarget.name}</div>
@@ -770,11 +768,10 @@ export default function PlatformCollegesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   <div
                     onClick={() => setDeleteMode("permanent")}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                      deleteMode === "permanent"
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${deleteMode === "permanent"
                         ? "border-status-danger bg-status-danger-subtle/50 shadow-xs"
                         : "border-border bg-surface hover:bg-surface/80"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 font-bold text-status-danger">
                       <input
@@ -793,11 +790,10 @@ export default function PlatformCollegesPage() {
 
                   <div
                     onClick={() => setDeleteMode("archive")}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                      deleteMode === "archive"
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${deleteMode === "archive"
                         ? "border-primary bg-primary/10 shadow-xs"
                         : "border-border bg-surface hover:bg-surface/80"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2 font-bold text-text-primary">
                       <input

@@ -16,6 +16,7 @@ import {
 } from "@/types/database";
 import { QuestionSetService } from "@/modules/question-bank/services/question-set-service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface CreateAssessmentInput {
   title: string;
@@ -160,12 +161,106 @@ export class AssessmentService {
       return { success: false, assessments: [], error: error.message };
     }
 
-    const formatted = (data || []).map((row: any) => ({
-      ...row,
-      attemptCount: Array.isArray(row.attempts)
-        ? row.attempts[0]?.count || 0
-        : row.attempts?.count || 0,
-    }));
+    // Authoritative Assignment Status & Recipient Enrichment from Supabase
+    const assessmentIds = (data || []).map((row: any) => row.id);
+    let assignmentsByAssessment: Record<string, any[]> = {};
+
+    if (assessmentIds.length > 0) {
+      const admin = createAdminClient();
+      const { data: assignmentsData } = await admin
+        .from("assessment_assignments")
+        .select(`
+          id,
+          assessment_id,
+          student_id,
+          cohort_name,
+          window_start,
+          window_end,
+          max_attempts_override,
+          status,
+          created_at
+        `)
+        .eq("tenant_id", tenantId)
+        .eq("status", "ACTIVE")
+        .in("assessment_id", assessmentIds);
+
+      if (assignmentsData) {
+        for (const item of assignmentsData) {
+          if (!assignmentsByAssessment[item.assessment_id]) {
+            assignmentsByAssessment[item.assessment_id] = [];
+          }
+          assignmentsByAssessment[item.assessment_id].push(item);
+        }
+      }
+    }
+
+    const now = new Date();
+    const formatted = (data || []).map((row: any) => {
+      const assItems = assignmentsByAssessment[row.id] || [];
+      const hasAssignments = assItems.length > 0;
+
+      const distinctStudentIds = new Set<string>();
+      let hasCollegeWide = false;
+      let primaryCohortName: string | null = null;
+      let earliestStart: string | null = null;
+      let latestEnd: string | null = null;
+
+      for (const a of assItems) {
+        if (!primaryCohortName && a.cohort_name) {
+          primaryCohortName = a.cohort_name;
+        }
+        if (a.student_id) {
+          distinctStudentIds.add(a.student_id);
+        } else {
+          hasCollegeWide = true;
+        }
+        if (a.window_start) {
+          if (!earliestStart || new Date(a.window_start) < new Date(earliestStart)) {
+            earliestStart = a.window_start;
+          }
+        }
+        if (a.window_end) {
+          if (!latestEnd || new Date(a.window_end) > new Date(latestEnd)) {
+            latestEnd = a.window_end;
+          }
+        }
+      }
+
+      let assignmentStatus: "NOT_ASSIGNED" | "ASSIGNED" | "SCHEDULED" | "EXPIRED" = "NOT_ASSIGNED";
+      if (hasAssignments) {
+        if (earliestStart && new Date(earliestStart) > now) {
+          assignmentStatus = "SCHEDULED";
+        } else if (latestEnd && new Date(latestEnd) < now) {
+          assignmentStatus = "EXPIRED";
+        } else {
+          assignmentStatus = "ASSIGNED";
+        }
+      }
+
+      const recipientCount = distinctStudentIds.size > 0
+        ? distinctStudentIds.size
+        : (hasCollegeWide ? (assItems.length > 1 ? assItems.length - 1 : 1) : 0);
+
+      const isAssigned = hasAssignments;
+
+      return {
+        ...row,
+        attemptCount: Array.isArray(row.attempts)
+          ? row.attempts[0]?.count || 0
+          : row.attempts?.count || 0,
+        assignments: assItems,
+        is_assigned: isAssigned,
+        isAssigned: isAssigned,
+        assigned_recipients_count: recipientCount,
+        assignedRecipientsCount: recipientCount,
+        assigned_cohort_name: primaryCohortName,
+        assignedCohortName: primaryCohortName,
+        window_start: earliestStart,
+        window_end: latestEnd,
+        assignment_status: assignmentStatus,
+        assignmentStatus: assignmentStatus,
+      };
+    });
 
     return { success: true, assessments: formatted };
   }
@@ -207,7 +302,88 @@ export class AssessmentService {
       return { success: false, error: "Assessment not found." };
     }
 
-    return { success: true, assessment: data };
+    const admin = createAdminClient();
+    const { data: assignmentsData } = await admin
+      .from("assessment_assignments")
+      .select(`
+        id,
+        assessment_id,
+        student_id,
+        cohort_name,
+        window_start,
+        window_end,
+        max_attempts_override,
+        status,
+        created_at
+      `)
+      .eq("tenant_id", tenantId)
+      .eq("assessment_id", assessmentId)
+      .eq("status", "ACTIVE");
+
+    const assItems = assignmentsData || [];
+    const hasAssignments = assItems.length > 0;
+    const distinctStudentIds = new Set<string>();
+    let hasCollegeWide = false;
+    let primaryCohortName: string | null = null;
+    let earliestStart: string | null = null;
+    let latestEnd: string | null = null;
+
+    for (const a of assItems) {
+      if (!primaryCohortName && a.cohort_name) {
+        primaryCohortName = a.cohort_name;
+      }
+      if (a.student_id) {
+        distinctStudentIds.add(a.student_id);
+      } else {
+        hasCollegeWide = true;
+      }
+      if (a.window_start) {
+        if (!earliestStart || new Date(a.window_start) < new Date(earliestStart)) {
+          earliestStart = a.window_start;
+        }
+      }
+      if (a.window_end) {
+        if (!latestEnd || new Date(a.window_end) > new Date(latestEnd)) {
+          latestEnd = a.window_end;
+        }
+      }
+    }
+
+    const now = new Date();
+    let assignmentStatus: "NOT_ASSIGNED" | "ASSIGNED" | "SCHEDULED" | "EXPIRED" = "NOT_ASSIGNED";
+    if (hasAssignments) {
+      if (earliestStart && new Date(earliestStart) > now) {
+        assignmentStatus = "SCHEDULED";
+      } else if (latestEnd && new Date(latestEnd) < now) {
+        assignmentStatus = "EXPIRED";
+      } else {
+        assignmentStatus = "ASSIGNED";
+      }
+    }
+
+    const recipientCount = distinctStudentIds.size > 0
+      ? distinctStudentIds.size
+      : (hasCollegeWide ? (assItems.length > 1 ? assItems.length - 1 : 1) : 0);
+
+    const isAssigned = hasAssignments;
+
+    return {
+      success: true,
+      assessment: {
+        ...data,
+        assignments: assItems,
+        is_assigned: isAssigned,
+        isAssigned: isAssigned,
+        assigned_recipients_count: recipientCount,
+        assignedRecipientsCount: recipientCount,
+        assigned_cohort_name: primaryCohortName,
+        assignedCohortName: primaryCohortName,
+        window_start: earliestStart,
+        window_end: latestEnd,
+        assignment_status: assignmentStatus,
+        assignmentStatus: assignmentStatus,
+      },
+    };
   }
 
   /**

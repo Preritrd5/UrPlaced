@@ -990,6 +990,42 @@ export class AttemptLifecycleService {
     const formattedResponses = (responses || []).map((r) => {
       const q = r.question as any;
       const v = r.version as any;
+      const payload = r.response_payload || {};
+
+      const formatOptionText = (options: any, raw: any): string => {
+        if (raw === null || raw === undefined || raw === "") return "None";
+        const idStr = String(raw).trim();
+        if (Array.isArray(options)) {
+          const match = options.find(
+            (opt: any) =>
+              opt &&
+              (String(opt.id).toLowerCase() === idStr.toLowerCase() ||
+                String(opt.text).trim().toLowerCase() === idStr.toLowerCase())
+          );
+          if (match) {
+            return match.text || match.option_text || match.label || idStr;
+          }
+        }
+        return idStr;
+      };
+
+      let studentAnswerText = "None";
+      if (q.question_type === "SINGLE_CHOICE") {
+        const rawChoice = payload.selected_option ?? payload.selected_option_id;
+        studentAnswerText = rawChoice !== undefined && rawChoice !== null ? formatOptionText(v.options, rawChoice) : "None";
+      } else if (q.question_type === "MULTIPLE_SELECT") {
+        const rawList = Array.isArray(payload.selected_options) ? payload.selected_options : [];
+        studentAnswerText =
+          rawList.length > 0
+            ? rawList.map((id: string) => formatOptionText(v.options, id)).join(", ")
+            : "None";
+      } else if (q.question_type === "NUMERIC") {
+        studentAnswerText = payload.numeric_value !== undefined ? String(payload.numeric_value) : "None";
+      } else if (q.question_type === "SHORT_ANSWER") {
+        studentAnswerText = payload.text || payload.answer || "No response";
+      } else if (q.question_type === "CODING") {
+        studentAnswerText = payload.code || "No code submitted";
+      }
 
       if (!isReleased && !isStaff) {
         // Mask answer keys and explanations
@@ -1001,15 +1037,33 @@ export class AttemptLifecycleService {
           options: v.options,
           isAnswered: r.is_answered,
           studentAnswer: r.response_payload,
+          studentAnswerText,
           pointsAwarded: r.points_awarded,
           isCorrect: r.is_correct,
           scoringStatus: r.scoring_status,
           answerKey: null,
+          correctAnswerText: null,
           explanation: null,
         };
       }
 
       // Full released review
+      const ak = v.answer_key || {};
+      let correctAnswerText = "";
+      if (q.question_type === "SINGLE_CHOICE") {
+        const rawCorrect = ak.correct_option_id ?? ak.correct_option ?? ak.correctOptionId;
+        correctAnswerText = rawCorrect ? formatOptionText(v.options, rawCorrect) : "";
+      } else if (q.question_type === "MULTIPLE_SELECT") {
+        const rawCorrectList = Array.isArray(ak.correct_option_ids)
+          ? ak.correct_option_ids
+          : Array.isArray(ak.correct_options)
+          ? ak.correct_options
+          : [];
+        correctAnswerText = rawCorrectList.map((id: string) => formatOptionText(v.options, id)).join(", ");
+      } else if (q.question_type === "NUMERIC") {
+        correctAnswerText = String((ak.value !== undefined ? ak.value : ak.correct_value) ?? "");
+      }
+
       return {
         questionId: r.question_id,
         questionType: q.question_type,
@@ -1018,11 +1072,13 @@ export class AttemptLifecycleService {
         options: v.options,
         isAnswered: r.is_answered,
         studentAnswer: r.response_payload,
+        studentAnswerText,
         pointsAwarded: r.points_awarded,
         isCorrect: r.is_correct,
         scoringStatus: r.scoring_status,
         manualNotes: r.manual_notes,
         answerKey: v.answer_key,
+        correctAnswerText,
         explanation: v.explanation,
         difficulty: v.difficulty,
         topicTags: v.topic_tags,

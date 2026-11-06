@@ -72,6 +72,23 @@ export default function AttemptReviewPage({
   const { isReleased, attempt, breakdown } = reviewData;
   const isPassed = Boolean(breakdown.isPassed);
 
+  const getOptionDisplay = (options: any, rawVal: any): string => {
+    if (rawVal === null || rawVal === undefined || rawVal === "") return "None";
+    const idStr = String(rawVal).trim();
+    if (Array.isArray(options)) {
+      const match = options.find(
+        (opt: any) =>
+          opt &&
+          (String(opt.id).toLowerCase() === idStr.toLowerCase() ||
+            String(opt.text).trim().toLowerCase() === idStr.toLowerCase())
+      );
+      if (match) {
+        return match.text || match.option_text || match.label || idStr;
+      }
+    }
+    return idStr;
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       {/* Top Header */}
@@ -238,11 +255,24 @@ export default function AttemptReviewPage({
                 <span className="text-[10px] font-mono uppercase text-text-muted block">Your Answer</span>
                 <div className="text-text-primary font-medium">
                   {q.questionType === "SINGLE_CHOICE" ? (
-                    <span>Option ID: {q.studentAnswer?.selected_option || "None"}</span>
+                    <span>
+                      {q.studentAnswerText && q.studentAnswerText !== "None"
+                        ? q.studentAnswerText
+                        : getOptionDisplay(
+                            q.options,
+                            q.studentAnswer?.selected_option ?? q.studentAnswer?.selected_option_id
+                          )}
+                    </span>
                   ) : q.questionType === "MULTIPLE_SELECT" ? (
-                    <span>Options: {Array.isArray(q.studentAnswer?.selected_options) ? q.studentAnswer.selected_options.join(", ") : "None"}</span>
+                    <span>
+                      {q.studentAnswerText && q.studentAnswerText !== "None"
+                        ? q.studentAnswerText
+                        : Array.isArray(q.studentAnswer?.selected_options) && q.studentAnswer.selected_options.length > 0
+                        ? q.studentAnswer.selected_options.map((opt: string) => getOptionDisplay(q.options, opt)).join(", ")
+                        : "None"}
+                    </span>
                   ) : q.questionType === "NUMERIC" ? (
-                    <span>Entered: {q.studentAnswer?.numeric_value ?? "None"}</span>
+                    <span>Entered: {q.studentAnswer?.numeric_value ?? q.studentAnswer?.value ?? "None"}</span>
                   ) : q.questionType === "SHORT_ANSWER" ? (
                     <p className="whitespace-pre-wrap">{q.studentAnswer?.text || "No response submitted."}</p>
                   ) : q.questionType === "CODING" ? (
@@ -254,25 +284,45 @@ export default function AttemptReviewPage({
               </div>
 
               {/* Released Explanations & Correct Keys */}
-              {isReleased && q.answerKey && (
+              {isReleased && (q.answerKey || q.explanation) && (
                 <div className="text-xs p-3 rounded-md bg-[rgba(80,82,201,0.04)] border border-primary/20 space-y-2">
                   <div className="flex items-center gap-1.5 text-primary font-semibold">
                     <CheckCircle2 className="h-4 w-4" /> Authoritative Solution
                   </div>
-                  <div className="text-text-secondary">
-                    {q.answerKey.correct_option && (
-                      <p><span className="font-medium">Correct Choice:</span> {q.answerKey.correct_option}</p>
+                  <div className="text-text-secondary space-y-1.5">
+                    {q.questionType === "SINGLE_CHOICE" && (
+                      <p>
+                        <span className="font-semibold text-text-primary">Correct Choice: </span>
+                        {q.correctAnswerText ||
+                          getOptionDisplay(
+                            q.options,
+                            q.answerKey?.correct_option_id ?? q.answerKey?.correct_option ?? q.answerKey?.correctOptionId
+                          )}
+                      </p>
                     )}
-                    {Array.isArray(q.answerKey.correct_options) && (
-                      <p><span className="font-medium">Correct Choices:</span> {q.answerKey.correct_options.join(", ")}</p>
+                    {q.questionType === "MULTIPLE_SELECT" && (
+                      <p>
+                        <span className="font-semibold text-text-primary">Correct Choices: </span>
+                        {q.correctAnswerText ||
+                          (Array.isArray(q.answerKey?.correct_option_ids)
+                            ? q.answerKey.correct_option_ids
+                            : Array.isArray(q.answerKey?.correct_options)
+                            ? q.answerKey.correct_options
+                            : []
+                          ).map((opt: string) => getOptionDisplay(q.options, opt)).join(", ")}
+                      </p>
                     )}
-                    {q.answerKey.correct_value !== undefined && (
-                      <p><span className="font-medium">Correct Value:</span> {q.answerKey.correct_value}</p>
+                    {q.questionType === "NUMERIC" && (q.answerKey?.value !== undefined || q.answerKey?.correct_value !== undefined) && (
+                      <p>
+                        <span className="font-semibold text-text-primary">Correct Value: </span>
+                        {q.answerKey?.value ?? q.answerKey?.correct_value}
+                        {q.answerKey?.tolerance ? ` (±${q.answerKey.tolerance})` : ""}
+                      </p>
                     )}
                     {q.explanation && (
                       <div className="mt-2 pt-2 border-t border-primary/10 text-text-secondary">
-                        <span className="font-medium text-text-primary block mb-0.5">Explanation:</span>
-                        <p>{q.explanation}</p>
+                        <span className="font-semibold text-text-primary block mb-0.5">Explanation:</span>
+                        <p className="whitespace-pre-wrap">{q.explanation}</p>
                       </div>
                     )}
                   </div>

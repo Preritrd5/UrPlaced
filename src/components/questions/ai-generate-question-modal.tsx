@@ -126,8 +126,8 @@ export function AIGenerateQuestionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#24283A]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-[#F8F7F3] border border-[#DDDCD5] rounded-xl shadow-xl w-full max-w-3xl my-4 sm:my-8 overflow-hidden flex flex-col max-h-[92dvh]">
+    <div className="fixed inset-0 z-50 bg-[#24283A]/50 backdrop-blur-sm flex min-h-full items-start justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-[#F8F7F3] border border-[#DDDCD5] rounded-xl shadow-xl w-full max-w-3xl my-auto overflow-hidden flex flex-col min-h-0 max-h-[calc(100dvh-2rem)]">
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-[#DDDCD5] flex items-center justify-between gap-2 bg-[#FBFAF7] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -153,7 +153,7 @@ export function AIGenerateQuestionModal({
         </div>
 
         {/* Content Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 min-h-0">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />

@@ -149,12 +149,12 @@ export function CreateQuestionBankModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex min-h-full items-start justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-bank-modal-title"
     >
-      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150 my-4 sm:my-8 max-h-[92dvh]">
+      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col min-h-0 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150 my-auto max-h-[calc(100dvh-2rem)]">
         {/* Header */}
         <div className="flex items-start justify-between p-5 sm:p-6 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3">
@@ -186,7 +186,7 @@ export function CreateQuestionBankModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
-          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
             {errorMsg && (
               <div
                 role="alert"

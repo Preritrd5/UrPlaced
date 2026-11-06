@@ -524,37 +524,37 @@ export default function AssessmentTakingPage({
   // Auto-Submission Violation Modal overlay
   if (autoSubmitNotice) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-        <Card className="w-full max-w-lg border-red-500/50 bg-[#F8F7F3] shadow-2xl animate-in fade-in duration-200">
-          <CardHeader className="text-center pb-3">
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+        <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden border-red-500/50 bg-card shadow-2xl my-auto animate-in fade-in duration-200">
+          <CardHeader className="text-center pb-3 shrink-0 border-b border-border">
             <div className="h-14 w-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
               <ShieldAlert className="h-8 w-8 text-red-600" />
             </div>
-            <CardTitle className="text-xl font-bold font-heading text-red-900">
+            <CardTitle className="text-xl font-bold font-heading text-red-900 dark:text-red-300">
               Assessment Terminated: Security Violation
             </CardTitle>
             <p className="text-xs text-text-muted mt-1 uppercase font-mono tracking-wider">
               Violation Code: {autoSubmitNotice.violationType}
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-3.5 bg-red-50/80 border border-red-200 rounded-lg text-xs text-red-950 space-y-2 leading-relaxed">
+          <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="p-3.5 bg-red-50/80 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-xs text-red-950 dark:text-red-200 space-y-2 leading-relaxed rounded-lg">
               <p className="font-medium">{autoSubmitNotice.message}</p>
-              <p className="text-[11px] text-red-800">
+              <p className="text-[11px] text-red-800 dark:text-red-300">
                 All answers saved prior to this violation have been securely preserved and submitted for scoring. Re-entry to this assessment attempt is permanently locked.
               </p>
             </div>
-            <div className="pt-2">
-              <Button
-                variant="primary"
-                size="default"
-                className="w-full font-semibold"
-                onClick={() => router.push(`/dashboard/student/attempts/${workspace.attempt.id}/review`)}
-              >
-                Proceed to Attempt Review & Breakdown
-              </Button>
-            </div>
           </CardContent>
+          <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50">
+            <Button
+              variant="primary"
+              size="default"
+              className="w-full font-semibold"
+              onClick={() => router.push(`/dashboard/student/attempts/${workspace.attempt.id}/review`)}
+            >
+              Proceed to Attempt Review & Breakdown
+            </Button>
+          </div>
         </Card>
       </div>
     );
@@ -591,9 +591,9 @@ export default function AssessmentTakingPage({
     <div className="space-y-4 max-w-7xl mx-auto pb-12 select-none" onContextMenu={(e) => e.preventDefault()}>
       {/* FULLSCREEN GATE OVERLAY: Displayed if browser drops out of fullscreen before exam is submitted */}
       {!isFullscreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
-          <Card className="w-full max-w-lg border-primary/40 bg-[#F8F7F3] shadow-2xl animate-in zoom-in-95 duration-150">
-            <CardHeader className="text-center pb-2">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-md p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden border-primary/40 bg-card shadow-2xl my-auto animate-in zoom-in-95 duration-150">
+            <CardHeader className="text-center pb-2 shrink-0 border-b border-border">
               <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <Maximize2 className="h-7 w-7 text-primary" />
               </div>
@@ -604,7 +604,7 @@ export default function AssessmentTakingPage({
                 UrPlaced examination security rules require active full-screen mode.
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4">
               <div className="p-3.5 bg-input rounded-lg border border-border text-xs text-text-secondary space-y-2">
                 <div className="flex items-center gap-2 text-text-primary font-medium">
                   <Lock className="h-4 w-4 text-primary" />
@@ -624,18 +624,17 @@ export default function AssessmentTakingPage({
                   <span>{fullscreenError}</span>
                 </div>
               )}
-
-              <div className="pt-2">
-                <Button
-                  variant="primary"
-                  size="default"
-                  onClick={requestFullscreenGate}
-                  className="w-full font-semibold shadow-md"
-                >
-                  <Maximize2 className="h-4 w-4 mr-2" /> Enter Full-Screen to Continue
-                </Button>
-              </div>
             </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50">
+              <Button
+                variant="primary"
+                size="default"
+                onClick={requestFullscreenGate}
+                className="w-full font-semibold shadow-md"
+              >
+                <Maximize2 className="h-4 w-4 mr-2" /> Enter Full-Screen to Continue
+              </Button>
+            </div>
           </Card>
         </div>
       )}
@@ -968,15 +967,15 @@ export default function AssessmentTakingPage({
 
       {/* Submit Confirmation Modal */}
       {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden my-auto shadow-2xl">
+            <CardHeader className="shrink-0 pb-3 border-b border-border">
               <CardTitle className="text-lg font-bold">Submit Assessment Attempt?</CardTitle>
               <p className="text-xs text-text-secondary mt-1">
                 Please verify your responses before concluding the test session.
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4">
               <div className="grid grid-cols-3 gap-2 text-center p-3 bg-input rounded-md border border-border text-xs">
                 <div>
                   <span className="text-secondary font-bold text-base block font-mono">{answeredCount}</span>
@@ -1000,26 +999,25 @@ export default function AssessmentTakingPage({
                   <p>You still have unanswered questions. Unanswered questions will receive 0 points.</p>
                 </div>
               )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSubmitModal(false)}
-                  disabled={submitting}
-                >
-                  Return to Test
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleFinalSubmit}
-                  disabled={submitting}
-                >
-                  {submitting ? "Evaluating..." : "Confirm & Submit"}
-                </Button>
-              </div>
             </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSubmitModal(false)}
+                disabled={submitting}
+              >
+                Return to Test
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleFinalSubmit}
+                disabled={submitting}
+              >
+                {submitting ? "Evaluating..." : "Confirm & Submit"}
+              </Button>
+            </div>
           </Card>
         </div>
       )}

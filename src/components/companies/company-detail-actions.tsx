@@ -149,9 +149,9 @@ export function CompanyDetailActions({ company, canManage }: CompanyDetailAction
 
       {/* Edit Modal Backdrop */}
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <Card className="w-full max-w-lg shadow-xl border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-xl border-border bg-card my-auto">
+            <CardHeader className="shrink-0 flex flex-row items-center justify-between pb-3 border-b border-border">
               <div>
                 <CardTitle className="text-base font-bold font-heading">Edit Company Profile</CardTitle>
                 <CardDescription className="text-xs">
@@ -167,8 +167,8 @@ export function CompanyDetailActions({ company, canManage }: CompanyDetailAction
                 <X className="h-4 w-4" />
               </Button>
             </CardHeader>
-            <CardContent className="pt-4">
-              <form onSubmit={handleUpdate} className="space-y-3.5 text-xs">
+            <form onSubmit={handleUpdate} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
                 {error && (
                   <Alert variant="destructive" className="py-2 text-xs">
                     <AlertCircle className="h-4 w-4" />
@@ -249,30 +249,30 @@ export function CompanyDetailActions({ company, canManage }: CompanyDetailAction
                     className="w-full rounded-md border border-border bg-input p-2 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
                   />
                 </div>
+              </CardContent>
 
-                <div className="pt-2 flex justify-end gap-2 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditOpen(false)}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    disabled={isSubmitting}
-                    isLoading={isSubmitting}
-                  >
-                    {!isSubmitting && <Save className="h-3.5 w-3.5 mr-1" />}
-                    {isSubmitting ? "Saving..." : "Save Changes"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={isSubmitting}
+                  isLoading={isSubmitting}
+                >
+                  {!isSubmitting && <Save className="h-3.5 w-3.5 mr-1" />}
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
           </Card>
         </div>
       )}

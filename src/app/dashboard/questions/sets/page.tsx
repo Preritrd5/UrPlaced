@@ -641,59 +641,61 @@ export default function QuestionSetsPage() {
 
       {/* Create Set Modal */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <div className="bg-card w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden rounded-xl shadow-xl border border-border p-4 sm:p-6 space-y-4 my-auto">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <div className="bg-card w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden rounded-xl shadow-xl border border-border my-auto">
+            <div className="flex items-center justify-between border-b border-border p-4 sm:p-6 pb-3 shrink-0">
               <h3 className="text-base font-bold text-text-primary">Create Question Set</h3>
               <button onClick={() => setCreateModalOpen(false)} className="text-text-secondary hover:text-text-primary">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSet} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">
-                  Set Title *
-                </label>
-                <Input
-                  value={setName}
-                  onChange={(e) => setSetName(e.target.value)}
-                  placeholder="e.g. TCS Ninja Diagnostic Assessment A"
-                  required
-                />
+            <form onSubmit={handleCreateSet} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">
+                    Set Title *
+                  </label>
+                  <Input
+                    value={setName}
+                    onChange={(e) => setSetName(e.target.value)}
+                    placeholder="e.g. TCS Ninja Diagnostic Assessment A"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">
+                    Purpose *
+                  </label>
+                  <select
+                    value={setPurpose}
+                    onChange={(e) => setSetPurpose(e.target.value as QuestionSetPurpose)}
+                    className="w-full h-10 px-3 rounded-md bg-input border border-border text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="ASSESSMENT">Assessment / Exam</option>
+                    <option value="PRACTICE">Self-Paced Practice</option>
+                    <option value="DIAGNOSTIC">Diagnostic Baseline</option>
+                    <option value="COMPANY_PREP">Company-Specific Prep</option>
+                    <option value="INTERVIEW">Technical Interview Drill</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-text-secondary mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={setDescription}
+                    onChange={(e) => setSetDescription(e.target.value)}
+                    placeholder="Target cohort, difficulty calibration, duration guidance..."
+                    rows={3}
+                    className="w-full p-2.5 rounded-md bg-input border border-border text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">
-                  Purpose *
-                </label>
-                <select
-                  value={setPurpose}
-                  onChange={(e) => setSetPurpose(e.target.value as QuestionSetPurpose)}
-                  className="w-full h-10 px-3 rounded-md bg-input border border-border text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="ASSESSMENT">Assessment / Exam</option>
-                  <option value="PRACTICE">Self-Paced Practice</option>
-                  <option value="DIAGNOSTIC">Diagnostic Baseline</option>
-                  <option value="COMPANY_PREP">Company-Specific Prep</option>
-                  <option value="INTERVIEW">Technical Interview Drill</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={setDescription}
-                  onChange={(e) => setSetDescription(e.target.value)}
-                  placeholder="Target cohort, difficulty calibration, duration guidance..."
-                  rows={3}
-                  className="w-full p-2.5 rounded-md bg-input border border-border text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => setCreateModalOpen(false)}>
                   Cancel
                 </Button>

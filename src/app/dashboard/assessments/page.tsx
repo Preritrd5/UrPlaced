@@ -17,6 +17,7 @@ import {
   ArrowRight,
   RefreshCw,
   Trash2,
+  Settings2,
 } from "lucide-react";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,6 +80,7 @@ export default function StaffAssessmentsPage() {
 
   // Assign Modal State
   const [assigningAssessment, setAssigningAssessment] = useState<any | null>(null);
+  const [isManageMode, setIsManageMode] = useState(false);
   const [assignScope, setAssignScope] = useState<"COLLEGE_WIDE" | "DEPARTMENT" | "BATCH" | "COHORT">("COLLEGE_WIDE");
   const [departments, setDepartments] = useState<any[]>([]);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
@@ -478,10 +480,29 @@ export default function StaffAssessmentsPage() {
           {filteredAssessments.map((a) => (
             <Card key={a.id} className="flex flex-col justify-between">
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <Badge variant={a.status === "PUBLISHED" ? "default" : "outline"}>
-                    {a.status}
-                  </Badge>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Badge variant={a.status === "PUBLISHED" ? "default" : "outline"}>
+                      {a.status}
+                    </Badge>
+                    {a.status === "PUBLISHED" && (
+                      (a.is_assigned || a.isAssigned) ? (
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-50 text-emerald-700 border-emerald-300 font-bold dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-[10px]"
+                        >
+                          ASSIGNED
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-50 text-amber-700 border-amber-300 font-medium dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 text-[10px]"
+                        >
+                          NOT ASSIGNED
+                        </Badge>
+                      )
+                    )}
+                  </div>
                   <Badge variant="secondary" className="font-mono text-[10px]">
                     {a.purpose}
                   </Badge>
@@ -516,6 +537,31 @@ export default function StaffAssessmentsPage() {
                   </div>
                 </div>
 
+                {(a.is_assigned || a.isAssigned) && (
+                  <div className="bg-card rounded-lg border border-border p-2.5 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-text-secondary">
+                      <span className="text-text-muted text-[10px] uppercase font-mono">Assigned Cohort</span>
+                      <span className="font-medium text-text-primary truncate max-w-[170px]" title={a.assigned_cohort_name || a.assignedCohortName || "All Eligible Students"}>
+                        {a.assigned_cohort_name || a.assignedCohortName || "All Eligible Students"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-text-secondary">
+                      <span className="text-text-muted text-[10px] uppercase font-mono">Target Recipients</span>
+                      <span className="font-semibold text-secondary-accent">
+                        {a.assigned_recipients_count ?? a.assignedRecipientsCount ?? 0} students
+                      </span>
+                    </div>
+                    {(a.window_start || a.window_end) && (
+                      <div className="flex items-center justify-between text-text-secondary pt-1 border-t border-border/50 text-[11px]">
+                        <span className="text-text-muted text-[10px] uppercase font-mono">Window</span>
+                        <span className="font-mono text-[10px] text-text-primary">
+                          {a.window_start ? new Date(a.window_start).toLocaleDateString() : "Anytime"} &rarr; {a.window_end ? new Date(a.window_end).toLocaleDateString() : "Open"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 pt-2 border-t border-border flex-wrap">
                   {a.status === "DRAFT" && (
                     <>
@@ -540,23 +586,65 @@ export default function StaffAssessmentsPage() {
 
                   {a.status === "PUBLISHED" && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs h-8"
-                        onClick={() => {
-                          setAssigningAssessment(a);
-                          setAssignScope("COLLEGE_WIDE");
-                          setAssignForm({
-                            cohort_name: "All Eligible Students",
-                            window_start: "",
-                            window_end: "",
-                            max_attempts_override: "",
-                          });
-                        }}
-                      >
-                        <Users className="h-3.5 w-3.5 mr-1.5" /> Assign Assessment
-                      </Button>
+                      {!(a.is_assigned || a.isAssigned) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8"
+                          disabled={submitting && assigningAssessment?.id === a.id}
+                          onClick={() => {
+                            setIsManageMode(false);
+                            setAssigningAssessment(a);
+                            setAssignScope("COLLEGE_WIDE");
+                            setAssignForm({
+                              cohort_name: "All Eligible Students",
+                              window_start: "",
+                              window_end: "",
+                              max_attempts_override: "",
+                            });
+                            setSelectedDepartments([]);
+                            setSelectedBatches([]);
+                          }}
+                        >
+                          {submitting && assigningAssessment?.id === a.id ? (
+                            <>
+                              <BrandLoader size="button" className="mr-1.5" />
+                              Assigning...
+                            </>
+                          ) : (
+                            <>
+                              <Users className="h-3.5 w-3.5 mr-1.5" /> Assign Assessment
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 text-primary border-primary/30 hover:bg-primary/5 hover:border-primary/50"
+                          disabled={submitting && assigningAssessment?.id === a.id}
+                          onClick={() => {
+                            setIsManageMode(true);
+                            setAssigningAssessment(a);
+                            const cohort = a.assigned_cohort_name || a.assignedCohortName || "All Eligible Students";
+                            setAssignScope(
+                              cohort.startsWith("Dept:") ? "DEPARTMENT" :
+                              cohort.startsWith("Batch") ? "BATCH" :
+                              cohort === "All Eligible Students" ? "COLLEGE_WIDE" : "COHORT"
+                            );
+                            setAssignForm({
+                              cohort_name: cohort,
+                              window_start: a.window_start ? new Date(a.window_start).toISOString().slice(0, 16) : "",
+                              window_end: a.window_end ? new Date(a.window_end).toISOString().slice(0, 16) : "",
+                              max_attempts_override: a.max_attempts_override ? String(a.max_attempts_override) : (a.allowed_attempts ? String(a.allowed_attempts) : ""),
+                            });
+                            setSelectedDepartments([]);
+                            setSelectedBatches([]);
+                          }}
+                        >
+                          <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Manage Assignment
+                        </Button>
+                      )}
 
                       {canManageAssessments && (
                         <Button
@@ -603,7 +691,7 @@ export default function StaffAssessmentsPage() {
 
       {/* Create Assessment Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="sm:max-w-xl max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+        <DialogContent className="sm:max-w-xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
           <DialogHeader className="p-6 pb-4 border-b border-border bg-card shrink-0">
             <DialogTitle className="text-xl font-bold font-heading text-text-primary">
               New Assessment Blueprint
@@ -613,8 +701,8 @@ export default function StaffAssessmentsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateAssessment} noValidate className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <form onSubmit={handleCreateAssessment} noValidate className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
               <div>
                 <Label htmlFor="title" className="text-xs font-medium text-text-primary">
                   Title <span className="text-status-danger">*</span>
@@ -811,20 +899,58 @@ export default function StaffAssessmentsPage() {
           if (!open) setAssigningAssessment(null);
         }}
       >
-        <DialogContent className="sm:max-w-lg max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+        <DialogContent className="sm:max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
           <DialogHeader className="p-6 pb-4 border-b border-border bg-card shrink-0">
             <DialogTitle className="text-xl font-bold font-heading text-text-primary">
-              Schedule & Assign Assessment
+              {isManageMode ? "Manage Assessment Assignment" : "Schedule & Assign Assessment"}
             </DialogTitle>
             <DialogDescription className="text-xs text-text-secondary mt-1">
-              Assign <span className="font-semibold text-text-primary">{assigningAssessment?.title}</span> with targeted eligibility and availability windows.
+              {isManageMode ? (
+                <>
+                  Update targeting cohorts, availability windows, or max attempts for{" "}
+                  <span className="font-semibold text-text-primary">{assigningAssessment?.title}</span>.
+                </>
+              ) : (
+                <>
+                  Assign <span className="font-semibold text-text-primary">{assigningAssessment?.title}</span> with targeted eligibility and availability windows.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAssign} noValidate className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <form onSubmit={handleAssign} noValidate className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+              {isManageMode && (
+                <div className="p-3.5 rounded-xl bg-surface/50 border border-border space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Current Persistence Status
+                    </span>
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 font-bold dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-[10px]">
+                      ASSIGNED
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-text-secondary pt-1">
+                    <div>
+                      <span className="text-[10px] uppercase font-mono text-text-muted block">Target Cohort</span>
+                      <span className="font-medium text-text-primary truncate block" title={assigningAssessment?.assigned_cohort_name || "All Eligible Students"}>
+                        {assigningAssessment?.assigned_cohort_name || "All Eligible Students"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-mono text-text-muted block">Active Recipients</span>
+                      <span className="font-semibold text-secondary-accent">
+                        {assigningAssessment?.assigned_recipients_count ?? 0} students
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-text-primary">Assignment Targeting *</Label>
+                <Label className="text-xs font-medium text-text-primary">
+                  {isManageMode ? "Update Assignment Targeting *" : "Assignment Targeting *"}
+                </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
@@ -1063,10 +1189,10 @@ export default function StaffAssessmentsPage() {
                 {submitting ? (
                   <>
                     <BrandLoader size="button" className="mr-2" />
-                    Assigning...
+                    {isManageMode ? "Updating..." : "Assigning..."}
                   </>
                 ) : (
-                  "Confirm Assignment"
+                  isManageMode ? "Update Assignment" : "Confirm Assignment"
                 )}
               </Button>
             </DialogFooter>

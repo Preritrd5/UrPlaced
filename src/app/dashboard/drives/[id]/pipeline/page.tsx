@@ -502,9 +502,9 @@ export default function CandidatePipelinePage({ params }: PipelinePageProps) {
 
       {/* Record Stage Evaluation Modal */}
       {evalModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <Card className="w-full max-w-md shadow-xl border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-xl border-border bg-card my-auto">
+            <CardHeader className="shrink-0 flex flex-row items-center justify-between pb-3 border-b border-border">
               <div>
                 <CardTitle className="text-base font-bold font-heading">
                   Evaluate Candidate: {evalModal.candidate?.student?.full_name}
@@ -522,8 +522,8 @@ export default function CandidatePipelinePage({ params }: PipelinePageProps) {
                 <X className="h-4 w-4" />
               </Button>
             </CardHeader>
-            <CardContent className="pt-4">
-              <form onSubmit={handleRecordAdvance} className="space-y-3.5 text-xs">
+            <form onSubmit={handleRecordAdvance} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
                 <div className="space-y-1">
                   <label className="font-semibold text-text-primary">Evaluation Result *</label>
                   <select
@@ -569,32 +569,32 @@ export default function CandidatePipelinePage({ params }: PipelinePageProps) {
                     className="w-full rounded-md border border-border bg-input p-2 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
                   />
                 </div>
+              </CardContent>
 
-                <div className="pt-2 flex justify-end gap-2 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEvalModal({ ...evalModal, isOpen: false })}
-                    disabled={isSubmittingEval}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" size="sm" disabled={isSubmittingEval} isLoading={isSubmittingEval}>
-                    {isSubmittingEval ? "Saving..." : "Save Evaluation"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEvalModal({ ...evalModal, isOpen: false })}
+                  disabled={isSubmittingEval}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" size="sm" disabled={isSubmittingEval} isLoading={isSubmittingEval}>
+                  {isSubmittingEval ? "Saving..." : "Save Evaluation"}
+                </Button>
+              </div>
+            </form>
           </Card>
         </div>
       )}
 
       {/* Extend Placement Offer Modal */}
       {offerModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <Card className="w-full max-w-md shadow-xl border-secondary/40 bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-xl border-secondary/40 bg-card my-auto">
+            <CardHeader className="shrink-0 flex flex-row items-center justify-between pb-3 border-b border-border">
               <div>
                 <CardTitle className="text-base font-bold font-heading text-secondary">
                   Extend Placement Offer
@@ -612,8 +612,8 @@ export default function CandidatePipelinePage({ params }: PipelinePageProps) {
                 <X className="h-4 w-4" />
               </Button>
             </CardHeader>
-            <CardContent className="pt-4">
-              <form onSubmit={handleCreateOffer} className="space-y-3.5 text-xs">
+            <form onSubmit={handleCreateOffer} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
                 <div className="space-y-1">
                   <label className="font-semibold text-text-primary">Annual CTC Compensation (₹) *</label>
                   <Input
@@ -658,23 +658,23 @@ export default function CandidatePipelinePage({ params }: PipelinePageProps) {
                     className="h-8 text-xs font-mono"
                   />
                 </div>
+              </CardContent>
 
-                <div className="pt-2 flex justify-end gap-2 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setOfferModal({ isOpen: false, candidate: null })}
-                    disabled={isSubmittingOffer}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="secondary" size="sm" disabled={isSubmittingOffer} isLoading={isSubmittingOffer}>
-                    {isSubmittingOffer ? "Issuing..." : "Confirm & Extend Offer"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOfferModal({ isOpen: false, candidate: null })}
+                  disabled={isSubmittingOffer}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" variant="secondary" size="sm" disabled={isSubmittingOffer} isLoading={isSubmittingOffer}>
+                  {isSubmittingOffer ? "Issuing..." : "Confirm & Extend Offer"}
+                </Button>
+              </div>
+            </form>
           </Card>
         </div>
       )}

@@ -516,8 +516,8 @@ export default function PlatformBillingPage() {
 
       {/* Record Payment Modal */}
       {payTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Record Payment for {payTarget.invoiceNumber}
@@ -526,8 +526,8 @@ export default function PlatformBillingPage() {
                 {payTarget.tenantName} &bull; Total: ₹{payTarget.totalInr.toLocaleString()}
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleRecordPayment} className="flex flex-col flex-1 overflow-hidden">
-              <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <form onSubmit={handleRecordPayment} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">Payment Method</label>
                   <select
@@ -593,15 +593,15 @@ export default function PlatformBillingPage() {
 
       {/* Generate Invoice Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Generate Platform Invoice
               </CardTitle>
             </CardHeader>
-            <form onSubmit={handleCreateInvoice} className="flex flex-col flex-1 overflow-hidden">
-              <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <form onSubmit={handleCreateInvoice} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">Select College</label>
                   <select
@@ -669,8 +669,8 @@ export default function PlatformBillingPage() {
 
       {/* Issue Refund Modal (Q10 & Q20) */}
       {refundTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <RotateCcw className="h-4 w-4 text-amber-700" />
@@ -680,8 +680,8 @@ export default function PlatformBillingPage() {
                 {refundTarget.tenantName} &bull; Total Paid: ₹{refundTarget.totalInr.toLocaleString()}
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleIssueRefund} className="flex flex-col flex-1 overflow-hidden">
-              <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <form onSubmit={handleIssueRefund} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">
                     Refund Amount (INR)

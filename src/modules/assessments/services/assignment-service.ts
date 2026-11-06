@@ -407,7 +407,27 @@ export class AssignmentService {
       "All Eligible Students"
     );
 
-    // 4. Build durable recipient rows for resolved students
+    // 4. Update existing active assignments if window or attempt overrides or cohort name are specified
+    const updatePayload: Record<string, any> = {};
+    if (input.window_start !== undefined) updatePayload.window_start = input.window_start || null;
+    if (input.window_end !== undefined) updatePayload.window_end = input.window_end || null;
+    if (input.max_attempts_override !== undefined) {
+      updatePayload.max_attempts_override = input.max_attempts_override ?? null;
+    }
+    if (input.cohort_name) {
+      updatePayload.cohort_name = effectiveCohortName;
+    }
+
+    if (Object.keys(updatePayload).length > 0 && (existingStudentMap.size > 0 || hasCohortHeaderRow)) {
+      await admin
+        .from("assessment_assignments")
+        .update(updatePayload)
+        .eq("tenant_id", tenantId)
+        .eq("assessment_id", input.assessment_id)
+        .eq("status", "ACTIVE");
+    }
+
+    // 5. Build durable recipient rows for resolved students that are not yet assigned
     for (const sId of resolvedStudentIds) {
       if (!existingStudentMap.has(sId)) {
         rowsToInsert.push({
@@ -424,7 +444,7 @@ export class AssignmentService {
       }
     }
 
-    // 5. Also insert / ensure parent cohort summary record (student_id = null)
+    // 6. Also insert / ensure parent cohort summary record (student_id = null)
     // for institutional oversight and historical reporting if none exists
     if (!hasCohortHeaderRow) {
       rowsToInsert.push({
@@ -440,6 +460,12 @@ export class AssignmentService {
       });
     }
 
+    const totalActiveRecipients = Math.max(
+      resolvedStudentIds.length,
+      existingStudentMap.size + rowsToInsert.filter((r) => r.student_id !== null).length,
+      (hasCohortHeaderRow || rowsToInsert.length > 0) ? 1 : 0
+    );
+
     if (rowsToInsert.length > 0) {
       const { data, error } = await admin
         .from("assessment_assignments")
@@ -453,14 +479,14 @@ export class AssignmentService {
       return {
         success: true,
         createdCount: data ? data.length : 0,
-        recipientCount: resolvedStudentIds.length,
+        recipientCount: totalActiveRecipients,
       };
     }
 
     return {
       success: true,
       createdCount: 0,
-      recipientCount: resolvedStudentIds.length,
+      recipientCount: totalActiveRecipients,
     };
   }
 

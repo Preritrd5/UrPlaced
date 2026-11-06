@@ -654,7 +654,7 @@ export default function StudentAssessmentsPage() {
           }
         }}
       >
-        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border rounded-2xl shadow-xl p-0">
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:w-full max-w-xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border rounded-2xl shadow-xl p-0">
           <DialogHeader className="shrink-0 p-4 sm:p-5 border-b border-border/60 bg-card space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-mono font-semibold uppercase tracking-wider w-fit">
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -669,7 +669,7 @@ export default function StudentAssessmentsPage() {
           </DialogHeader>
 
           {selectedAssessmentForStart && (
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
               {/* Assessment Context Card */}
               <div className="p-3.5 rounded-xl bg-surface border border-border flex items-center justify-between gap-3">
                 <div className="min-w-0">

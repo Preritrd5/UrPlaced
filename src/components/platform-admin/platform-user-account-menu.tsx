@@ -166,10 +166,10 @@ export function PlatformUserAccountMenu({
 
         <DropdownMenuItem
           data-testid="platform-menu-item-security"
-          onClick={() => handleNavigate("/preritrd/profile#security")}
+          onClick={() => handleNavigate("/preritrd/profile?tab=security")}
           className="cursor-pointer gap-2.5 py-2 rounded-xl text-text-primary hover:bg-surface focus:bg-surface transition-colors"
         >
-          <div className="h-7 w-7 rounded-lg bg-secondary/10 text-secondary flex items-center justify-center shrink-0">
+          <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Key className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
@@ -177,14 +177,14 @@ export function PlatformUserAccountMenu({
               Account &amp; Security
             </div>
             <div className="text-[11px] text-text-secondary leading-tight">
-              Password, MFA &amp; platform security
+              Password, cryptographic MFA &amp; session assurance
             </div>
           </div>
         </DropdownMenuItem>
 
         <DropdownMenuItem
           data-testid="platform-menu-item-notifications"
-          onClick={() => handleNavigate("/preritrd/profile#notifications")}
+          onClick={() => handleNavigate("/preritrd/profile?tab=notifications")}
           className="cursor-pointer gap-2.5 py-2 rounded-xl text-text-primary hover:bg-surface focus:bg-surface transition-colors"
         >
           <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -195,10 +195,10 @@ export function PlatformUserAccountMenu({
               Notification Preferences
             </div>
             <div className="text-[11px] text-text-secondary leading-tight">
-              Platform alerts &amp; communication settings
+              Alerts, broadcast channels &amp; email digests
             </div>
           </div>
-        </DropdownMenuItem>
+        </DropdownMenuItem>       
 
         <DropdownMenuSeparator className="my-1.5 bg-border/60" />
 
@@ -214,9 +214,6 @@ export function PlatformUserAccountMenu({
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-xs leading-tight font-heading">
               {isSigningOut ? "Signing out..." : "Sign Out"}
-            </div>
-            <div className="text-[11px] text-text-secondary leading-tight">
-              Revoke session &amp; return to login
             </div>
           </div>
         </DropdownMenuItem>

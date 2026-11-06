@@ -3,6 +3,7 @@ import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
 import { AssignmentService } from "@/modules/assessments/services/assignment-service";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(_request: NextRequest) {
   try {
@@ -11,12 +12,23 @@ export async function GET(_request: NextRequest) {
 
     // 1. Resolve student record (strictly via canonical user_id binding, no email fallback)
     let studentId: string | null = null;
-    const { data: student } = await supabase
+    let { data: student } = await supabase
       .from("students")
       .select("id, is_archived, academic_status")
       .eq("tenant_id", authContext.tenantId)
       .eq("user_id", authContext.userId)
       .maybeSingle();
+
+    if (!student) {
+      const admin = createAdminClient();
+      const { data: adminStudent } = await admin
+        .from("students")
+        .select("id, is_archived, academic_status")
+        .eq("tenant_id", authContext.tenantId)
+        .eq("user_id", authContext.userId)
+        .maybeSingle();
+      student = adminStudent;
+    }
 
     if (student && !student.is_archived && student.academic_status === "ACTIVE") {
       studentId = student.id;

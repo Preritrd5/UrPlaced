@@ -1243,27 +1243,27 @@ export default function CollegeBillingPage() {
       {/* MODAL 1: CHANGE / UPGRADE / DOWNGRADE PLAN MODAL */}
       {/* ========================================================================= */}
       {showPlanModal && data?.subscription && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-3xl max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-[#F8F7F3] border-[#B8B6AC] shadow-2xl rounded-2xl my-auto">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30 shrink-0">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-3xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
+            <CardHeader className="pb-3 border-b border-border/30 shrink-0">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-[#5052C9]" />
+                <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
                   <span>Institutional Subscription Plan Management</span>
                 </CardTitle>
                 <button
                   onClick={() => setShowPlanModal(false)}
-                  className="text-xs text-[#747683] hover:text-[#24283A] font-bold p-1 cursor-pointer"
+                  className="text-xs text-text-secondary hover:text-text-primary font-bold p-1 cursor-pointer"
                 >
                   &times;
                 </button>
               </div>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Upgrade capacity immediately via prorated difference or schedule a downgrade for your next renewal milestone.
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="p-5 space-y-4 overflow-y-auto flex-1">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {(data?.availablePlans || []).map((plan) => {
                   const currentPrice = data.subscription?.priceAnnual || 0;
@@ -1366,6 +1366,16 @@ export default function CollegeBillingPage() {
                 </p>
               </div>
             </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPlanModal(false)}
+                className="border-border text-xs h-9"
+              >
+                Close
+              </Button>
+            </div>
           </Card>
         </div>
       )}
@@ -1374,27 +1384,27 @@ export default function CollegeBillingPage() {
       {/* MODAL 2: BANK TRANSFER DETAILS & UTR SUBMISSION MODAL */}
       {/* ========================================================================= */}
       {showBankTransferModal && selectedInvoiceForUtr && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-[#F8F7F3] border-[#B8B6AC] shadow-2xl rounded-2xl my-auto">
-            <CardHeader className="shrink-0 pb-3 border-b border-[#B8B6AC]/30 bg-[#F8F7F3]">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/30 bg-card">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#5052C9]" />
+                <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
                   <span>Bank Transfer Beneficiary Details</span>
                 </CardTitle>
                 <button
                   onClick={() => setShowBankTransferModal(false)}
-                  className="text-xs text-[#747683] hover:text-[#24283A] font-bold p-1 cursor-pointer"
+                  className="text-xs text-text-secondary hover:text-text-primary font-bold p-1 cursor-pointer"
                 >
                   &times;
                 </button>
               </div>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Official institutional banking coordinates for NEFT / RTGS / IMPS wire transfers
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
               {/* Beneficiary Details Box */}
               <div className="p-3.5 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
                 <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
@@ -1504,18 +1514,18 @@ export default function CollegeBillingPage() {
       {/* MODAL 3: MANDATE CONSENT MODAL */}
       {/* ========================================================================= */}
       {showConsentModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-lg max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-[#F8F7F3] border-[#B8B6AC] shadow-xl rounded-2xl my-auto">
-            <CardHeader className="pb-3 border-b border-[#B8B6AC]/30 shrink-0">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-[#5052C9]" />
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="pb-3 border-b border-border/30 shrink-0">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
                 <span>Authorize Automatic Annual Renewal</span>
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Explicit consent required per UrPlaced financial compliance (Q4)
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-5 space-y-4 text-xs text-[#24283A] overflow-y-auto flex-1">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs text-text-primary">
               <p className="leading-relaxed">
                 By enabling automatic renewal, you authorize UrPlaced to automatically charge your institutional payment method annually on your renewal date (
                 <strong className="font-semibold">{data?.subscription?.renewalDate ? new Date(data.subscription.renewalDate).toLocaleDateString("en-IN") : "next anniversary"}</strong>
@@ -1543,30 +1553,29 @@ export default function CollegeBillingPage() {
                   I authorize UrPlaced to automatically process annual renewals for this institution.
                 </label>
               </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-[#B8B6AC]/30">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowConsentModal(false)}
-                  className="border-[#B8B6AC] text-xs h-9"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => handleToggleBillingMode("AUTOMATIC")}
-                  disabled={!consentAgreed || mandateLoading}
-                  className="bg-[#5052C9] hover:bg-[#4345B0] text-white text-xs h-9 cursor-pointer"
-                >
-                  {mandateLoading ? (
-                    <span className="flex items-center gap-1.5">
-                      <BrandLoader size="button" /> Recording Authorization...
-                    </span>
-                  ) : (
-                    "Confirm & Enable"
-                  )}
-                </Button>
-              </div>
             </CardContent>
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowConsentModal(false)}
+                className="border-border text-xs h-9"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleToggleBillingMode("AUTOMATIC")}
+                disabled={!consentAgreed || mandateLoading}
+                className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 cursor-pointer"
+              >
+                {mandateLoading ? (
+                  <span className="flex items-center gap-1.5">
+                    <BrandLoader size="button" /> Recording Authorization...
+                  </span>
+                ) : (
+                  "Confirm & Enable"
+                )}
+              </Button>
+            </div>
           </Card>
         </div>
       )}
@@ -1575,26 +1584,26 @@ export default function CollegeBillingPage() {
       {/* MODAL 4: PERIOD-END CANCELLATION REQUEST MODAL */}
       {/* ========================================================================= */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-[#F8F7F3] border-[#B8B6AC] shadow-xl rounded-2xl my-auto">
-            <CardHeader className="shrink-0 pb-3 border-b border-[#B8B6AC]/30 bg-[#F8F7F3]">
-              <CardTitle className="text-base font-bold font-heading text-[#24283A] flex items-center gap-2">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border/30 bg-card">
+              <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <span>Request Subscription Cancellation</span>
               </CardTitle>
-              <CardDescription className="text-xs text-[#292D40]/70">
+              <CardDescription className="text-xs text-text-secondary">
                 Notice: Cancellations take effect at the end of your current paid term (Q15).
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs text-[#24283A]">
-              <p className="leading-relaxed">
-                Under the UrPlaced Institutional Agreement, cancellation requests initiated by the Placement Head take effect at the end of your active billing period (
-                <strong className="font-semibold">{data?.subscription?.renewalDate ? new Date(data.subscription.renewalDate).toLocaleDateString("en-IN") : "renewal date"}</strong>
-                ). You retain full access to all placement features until that date.
-              </p>
-              <form onSubmit={handleRequestCancellation} className="space-y-3">
+            <form onSubmit={handleRequestCancellation} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs text-text-primary">
+                <p className="leading-relaxed">
+                  Under the UrPlaced Institutional Agreement, cancellation requests initiated by the Placement Head take effect at the end of your active billing period (
+                  <strong className="font-semibold">{data?.subscription?.renewalDate ? new Date(data.subscription.renewalDate).toLocaleDateString("en-IN") : "renewal date"}</strong>
+                  ). You retain full access to all placement features until that date.
+                </p>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#24283A]">
+                  <label className="text-xs font-semibold text-text-primary">
                     Reason for Cancellation (Feedback) *
                   </label>
                   <textarea
@@ -1603,34 +1612,34 @@ export default function CollegeBillingPage() {
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
                     placeholder="Please tell us why you are cancelling..."
-                    className="w-full p-2.5 rounded-xl border border-[#B8B6AC] bg-[#FBFAF7] text-xs outline-none focus:ring-2 focus:ring-[#5052C9]/20"
+                    className="w-full p-2.5 rounded-xl border border-border bg-input text-xs outline-none focus:ring-2 focus:ring-primary/20 text-text-primary"
                   />
                 </div>
-                <div className="flex justify-end gap-2 pt-2 border-t border-[#B8B6AC]/30">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCancelModal(false)}
-                    className="border-[#B8B6AC] text-xs h-9"
-                  >
-                    Keep Subscription
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={cancelLoading}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 cursor-pointer"
-                  >
-                    {cancelLoading ? (
-                      <span className="flex items-center gap-1.5">
-                        <BrandLoader size="button" /> Submitting...
-                      </span>
-                    ) : (
-                      "Confirm Cancellation"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
+              </CardContent>
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCancelModal(false)}
+                  className="border-border text-xs h-9"
+                >
+                  Keep Subscription
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={cancelLoading}
+                  className="bg-red-600 hover:bg-red-700 text-white text-xs h-9 cursor-pointer"
+                >
+                  {cancelLoading ? (
+                    <span className="flex items-center gap-1.5">
+                      <BrandLoader size="button" /> Submitting...
+                    </span>
+                  ) : (
+                    "Confirm Cancellation"
+                  )}
+                </Button>
+              </div>
+            </form>
           </Card>
         </div>
       )}

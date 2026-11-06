@@ -350,13 +350,6 @@ export default function PlatformDashboardPage() {
               </div>
             )}
 
-            {/* Strict Option A Isolation Callout */}
-            <div className="mt-4 p-3.5 rounded-xl bg-surface/80 border border-border flex items-start gap-3 text-xs text-text-primary">
-              <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <span className="font-bold">Strict Option A Governance:</span> Platform Super Admin operates on the SaaS control plane only. Under no circumstances can administrator sessions access private student profiles, resumes, evaluations, or college-owned question banks.
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

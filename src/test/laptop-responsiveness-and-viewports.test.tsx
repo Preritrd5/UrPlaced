@@ -97,7 +97,8 @@ describe("Laptop Responsiveness Architecture & Viewport Adaptability", () => {
     // Pinned header
     expect(content).toContain("shrink-0 pb-3 border-b border-border/60 bg-card");
     // Scrollable body
-    expect(content).toContain("flex-1 overflow-y-auto");
+    expect(content).toContain("overflow-y-auto");
+    expect(content).toContain("min-h-0");
     // Pinned footer
     expect(content).toContain("shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50 flex justify-end gap-2");
   });
@@ -126,7 +127,8 @@ describe("Laptop Responsiveness Architecture & Viewport Adaptability", () => {
 
     expect(content).toContain("max-h-[calc(100dvh-2rem)]");
     expect(content).toContain("shrink-0 p-4 sm:p-5 border-b border-border/60 bg-card");
-    expect(content).toContain("flex-1 overflow-y-auto");
+    expect(content).toContain("overflow-y-auto");
+    expect(content).toContain("min-h-0");
     expect(content).toContain("shrink-0 p-3.5 sm:p-4 border-t border-border/60 bg-surface/50");
   });
 });

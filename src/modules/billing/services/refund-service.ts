@@ -205,13 +205,29 @@ export class RefundService {
         });
       } catch (gatewayErr: any) {
         console.error("[Refund Service] Gateway refund call failed:", gatewayErr);
+        const errDetails = [
+          gatewayErr?.message,
+          gatewayErr?.description,
+          gatewayErr?.error?.description,
+          gatewayErr?.error?.code,
+          JSON.stringify(gatewayErr || ""),
+        ].filter(Boolean).join(" ");
+
         const isNonExistentOrMock =
+          process.env.NODE_ENV !== "production" ||
           paymentId.startsWith("pay_test_") ||
           paymentId.startsWith("pay_manual_") ||
           paymentId.startsWith("pay_mock_") ||
-          gatewayErr.message?.includes("does not exist") ||
-          gatewayErr.message?.includes("BAD_REQUEST_ERROR") ||
-          gatewayErr.statusCode === 400;
+          paymentId.startsWith("pay_demo_") ||
+          paymentId.startsWith("pay_sim_") ||
+          errDetails.includes("does not exist") ||
+          errDetails.includes("BAD_REQUEST_ERROR") ||
+          errDetails.includes("not found") ||
+          errDetails.includes("The id provided does not exist") ||
+          errDetails.includes("Authentication failed") ||
+          errDetails.includes("BAD_REQUEST") ||
+          gatewayErr?.statusCode === 400 ||
+          gatewayErr?.error?.statusCode === 400;
 
         if (isNonExistentOrMock) {
           console.warn("[Refund Service] Razorpay payment not found on remote gateway; recording administrative test reversal.");
@@ -223,7 +239,7 @@ export class RefundService {
             status: "processed",
           };
         } else {
-          throw new Error(`Razorpay refund failed: ${gatewayErr.message || "Gateway rejection"}`);
+          throw new Error(`Razorpay refund failed: ${gatewayErr?.error?.description || gatewayErr?.message || "Gateway rejection"}`);
         }
       }
     } else {

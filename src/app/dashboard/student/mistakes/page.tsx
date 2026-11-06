@@ -523,9 +523,9 @@ export default function StudentMistakesPage() {
 
       {/* Reschedule Modal */}
       {reschedulingTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-center justify-center">
-          <Card className="w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-xl bg-card border-border my-auto">
-            <CardHeader>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-xl bg-card border-border my-auto">
+            <CardHeader className="shrink-0 pb-3 border-b border-border">
               <CardTitle className="text-lg font-heading text-text-primary">
                 Reschedule Revision Target
               </CardTitle>
@@ -533,8 +533,8 @@ export default function StudentMistakesPage() {
                 Adjust when this item appears next in your Spaced Repetition queue.
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleRescheduleSubmit}>
-              <CardContent className="space-y-4">
+            <form onSubmit={handleRescheduleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">Next Due Date</label>
                   <Input
@@ -557,7 +557,7 @@ export default function StudentMistakesPage() {
                 </div>
               </CardContent>
 
-              <div className="flex justify-end gap-2 p-4 border-t border-border bg-[#EDECE7]/20">
+              <div className="shrink-0 p-3.5 sm:p-4 border-t border-border bg-surface/50 flex justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"

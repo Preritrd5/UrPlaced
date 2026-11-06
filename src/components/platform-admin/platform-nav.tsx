@@ -40,81 +40,81 @@ export const PLATFORM_NAVIGATION: {
   section: string;
   items: PlatformNavItem[];
 }[] = [
-  {
-    section: "Control Plane",
-    items: [
-      {
-        title: "Platform Dashboard",
-        href: "/preritrd/dashboard",
-        icon: LayoutDashboard,
-        exactMatch: true,
-      },
-      {
-        title: "College Management",
-        href: "/preritrd/colleges",
-        icon: Building2,
-      },
-      {
-        title: "Register College",
-        href: "/preritrd/colleges/new",
-        icon: PlusCircle,
-        badge: "Onboarding",
-        exactMatch: true,
-      },
-    ],
-  },
-  {
-    section: "Subscriptions & Billing",
-    items: [
-      {
-        title: "Subscription Plans",
-        href: "/preritrd/subscriptions",
-        icon: CreditCard,
-      },
-      {
-        title: "Billing & Invoices",
-        href: "/preritrd/billing",
-        icon: Receipt,
-      },
-    ],
-  },
-  {
-    section: "Intelligence & Settings",
-    items: [
-      {
-        title: "Platform Analytics",
-        href: "/preritrd/analytics",
-        icon: BarChart3,
-      },
-      {
-        title: "Configuration",
-        href: "/preritrd/configuration",
-        icon: Sliders,
-      },
-      {
-        title: "Super Admins",
-        href: "/preritrd/accounts",
-        icon: Users2,
-      },
-    ],
-  },
-  {
-    section: "Operations & Governance",
-    items: [
-      {
-        title: "Platform Audit Logs",
-        href: "/preritrd/audit-logs",
-        icon: FileText,
-      },
-      {
-        title: "System Health",
-        href: "/preritrd/system-health",
-        icon: Activity,
-        badge: "Live",
-      },
-    ],
-  },
-];
+    {
+      section: "Control Plane",
+      items: [
+        {
+          title: "Platform Dashboard",
+          href: "/preritrd/dashboard",
+          icon: LayoutDashboard,
+          exactMatch: true,
+        },
+        {
+          title: "College Management",
+          href: "/preritrd/colleges",
+          icon: Building2,
+        },
+        {
+          title: "Register College",
+          href: "/preritrd/colleges/new",
+          icon: PlusCircle,
+          badge: "Onboarding",
+          exactMatch: true,
+        },
+      ],
+    },
+    {
+      section: "Subscriptions & Billing",
+      items: [
+        {
+          title: "Subscription Plans",
+          href: "/preritrd/subscriptions",
+          icon: CreditCard,
+        },
+        {
+          title: "Billing & Invoices",
+          href: "/preritrd/billing",
+          icon: Receipt,
+        },
+      ],
+    },
+    {
+      section: "Intelligence & Settings",
+      items: [
+        {
+          title: "Platform Analytics",
+          href: "/preritrd/analytics",
+          icon: BarChart3,
+        },
+        {
+          title: "Configuration",
+          href: "/preritrd/configuration",
+          icon: Sliders,
+        },
+        {
+          title: "Super Admins",
+          href: "/preritrd/accounts",
+          icon: Users2,
+        },
+      ],
+    },
+    {
+      section: "Operations & Governance",
+      items: [
+        {
+          title: "Platform Audit Logs",
+          href: "/preritrd/audit-logs",
+          icon: FileText,
+        },
+        {
+          title: "System Health",
+          href: "/preritrd/system-health",
+          icon: Activity,
+          badge: "Live",
+        },
+      ],
+    },
+  ];
 
 export function PlatformSidebar({
   adminEmail,
@@ -328,14 +328,9 @@ export function PlatformTopNavbar({
       {/* Left: Control Plane Context Breadcrumb */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center gap-2 text-sm text-text-secondary truncate">
-          <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
-          <span className="font-semibold text-text-primary truncate">
-            Control Plane
-          </span>
-          <span className="text-border">&bull;</span>
           <Badge
             variant="outline"
-            className="text-[10px] px-2 py-0.5 text-secondary border-secondary/60 font-mono"
+            className="text-sm px-2 py-1 text-secondary border-secondary/60 font-mono"
           >
             {currentTitle}
           </Badge>

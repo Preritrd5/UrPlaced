@@ -119,8 +119,8 @@ export function AnswerKeyReviewModal({
   const questionType = activeQuestion?.questionType;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24283A]/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-card w-full max-w-2xl max-h-[92dvh] flex flex-col rounded-xl shadow-xl border border-border">
+    <div className="fixed inset-0 z-50 flex min-h-full items-start justify-center bg-[#24283A]/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-card w-full max-w-2xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden rounded-xl shadow-xl border border-border my-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-3.5 sm:py-4 shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
@@ -143,7 +143,7 @@ export function AnswerKeyReviewModal({
         </div>
 
         {/* Scrollable Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1 min-h-0">
           {error && (
             <div className="p-3 rounded-md bg-red-50 text-red-700 text-xs border border-red-200">
               {error}
