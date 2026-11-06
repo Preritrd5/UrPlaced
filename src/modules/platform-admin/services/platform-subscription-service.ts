@@ -229,9 +229,19 @@ export class PlatformSubscriptionService {
       query = query.or(`name.ilike.${term},slug.ilike.${term},description.ilike.${term}`);
     }
 
-    const { data: rawPlans, error: plansErr } = await query;
+    let rawPlans: any[] = [];
+    const { data: queryPlans, error: plansErr } = await query;
     if (plansErr) {
-      throw new Error(`Failed to list subscription plans: ${plansErr.message}`);
+      // Fallback: If status or billing_interval column does not exist on legacy/base schema, query base table directly
+      const { data: fallbackPlans, error: fallbackErr } = await admin
+        .from("subscription_plans")
+        .select("*");
+      if (fallbackErr || !fallbackPlans) {
+        throw new Error(`Failed to list subscription plans: ${plansErr.message}`);
+      }
+      rawPlans = fallbackPlans;
+    } else {
+      rawPlans = queryPlans || [];
     }
 
     // Query active subscriptions count per plan
@@ -307,8 +317,28 @@ export class PlatformSubscriptionService {
       };
     });
 
+    // Resilient in-memory filtering to ensure filters apply regardless of DB schema differences
+    let filteredPlans = plans;
+    if (status && status !== "ALL") {
+      filteredPlans = filteredPlans.filter((p) => p.status === status);
+    }
+    if (billingInterval && billingInterval !== "ALL") {
+      filteredPlans = filteredPlans.filter(
+        (p) => p.billingInterval === billingInterval || (p as any).billingCycle === billingInterval
+      );
+    }
+    if (search && search.trim().length > 0) {
+      const term = search.trim().toLowerCase();
+      filteredPlans = filteredPlans.filter(
+        (p) =>
+          p.name.toLowerCase().includes(term) ||
+          p.slug.toLowerCase().includes(term) ||
+          (p.description && p.description.toLowerCase().includes(term))
+      );
+    }
+
     // Sorting
-    plans.sort((a, b) => {
+    filteredPlans.sort((a, b) => {
       let comparison = 0;
       if (sortBy === "priceInr") {
         comparison = a.priceInr - b.priceInr;
@@ -322,7 +352,7 @@ export class PlatformSubscriptionService {
       return sortOrder === "desc" ? -comparison : comparison;
     });
 
-    return plans;
+    return filteredPlans;
   }
 
   /**

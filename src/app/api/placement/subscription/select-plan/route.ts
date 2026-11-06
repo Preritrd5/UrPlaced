@@ -52,27 +52,72 @@ export async function POST(request: NextRequest) {
     const cleanPlanId = planId.trim();
 
     // 1. Fetch target plan: verify existence and PUBLISHED status
-    const { data: targetPlan, error: planErr } = await admin
+    let { data: rawPlan, error: planErr } = await admin
       .from("subscription_plans")
       .select("*")
       .eq("id", cleanPlanId)
       .maybeSingle();
 
-    if (planErr || !targetPlan) {
+    if (!rawPlan) {
+      const { data: slugPlan } = await admin
+        .from("subscription_plans")
+        .select("*")
+        .eq("slug", cleanPlanId)
+        .maybeSingle();
+      if (slugPlan) {
+        rawPlan = slugPlan;
+        planErr = null;
+      }
+    }
+
+    if (planErr || !rawPlan) {
       return NextResponse.json(
         { error: `Subscription plan '${cleanPlanId}' does not exist.` },
         { status: 404 }
       );
     }
 
-    if (targetPlan.status !== "PUBLISHED") {
+    const effectiveStatus = rawPlan.status || (rawPlan.is_active !== false ? "PUBLISHED" : "ARCHIVED");
+
+    if (effectiveStatus !== "PUBLISHED") {
       return NextResponse.json(
         {
-          error: `Cannot select plan '${targetPlan.name}': Only PUBLISHED plans are available for purchase (current status: ${targetPlan.status}).`,
+          error: `Cannot select plan '${rawPlan.name}': Only PUBLISHED plans are available for purchase (current status: ${rawPlan.status ?? effectiveStatus}).`,
         },
         { status: 400 }
       );
     }
+
+    // Ensure limits and entitlements are populated even on base schema
+    const planTier = rawPlan.slug || rawPlan.id;
+    const limits =
+      rawPlan.limits && typeof rawPlan.limits === "object"
+        ? { ...PlatformSubscriptionService.buildDefaultLimits(null, planTier), ...rawPlan.limits }
+        : PlatformSubscriptionService.buildDefaultLimits(
+            {
+              max_students: rawPlan.student_limit,
+              max_staff: rawPlan.staff_limit,
+              max_storage_gb: rawPlan.storage_limit_gb,
+            },
+            planTier
+          );
+
+    const entitlements =
+      rawPlan.entitlements && typeof rawPlan.entitlements === "object" && Object.keys(rawPlan.entitlements).length > 0
+        ? { ...PlatformSubscriptionService.buildDefaultEntitlements(null, planTier), ...rawPlan.entitlements }
+        : PlatformSubscriptionService.buildDefaultEntitlements(null, planTier);
+
+    const targetPlan = {
+      ...rawPlan,
+      status: effectiveStatus,
+      version: Number(rawPlan.version || 1),
+      priceInr: Number(rawPlan.price_inr ?? rawPlan.priceInr ?? 0),
+      billingInterval: rawPlan.billing_interval || rawPlan.billing_cycle || "ANNUAL",
+      student_limit: Number(limits.max_students || rawPlan.student_limit || 1000),
+      staff_limit: Number(limits.max_staff || rawPlan.staff_limit || 10),
+      limits,
+      entitlements,
+    };
 
     // 2. Check current college subscription
     const { data: existingSub } = await admin
@@ -271,29 +316,38 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Emit audit trail
-    await admin.from("audit_logs").insert({
-      tenant_id: ctx.tenantId,
-      actor_id: ctx.userId,
-      action: "COLLEGE_INITIAL_PLAN_SELECTED",
-      resource_type: "SUBSCRIPTION_PLAN",
-      resource_id: targetPlan.id,
-      metadata: {
-        planId: targetPlan.id,
-        planName: targetPlan.name,
-        priceInr: planPrice,
-        taxInr: taxPrice,
-        subscriptionId: subscription.id,
-        invoiceId: invoice?.id,
-        status: "PENDING_PAYMENT",
-      },
-    });
+    try {
+      await admin.from("audit_logs").insert({
+        tenant_id: ctx.tenantId,
+        actor_id: ctx.userId,
+        action: "COLLEGE_INITIAL_PLAN_SELECTED",
+        resource_type: "SUBSCRIPTION_PLAN",
+        resource_id: targetPlan.id,
+        after_state: {
+          planId: targetPlan.id,
+          planName: targetPlan.name,
+          priceInr: planPrice,
+          taxInr: taxPrice,
+          subscriptionId: subscription.id,
+          invoiceId: invoice?.id,
+          status: "PENDING_PAYMENT",
+        },
+      });
+    } catch (auditErr: any) {
+      console.warn("[Audit] Non-critical audit log insertion notice:", auditErr?.message || auditErr);
+    }
+
+    const effectiveResponseSubStatus =
+      subscription.status === "ACTIVE" && invoice?.status === "PENDING"
+        ? "PENDING_PAYMENT"
+        : subscription.status;
 
     return NextResponse.json({
       success: true,
       message: `Successfully selected '${targetPlan.name}'. Complete payment to activate full operational access.`,
       subscription: {
         id: subscription.id,
-        status: subscription.status,
+        status: effectiveResponseSubStatus,
         planId: subscription.plan_id,
         planName: targetPlan.name,
         studentSeatLimit: subscription.student_seat_limit,
