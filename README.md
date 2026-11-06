@@ -11,9 +11,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_%26_RLS-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com/)
-[![Razorpay](https://img.shields.io/badge/Razorpay-Billing_%26_Subscriptions-0C2340?style=for-the-badge&logo=razorpay)](https://razorpay.com/)
+[![Razorpay](https://img.shields.io/badge/Razorpay-Live_Standard_Checkout_%26_UPI_QR-0C2340?style=for-the-badge&logo=razorpay)](https://razorpay.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.0_Flash_AI-8E75C2?style=for-the-badge&logo=google)](https://ai.google.dev/)
-[![Vitest](https://img.shields.io/badge/Vitest-111_Files_•_1314_Tests_Passing-729B1B?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-117_Files_•_1363_Tests_Passing-729B1B?style=for-the-badge&logo=vitest)](https://vitest.dev/)
 
 </div>
 
@@ -117,11 +117,17 @@ Traditional placement management relies on fractured spreadsheets, unmonitored t
 - **Onboarding Invitations:** Issue, revoke, and track cryptographically hashed invitations for institutional onboarding.
 - **Global Audit Logs:** Comprehensive immutable log tracking every administrative state modification, role change, and deletion action.
 
-### 9. Institutional Billing, Invoicing & Refunds
-- **Razorpay Integration:** Complete payment lifecycle covering checkout orders, cryptographic signature verification, and automated webhook ingestion.
-- **Plan Catalogue Versioning:** Support for tiered institutional subscription plans (`STARTER`, `GROWTH`, `ENTERPRISE`) with feature entitlements and annual billing modes.
-- **Automated Tax Calculations:** 18% GST (CGST + SGST for Karnataka intra-state; IGST for inter-state) computed with automated credit note generation.
-- **Decoupled Refunds (Q10 & Q20):** Administrative refunds allow full/partial payment reversals while offering explicit decoupled control over subscription status (`KEEP_ACTIVE`, `CANCEL_IMMEDIATELY`, `CANCEL_AT_PERIOD_END`).
+### 9. Institutional Billing, Payment Gateway & Financial Reconciliation
+- **Razorpay Standard Web Checkout Integration:** End-to-end payment lifecycle via official Razorpay Standard Checkout SDK (`https://checkout.razorpay.com/v1/checkout.js`), enforcing server-authoritative order creation (`POST /api/billing/checkout/create-order`) with server-side paise conversion, INR currency validation, and balance guards.
+- **Immediate Dynamic UPI QR Code Presentation (Desktop Web):** Explicitly configured `config.display` with `flow: "qr"` and `flows: ["qr"]` for desktop browsers across PhonePe, Google Pay, Paytm, and BHIM. Eliminates desktop protocol handler failures (`phonepe://pay?...`) and renders an instant dynamic scannable QR code on the very first attempt without failure screens.
+- **Mobile 1-Tap UPI Intent Flow:** Automatic device detection (`isMobile`) routing smartphone users to native 1-tap app switching (`flows: ["intent", "qr"]`) for seamless mobile checkouts.
+- **Real-Time Cross-Device Status Polling (`/api/billing/checkout/status`):** Active 3-second background status polling while the checkout modal is open. When a user scans the desktop QR code using PhonePe on their phone, the backend detects payment capture directly via Razorpay API, automatically closes the checkout modal, and activates institutional entitlements in real time.
+- **Cryptographic Signature Verification (`/api/billing/checkout/verify`):** Raw HMAC-SHA256 signature verification over `order_id + "|" + payment_id` against `RAZORPAY_KEY_SECRET` before marking transactions settled.
+- **Atomic Payment Reconciliation Service (`PaymentReconciliationService`):** Single-execution idempotent settlement transitioning invoices to `PAID`, subscriptions to `ACTIVE`, updating student seat allocations, and recording immutable audit logs.
+- **Dynamic Subscription Plan Pricing:** Platform Admin plan editor updates dynamically synchronize across all public registration forms (`/preritrd/colleges/new`) and billing dashboards (`/dashboard/billing`), eliminating hardcoded plan prices.
+- **Automated Tax Calculations & Invoicing:** 18% GST (CGST + SGST for Karnataka; IGST inter-state) computed with automated credit note generation.
+- **Dual-Identifier PDF Invoice & Credit Note Downloads:** High-resiliency binary PDF generation supporting lookups by UUID and human-readable invoice identifiers (`INV-YYYY-XXXX`).
+- **Decoupled Administrative Refunds (Q10 & Q20):** Super Admin refunds with explicit subscription lifecycle governance (`KEEP_ACTIVE`, `CANCEL_IMMEDIATELY`, `CANCEL_AT_PERIOD_END`).
 
 ---
 
@@ -223,18 +229,25 @@ graph TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> UNPAID: College Registered
-    UNPAID --> CHECKOUT_INITIATED: Plan Selected
-    CHECKOUT_INITIATED --> PAID: Razorpay Signature Verified
-    CHECKOUT_INITIATED --> UNPAID: Payment Cancelled / Expired
-    PAID --> ACTIVE: Entitlements Provisioned
+    [*] --> UNPAID: College Registered / Plan Selected
+    UNPAID --> ORDER_CREATED: Server Order Initialized (Paise Validated)
+    ORDER_CREATED --> CHECKOUT_OPEN: Standard Checkout Modal Opened
+    CHECKOUT_OPEN --> QR_DISPLAYED: Desktop: Dynamic UPI QR Rendered (1st Attempt)
+    CHECKOUT_OPEN --> INTENT_DISPATCHED: Mobile: 1-Tap UPI App Intent
+    QR_DISPLAYED --> POLLING_ACTIVE: 3-Second Cross-Device Status Poller
+    POLLING_ACTIVE --> RECONCILING: User Scans QR on Phone & Approves
+    INTENT_DISPATCHED --> RECONCILING: Mobile UPI Payment Approved
+    CHECKOUT_OPEN --> RECONCILING: Card / Net Banking / Signature Returned
+    RECONCILING --> PAID: HMAC Verified / Razorpay API Capture Confirmed
+    CHECKOUT_OPEN --> UNPAID: User Dismissed / Modal Closed
+    PAID --> ACTIVE: Atomic Provisioning (Seat Limit & Entitlements)
     ACTIVE --> PAST_DUE: Renewal Payment Failed
     PAST_DUE --> ACTIVE: Retry Succeeded
     PAST_DUE --> SUSPENDED: Grace Period Expired
     ACTIVE --> REFUNDED: Administrative Refund Issued
-    REFUNDED --> CANCELLED: Q10 Immediate Lockout
+    REFUNDED --> CANCELLED: Q10 Immediate Lockout Policy
     REFUNDED --> ACTIVE: Q10 Keep Active Policy
-    SUSPENDED --> ACTIVE: Manual Super Admin Override
+    SUSPENDED --> ACTIVE: Manual Super Admin Access Override
 ```
 
 ---
@@ -362,9 +375,10 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
-# Razorpay Payment Gateway (Test Mode)
-NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_your_key_id
-RAZORPAY_KEY_ID=rzp_test_your_key_id
+# Razorpay Payment Gateway (Live Mode or Test Mode)
+RAZORPAY_MODE=live
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_your_key_id
+RAZORPAY_KEY_ID=rzp_live_your_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_secret
 RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
 
@@ -401,7 +415,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the portal.
 UrPlaced maintains a comprehensive automated testing suite powered by **Vitest** and **Testing Library**.
 
 ```bash
-# Run all 111 test suites
+# Run all 117 test suites
 npm test
 
 # Run tests in watch mode
@@ -415,10 +429,15 @@ npm run lint
 ```
 
 ### Test Suite Execution Metrics
-- **Total Test Suites:** `111 passing`
-- **Total Unit & Integration Tests:** `1,314 passing`
+- **Total Test Suites:** `117 passing`
+- **Total Unit & Integration Tests:** `1,363 passing`
 - **TypeScript Errors:** `0`
-- **Coverage Areas:** RLS authorization, CSRF/SSRF guards, AAL2 TOTP MFA authentication, question duplicate fingerprinting, autosave race conditions, assessment grading integrity, Mistake Bank spaced repetition, and Razorpay signature verification.
+- **Payment & Financial Test Coverage:**
+  - `sa08-subscription-payment-flow-audit.test.ts`: Server-authoritative order creation, paise computation, and balance validation.
+  - `sa09-invoice-download-and-rendering.test.ts`: PDF invoice and credit note dual-identifier lookup and binary stream verification.
+  - `sa10-razorpay-upi-qr-and-status-polling.test.ts`: Desktop UPI dynamic QR configuration (`flows: ["qr"]`) and 3-second cross-device payment reconciliation polling.
+  - `sa11-dynamic-college-registration-plans.test.ts`: Dynamic subscription plan pricing resolution on college onboarding and capacity synchronization.
+- **Platform Invariants Covered:** RLS authorization, CSRF/SSRF guards, AAL2 TOTP MFA authentication, question duplicate fingerprinting, autosave race conditions, assessment grading integrity, Mistake Bank spaced repetition, and Razorpay HMAC-SHA256 signature verification.
 
 ---
 
@@ -427,7 +446,8 @@ npm run lint
 - **Row Level Security (RLS):** Enabled and strictly enforced on all public schema tables; cross-tenant queries fail deterministically at the database engine level.
 - **Strict Option A Super Admin Boundaries:** Administrative routes require dedicated cookies and cryptographically verified MFA claims, blocking session reuse from college or student logins.
 - **SSRF Defense:** URL ingestion routines strictly validate outgoing requests against reserved private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`).
-- **Cryptographic Webhook Verification:** Razorpay webhooks validate raw HMAC-SHA256 signatures before processing order settlements or refunds.
+- **Cryptographic Signature & Webhook Verification:** Razorpay Standard Checkout verify route and webhooks validate raw HMAC-SHA256 signatures before processing order settlements or refunds.
+- **Cross-Device Status Polling & Idempotent Reconciliation:** Backend-verified polling reconciles external UPI payments with Razorpay Live API directly, preventing double charges or duplicate subscription provisioning.
 - **Audit Logging:** Administrative operations emit immutable audit trail entries into `public.audit_logs`.
 
 ---
