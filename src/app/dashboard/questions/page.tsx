@@ -36,7 +36,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
-import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { TableSkeleton, QuestionBankSkeleton } from "@/components/ui/page-skeletons";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { toast } from "@/components/ui/dialog-system";
 
@@ -289,14 +289,7 @@ export default function QuestionsDashboardPage() {
   ) as string[];
 
   if (isLoadingAuth || (loading && questions.length === 0)) {
-    return (
-      <TableSkeleton
-        title="Question Bank Sentinel"
-        subtitle="Curated collection of verified technical, aptitude, and verbal questions with multi-version tracking and leak protection."
-        columns={5}
-        rows={7}
-      />
-    );
+    return <QuestionBankSkeleton />;
   }
 
   if (!canManageQuestions) {
@@ -539,8 +532,8 @@ export default function QuestionsDashboardPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <div className="py-16 flex items-center justify-center">
-              <BrandLoader size="card" aria-label="Loading question bank repository..." />
+            <div className="p-4">
+              <QuestionBankSkeleton />
             </div>
           ) : questions.length === 0 ? (
             <div className="p-12 text-center space-y-3">

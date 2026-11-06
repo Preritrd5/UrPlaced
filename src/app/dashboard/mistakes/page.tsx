@@ -23,7 +23,7 @@ import { BrandLoader } from "@/components/common/brand-loader";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
-import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
+import { AnalyticsSkeleton, MistakeAnalyticsSkeleton } from "@/components/ui/page-skeletons";
 import { toast } from "@/components/ui/dialog-system";
 
 export default function PlacementMistakesAnalyticsPage() {
@@ -129,7 +129,7 @@ export default function PlacementMistakesAnalyticsPage() {
   }
 
   if (isLoadingAuth || loading) {
-    return <AnalyticsSkeleton />;
+    return <MistakeAnalyticsSkeleton />;
   }
 
   if (!canViewCohortMistakes) {
@@ -245,9 +245,7 @@ export default function PlacementMistakesAnalyticsPage() {
       {activeTab === "SKILLS" && (
         <div className="space-y-4">
           {loading ? (
-            <div className="py-16 flex items-center justify-center">
-              <BrandLoader size="section" aria-label="Loading cohort skill analytics..." />
-            </div>
+            <MistakeAnalyticsSkeleton />
           ) : !summaryData?.skillGaps || summaryData.skillGaps.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
@@ -337,9 +335,7 @@ export default function PlacementMistakesAnalyticsPage() {
       {activeTab === "DEFECTS" && (
         <div className="space-y-4">
           {loadingDefects ? (
-            <div className="py-16 flex items-center justify-center">
-              <BrandLoader size="section" aria-label="Loading question defect tickets..." />
-            </div>
+            <MistakeAnalyticsSkeleton />
           ) : defects.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>

@@ -27,7 +27,8 @@ import {
 import { BrandLoader } from "@/components/common/brand-loader";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
-import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { TableSkeleton, QuestionBankSkeleton } from "@/components/ui/page-skeletons";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import { toast, confirmDialog } from "@/components/ui/dialog-system";
 
@@ -302,14 +303,7 @@ export default function QuestionSetsPage() {
   };
 
   if (isLoadingAuth || (loading && sets.length === 0)) {
-    return (
-      <TableSkeleton
-        title="Question Sets & Blueprints"
-        subtitle="Manage curated assessment question sets, purpose tags, and blueprint balance."
-        columns={4}
-        rows={6}
-      />
-    );
+    return <QuestionBankSkeleton />;
   }
 
   if (!canManageQuestions) {
@@ -381,8 +375,10 @@ export default function QuestionSetsPage() {
           </CardHeader>
           <CardContent className="p-0 divide-y divide-border">
             {loading ? (
-              <div className="py-12 flex items-center justify-center">
-                <BrandLoader size="card" aria-label="Loading question sets..." />
+              <div className="p-3 space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <SkeletonCard key={i} className="h-16" />
+                ))}
               </div>
             ) : sets.length === 0 ? (
               <p className="p-4 text-xs text-text-secondary">No question sets found. Create your first set.</p>
@@ -417,8 +413,8 @@ export default function QuestionSetsPage() {
         {/* Set Details & Item Builder (2 cols) */}
         <div className="md:col-span-2 space-y-6">
           {detailLoading ? (
-            <Card className="py-16 flex items-center justify-center">
-              <BrandLoader size="section" aria-label="Loading set details and questions..." />
+            <Card className="p-6">
+              <QuestionBankSkeleton />
             </Card>
           ) : !activeSetDetail?.set ? (
             <Card className="p-8 text-center text-sm text-text-secondary">

@@ -1,5 +1,6 @@
-import { AnalyticsSkeleton } from "@/components/ui/page-skeletons";
+import React from "react";
+import { MistakeAnalyticsSkeleton } from "@/components/ui/page-skeletons";
 
 export default function MistakesLoading() {
-  return <AnalyticsSkeleton />;
+  return <MistakeAnalyticsSkeleton />;
 }

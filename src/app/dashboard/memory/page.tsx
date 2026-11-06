@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { SkeletonCard } from "@/components/ui/skeleton";
 
 export default function PlacementMemoryPage() {
   const router = useRouter();
@@ -170,8 +171,10 @@ export default function PlacementMemoryPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="py-12 flex items-center justify-center">
-                <BrandLoader size="card" aria-label="Loading historical records..." />
+              <div className="space-y-3 p-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <SkeletonCard key={i} className="h-24" />
+                ))}
               </div>
             ) : records.length === 0 ? (
               <div className="text-center py-8 text-[#292D40] text-sm">
@@ -228,7 +231,11 @@ export default function PlacementMemoryPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-sm text-[#292D40] py-4">Checking moderation queue...</p>
+              <div className="space-y-3 p-2">
+                {[1, 2].map((i) => (
+                  <SkeletonCard key={i} className="h-20" />
+                ))}
+              </div>
             ) : pendingReports.length === 0 ? (
               <div className="text-center py-8 text-[#292D40] text-sm">
                 No candidate reports currently pending review.

@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
-import { TableSkeleton } from "@/components/ui/page-skeletons";
+import { TableSkeleton, AssessmentListSkeleton } from "@/components/ui/page-skeletons";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import {
   Dialog,
@@ -331,14 +331,7 @@ export default function StaffAssessmentsPage() {
   });
 
   if (isLoadingAuth || (loading && assessments.length === 0)) {
-    return (
-      <TableSkeleton
-        title="Assessments & Student Prep"
-        subtitle="Author authoritative assessment activities, schedule availability windows, track participation, and govern result releases."
-        columns={5}
-        rows={6}
-      />
-    );
+    return <AssessmentListSkeleton />;
   }
 
   if (!canViewAssessments) {
@@ -456,9 +449,7 @@ export default function StaffAssessmentsPage() {
 
       {/* Directory List */}
       {loading ? (
-        <div className="py-16 flex items-center justify-center">
-          <BrandLoader size="section" aria-label="Loading assessments..." />
-        </div>
+        <AssessmentListSkeleton />
       ) : filteredAssessments.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>

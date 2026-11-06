@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
-import { DashboardSkeleton } from "@/components/ui/page-skeletons";
+import { DashboardSkeleton, TrainingSkeleton } from "@/components/ui/page-skeletons";
 
 export default function TrainingManagementPage() {
   const router = useRouter();
@@ -87,7 +87,7 @@ export default function TrainingManagementPage() {
   }
 
   if (isLoadingAuth || (loading && sessions.length === 0)) {
-    return <DashboardSkeleton />;
+    return <TrainingSkeleton />;
   }
 
   if (!canManageTraining) {
@@ -129,8 +129,8 @@ export default function TrainingManagementPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="py-12 flex items-center justify-center">
-                  <BrandLoader size="card" aria-label="Loading training sessions..." />
+                <div className="py-4">
+                  <TrainingSkeleton />
                 </div>
               ) : sessions.length === 0 ? (
                 <div className="text-center py-8 text-[#292D40] text-sm">
