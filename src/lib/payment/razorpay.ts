@@ -18,6 +18,13 @@ export function getRazorpayConfig(): RazorpayConfig {
   const keyId = process.env.RAZORPAY_KEY_ID?.replace(/^["']|["']$/g, "").trim();
   const keySecret = process.env.RAZORPAY_KEY_SECRET?.replace(/^["']|["']$/g, "").trim();
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET?.replace(/^["']|["']$/g, "").trim();
+  const mode = (process.env.RAZORPAY_MODE || "test").replace(/^["']|["']$/g, "").trim().toLowerCase();
+
+  if (mode !== "test") {
+    throw new Error(
+      "Safety violation: UrPlaced is configured in Razorpay TEST MODE only. Live mode is strictly prohibited."
+    );
+  }
 
   if (!keyId || !keySecret) {
     throw new Error(

@@ -132,18 +132,15 @@ export class PaymentReconciliationService {
           .from("platform_invoices")
           .select("id, invoice_number, tenant_id, subscription_id, amount_inr, tax_inr, currency, status, notes")
           .eq("tenant_id", tenantId)
-          .eq("status", "PENDING")
-          .order("created_at", { ascending: false })
-          .limit(1)
           .maybeSingle();
 
-        if (pendingInv) {
+        if (pendingInv && pendingInv.status === "PENDING") {
           invoice = pendingInv;
         }
       }
     }
 
-    if (invErr && !invoice) {
+    if (invErr && (invErr as any).code !== "22P02" && !invoice) {
       console.error("[Payment Reconciliation] Database error querying invoice:", invErr);
       throw new Error(`Database error querying invoice: ${invErr.message}`);
     }
@@ -171,8 +168,8 @@ export class PaymentReconciliationService {
     const totalInr = Number((amountInr + taxInr).toFixed(2));
     const amountPaise = Math.round(totalInr * 100);
 
-    if (amountPaise <= 0) {
-      throw new Error("Invalid invoice amount: Payable total must be greater than zero.");
+    if (amountPaise < 100) {
+      throw new Error("Invalid invoice amount: Payable total must be at least ₹1.00 (100 paise).");
     }
 
     const config = getRazorpayConfig();
@@ -325,6 +322,7 @@ export class PaymentReconciliationService {
     source: "CHECKOUT_VERIFICATION" | "WEBHOOK" | "RECONCILIATION";
     rawWebhookBody?: string;
     webhookSignature?: string;
+    callerTenantId?: string;
     admin?: ReturnType<typeof createAdminClient>;
   }): Promise<ReconcilePaymentResult> {
     const {
@@ -334,6 +332,7 @@ export class PaymentReconciliationService {
       source,
       rawWebhookBody,
       webhookSignature,
+      callerTenantId,
       admin = createAdminClient(),
     } = params;
 
@@ -452,6 +451,11 @@ export class PaymentReconciliationService {
 
     if (!order) {
       throw new Error(`Payment order not found: ${orderId}`);
+    }
+
+    // Strict tenant isolation check: Reject cross-tenant payment verification attempts
+    if (callerTenantId && order.tenant_id !== callerTenantId) {
+      throw new Error("Forbidden: You are not authorized to verify a payment for another college.");
     }
 
     // 3. Look up trusted invoice record

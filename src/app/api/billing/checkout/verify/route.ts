@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       paymentId,
       signature,
       source: "CHECKOUT_VERIFICATION",
+      callerTenantId: ctx.isPlatformAdmin ? undefined : ctx.tenantId,
     });
 
     return NextResponse.json({
