@@ -408,8 +408,8 @@ export default function PlatformAccountsPage() {
 
       {/* Invite Super Admin Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Invite Super Administrator
@@ -418,7 +418,7 @@ export default function PlatformAccountsPage() {
                 Issue a single-use onboarding credential link with mandatory MFA
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4">
               {!createdInviteLink ? (
                 <form onSubmit={handleCreateInvite} className="space-y-4">
                   <div className="space-y-1.5">
@@ -503,15 +503,15 @@ export default function PlatformAccountsPage() {
 
       {/* Confirmation Modal for Admin Status Change */}
       {statusTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />
                 <span>Confirm Privilege Modification</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4">
               <p className="text-xs text-text-primary leading-relaxed">
                 Are you sure you want to change the status of administrator{" "}
                 <span className="font-bold font-mono">{statusTarget.admin.email}</span> to{" "}
@@ -546,8 +546,8 @@ export default function PlatformAccountsPage() {
 
       {/* Permanent Administrator Deletion Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-status-danger/30 bg-status-danger-subtle/40">
               <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-status-danger shrink-0" />
@@ -557,7 +557,7 @@ export default function PlatformAccountsPage() {
                 P0 Permanent Removal: Supabase Auth credentials, active sessions, and profile records will be permanently deleted.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4">
               <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-1.5">
                 <div className="font-bold flex items-center gap-1.5">
                   <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />

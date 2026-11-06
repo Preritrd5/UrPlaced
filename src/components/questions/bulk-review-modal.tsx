@@ -113,8 +113,8 @@ export function BulkReviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex min-h-full items-start justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col rounded-xl shadow-xl border border-[#DDDCD5] overflow-hidden my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col rounded-xl shadow-2xl border border-[#DDDCD5] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#DDDCD5] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#F8F7F3] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
@@ -141,7 +141,7 @@ export function BulkReviewModal({
         </div>
 
         {/* Body */}
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 min-h-0">
+        <div className="p-4 sm:p-6 pr-3 sm:pr-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1 min-h-0">
           {errorMsg && (
             <div className="p-3 bg-red-50 text-red-800 text-xs rounded-lg border border-red-200 flex items-start gap-2">
               <XCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />

@@ -620,8 +620,8 @@ export default function MistakeTargetDetailPage({
 
       {/* Defect Reporting Modal */}
       {showDefectModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-xl bg-card border-border my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl bg-card border-border">
             <CardHeader className="shrink-0 pb-3 border-b border-border">
               <CardTitle className="text-lg font-heading text-text-primary flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
@@ -632,7 +632,7 @@ export default function MistakeTargetDetailPage({
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmitDefect} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pr-3 sm:pr-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-text-primary">Defect Type</label>
                   <select

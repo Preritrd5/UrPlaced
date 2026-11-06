@@ -149,8 +149,8 @@ export function CompanyDetailActions({ company, canManage }: CompanyDetailAction
 
       {/* Edit Modal Backdrop */}
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-xl border-border bg-card my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl border-border bg-card">
             <CardHeader className="shrink-0 flex flex-row items-center justify-between pb-3 border-b border-border">
               <div>
                 <CardTitle className="text-base font-bold font-heading">Edit Company Profile</CardTitle>
@@ -168,7 +168,7 @@ export function CompanyDetailActions({ company, canManage }: CompanyDetailAction
               </Button>
             </CardHeader>
             <form onSubmit={handleUpdate} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3.5 text-xs">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-3.5 text-xs">
                 {error && (
                   <Alert variant="destructive" className="py-2 text-xs">
                     <AlertCircle className="h-4 w-4" />

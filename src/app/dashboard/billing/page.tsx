@@ -1246,8 +1246,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 1: CHANGE / UPGRADE / DOWNGRADE PLAN MODAL */}
       {/* ========================================================================= */}
       {showPlanModal && data?.subscription && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-3xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-3xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
@@ -1266,7 +1266,7 @@ export default function CollegeBillingPage() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {(data?.availablePlans || []).map((plan) => {
                   const currentPrice = data.subscription?.priceAnnual || 0;
@@ -1387,8 +1387,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 2: BANK TRANSFER DETAILS & UTR SUBMISSION MODAL */}
       {/* ========================================================================= */}
       {showBankTransferModal && selectedInvoiceForUtr && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/30 bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
@@ -1407,7 +1407,7 @@ export default function CollegeBillingPage() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4 text-xs">
               {/* Beneficiary Details Box */}
               <div className="p-3.5 rounded-xl bg-white border border-[#DDDCD5] space-y-2">
                 <div className="text-[10px] font-mono font-bold uppercase text-[#747683]">
@@ -1517,8 +1517,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 3: MANDATE CONSENT MODAL */}
       {/* ========================================================================= */}
       {showConsentModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-primary" />
@@ -1528,7 +1528,7 @@ export default function CollegeBillingPage() {
                 Explicit consent required per UrPlaced financial compliance (Q4)
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs text-text-primary">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4 text-xs text-text-primary">
               <p className="leading-relaxed">
                 By enabling automatic renewal, you authorize UrPlaced to automatically charge your institutional payment method annually on your renewal date (
                 <strong className="font-semibold">{data?.subscription?.renewalDate ? new Date(data.subscription.renewalDate).toLocaleDateString("en-IN") : "next anniversary"}</strong>
@@ -1587,8 +1587,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 4: PERIOD-END CANCELLATION REQUEST MODAL */}
       {/* ========================================================================= */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/30 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -1599,7 +1599,7 @@ export default function CollegeBillingPage() {
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleRequestCancellation} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs text-text-primary">
+              <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4 text-xs text-text-primary">
                 <p className="leading-relaxed">
                   Under the UrPlaced Institutional Agreement, cancellation requests initiated by the Placement Head take effect at the end of your active billing period (
                   <strong className="font-semibold">{data?.subscription?.renewalDate ? new Date(data.subscription.renewalDate).toLocaleDateString("en-IN") : "renewal date"}</strong>

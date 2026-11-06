@@ -292,25 +292,56 @@ pre {
 }
 
 /* ========================================================
-   DARK MODE SCROLLBAR APPEARANCE
+   GLOBAL SLEEK SCROLLBARS & MODAL BODY SCROLL LOCK
    ======================================================== */
 
+body:has(.fixed.inset-0.z-50) {
+  overflow: hidden !important;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(36, 40, 58, 0.22) transparent;
+}
+
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(36, 40, 58, 0.22);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(36, 40, 58, 0.38);
+}
+
 .dark ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #111318;
+  background: transparent;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #303548;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 9999px;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #42485F;
+  background: rgba(255, 255, 255, 0.38);
 }
 
 /* ========================================================

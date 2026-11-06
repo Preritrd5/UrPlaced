@@ -520,8 +520,8 @@ export default function PlatformCollegesPage() {
 
       {/* Onboarding Details Modal */}
       {detailsTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
@@ -539,7 +539,7 @@ export default function PlatformCollegesPage() {
                 Institutional metadata and administrative onboarding tracking
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4 text-xs">
               {/* Institution Identity */}
               <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
                 <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">
@@ -679,15 +679,15 @@ export default function PlatformCollegesPage() {
 
       {/* Confirmation Modal for Suspend/Activate */}
       {actionTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-amber-600" />
                 <span>Confirm Status Modification</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4">
               <p className="text-xs text-text-primary leading-relaxed">
                 You are about to change the status of{" "}
                 <span className="font-bold">{actionTarget.college.name}</span> to{" "}
@@ -742,8 +742,8 @@ export default function PlatformCollegesPage() {
 
       {/* Confirmation Modal for College Deletion */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(36,40,58,0.50)] backdrop-blur-sm p-3 sm:p-4 flex min-h-full items-start justify-center">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-xl rounded-2xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-status-danger-subtle/40">
               <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-status-danger" />
@@ -753,7 +753,7 @@ export default function PlatformCollegesPage() {
                 Administrative removal of institutional workspace and associated accounts.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
+            <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4">
               <div className="p-3.5 rounded-xl bg-surface border border-border space-y-1.5">
                 <div className="text-[10px] font-mono font-bold uppercase text-text-secondary">Target Institution</div>
                 <div className="text-sm font-bold font-heading text-text-primary">{deleteTarget.name}</div>
