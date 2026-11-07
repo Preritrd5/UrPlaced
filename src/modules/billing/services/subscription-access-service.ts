@@ -380,10 +380,9 @@ export class SubscriptionAccessService {
 
         // If specific feature requested, check snapshot
         const isCoreUniversal =
-          (featureKey === "department_hierarchy" ||
-           featureKey === "academic_structure" ||
-           (isStudent && (featureKey === "mistake_to_mastery" || featureKey === "placement_memory_analytics"))) &&
-          resolvedEntitlements.features[featureKey] !== false;
+          featureKey === "department_hierarchy" ||
+          featureKey === "academic_structure" ||
+          (isStudent && (featureKey === "mistake_to_mastery" || featureKey === "placement_memory_analytics"));
 
         if (featureKey && !isCoreUniversal && !resolvedEntitlements.features[featureKey]) {
           return makeDenial(
@@ -500,10 +499,9 @@ export class SubscriptionAccessService {
           // Retain paid operational access until effective end date
           const resolvedEntitlements = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
           const isCoreUniversal =
-            (featureKey === "department_hierarchy" ||
-             featureKey === "academic_structure" ||
-             (isStudent && (featureKey === "mistake_to_mastery" || featureKey === "placement_memory_analytics"))) &&
-            resolvedEntitlements.features[featureKey] !== false;
+            featureKey === "department_hierarchy" ||
+            featureKey === "academic_structure" ||
+            (isStudent && (featureKey === "mistake_to_mastery" || featureKey === "placement_memory_analytics"));
 
           if (featureKey && !isCoreUniversal && !resolvedEntitlements.features[featureKey]) {
             return makeDenial(
@@ -595,11 +593,11 @@ export class SubscriptionAccessService {
         // 1. Academic Structure & Department Hierarchy: Every college needs departments, branches, and batches.
         // 2. Assessment Engine & Question Banks: Placement preparation and practice assessments are core to every tier.
         // 3. Student Roster Directory & Core Placement Drives: Fundamental multi-tenant operations.
+        // 4. Student Mistakes & Mastery Radar: Personal skill growth and question defect reviews are universally accessible to students.
         const isCoreUniversalFeature =
-          (targetFeature === "department_hierarchy" ||
-           targetFeature === "academic_structure" ||
-           (isStudent && (targetFeature === "mistake_to_mastery" || targetFeature === "placement_memory_analytics"))) &&
-          features[targetFeature] !== false;
+          targetFeature === "department_hierarchy" ||
+          targetFeature === "academic_structure" ||
+          (isStudent && (targetFeature === "mistake_to_mastery" || targetFeature === "placement_memory_analytics"));
 
         const isEntitled = isCoreUniversalFeature || Boolean(features[targetFeature]);
         if (!isEntitled) {
