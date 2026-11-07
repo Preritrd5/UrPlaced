@@ -10,6 +10,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import {
   FileText,
@@ -18,7 +19,6 @@ import {
   AlertTriangle,
   Bell,
   X,
-  ExternalLink,
   ChevronRight,
 } from "lucide-react";
 import { useNotifications } from "@/modules/notifications/hooks/use-notifications";
@@ -81,7 +81,12 @@ export function StudentNotificationToast() {
   const { activeToasts = [], dismissToast, markAsRead } = useNotifications();
 
   const [isPaused, setIsPaused] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Active examination protection: Never display pop-ups while taking a test
   const isAssessmentTaking = React.useMemo(() => {
@@ -155,7 +160,7 @@ export function StudentNotificationToast() {
     }
   };
 
-  return (
+  const toastContent = (
     <div
       role="status"
       aria-live="polite"
@@ -164,7 +169,7 @@ export function StudentNotificationToast() {
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
       onBlur={() => setIsPaused(false)}
-      className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] w-[calc(100%-1.5rem)] max-w-md sm:max-w-lg transition-all duration-300 ease-out animate-notification-pop pointer-events-auto shadow-2xl"
+      className="fixed top-20 left-1/2 -translate-x-1/2 z-[999999] w-[calc(100%-1.5rem)] max-w-md sm:max-w-lg transition-all duration-300 ease-out animate-notification-pop pointer-events-auto shadow-2xl"
     >
       <div className="bg-card border-2 border-primary/30 rounded-2xl shadow-2xl overflow-hidden p-4 flex flex-col gap-3 backdrop-blur-none relative ring-1 ring-black/5">
         {/* Top Header Row: Category Icon, Badge, Title, Time, Close */}
@@ -186,7 +191,7 @@ export function StudentNotificationToast() {
                 </span>
 
                 <span className="font-heading font-bold text-sm sm:text-base text-text-primary tracking-tight truncate max-w-[200px] sm:max-w-[280px]">
-                  {currentToast.title}
+                  {currentToast.title || badgeInfo.label}
                 </span>
 
                 {queueCount > 1 && (
@@ -247,4 +252,10 @@ export function StudentNotificationToast() {
       </div>
     </div>
   );
+
+  if (mounted && typeof document !== "undefined") {
+    return createPortal(toastContent, document.body);
+  }
+
+  return toastContent;
 }

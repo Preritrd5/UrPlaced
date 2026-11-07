@@ -380,15 +380,7 @@ body:has([data-radix-portal]:has([role="dialog"]:not([aria-label*="Notification"
 /* Ensure notification centers, popovers, and toast overlays always have maximum elevation */
 [aria-label*="Notification" i][role="dialog"],
 [aria-label*="Notification Center" i][role="dialog"],
-header [role="dialog"],
-header [aria-label*="Notification" i] {
-  z-index: 99999 !important;
-}
-
-body:has(header [role="dialog"]) header,
-body:has(header [aria-label*="Notification" i]) header,
-header:has([role="dialog"]),
-header:has([aria-label*="Notification" i]) {
+header [role="dialog"] {
   z-index: 99999 !important;
 }
 
@@ -540,7 +532,7 @@ header:has([aria-label*="Notification" i]) {
 @keyframes notification-slide-down {
   0% {
     opacity: 0;
-    transform: translate(-50%, -1.25rem) scale(0.96);
+    transform: translate(-50%, -1rem) scale(0.96);
   }
   100% {
     opacity: 1;
