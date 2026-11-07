@@ -8,7 +8,7 @@
  * Features:
  * - Live broadcast pulse beacon & category iconography
  * - Distinct, prominent headline & refined body typography
- * - Smooth auto-dismiss countdown progress bar with hover-pause
+ * - Smooth CSS-accelerated auto-dismiss countdown progress bar with hover-pause
  * - One-click "View Details" with gradient styling & animated micro-interactions
  * - Accessible keyboard navigation & strict suppression during active examinations
  */
@@ -88,10 +88,6 @@ export function StudentNotificationToast() {
 
   const [isPaused, setIsPaused] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
-  const [progress, setProgress] = React.useState(100);
-
-  const DURATION_MS = 8000;
-  const INTERVAL_MS = 100;
 
   React.useEffect(() => {
     setMounted(true);
@@ -126,33 +122,21 @@ export function StudentNotificationToast() {
     return "/dashboard/student";
   }, [currentToast]);
 
-  // Reset progress bar on toast change
-  React.useEffect(() => {
-    setProgress(100);
-  }, [currentToast?.id]);
-
-  // Auto-dismiss countdown with hover pause
+  // Auto-dismiss 8-second timer with hover pause
   React.useEffect(() => {
     if (!currentToast || isPaused || isAssessmentTaking) {
       return;
     }
 
-    const step = (INTERVAL_MS / DURATION_MS) * 100;
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        const next = prev - step;
-        if (next <= 0) {
-          clearInterval(interval);
-          if (dismissToast) {
-            dismissToast(currentToast.id);
-          }
-          return 0;
-        }
-        return next;
-      });
-    }, INTERVAL_MS);
+    const timer = setTimeout(() => {
+      if (dismissToast) {
+        dismissToast(currentToast.id);
+      }
+    }, 8000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [currentToast?.id, isPaused, isAssessmentTaking, dismissToast]);
 
   if (!currentToast || isAssessmentTaking) {
@@ -292,10 +276,11 @@ export function StudentNotificationToast() {
         {/* Auto-Dismiss Smooth Animated Progress Bar */}
         <div className="h-1 w-full bg-[#EDECE7] overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-[#7779D8] to-[#5052C9] transition-all ease-linear"
+            key={currentToast.id}
+            className="h-full bg-gradient-to-r from-[#7779D8] to-[#5052C9]"
             style={{
-              width: `${progress}%`,
-              transitionDuration: isPaused ? "0ms" : "100ms",
+              animation: "toast-progress 8s linear forwards",
+              animationPlayState: isPaused ? "paused" : "running",
             }}
           />
         </div>

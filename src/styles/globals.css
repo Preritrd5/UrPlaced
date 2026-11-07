@@ -540,6 +540,15 @@ header [role="dialog"] {
   }
 }
 
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
 .animate-notification-pop {
   animation: notification-slide-down 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
