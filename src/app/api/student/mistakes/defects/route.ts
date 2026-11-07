@@ -5,7 +5,12 @@ import { ContentDefectService } from "@/modules/mistake-mastery/services/content
 
 export async function POST(request: NextRequest) {
   try {
-    const authContext = await requireAuthContext(Permissions.QUESTION_DEFECTS_REPORT);
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+    const authContext = await requireAuthContext(Permissions.QUESTION_DEFECTS_REPORT, undefined, token);
     const body = await request.json();
     const { questionId, versionId, defectType, description } = body;
 
@@ -33,9 +38,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, report: res.report });
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+    if (err.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err.message?.startsWith("FORBIDDEN") || err?.statusCode === 403) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
   }
 }

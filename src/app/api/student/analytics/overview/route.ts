@@ -80,7 +80,10 @@ export async function GET(request: NextRequest) {
       recentAttempts: attemptList.slice(0, 5),
     });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN") {
+    if (error.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    if (error.message?.startsWith("FORBIDDEN") || error.statusCode === 403) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });

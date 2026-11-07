@@ -9,7 +9,12 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    const authContext = await requireAuthContext(Permissions.PLACEMENT_MEMORY_READ);
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+    const authContext = await requireAuthContext(Permissions.PLACEMENT_MEMORY_READ, undefined, token);
     const searchParams = request.nextUrl.searchParams;
 
     const filter = {
@@ -29,7 +34,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ reports: result.reports });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN") {
+    if (error.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    if (error.message?.startsWith("FORBIDDEN") || error.statusCode === 403) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
@@ -38,7 +46,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authContext = await requireAuthContext(Permissions.EXPERIENCE_REPORTS_SUBMIT);
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+    const authContext = await requireAuthContext(Permissions.EXPERIENCE_REPORTS_SUBMIT, undefined, token);
     const body: SubmitExperienceReportInput = await request.json();
 
     // Resolve student record to ensure valid student foreign key
@@ -57,7 +70,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ report: result.report }, { status: 201 });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN") {
+    if (error.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    if (error.message?.startsWith("FORBIDDEN") || error.statusCode === 403) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });

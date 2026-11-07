@@ -380,7 +380,9 @@ export class SubscriptionAccessService {
 
         // If specific feature requested, check snapshot
         const isCoreUniversal =
-          (featureKey === "department_hierarchy" || featureKey === "academic_structure") &&
+          (featureKey === "department_hierarchy" ||
+           featureKey === "academic_structure" ||
+           (isStudent && (featureKey === "mistake_to_mastery" || featureKey === "placement_memory_analytics"))) &&
           resolvedEntitlements.features[featureKey] !== false;
 
         if (featureKey && !isCoreUniversal && !resolvedEntitlements.features[featureKey]) {
@@ -498,7 +500,9 @@ export class SubscriptionAccessService {
           // Retain paid operational access until effective end date
           const resolvedEntitlements = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
           const isCoreUniversal =
-            (featureKey === "department_hierarchy" || featureKey === "academic_structure") &&
+            (featureKey === "department_hierarchy" ||
+             featureKey === "academic_structure" ||
+             (isStudent && (featureKey === "mistake_to_mastery" || featureKey === "placement_memory_analytics"))) &&
             resolvedEntitlements.features[featureKey] !== false;
 
           if (featureKey && !isCoreUniversal && !resolvedEntitlements.features[featureKey]) {
@@ -592,7 +596,9 @@ export class SubscriptionAccessService {
         // 2. Assessment Engine & Question Banks: Placement preparation and practice assessments are core to every tier.
         // 3. Student Roster Directory & Core Placement Drives: Fundamental multi-tenant operations.
         const isCoreUniversalFeature =
-          (targetFeature === "department_hierarchy" || targetFeature === "academic_structure") &&
+          (targetFeature === "department_hierarchy" ||
+           targetFeature === "academic_structure" ||
+           (isStudent && (targetFeature === "mistake_to_mastery" || targetFeature === "placement_memory_analytics"))) &&
           features[targetFeature] !== false;
 
         const isEntitled = isCoreUniversalFeature || Boolean(features[targetFeature]);

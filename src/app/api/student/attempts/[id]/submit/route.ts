@@ -47,9 +47,12 @@ export async function POST(
 
     return NextResponse.json(result.attempt);
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+    if (err.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err.message?.startsWith("FORBIDDEN") || err?.statusCode === 403) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
   }
 }

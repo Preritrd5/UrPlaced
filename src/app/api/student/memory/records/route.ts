@@ -5,7 +5,12 @@ import { HistoricalRecruitmentService } from "@/modules/placement-memory/service
 
 export async function GET(request: NextRequest) {
   try {
-    const authContext = await requireAuthContext(Permissions.PLACEMENT_MEMORY_READ);
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+    const authContext = await requireAuthContext(Permissions.PLACEMENT_MEMORY_READ, undefined, token);
     const searchParams = request.nextUrl.searchParams;
 
     const filter = {
@@ -22,7 +27,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ records: result.records });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN") {
+    if (error.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    if (error.message?.startsWith("FORBIDDEN") || error.statusCode === 403) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });

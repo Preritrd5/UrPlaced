@@ -6,7 +6,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest) {
   try {
-    const authContext = await requireAuthContext(Permissions.MISTAKE_BANK_MANAGE_OWN);
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+    const authContext = await requireAuthContext(Permissions.MISTAKE_BANK_MANAGE_OWN, undefined, token);
     const supabase = createAdminClient();
 
     // 1. Resolve student profile
@@ -127,9 +132,12 @@ export async function GET(request: NextRequest) {
       availableSkills: skills || [],
     });
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+    if (err.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err.message?.startsWith("FORBIDDEN") || err?.statusCode === 403) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
   }
 }

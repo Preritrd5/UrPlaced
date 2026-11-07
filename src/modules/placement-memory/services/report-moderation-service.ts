@@ -144,7 +144,7 @@ export class ReportModerationService {
 
     const { data, error } = await supabase
       .from("recruitment_experience_reports")
-      .select("*, companies(name), students(full_name, enrollment_number)")
+      .select("*, companies!company_id(name), students!student_id(full_name, enrollment_number)")
       .eq("tenant_id", tenantId)
       .eq("moderation_status", "PENDING")
       .order("created_at", { ascending: false });
@@ -260,7 +260,7 @@ export class ReportModerationService {
 
     let query = supabase
       .from("recruitment_experience_reports")
-      .select("*, companies(name), students(full_name, enrollment_number)")
+      .select("*, companies!company_id(name), students!student_id(full_name, enrollment_number)")
       .eq("tenant_id", tenantId)
       .eq("moderation_status", "APPROVED");
 

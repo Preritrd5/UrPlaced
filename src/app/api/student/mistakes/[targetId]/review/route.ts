@@ -10,7 +10,12 @@ export async function POST(
 ) {
   try {
     const { targetId } = await params;
-    const authContext = await requireAuthContext(Permissions.MISTAKE_BANK_MANAGE_OWN);
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+    const authContext = await requireAuthContext(Permissions.MISTAKE_BANK_MANAGE_OWN, undefined, token);
     const supabase = createAdminClient();
 
     // 1. Resolve student profile
@@ -80,9 +85,12 @@ export async function POST(
 
     return NextResponse.json({ error: "Unknown review action." }, { status: 400 });
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
+    if (err.message?.startsWith("UNAUTHORIZED")) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err.message?.startsWith("FORBIDDEN") || err?.statusCode === 403) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
   }
 }
