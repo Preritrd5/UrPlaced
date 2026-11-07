@@ -175,19 +175,20 @@ body {
 }
 
 /* ========================================================
-   MOBILE VIEWPORT & CHROMIUM COMPOSITOR BACKDROP FIX
+   GLOBAL ZERO-BLUR INVARIANT (APPLICATION-WIDE)
+   Completely eliminate all backdrop blur, CSS filters, and
+   GPU compositor blur artifacts across desktop, tablet, and mobile.
    ======================================================== */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 @media (max-width: 768px), (hover: none) and (pointer: coarse) {
   body {
     background-attachment: scroll !important;
-  }
-
-  /* Prevent Chromium mobile Blink/WebKit compositor backdrop-filter bleeding/blur bugs */
-  *,
-  *::before,
-  *::after {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
   }
 }
 
@@ -328,12 +329,21 @@ body:has([data-modal-open]) {
   overflow: hidden !important;
 }
 
-/* Ensure modal backdrop overlays and radix portals sit strictly above headers, sidebars, and page content */
+/* Modal backdrop overlays: sit strictly above headers, sidebars, and page content */
 .fixed.inset-0.z-50:not([data-drawer-backdrop]),
 .fixed.inset-0[class*="z-50"]:not([data-drawer-backdrop]),
-[data-radix-portal] {
+[data-radix-portal] > [class*="fixed"][class*="inset-0"] {
   margin: 0 !important;
   z-index: 100 !important;
+}
+
+/* Modal dialog contents: MUST ALWAYS SIT STRICTLY ABOVE BACKDROP OVERLAYS */
+[role="dialog"]:not([aria-label*="Notification" i]),
+[data-radix-portal] [role="dialog"]:not([aria-label*="Notification" i]),
+[data-radix-portal] > div:not([class*="inset-0"]),
+.fixed.inset-0.z-50:not([data-drawer-backdrop]) > [class*="bg-"],
+.fixed.inset-0[class*="z-50"]:not([data-drawer-backdrop]) > [class*="bg-"] {
+  z-index: 110 !important;
 }
 
 /* Mobile Navigation Drawer & Backdrop Hierarchy */

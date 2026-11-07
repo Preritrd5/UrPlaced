@@ -545,8 +545,8 @@ export function DialogSystemHost() {
     return (
       <DialogPrimitive.Root open={true} onOpenChange={handleOpenChange}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[110] grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
             <div className="flex flex-col space-y-3">
               <div
                 className={cn(
@@ -645,8 +645,8 @@ export function DialogSystemHost() {
     return (
       <DialogPrimitive.Root open={true} onOpenChange={handleOpenChange}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[110] grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <DialogPrimitive.Title className="text-base font-bold text-text-primary font-heading">
@@ -721,8 +721,8 @@ export function DialogSystemHost() {
     return (
       <DialogPrimitive.Root open={true} onOpenChange={handleOpenChange}>
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[rgba(36,40,58,0.50)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[110] grid w-[calc(100%-1.5rem)] sm:w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-card p-4 sm:p-6 shadow-xl rounded-xl duration-200">
             <div className="flex flex-col space-y-3">
               <div
                 className={cn(
@@ -773,3 +773,4 @@ export function DialogSystemHost() {
 
   return null;
 }
+
