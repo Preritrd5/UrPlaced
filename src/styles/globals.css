@@ -332,6 +332,21 @@ body:has([data-radix-portal]) aside {
   z-index: 10 !important;
 }
 
+/* Ensure the main column and main content container are positioned and elevated above headers and sidebars */
+body:has(.fixed.inset-0.z-50) div:has(> main),
+body:has([role="dialog"]) div:has(> main),
+body:has([data-radix-portal]) div:has(> main) {
+  position: relative;
+  z-index: 90 !important;
+}
+
+body:has(.fixed.inset-0.z-50) main,
+body:has([role="dialog"]) main,
+body:has([data-radix-portal]) main {
+  position: relative;
+  z-index: 90 !important;
+}
+
 /* On short viewports or small monitors, prevent modal content truncation by enabling backdrop scroll */
 .fixed.inset-0.z-50,
 .fixed.inset-0[class*="z-"] {

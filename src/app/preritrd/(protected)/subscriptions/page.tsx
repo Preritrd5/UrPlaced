@@ -1173,8 +1173,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 1: CREATE PLAN MODAL */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold font-heading text-text-primary">
@@ -1468,8 +1468,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 2: EDIT PLAN MODAL */}
       {editingPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -1756,8 +1756,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 3: VIEW PLAN DETAILS & ENTITLEMENTS MODAL */}
       {viewingPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -1877,8 +1877,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 4: CHANGE COLLEGE PLAN MODAL */}
       {changePlanSub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Change Subscription Plan
@@ -2019,8 +2019,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 5: VIEW SNAPSHOT ENTITLEMENTS MODAL */}
       {viewingSnapshot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -2101,8 +2101,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 6: ARCHIVE CONFLICT MODAL */}
       {archiveConflict && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-red-300 shadow-xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-red-300 shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-red-200 bg-card">
               <div className="flex items-center gap-2 text-red-700">
                 <ShieldAlert className="h-5 w-5" />
@@ -2145,8 +2145,8 @@ export default function PlatformSubscriptionsPage() {
       )}
       {/* MODAL 7: ARCHIVE CONFIRMATION MODAL */}
       {planToArchive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center gap-2 text-amber-700">
                 <AlertTriangle className="h-5 w-5" />
@@ -2188,8 +2188,8 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 8: SYNC VERSION CONFIRMATION MODAL */}
       {subToSync && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center gap-2 text-primary">
                 <History className="h-5 w-5" />
