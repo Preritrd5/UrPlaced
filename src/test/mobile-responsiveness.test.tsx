@@ -1,11 +1,19 @@
 import React from "react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { TableContainer, Table } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ToastContainer, toast } from "@/components/ui/dialog-system";
 import tailwindConfig from "../../tailwind.config";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => "/preritrd/dashboard",
+}));
 
 describe("Mobile Responsiveness Architecture & Component Invariants", () => {
   it("verifies tailwind screens configuration includes xs (480px) breakpoint", () => {
@@ -77,5 +85,23 @@ describe("Mobile Responsiveness Architecture & Component Invariants", () => {
     expect(toastContainerEl.className).toContain("inset-x-3");
     expect(toastContainerEl.className).toContain("sm:inset-x-auto");
     expect(toastContainerEl.className).toContain("sm:right-4");
+  });
+
+  it("verifies PlatformSidebar mobile drawer has responsive width, dvh bounds, and elevated z-index", async () => {
+    const { PlatformSidebar } = await import("@/components/platform-admin/platform-nav");
+    const { container } = render(
+      <PlatformSidebar adminEmail="urplaced5@gmail.com" adminName="Platform Super Admin" />
+    );
+
+    const mobileHeader = container.querySelector("header.md\\:hidden");
+    expect(mobileHeader).not.toBeNull();
+    expect(mobileHeader?.className).toContain("z-30");
+
+    const aside = container.querySelector("aside");
+    expect(aside).not.toBeNull();
+    expect(aside?.className).toContain("w-[min(310px,85vw)]");
+    expect(aside?.className).toContain("h-[100dvh]");
+    expect(aside?.className).toContain("z-50");
+    expect(aside?.className).toContain("shadow-2xl");
   });
 });

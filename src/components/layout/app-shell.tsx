@@ -47,6 +47,28 @@ export function AppShell({ children }: AppShellProps) {
     setPendingHref(null);
   }, [pathname]);
 
+  // Lock body scroll and handle Escape key when mobile drawer is open
+  React.useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileMenuOpen]);
+
   React.useEffect(() => {
     let mounted = true;
     fetch("/api/platform/maintenance")
@@ -169,7 +191,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="fixed top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-[#7779D8] to-primary z-[99999] animate-pulse" />
       )}
       {/* Mobile Header Bar */}
-      <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-40">
+      <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-30">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 mr-2">
           <UrPlacedLogo size="sm" className="h-8 w-8 shrink-0" />
           <span className="font-heading font-bold text-base sm:text-lg text-text-primary shrink-0">
@@ -203,7 +225,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Mobile Drawer Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-[rgba(36,40,58,0.40)] backdrop-blur-sm z-40 transition-opacity"
+          className="md:hidden fixed inset-0 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm z-40 transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
           aria-hidden="true"
         />
@@ -212,13 +234,13 @@ export function AppShell({ children }: AppShellProps) {
       {/* Sidebar (Desktop persistent, Mobile slide-over) */}
       <aside
         className={cn(
-          "fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-64 shrink-0 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-screen",
+          "fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-[min(310px,85vw)] sm:w-72 md:w-64 shrink-0 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-[100dvh] max-h-[100dvh] h-screen shadow-2xl md:shadow-none",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Brand Header */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-border shrink-0">
-          <Link href={defaultDashboard} className="flex items-center gap-2.5 min-w-0">
+        <div className="h-16 flex items-center justify-between px-4 sm:px-5 border-b border-border shrink-0">
+          <Link href={defaultDashboard} className="flex items-center gap-2.5 min-w-0" onClick={() => setMobileMenuOpen(false)}>
             <UrPlacedLogo size="md" className="h-9 w-9 shrink-0" />
             <div className="min-w-0 flex-1">
               <span className="font-heading font-bold text-lg tracking-tight text-text-primary block leading-none truncate">
@@ -229,7 +251,7 @@ export function AppShell({ children }: AppShellProps) {
           {mobileMenuOpen && (
             <button
               onClick={() => setMobileMenuOpen(false)}
-              className="md:hidden text-text-secondary hover:text-text-primary p-1"
+              className="md:hidden text-text-secondary hover:text-text-primary p-1.5 rounded-lg hover:bg-[rgba(36,40,58,0.06)] dark:hover:bg-white/10 transition-colors shrink-0 ml-1"
               aria-label="Close menu"
               suppressHydrationWarning
             >
