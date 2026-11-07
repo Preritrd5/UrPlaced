@@ -25,8 +25,17 @@ export async function GET(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // 1. Fetch student roster record
+    // 1. Fetch student roster record & personalization preferences
     const student = await StudentService.getByUserId(ctx.tenantId, ctx.userId);
+    const { data: userProfile } = await supabase
+      .from("profiles")
+      .select("preferences")
+      .eq("id", ctx.userId)
+      .maybeSingle();
+
+    const targetRoles: string[] = Array.isArray(userProfile?.preferences?.targetRoles)
+      ? userProfile.preferences.targetRoles
+      : [];
 
     // 2. Fetch published drives for caller's college
     let query = supabase
@@ -96,6 +105,15 @@ export async function GET(request: NextRequest) {
         applicationStatus: studentApplication?.status || null,
         applicationId: studentApplication?.id || null,
         eligibility,
+        isTargetRoleMatch:
+          targetRoles.length > 0
+            ? targetRoles.some((tr) => {
+                const cleanTr = tr.toLowerCase();
+                const role = (drive.role_title || "").toLowerCase();
+                const title = (drive.title || "").toLowerCase();
+                return role.includes(cleanTr) || cleanTr.includes(role) || title.includes(cleanTr);
+              })
+            : true,
         createdAt: drive.created_at,
       };
     });
@@ -117,6 +135,8 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((d) => d.eligibility.isEligible);
     } else if (filter === "APPLIED") {
       filtered = filtered.filter((d) => d.hasApplied);
+    } else if (filter === "TARGET_ROLES") {
+      filtered = filtered.filter((d) => d.isTargetRoleMatch);
     }
 
     return NextResponse.json({

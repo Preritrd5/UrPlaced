@@ -238,11 +238,11 @@ export async function PATCH(request: NextRequest) {
       updates.bio = bio || null;
     }
 
-    // Query existing profile to verify current canonical storage path
+    // Query existing profile to verify current canonical storage path and preferences
     const admin = createAdminClient();
     const { data: existingProfile } = await admin
       .from("profiles")
-      .select("avatar_url")
+      .select("avatar_url, preferences")
       .eq("id", profile.id)
       .maybeSingle();
 
@@ -259,8 +259,15 @@ export async function PATCH(request: NextRequest) {
       updates.avatar_url = currentCanonicalAvatar;
     }
 
+    const currentPreferences = (existingProfile?.preferences || profile.preferences || {}) as Record<string, unknown>;
+
     if (body.preferences !== undefined && typeof body.preferences === "object") {
-      updates.preferences = body.preferences;
+      updates.preferences = {
+        ...currentPreferences,
+        ...body.preferences,
+      };
+    } else {
+      updates.preferences = currentPreferences;
     }
 
     // 2. Persist to Supabase Auth user_metadata

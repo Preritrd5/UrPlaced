@@ -32,6 +32,9 @@ import {
   Lock,
   Save,
   X,
+  Plus,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
@@ -41,6 +44,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { ProfileSkeleton } from "@/components/ui/page-skeletons";
@@ -117,6 +122,23 @@ export default function MyProfilePage() {
     aiMistakeTips: true,
   });
 
+  // Target Hiring Roles & Custom Roles State
+  const [targetRoles, setTargetRoles] = useState<string[]>([
+    "Software Development Engineer (SDE)",
+    "Frontend Engineer",
+    "Full Stack Developer",
+    "Data Analyst",
+    "Cloud & DevOps Engineer",
+  ]);
+  const [customRoles, setCustomRoles] = useState<string[]>([]);
+  const [showAddRoleInput, setShowAddRoleInput] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  // Preference Async Saving feedback & states
+  const [preferenceSavingKey, setPreferenceSavingKey] = useState<string | null>(null);
+  const [preferenceSavedMsg, setPreferenceSavedMsg] = useState<string | null>(null);
+
   // Password change modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -153,8 +175,11 @@ export default function MyProfilePage() {
           phone: data.profile?.phone || "",
           location: data.profile?.location || "",
           bio: data.profile?.bio || "",
-          weeklyGoalHours: pref.weeklyGoalHours || 10,
-          dailyStudyTime: pref.dailyStudyTime || "1-2 hours",
+          weeklyGoalHours:
+            typeof pref.weeklyGoalHours === "number" && pref.weeklyGoalHours >= 1 && pref.weeklyGoalHours <= 40
+              ? pref.weeklyGoalHours
+              : 10,
+          dailyStudyTime: pref.dailyStudyTime || "1–2 hours",
           practiceMode: pref.practiceMode || "Adaptive (Recommended)",
           difficulty: pref.difficulty || "Adaptive",
           studyReminders: pref.studyReminders !== false,
@@ -162,6 +187,22 @@ export default function MyProfilePage() {
           testUpdates: pref.testUpdates !== false,
           aiMistakeTips: pref.aiMistakeTips !== false,
         });
+
+        if (Array.isArray(pref.targetRoles) && pref.targetRoles.length > 0) {
+          setTargetRoles(pref.targetRoles);
+        } else {
+          setTargetRoles([
+            "Software Development Engineer (SDE)",
+            "Frontend Engineer",
+            "Full Stack Developer",
+            "Data Analyst",
+            "Cloud & DevOps Engineer",
+          ]);
+        }
+
+        if (Array.isArray(pref.customRoles)) {
+          setCustomRoles(pref.customRoles);
+        }
       } else if (res.status === 401) {
         setLoadError("UNAUTHORIZED");
       } else if (res.status === 403) {
@@ -214,6 +255,8 @@ export default function MyProfilePage() {
             driveAlerts: formData.driveAlerts,
             testUpdates: formData.testUpdates,
             aiMistakeTips: formData.aiMistakeTips,
+            targetRoles,
+            customRoles,
           },
         }),
       });
@@ -232,6 +275,180 @@ export default function MyProfilePage() {
       setFeedbackMsg({ type: "error", text: msg });
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Dedicated atomic preference persistence with optimistic UI and rollback
+  async function persistPreferenceUpdate(
+    updates: Record<string, unknown>,
+    keyName: string
+  ) {
+    setPreferenceSavingKey(keyName);
+    setPreferenceSavedMsg(null);
+
+    try {
+      const res = await fetch("/api/profile/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to update preference.");
+      }
+
+      const data = await res.json();
+      if (data.preferences) {
+        setProfile((prev) => (prev ? { ...prev, preferences: data.preferences } : prev));
+      }
+      setPreferenceSavedMsg("Saved");
+      setTimeout(() => setPreferenceSavedMsg(null), 2500);
+      return data;
+    } catch (err: any) {
+      setFeedbackMsg({
+        type: "error",
+        text: err?.message || "Failed to save preference.",
+      });
+      setTimeout(() => setFeedbackMsg(null), 4000);
+      throw err;
+    } finally {
+      setPreferenceSavingKey(null);
+    }
+  }
+
+  // 1. Notification Toggle Handler
+  async function handleToggleNotification(
+    key: "studyReminders" | "driveAlerts" | "testUpdates" | "aiMistakeTips",
+    checked: boolean
+  ) {
+    const prev = Boolean(formData[key]);
+    // Optimistic update
+    setFormData((curr) => ({ ...curr, [key]: checked }));
+
+    try {
+      await persistPreferenceUpdate({ [key]: checked }, key);
+    } catch {
+      // Rollback on failure
+      setFormData((curr) => ({ ...curr, [key]: prev }));
+    }
+  }
+
+  // 2. Weekly Practice Goal Handler
+  async function handleGoalChange(hours: number) {
+    const validHours = Math.max(1, Math.min(40, Math.round(hours)));
+    const prev = formData.weeklyGoalHours;
+    if (validHours === prev) return;
+
+    // Optimistic update
+    setFormData((curr) => ({ ...curr, weeklyGoalHours: validHours }));
+
+    try {
+      await persistPreferenceUpdate({ weeklyGoalHours: validHours }, "weeklyGoalHours");
+    } catch {
+      setFormData((curr) => ({ ...curr, weeklyGoalHours: prev }));
+    }
+  }
+
+  // 3. Daily Study Cadence Handler
+  async function handleCadenceChange(cadence: string) {
+    const prev = formData.dailyStudyTime;
+    if (cadence === prev) return;
+
+    setFormData((curr) => ({ ...curr, dailyStudyTime: cadence }));
+
+    try {
+      await persistPreferenceUpdate({ dailyStudyTime: cadence }, "dailyStudyTime");
+    } catch {
+      setFormData((curr) => ({ ...curr, dailyStudyTime: prev }));
+    }
+  }
+
+  // 4. Target Hiring Roles Handlers
+  async function handleToggleRole(role: string) {
+    const prev = [...targetRoles];
+    const isSelected = prev.includes(role);
+    const updated = isSelected ? prev.filter((r) => r !== role) : [...prev, role];
+
+    // Optimistic update
+    setTargetRoles(updated);
+
+    try {
+      await persistPreferenceUpdate({ targetRoles: updated }, "toggleRole");
+    } catch {
+      setTargetRoles(prev);
+    }
+  }
+
+  async function handleAddCustomRole(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = newRoleName.trim();
+    if (!trimmed) return;
+
+    if (trimmed.length < 2) {
+      setRoleError("Role title must be at least 2 characters.");
+      return;
+    }
+    if (trimmed.length > 60) {
+      setRoleError("Role title cannot exceed 60 characters.");
+      return;
+    }
+
+    const defaultPresetRoles = [
+      "Software Development Engineer (SDE)",
+      "Frontend Engineer",
+      "Full Stack Developer",
+      "Data Analyst",
+      "Cloud & DevOps Engineer",
+    ];
+    const allRoles = Array.from(new Set([...defaultPresetRoles, ...customRoles]));
+    if (allRoles.some((r) => r.toLowerCase() === trimmed.toLowerCase())) {
+      setRoleError("This role already exists.");
+      return;
+    }
+
+    setRoleError(null);
+    const prevCustom = [...customRoles];
+    const prevTarget = [...targetRoles];
+
+    const updatedCustom = [...prevCustom, trimmed];
+    const updatedTarget = prevTarget.includes(trimmed) ? prevTarget : [...prevTarget, trimmed];
+
+    setCustomRoles(updatedCustom);
+    setTargetRoles(updatedTarget);
+    setNewRoleName("");
+    setShowAddRoleInput(false);
+
+    try {
+      await persistPreferenceUpdate(
+        { customRoles: updatedCustom, targetRoles: updatedTarget },
+        "addRole"
+      );
+    } catch {
+      setCustomRoles(prevCustom);
+      setTargetRoles(prevTarget);
+    }
+  }
+
+  async function handleRemoveCustomRole(role: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    const prevCustom = [...customRoles];
+    const prevTarget = [...targetRoles];
+
+    const updatedCustom = prevCustom.filter((r) => r !== role);
+    const updatedTarget = prevTarget.filter((r) => r !== role);
+
+    setCustomRoles(updatedCustom);
+    setTargetRoles(updatedTarget);
+
+    try {
+      await persistPreferenceUpdate(
+        { customRoles: updatedCustom, targetRoles: updatedTarget },
+        "removeRole"
+      );
+    } catch {
+      setCustomRoles(prevCustom);
+      setTargetRoles(prevTarget);
     }
   }
 
@@ -823,26 +1040,116 @@ export default function MyProfilePage() {
               <CardContent className="p-6 space-y-6">
                 {/* Target Focus */}
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary font-mono mb-2">
-                    Target Hiring Roles
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {[
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary font-mono">
+                      Target Hiring Roles
+                    </h4>
+                    {preferenceSavingKey?.includes("Role") ? (
+                      <span className="text-[10px] text-primary font-mono animate-pulse flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+                      </span>
+                    ) : preferenceSavedMsg && preferenceSavingKey === null ? (
+                      <span className="text-[10px] text-secondary font-mono flex items-center gap-0.5">
+                        <Check className="h-2.5 w-2.5" /> Saved
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Combine default preset roles and custom user roles without duplicates */}
+                    {Array.from(new Set([
                       "Software Development Engineer (SDE)",
                       "Frontend Engineer",
                       "Full Stack Developer",
                       "Data Analyst",
                       "Cloud & DevOps Engineer",
-                    ].map((roleChip) => (
-                      <Badge
-                        key={roleChip}
-                        variant="outline"
-                        className="bg-surface text-text-primary border-border hover:border-primary cursor-default text-xs py-1 px-2.5"
+                      ...customRoles,
+                    ])).map((roleChip) => {
+                      const isSelected = targetRoles.includes(roleChip);
+                      const isCustom = customRoles.includes(roleChip);
+
+                      return (
+                        <button
+                          type="button"
+                          key={roleChip}
+                          onClick={() => handleToggleRole(roleChip)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs transition-all border font-medium select-none cursor-pointer",
+                            isSelected
+                              ? "bg-primary text-white border-primary shadow-xs hover:bg-primary/90"
+                              : "bg-surface text-text-secondary border-border hover:border-primary/60 hover:text-text-primary"
+                          )}
+                          title={isSelected ? "Click to deselect role" : "Click to select role"}
+                        >
+                          {isSelected ? (
+                            <Check className="h-3 w-3 stroke-[2.5]" />
+                          ) : (
+                            <Plus className="h-3 w-3 text-text-muted" />
+                          )}
+                          <span>{roleChip}</span>
+                          {isCustom && (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => handleRemoveCustomRole(roleChip, e)}
+                              className="ml-1 -mr-1 p-0.5 rounded-full hover:bg-black/20 text-current transition-colors"
+                              title="Delete custom role"
+                            >
+                              <X className="h-3 w-3" />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+
+                    {/* Add Custom Role Control */}
+                    {showAddRoleInput ? (
+                      <form onSubmit={handleAddCustomRole} className="inline-flex items-center gap-1.5">
+                        <Input
+                          type="text"
+                          value={newRoleName}
+                          onChange={(e) => {
+                            setNewRoleName(e.target.value);
+                            if (roleError) setRoleError(null);
+                          }}
+                          placeholder="e.g. AI Engineer"
+                          className="h-7 w-44 text-xs bg-input border-border px-2"
+                          autoFocus
+                          maxLength={60}
+                        />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          className="h-7 px-2.5 text-xs bg-primary text-white hover:bg-primary/90"
+                        >
+                          Add
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowAddRoleInput(false);
+                            setNewRoleName("");
+                            setRoleError(null);
+                          }}
+                          className="h-7 px-1.5 text-xs text-text-muted hover:text-text-primary"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </form>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddRoleInput(true)}
+                        className="inline-flex items-center gap-1 text-xs py-1 px-2.5 rounded-full border border-dashed border-primary/50 text-primary hover:bg-primary/10 transition-colors font-medium cursor-pointer"
                       >
-                        {roleChip}
-                      </Badge>
-                    ))}
+                        <Plus className="h-3 w-3" /> Add Role
+                      </button>
+                    )}
                   </div>
+                  {roleError && (
+                    <p className="text-[11px] text-red-500 font-mono mt-1.5">{roleError}</p>
+                  )}
                 </div>
 
                 {/* Target Companies */}
@@ -864,25 +1171,105 @@ export default function MyProfilePage() {
 
                 {/* Study Preferences & Goals Grid */}
                 <div className="pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="p-3.5 rounded-xl border border-border bg-input space-y-1">
-                    <span className="text-[11px] font-semibold text-text-secondary uppercase font-mono">
-                      Weekly Practice Goal
-                    </span>
-                    <p className="text-sm font-bold text-text-primary font-heading">
-                      {formData.weeklyGoalHours} Hours / Week
-                    </p>
+                  <div className="p-3.5 rounded-xl border border-border bg-input space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-text-secondary uppercase font-mono">
+                        Weekly Practice Goal
+                      </span>
+                      {preferenceSavingKey === "weeklyGoalHours" ? (
+                        <span className="text-[10px] text-primary font-mono animate-pulse">Saving...</span>
+                      ) : preferenceSavedMsg && preferenceSavingKey === null ? (
+                        <span className="text-[10px] text-secondary font-mono flex items-center gap-0.5">
+                          <Check className="h-2.5 w-2.5" /> Saved
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-sm font-bold text-text-primary font-heading">
+                        {formData.weeklyGoalHours} Hours / Week
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={formData.weeklyGoalHours <= 1 || preferenceSavingKey === "weeklyGoalHours"}
+                          onClick={() => handleGoalChange(Math.max(1, formData.weeklyGoalHours - 1))}
+                          className="h-5 w-5 rounded bg-surface border border-border flex items-center justify-center text-xs font-bold text-text-secondary hover:text-primary hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          title="Decrease goal"
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          disabled={formData.weeklyGoalHours >= 40 || preferenceSavingKey === "weeklyGoalHours"}
+                          onClick={() => handleGoalChange(Math.min(40, formData.weeklyGoalHours + 1))}
+                          className="h-5 w-5 rounded bg-surface border border-border flex items-center justify-center text-xs font-bold text-text-secondary hover:text-primary hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          title="Increase goal"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Range Slider */}
+                    <div className="space-y-1 pt-0.5">
+                      <input
+                        type="range"
+                        min={1}
+                        max={40}
+                        step={1}
+                        value={formData.weeklyGoalHours}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setFormData((prev) => ({ ...prev, weeklyGoalHours: val }));
+                        }}
+                        onMouseUp={(e) => handleGoalChange(Number((e.target as HTMLInputElement).value))}
+                        onTouchEnd={(e) => handleGoalChange(Number((e.target as HTMLInputElement).value))}
+                        className="w-full accent-[#5052C9] h-1.5 bg-border rounded-lg cursor-pointer transition-all"
+                        aria-label="Weekly Practice Goal Hours"
+                      />
+                      <div className="flex justify-between text-[10px] text-text-muted font-mono">
+                        <span>1 hr</span>
+                        <span>20 hrs</span>
+                        <span>40 hrs</span>
+                      </div>
+                    </div>
+
                     <p className="text-[11px] text-text-muted leading-tight">
                       Recommended for consistent problem-solving readiness.
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl border border-border bg-input space-y-1">
-                    <span className="text-[11px] font-semibold text-text-secondary uppercase font-mono">
-                      Daily Study Cadence
-                    </span>
-                    <p className="text-sm font-bold text-text-primary font-heading">
-                      {formData.dailyStudyTime}
-                    </p>
+                  <div className="p-3.5 rounded-xl border border-border bg-input space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-text-secondary uppercase font-mono">
+                        Daily Study Cadence
+                      </span>
+                      {preferenceSavingKey === "dailyStudyTime" ? (
+                        <span className="text-[10px] text-primary font-mono animate-pulse">Saving...</span>
+                      ) : preferenceSavedMsg && preferenceSavingKey === null ? (
+                        <span className="text-[10px] text-secondary font-mono flex items-center gap-0.5">
+                          <Check className="h-2.5 w-2.5" /> Saved
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div>
+                      <select
+                        value={formData.dailyStudyTime}
+                        onChange={(e) => handleCadenceChange(e.target.value)}
+                        disabled={preferenceSavingKey === "dailyStudyTime"}
+                        className="w-full h-8 text-xs rounded-lg bg-surface border border-border text-text-primary font-semibold px-2.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer transition-colors"
+                        aria-label="Daily Study Cadence"
+                      >
+                        <option value="30 minutes">30 minutes</option>
+                        <option value="1–2 hours">1–2 hours</option>
+                        <option value="2–3 hours">2–3 hours</option>
+                        <option value="3–4 hours">3–4 hours</option>
+                        <option value="5+ hours">5+ hours</option>
+                      </select>
+                    </div>
+
                     <p className="text-[11px] text-text-muted leading-tight">
                       Optimal duration to balance coursework and placement prep.
                     </p>
@@ -891,29 +1278,69 @@ export default function MyProfilePage() {
 
                 {/* Notification Toggles */}
                 <div className="pt-4 border-t border-border space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary font-mono">
-                    Study Reminders &amp; Notification Toggles
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-text-secondary font-mono">
+                      Study Reminders &amp; Notification Toggles
+                    </h4>
+                    {preferenceSavingKey && [
+                      "studyReminders",
+                      "driveAlerts",
+                      "testUpdates",
+                      "aiMistakeTips",
+                    ].includes(preferenceSavingKey) ? (
+                      <span className="text-[10px] text-primary font-mono animate-pulse flex items-center gap-1">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+                      </span>
+                    ) : preferenceSavedMsg && preferenceSavingKey === null ? (
+                      <span className="text-[10px] text-secondary font-mono flex items-center gap-0.5">
+                        <Check className="h-2.5 w-2.5" /> Saved
+                      </span>
+                    ) : null}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     {[
                       { key: "studyReminders", title: "Practice Reminders", desc: "Daily reminders for scheduled questions" },
                       { key: "driveAlerts", title: "Recruitment Alerts", desc: "Instant notice when matching drives launch" },
                       { key: "testUpdates", title: "Assessment Notifications", desc: "Alerts when new test papers are assigned" },
                       { key: "aiMistakeTips", title: "AI Remediation Tips", desc: "Automated analysis for recurrent mistakes" },
-                    ].map((item) => (
-                      <div
-                        key={item.key}
-                        className="flex items-start justify-between p-3 rounded-lg border border-border bg-surface"
-                      >
-                        <div className="space-y-0.5 pr-2">
-                          <span className="font-semibold text-text-primary block">{item.title}</span>
-                          <span className="text-[11px] text-text-muted leading-tight block">{item.desc}</span>
+                    ].map((item) => {
+                      const isEnabled = Boolean(formData[item.key as keyof typeof formData]);
+                      const isSavingThis = preferenceSavingKey === item.key;
+
+                      return (
+                        <div
+                          key={item.key}
+                          className="flex items-start justify-between p-3 rounded-lg border border-border bg-surface transition-colors"
+                        >
+                          <div className="space-y-0.5 pr-2">
+                            <span className="font-semibold text-text-primary block">{item.title}</span>
+                            <span className="text-[11px] text-text-muted leading-tight block">{item.desc}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold font-mono uppercase transition-colors",
+                                isEnabled ? "text-secondary" : "text-text-muted"
+                              )}
+                            >
+                              {isEnabled ? "ON" : "OFF"}
+                            </span>
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={(checked) =>
+                                handleToggleNotification(
+                                  item.key as "studyReminders" | "driveAlerts" | "testUpdates" | "aiMistakeTips",
+                                  checked
+                                )
+                              }
+                              disabled={isSavingThis}
+                              aria-label={item.title}
+                            />
+                          </div>
                         </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[rgba(46,143,134,0.12)] text-secondary">
-                          Active
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>
