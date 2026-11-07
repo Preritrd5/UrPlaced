@@ -306,60 +306,49 @@ pre {
    ======================================================== */
 
 body:has(.fixed.inset-0.z-50),
-body:has([role="dialog"]),
-body:has([data-radix-portal]) {
+body:has([data-radix-portal]),
+body:has([data-modal-open]) {
   overflow: hidden !important;
 }
 
-/* Ensure modal overlays always sit strictly above application headers, sidebars, and sticky controls */
+/* Ensure modal backdrop overlays and radix portals sit strictly above headers, sidebars, and page content */
 .fixed.inset-0,
+.fixed.inset-0.z-50,
+.fixed.inset-0[class*="z-"],
 [class*="fixed"][class*="inset-0"],
-[data-radix-portal],
-div[role="dialog"] {
+[data-radix-portal] {
+  margin: 0 !important;
   z-index: 100 !important;
 }
 
 /* De-elevate sticky headers and sidebars whenever a modal or dialog is present in the DOM */
 body:has(.fixed.inset-0) header,
-body:has([class*="fixed"][class*="inset-0"]) header,
 body:has([role="dialog"]) header,
 body:has([data-radix-portal]) header {
   z-index: 10 !important;
 }
 
 body:has(.fixed.inset-0) aside,
-body:has([class*="fixed"][class*="inset-0"]) aside,
 body:has([role="dialog"]) aside,
 body:has([data-radix-portal]) aside {
   z-index: 10 !important;
 }
 
-/* Ensure the main column and main content container are positioned and elevated above headers and sidebars */
-body:has(.fixed.inset-0) div:has(> main),
-body:has([class*="fixed"][class*="inset-0"]) div:has(> main),
-body:has([role="dialog"]) div:has(> main),
-body:has([data-radix-portal]) div:has(> main) {
-  position: relative;
-  z-index: 90 !important;
-}
-
-body:has(.fixed.inset-0) main,
-body:has([class*="fixed"][class*="inset-0"]) main,
-body:has([role="dialog"]) main,
-body:has([data-radix-portal]) main {
-  position: relative;
-  z-index: 90 !important;
+/* Re-elevate header if the dialog is a popover hosted inside the header itself (e.g. notification center) */
+body:has(header [role="dialog"]) header {
+  z-index: 40 !important;
 }
 
 /* On short viewports or small monitors, prevent modal content truncation by enabling backdrop scroll */
 .fixed.inset-0,
+.fixed.inset-0.z-50,
 .fixed.inset-0[class*="z-"],
 [class*="fixed"][class*="inset-0"] {
   overflow-y: auto !important;
-  align-items: normal !important;
 }
 
 .fixed.inset-0 > *,
+.fixed.inset-0.z-50 > *,
 .fixed.inset-0[class*="z-"] > *,
 [class*="fixed"][class*="inset-0"] > * {
   margin-top: auto;
