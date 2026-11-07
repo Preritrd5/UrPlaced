@@ -207,7 +207,7 @@ export function PlatformSidebar({
         <div className="fixed top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-[#7779D8] to-primary z-[99999] animate-pulse" />
       )}
       {/* Mobile Top Navigation Header */}
-      <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-30">
+      <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-40">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 mr-2">
           <UrPlacedLogo size="sm" className="h-8 w-8 shrink-0" />
           <span className="font-heading font-bold text-base sm:text-lg text-text-primary shrink-0">
@@ -238,6 +238,7 @@ export function PlatformSidebar({
       {/* Mobile Drawer Backdrop */}
       {mobileOpen && (
         <div
+          data-drawer-backdrop="true"
           className="md:hidden fixed inset-0 bg-[rgba(36,40,58,0.55)] z-40 transition-opacity"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"
@@ -246,6 +247,7 @@ export function PlatformSidebar({
 
       {/* Sidebar: Desktop persistent sticky, Mobile slide-over drawer */}
       <aside
+        data-drawer="true"
         className={cn(
           "isolate fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-[min(310px,85vw)] sm:w-72 md:w-64 shrink-0 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-screen h-[100dvh] max-h-[100dvh] shadow-2xl md:shadow-none",
           mobileOpen
@@ -401,7 +403,7 @@ export function PlatformTopNavbar({
   }, [pathname]);
 
   return (
-    <header className="hidden md:flex items-center justify-between h-16 px-6 lg:px-10 bg-card/85 backdrop-blur-sm border-b border-border sticky top-0 z-30 shrink-0">
+    <header className="hidden md:flex items-center justify-between h-16 px-6 lg:px-10 bg-card border-b border-border sticky top-0 z-40 shrink-0">
       {/* Left: Control Plane Context Breadcrumb */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center gap-2 text-sm text-text-secondary truncate">

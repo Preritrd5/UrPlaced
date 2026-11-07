@@ -95,14 +95,15 @@ describe("Mobile Responsiveness Architecture & Component Invariants", () => {
 
     const mobileHeader = container.querySelector("header.md\\:hidden");
     expect(mobileHeader).not.toBeNull();
-    expect(mobileHeader?.className).toContain("z-30");
+    expect(mobileHeader?.className).toMatch(/z-(30|40)/);
 
     const aside = container.querySelector("aside");
     expect(aside).not.toBeNull();
     expect(aside?.className).toContain("isolate");
     expect(aside?.className).toContain("w-[min(310px,85vw)]");
     expect(aside?.className).toContain("h-[100dvh]");
-    expect(aside?.className).toContain("z-50");
+    expect(aside?.className).toMatch(/z-(50|\[60\])/);
+    expect(aside?.getAttribute("data-drawer")).toBe("true");
     expect(aside?.className).toContain("shadow-2xl");
     expect(aside?.className).toContain("pointer-events-none");
   });
@@ -120,6 +121,7 @@ describe("Mobile Responsiveness Architecture & Component Invariants", () => {
     // After clicking toggle, backdrop should be present
     const backdrop = container.querySelector(".fixed.inset-0.z-40");
     expect(backdrop).not.toBeNull();
+    expect(backdrop?.getAttribute("data-drawer-backdrop")).toBe("true");
     expect(backdrop?.className).toContain("bg-[rgba(36,40,58,0.55)]");
     expect(backdrop?.className).not.toContain("backdrop-blur");
   });

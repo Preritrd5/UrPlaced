@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -132,22 +133,55 @@ export function PlatformNotificationBell({
     usePlatformNotifications();
 
   const [isOpen, setIsOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const [panelCoords, setPanelCoords] = React.useState<{ top: number; right: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updatePosition = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPanelCoords({
+      top: rect.bottom + 8,
+      right: Math.max(12, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    }
+  }, [isOpen, updatePosition]);
 
   // Close when clicking outside
   React.useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      const isInsideTrigger = triggerRef.current?.contains(target);
+      const isInsidePanel = panelRef.current?.contains(target);
+      if (!isInsideTrigger && !isInsidePanel) {
         setIsOpen(false);
       }
     }
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
     };
   }, [isOpen]);
 
@@ -186,7 +220,16 @@ export function PlatformNotificationBell({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (!isOpen && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setPanelCoords({
+              top: rect.bottom + 8,
+              right: Math.max(12, window.innerWidth - rect.right),
+            });
+          }
+          setIsOpen((prev) => !prev);
+        }}
         suppressHydrationWarning
         aria-label={
           unreadCount > 0
@@ -217,13 +260,26 @@ export function PlatformNotificationBell({
         )}
       </button>
 
-      {/* Expanded Notification Panel */}
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-label="Platform Notification Center"
-          className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-2 sm:w-96 sm:max-w-[calc(100vw-1.5rem)] bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-[9999] flex flex-col font-sans animate-in fade-in zoom-in-95 duration-150"
-        >
+      {/* Expanded Notification Panel — Portaled to document.body to prevent any button or header overlap */}
+      {isOpen && (() => {
+        const isClient = typeof window !== "undefined";
+        const isDesktop = isClient && window.innerWidth >= 640;
+
+        const panelElement = (
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-label="Platform Notification Center"
+            style={{
+              top: panelCoords ? `${panelCoords.top}px` : undefined,
+              right: panelCoords && isDesktop ? `${panelCoords.right}px` : undefined,
+            }}
+            className={cn(
+              "fixed top-16 z-[99999] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col font-sans animate-in fade-in zoom-in-95 duration-150",
+              "inset-x-3 sm:inset-x-auto sm:w-96 sm:max-w-[calc(100vw-1.5rem)]",
+              "max-h-[min(520px,calc(100dvh-5rem))]"
+            )}
+          >
           {/* Header */}
           <div className="p-3.5 px-4 bg-surface/80 border-b border-border flex items-center justify-between select-none">
             <div className="flex items-center gap-2">
@@ -389,8 +445,14 @@ export function PlatformNotificationBell({
               <ExternalLink className="w-3 h-3" />
             </button>
           </div>
-        </div>
-      )}
+          </div>
+        );
+
+        if (mounted && typeof document !== "undefined") {
+          return createPortal(panelElement, document.body);
+        }
+        return panelElement;
+      })()}
     </div>
   );
 }

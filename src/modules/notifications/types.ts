@@ -164,3 +164,32 @@ export interface RecipientPreviewResult {
   eligibleCount: number;
   students: EligibleStudentItem[];
 }
+
+export interface CollegeBroadcastInput {
+  collegeId: string;
+  actorUserId?: string | null;
+  type: string;
+  source?: NotificationSource;
+  title: string;
+  body: string;
+  actionUrl?: string | null;
+  metadata?: Record<string, any>;
+  deduplicationPrefix?: string;
+  announcementId?: string | null;
+  audienceType?: AnnouncementAudienceType;
+  departmentId?: string;
+  departmentName?: string;
+  selectedStudentIds?: string[];
+  explicitStudentIds?: string[];
+}
+
+export interface CollegeBroadcastResult {
+  success: boolean;
+  eligibleStudentRecords: number;
+  authenticatedRecipients: number;
+  notificationsCreated: number;
+  duplicatesSkipped: number;
+  deliveryFailures: number;
+  recipientUserIds: string[];
+  error?: string;
+}

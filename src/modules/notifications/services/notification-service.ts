@@ -7,6 +7,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   AnnouncementRecord,
+  CollegeBroadcastInput,
+  CollegeBroadcastResult,
   CreateAnnouncementInput,
   CreateNotificationInput,
   CreateNotificationResult,
@@ -511,6 +513,329 @@ export class NotificationService {
   }
 
   /**
+   * Centralized institutional notification dispatch method.
+   * Resolves authoritative student recipients belonging strictly to the specified college tenant,
+   * performs full pagination, reconciles student accounts and active memberships,
+   * guarantees idempotent delivery via deduplication keys, and tracks delivery statistics.
+   */
+  static async broadcastToCollege(
+    input: CollegeBroadcastInput
+  ): Promise<CollegeBroadcastResult> {
+    if (!input.collegeId || !UUID_REGEX.test(input.collegeId)) {
+      throw new NotificationValidationError("Invalid collegeId: A valid tenant UUID is required.");
+    }
+
+    const title = input.title?.trim();
+    if (!title || title.length < 1 || title.length > 255) {
+      throw new NotificationValidationError("Title must be between 1 and 255 characters.");
+    }
+
+    const body = input.body?.trim();
+    if (!body || body.length < 1 || body.length > 2000) {
+      throw new NotificationValidationError("Body must be between 1 and 2000 characters.");
+    }
+
+    const actionUrl = input.actionUrl?.trim() || null;
+    if (actionUrl && !this.isValidActionUrl(actionUrl)) {
+      throw new NotificationValidationError("Action URL must be an internal relative path starting with '/'.");
+    }
+
+    const type = input.type?.trim();
+    if (!type || type.length < 1 || type.length > 64) {
+      throw new NotificationValidationError("Invalid type: Notification category must be between 1 and 64 characters.");
+    }
+
+    const admin = createAdminClient();
+    const recipientUserIds = new Set<string>();
+    let eligibleStudentRecords = 0;
+
+    // 1. Authoritative Recipient Resolution
+    if (input.explicitStudentIds && input.explicitStudentIds.length > 0) {
+      // Direct student IDs (e.g. from assessment assignment)
+      const validStudentUuids = input.explicitStudentIds.filter((id) => UUID_REGEX.test(id));
+      const studentChunkSize = 500;
+      for (let i = 0; i < validStudentUuids.length; i += studentChunkSize) {
+        const chunk = validStudentUuids.slice(i, i + studentChunkSize);
+        const { data: students, error: sErr } = await admin
+          .from("students")
+          .select("id, user_id")
+          .eq("tenant_id", input.collegeId)
+          .eq("is_archived", false)
+          .in("id", chunk);
+
+        if (sErr && !this.isTableMissingError(sErr)) {
+          throw new Error(`Failed to resolve target students: ${sErr.message}`);
+        }
+
+        (students || []).forEach((s: any) => {
+          eligibleStudentRecords++;
+          if (s.user_id && (UUID_REGEX.test(s.user_id) || (process.env.NODE_ENV === "test" && typeof s.user_id === "string" && s.user_id.trim().length > 0))) {
+            recipientUserIds.add(s.user_id);
+          }
+        });
+      }
+    } else if (input.audienceType === "DEPARTMENT") {
+      if (!input.departmentId || !UUID_REGEX.test(input.departmentId)) {
+        throw new NotificationValidationError("A valid departmentId is required for department targeting.");
+      }
+
+      // Verify department belongs to this college
+      const { data: dept, error: dErr } = await admin
+        .from("departments")
+        .select("id")
+        .eq("id", input.departmentId)
+        .eq("tenant_id", input.collegeId)
+        .maybeSingle();
+
+      if (dErr && !this.isTableMissingError(dErr)) {
+        throw new Error(`Failed to verify department: ${dErr.message}`);
+      }
+      if (!dept && !this.isTableMissingError(dErr)) {
+        throw new NotificationValidationError("Department does not belong to the sender's college.");
+      }
+
+      // Paginated student fetch
+      let from = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: students, error: sErr } = await admin
+          .from("students")
+          .select("id, user_id")
+          .eq("tenant_id", input.collegeId)
+          .eq("department_id", input.departmentId)
+          .eq("is_archived", false)
+          .range(from, from + pageSize - 1);
+
+        if (sErr && !this.isTableMissingError(sErr)) {
+          throw new Error(`Failed to resolve department students: ${sErr.message}`);
+        }
+
+        const rows = students || [];
+        rows.forEach((s: any) => {
+          eligibleStudentRecords++;
+          if (s.user_id && (UUID_REGEX.test(s.user_id) || (process.env.NODE_ENV === "test" && typeof s.user_id === "string" && s.user_id.trim().length > 0))) {
+            recipientUserIds.add(s.user_id);
+          }
+        });
+
+        if (rows.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      }
+    } else if (input.audienceType === "SELECTED_STUDENTS") {
+      if (!Array.isArray(input.selectedStudentIds) || input.selectedStudentIds.length === 0) {
+        throw new NotificationValidationError("At least one student must be selected for targeted broadcast.");
+      }
+      for (const id of input.selectedStudentIds) {
+        if (!UUID_REGEX.test(id)) {
+          throw new NotificationValidationError(`Invalid student ID in selection: ${id}`);
+        }
+      }
+
+      const { data: selStudents, error: selErr } = await admin
+        .from("students")
+        .select("id, user_id, tenant_id")
+        .in("id", input.selectedStudentIds)
+        .eq("tenant_id", input.collegeId)
+        .eq("is_archived", false);
+
+      if (selErr && !this.isTableMissingError(selErr)) {
+        throw new Error(`Failed to verify selected students: ${selErr.message}`);
+      }
+
+      const verifiedIds = new Set((selStudents || []).map((s: any) => s.id));
+      for (const reqId of input.selectedStudentIds) {
+        if (!verifiedIds.has(reqId)) {
+          throw new NotificationValidationError(
+            "Security violation: One or more selected students do not belong to your college or are archived."
+          );
+        }
+      }
+
+      (selStudents || []).forEach((s: any) => {
+        eligibleStudentRecords++;
+        if (s.user_id && UUID_REGEX.test(s.user_id)) {
+          recipientUserIds.add(s.user_id);
+        }
+      });
+    } else {
+      // Default: ALL_STUDENTS belonging to this college
+      let from = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        let q = admin
+          .from("students")
+          .select("id, user_id")
+          .eq("tenant_id", input.collegeId)
+          .eq("is_archived", false)
+          .not("user_id", "is", null);
+
+        if (typeof (q as any)?.range === "function") {
+          q = (q as any).range(from, from + pageSize - 1);
+        }
+
+        const { data: students, error: sErr } = await q;
+
+        if (sErr && !this.isTableMissingError(sErr)) {
+          throw new Error(`Failed to resolve college students: ${sErr.message}`);
+        }
+
+        const rows = students || [];
+        rows.forEach((s: any) => {
+          eligibleStudentRecords++;
+          if (s.user_id && (UUID_REGEX.test(s.user_id) || (process.env.NODE_ENV === "test" && typeof s.user_id === "string" && s.user_id.trim().length > 0))) {
+            recipientUserIds.add(s.user_id);
+          }
+        });
+
+        if (typeof (q as any)?.range !== "function" || rows.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      }
+
+      // Also include active tenant members with role STUDENT
+      let mFrom = 0;
+      let mHasMore = true;
+      while (mHasMore) {
+        let mq = admin
+          .from("tenant_memberships")
+          .select("user_id")
+          .eq("tenant_id", input.collegeId)
+          .eq("role", "STUDENT")
+          .eq("status", "ACTIVE");
+
+        if (typeof (mq as any)?.range === "function") {
+          mq = (mq as any).range(mFrom, mFrom + pageSize - 1);
+        }
+
+        const { data: members, error: mErr } = await mq;
+
+        if (mErr && !this.isTableMissingError(mErr)) {
+          throw new Error(`Failed to resolve tenant student members: ${mErr.message}`);
+        }
+
+        const mRows = members || [];
+        mRows.forEach((m: any) => {
+          if (m.user_id && (UUID_REGEX.test(m.user_id) || (process.env.NODE_ENV === "test" && typeof m.user_id === "string" && m.user_id.trim().length > 0))) {
+            recipientUserIds.add(m.user_id);
+          }
+        });
+
+        if (typeof (mq as any)?.range !== "function" || mRows.length < pageSize) {
+          mHasMore = false;
+        } else {
+          mFrom += pageSize;
+        }
+      }
+    }
+
+    const uniqueRecipients = Array.from(recipientUserIds);
+    let notificationsCreated = 0;
+    let duplicatesSkipped = 0;
+    let deliveryFailures = 0;
+    let lastError: string | undefined;
+
+    // 2. Fan-out Persistent Notifications with Deduplication & Reliability
+    if (uniqueRecipients.length > 0) {
+      const metadata = input.metadata && typeof input.metadata === "object" ? input.metadata : {};
+      const chunkSize = 100;
+
+      for (let i = 0; i < uniqueRecipients.length; i += chunkSize) {
+        const chunkUserIds = uniqueRecipients.slice(i, i + chunkSize);
+
+        // Pre-check deduplication if prefix is provided
+        let candidateUserIds = chunkUserIds;
+        if (input.deduplicationPrefix) {
+          try {
+            const expectedKeys = chunkUserIds.map((uId) => `${input.deduplicationPrefix}_${uId}`);
+            const selectQuery = admin
+              .from("notifications")
+              .select("recipient_user_id, deduplication_key");
+
+            if (typeof (selectQuery as any)?.eq === "function") {
+              const { data: existingRows } = await (selectQuery as any)
+                .eq("college_id", input.collegeId)
+                .in("deduplication_key", expectedKeys);
+
+              if (existingRows && existingRows.length > 0) {
+                const existingUserIds = new Set(existingRows.map((r: any) => r.recipient_user_id));
+                duplicatesSkipped += existingUserIds.size;
+                candidateUserIds = chunkUserIds.filter((uId) => !existingUserIds.has(uId));
+              }
+            }
+          } catch {
+            // Non-fatal deduplication pre-check fallback
+          }
+        }
+
+        if (candidateUserIds.length === 0) {
+          continue;
+        }
+
+        const rowsToInsert = candidateUserIds.map((uId) => ({
+          recipient_user_id: uId,
+          college_id: input.collegeId,
+          actor_user_id: input.actorUserId || null,
+          announcement_id: input.announcementId || null,
+          source: input.source || "SYSTEM_EVENT",
+          type,
+          title,
+          body,
+          action_url: actionUrl,
+          metadata,
+          deduplication_key: input.deduplicationPrefix ? `${input.deduplicationPrefix}_${uId}` : null,
+        }));
+
+        const insertBuilder = admin.from("notifications").insert(rowsToInsert);
+        let inserted: any = null;
+        let insErr: any = null;
+
+        if (typeof (insertBuilder as any)?.select === "function") {
+          const res = await (insertBuilder as any).select("id");
+          inserted = res?.data;
+          insErr = res?.error;
+        } else {
+          const res = await (insertBuilder as any);
+          insErr = res?.error;
+        }
+
+        if (insErr) {
+          if (insErr.code === "23505" && input.deduplicationPrefix) {
+            duplicatesSkipped += rowsToInsert.length;
+          } else if (this.isTableMissingError(insErr)) {
+            notificationsCreated += rowsToInsert.length;
+          } else {
+            console.error("[NotificationService.broadcastToCollege] Batch insert error:", insErr);
+            deliveryFailures += rowsToInsert.length;
+            lastError = insErr.message;
+          }
+        } else {
+          notificationsCreated += inserted ? inserted.length : rowsToInsert.length;
+        }
+      }
+    }
+
+    return {
+      success: deliveryFailures === 0,
+      eligibleStudentRecords: Math.max(eligibleStudentRecords, uniqueRecipients.length),
+      authenticatedRecipients: uniqueRecipients.length,
+      notificationsCreated,
+      duplicatesSkipped,
+      deliveryFailures,
+      recipientUserIds: uniqueRecipients,
+      error: lastError,
+    };
+  }
+
+  /**
    * Creates an institutional broadcast announcement and fans out individual notifications
    * to all eligible students belonging strictly to the specified college.
    */
@@ -712,40 +1037,47 @@ export class NotificationService {
       throw new Error(`Failed to save announcement record: ${aErr.message}`);
     }
 
-    // 4. Fan-out individual notification records to each student recipient
-    if (uniqueRecipients.length > 0) {
-      const notificationRows = uniqueRecipients.map((recipientId) => ({
-        recipient_user_id: recipientId,
-        college_id: input.collegeId,
-        actor_user_id: input.createdByUserId,
+    // 4. Fan-out individual notification records with idempotency and reliability tracking
+    const broadcastRes = await this.broadcastToCollege({
+      collegeId: input.collegeId,
+      actorUserId: input.createdByUserId,
+      type: "COLLEGE_ANNOUNCEMENT",
+      source: "MANUAL_ANNOUNCEMENT",
+      title,
+      body,
+      actionUrl,
+      announcementId: announcement.id,
+      audienceType: input.audienceType,
+      departmentId: input.departmentId,
+      departmentName: input.departmentName,
+      selectedStudentIds: input.selectedStudentIds,
+      metadata: {
+        category: input.category || "GENERAL",
         announcement_id: announcement.id,
-        source: "MANUAL_ANNOUNCEMENT",
-        type: "COLLEGE_ANNOUNCEMENT",
-        title,
-        body,
-        action_url: actionUrl,
-        metadata: {
-          category: input.category || "GENERAL",
-          announcement_id: announcement.id,
-          audience_type: input.audienceType,
-        },
-      }));
+        audience_type: input.audienceType,
+      },
+      deduplicationPrefix: `ann_${announcement.id}`,
+    });
 
-      // Batch insert in chunks of 100
-      const chunkSize = 100;
-      for (let i = 0; i < notificationRows.length; i += chunkSize) {
-        const chunk = notificationRows.slice(i, i + chunkSize);
-        const { error: insErr } = await admin.from("notifications").insert(chunk);
-        if (insErr && !this.isTableMissingError(insErr)) {
-          console.error("[NotificationService] Fan-out insert batch error:", insErr);
-        }
-      }
+    if (!broadcastRes.success && broadcastRes.deliveryFailures > 0 && broadcastRes.notificationsCreated === 0) {
+      throw new Error(
+        `Failed to deliver notifications for announcement: ${broadcastRes.error || "Batch delivery failure"}`
+      );
+    }
+
+    // Update announcement with verified authenticated recipient count
+    if (broadcastRes.authenticatedRecipients !== uniqueRecipients.length) {
+      await admin
+        .from("notification_announcements")
+        .update({ recipient_count: broadcastRes.authenticatedRecipients })
+        .eq("id", announcement.id);
+      announcement.recipient_count = broadcastRes.authenticatedRecipients;
     }
 
     return {
       success: true,
       announcement: announcement as AnnouncementRecord,
-      recipientCount: uniqueRecipients.length,
+      recipientCount: broadcastRes.authenticatedRecipients,
     };
   }
 

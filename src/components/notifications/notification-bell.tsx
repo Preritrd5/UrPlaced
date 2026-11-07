@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -76,16 +77,44 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
   } = useNotifications();
 
   const [isOpen, setIsOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const [panelCoords, setPanelCoords] = React.useState<{ top: number; right: number } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updatePosition = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPanelCoords({
+      top: rect.bottom + 8,
+      right: Math.max(12, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+      return () => {
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    }
+  }, [isOpen, updatePosition]);
 
   // Close on outside click
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      const isInsideTrigger = triggerRef.current?.contains(target);
+      const isInsidePanel = panelRef.current?.contains(target);
+      if (!isInsideTrigger && !isInsidePanel) {
         setIsOpen(false);
       }
     }
@@ -138,7 +167,16 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (!isOpen && triggerRef.current) {
+            const rect = triggerRef.current.getBoundingClientRect();
+            setPanelCoords({
+              top: rect.bottom + 8,
+              right: Math.max(12, window.innerWidth - rect.right),
+            });
+          }
+          setIsOpen((prev) => !prev);
+        }}
         suppressHydrationWarning
         aria-label={
           unreadCount > 0
@@ -169,168 +207,187 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
         )}
       </button>
 
-      {/* Expanded Notification Panel */}
-      {isOpen && (
-        <div
-          role="dialog"
-          aria-label="Notification center"
-          className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-2 sm:w-96 sm:max-w-[calc(100vw-1.5rem)] bg-[#F8F7F3] border border-[#DDDCD5] rounded-2xl shadow-xl overflow-hidden z-[9999] flex flex-col font-inter animate-in fade-in zoom-in-95 duration-150"
-        >
-          {/* Header */}
-          <div className="p-3.5 px-4 bg-[#FBFAF7] border-b border-[#DDDCD5] flex items-center justify-between select-none">
-            <div className="flex items-center gap-2">
-              <h3 className="font-outfit font-bold text-sm text-[#24283A]">
-                Notifications
-              </h3>
-              {unreadCount > 0 && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#5052C9]/10 text-[#5052C9]">
-                  {unreadCount} new
-                </span>
-              )}
-            </div>
+      {/* Expanded Notification Panel — Portaled to document.body to prevent any page button or header overlap */}
+      {isOpen && (() => {
+        const isClient = typeof window !== "undefined";
+        const isDesktop = isClient && window.innerWidth >= 640;
 
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => markAllAsRead()}
-                  className="text-xs text-[#5052C9] hover:text-[#4345B0] font-medium flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-[#5052C9]/5"
-                  title="Mark all as read"
-                >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  <span>Mark all read</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="p-1 text-[#292D40]/60 hover:text-[#24283A] rounded-lg hover:bg-[#EDECE7] transition-colors"
-                aria-label="Close notifications"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+        const panelElement = (
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-label="Notification center"
+            style={{
+              top: panelCoords ? `${panelCoords.top}px` : undefined,
+              right: panelCoords && isDesktop ? `${panelCoords.right}px` : undefined,
+            }}
+            className={cn(
+              "fixed top-16 z-[99999] bg-[#F8F7F3] border border-[#DDDCD5] rounded-2xl shadow-2xl overflow-hidden flex flex-col font-inter animate-in fade-in zoom-in-95 duration-150",
+              "inset-x-3 sm:inset-x-auto sm:w-96 sm:max-w-[calc(100vw-1.5rem)]",
+              "max-h-[min(520px,calc(100dvh-5rem))]"
+            )}
+          >
+            {/* Header */}
+            <div className="p-3.5 px-4 bg-[#FBFAF7] border-b border-[#DDDCD5] flex items-center justify-between select-none">
+              <div className="flex items-center gap-2">
+                <h3 className="font-outfit font-bold text-sm text-[#24283A]">
+                  Notifications
+                </h3>
+                {unreadCount > 0 && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#5052C9]/10 text-[#5052C9]">
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
 
-          {/* Body Content */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-[#DDDCD5]/50">
-            {isLoading && notifications.length === 0 ? (
-              /* Loading Skeleton */
-              <div className="p-4 space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex gap-3 items-center">
-                    <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-3 w-3/4" />
-                      <Skeleton className="h-2.5 w-1/2" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : error ? (
-              /* Error State */
-              <div className="p-6 text-center space-y-2">
-                <AlertCircle className="w-6 h-6 text-red-500 mx-auto" />
-                <p className="text-xs text-[#24283A] font-medium">
-                  Failed to load notifications
-                </p>
-                <button
-                  type="button"
-                  onClick={() => refetch()}
-                  className="text-xs text-[#5052C9] hover:underline font-semibold"
-                >
-                  Try again
-                </button>
-              </div>
-            ) : notifications.length === 0 ? (
-              /* Empty State */
-              <div className="py-12 px-6 text-center space-y-2 select-none">
-                <div className="w-10 h-10 rounded-full bg-[#EDECE7] text-[#292D40]/50 flex items-center justify-center mx-auto mb-3">
-                  <Inbox className="w-5 h-5" />
-                </div>
-                <h4 className="font-outfit font-semibold text-sm text-[#24283A]">
-                  You&apos;re all caught up
-                </h4>
-                <p className="text-xs text-[#292D40]/70 max-w-[220px] mx-auto leading-relaxed">
-                  You don&apos;t have any notifications right now.
-                </p>
-              </div>
-            ) : (
-              /* Populated Notification List */
-              notifications.map((notif) => {
-                const isUnread = !notif.read_at;
-                const timeText = formatRelativeTime(notif.created_at);
-
-                return (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleNotificationClick(notif)}
-                    className={cn(
-                      "p-3.5 px-4 flex items-start gap-3 transition-colors cursor-pointer text-left relative group",
-                      isUnread
-                        ? "bg-white hover:bg-[#FBFAF7]"
-                        : "bg-transparent hover:bg-white/60 opacity-80 hover:opacity-100"
-                    )}
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => markAllAsRead()}
+                    className="text-xs text-[#5052C9] hover:text-[#4345B0] font-medium flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-[#5052C9]/5"
+                    title="Mark all as read"
                   >
-                    {/* Category Icon */}
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    <span>Mark all read</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="p-1 text-[#292D40]/60 hover:text-[#24283A] rounded-lg hover:bg-[#EDECE7] transition-colors"
+                  aria-label="Close notifications"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body Content */}
+            <div className="max-h-[380px] overflow-y-auto divide-y divide-[#DDDCD5]/50">
+              {isLoading && notifications.length === 0 ? (
+                /* Loading Skeleton */
+                <div className="p-4 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex gap-3 items-center">
+                      <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-2.5 w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : error ? (
+                /* Error State */
+                <div className="p-6 text-center space-y-2">
+                  <AlertCircle className="w-6 h-6 text-red-500 mx-auto" />
+                  <p className="text-xs text-[#24283A] font-medium">
+                    Failed to load notifications
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => refetch()}
+                    className="text-xs text-[#5052C9] hover:underline font-semibold"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : notifications.length === 0 ? (
+                /* Empty State */
+                <div className="py-12 px-6 text-center space-y-2 select-none">
+                  <div className="w-10 h-10 rounded-full bg-[#EDECE7] text-[#292D40]/50 flex items-center justify-center mx-auto mb-3">
+                    <Inbox className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-outfit font-semibold text-sm text-[#24283A]">
+                    You&apos;re all caught up
+                  </h4>
+                  <p className="text-xs text-[#292D40]/70 max-w-[220px] mx-auto leading-relaxed">
+                    You don&apos;t have any notifications right now.
+                  </p>
+                </div>
+              ) : (
+                /* Populated Notification List */
+                notifications.map((notif) => {
+                  const isUnread = !notif.read_at;
+                  const timeText = formatRelativeTime(notif.created_at);
+
+                  return (
                     <div
+                      key={notif.id}
+                      onClick={() => handleNotificationClick(notif)}
                       className={cn(
-                        "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border mt-0.5",
+                        "p-3.5 px-4 flex items-start gap-3 transition-colors cursor-pointer text-left relative group",
                         isUnread
-                          ? "bg-[#5052C9]/10 border-[#5052C9]/20"
-                          : "bg-[#EDECE7] border-[#DDDCD5]"
+                          ? "bg-white hover:bg-[#FBFAF7]"
+                          : "bg-transparent hover:bg-white/60 opacity-80 hover:opacity-100"
                       )}
                     >
-                      {getNotificationIcon(notif.type)}
-                    </div>
+                      {/* Category Icon */}
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border mt-0.5",
+                          isUnread
+                            ? "bg-[#5052C9]/10 border-[#5052C9]/20"
+                            : "bg-[#EDECE7] border-[#DDDCD5]"
+                        )}
+                      >
+                        {getNotificationIcon(notif.type)}
+                      </div>
 
-                    {/* Text Body */}
-                    <div className="flex-1 min-w-0 pr-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4
-                          className={cn(
-                            "text-xs leading-snug truncate",
-                            isUnread
-                              ? "font-bold text-[#24283A]"
-                              : "font-medium text-[#292D40]"
+                      {/* Text Body */}
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4
+                            className={cn(
+                              "text-xs leading-snug truncate",
+                              isUnread
+                                ? "font-bold text-[#24283A]"
+                                : "font-medium text-[#292D40]"
+                            )}
+                          >
+                            {notif.title}
+                          </h4>
+                          {timeText && (
+                            <span className="text-[10px] text-[#292D40]/50 whitespace-nowrap shrink-0">
+                              {timeText}
+                            </span>
                           )}
-                        >
-                          {notif.title}
-                        </h4>
-                        {timeText && (
-                          <span className="text-[10px] text-[#292D40]/50 whitespace-nowrap shrink-0">
-                            {timeText}
-                          </span>
+                        </div>
+                        <p className="text-xs text-[#292D40]/80 line-clamp-2 mt-0.5 leading-relaxed">
+                          {notif.body}
+                        </p>
+
+                        {notif.action_url && (
+                          <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[#5052C9]">
+                            <span>View details</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </div>
                         )}
                       </div>
-                      <p className="text-xs text-[#292D40]/80 line-clamp-2 mt-0.5 leading-relaxed">
-                        {notif.body}
-                      </p>
 
-                      {notif.action_url && (
-                        <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[#5052C9]">
-                          <span>View details</span>
-                          <ExternalLink className="w-2.5 h-2.5" />
+                      {/* Unread Dot Indicator */}
+                      {isUnread && (
+                        <div className="shrink-0 pt-1.5">
+                          <span
+                            className="block w-2 h-2 rounded-full bg-[#5052C9]"
+                            title="Unread notification"
+                          />
                         </div>
                       )}
                     </div>
-
-                    {/* Unread Dot Indicator */}
-                    {isUnread && (
-                      <div className="shrink-0 pt-1.5">
-                        <span
-                          className="block w-2 h-2 rounded-full bg-[#5052C9]"
-                          title="Unread notification"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+
+        if (mounted && typeof document !== "undefined") {
+          return createPortal(panelElement, document.body);
+        }
+        return panelElement;
+      })()}
     </div>
   );
 }

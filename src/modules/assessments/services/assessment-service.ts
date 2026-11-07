@@ -398,7 +398,7 @@ export class AssessmentService {
 
     const { data: assessment, error: getErr } = await supabase
       .from("assessments")
-      .select("id, question_set_id, status")
+      .select("id, question_set_id, status, title")
       .eq("tenant_id", tenantId)
       .eq("id", assessmentId)
       .single();
@@ -461,6 +461,41 @@ export class AssessmentService {
 
     if (upErr) {
       return { success: false, error: upErr.message };
+    }
+
+    // Check if active student assignments exist for this newly published assessment
+    try {
+      const { data: assignments } = await supabase
+        .from("assessment_assignments")
+        .select("student_id")
+        .eq("tenant_id", tenantId)
+        .eq("assessment_id", assessmentId)
+        .eq("status", "ACTIVE");
+
+      if (assignments && assignments.length > 0) {
+        const studentIds = assignments
+          .map((a: any) => a.student_id)
+          .filter((id: any) => Boolean(id));
+
+        const { NotificationService } = await import("@/modules/notifications/services/notification-service");
+        await NotificationService.broadcastToCollege({
+          collegeId: tenantId,
+          type: "ASSESSMENT_ASSIGNED",
+          source: "SYSTEM_EVENT",
+          title: "New Assessment Published",
+          body: `Your College Placement Office has published a new assessment: "${assessment.title || "New Assessment"}". Visit Assessments & Practice to check your available assessments.`,
+          actionUrl: "/dashboard/student/assessments",
+          metadata: {
+            assessment_id: assessmentId,
+            assessment_title: assessment.title,
+          },
+          deduplicationPrefix: `assess_${assessmentId}_published`,
+          explicitStudentIds: studentIds.length > 0 ? studentIds : undefined,
+          audienceType: studentIds.length === 0 ? "ALL_STUDENTS" : undefined,
+        });
+      }
+    } catch (notifErr) {
+      console.error("[AssessmentService.publishAssessment] Notification broadcast error:", notifErr);
     }
 
     return { success: true };

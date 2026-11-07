@@ -4,9 +4,10 @@
  * Ensures zero cross-session leakage when user accounts or sessions change.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationContext } from "../context/notification-context";
 import type { NotificationRecord } from "../types";
 
 export interface UseNotificationsReturn {
@@ -17,6 +18,8 @@ export interface UseNotificationsReturn {
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refetch: () => Promise<void>;
+  activeToasts?: NotificationRecord[];
+  dismissToast?: (notificationId: string) => void;
 }
 
 // Shared in-flight deduplication cache to prevent concurrent redundant fetches (e.g. from mobile and desktop bells)
@@ -25,6 +28,7 @@ let lastFetchTimestamp = 0;
 let cachedResult: { notifications: NotificationRecord[]; unreadCount: number; userId: string } | null = null;
 
 export function useNotifications(): UseNotificationsReturn {
+  const context = useContext(NotificationContext);
   const auth = useAuthContext();
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -35,6 +39,7 @@ export function useNotifications(): UseNotificationsReturn {
 
   // Fetch notifications from server API
   const fetchNotifications = useCallback(async (isInitial = false) => {
+    if (context) return;
     if (!auth.isAuthenticated || !auth.userId) {
       setNotifications([]);
       setUnreadCount(0);
@@ -91,10 +96,11 @@ export function useNotifications(): UseNotificationsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [auth.isAuthenticated, auth.userId]);
+  }, [auth.isAuthenticated, auth.userId, context]);
 
   // Main lifecycle: Session attachment and Realtime subscription
   useEffect(() => {
+    if (context) return;
     // 1. Session boundary guard: Clear state when signed out or switching users
     if (!auth.isAuthenticated || !auth.userId) {
       activeUserIdRef.current = null;
@@ -209,7 +215,7 @@ export function useNotifications(): UseNotificationsReturn {
         }
       }
     };
-  }, [auth.isAuthenticated, auth.userId, fetchNotifications]);
+  }, [auth.isAuthenticated, auth.userId, context, fetchNotifications]);
 
   // Mark single notification as read (optimistic)
   const markAsRead = useCallback(
@@ -264,6 +270,10 @@ export function useNotifications(): UseNotificationsReturn {
       fetchNotifications(false);
     }
   }, [fetchNotifications]);
+
+  if (context) {
+    return context;
+  }
 
   return {
     notifications,

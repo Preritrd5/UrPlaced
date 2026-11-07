@@ -13,6 +13,7 @@ import {
 } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { NotificationService } from "@/modules/notifications/services/notification-service";
 
 export interface AssignAssessmentInput {
   assessment_id: string;
@@ -466,6 +467,7 @@ export class AssignmentService {
       (hasCohortHeaderRow || rowsToInsert.length > 0) ? 1 : 0
     );
 
+    let createdCount = 0;
     if (rowsToInsert.length > 0) {
       const { data, error } = await admin
         .from("assessment_assignments")
@@ -475,17 +477,35 @@ export class AssignmentService {
       if (error) {
         return { success: false, createdCount: 0, error: error.message };
       }
+      createdCount = data ? data.length : 0;
+    }
 
-      return {
-        success: true,
-        createdCount: data ? data.length : 0,
-        recipientCount: totalActiveRecipients,
-      };
+    // 7. Dispatch real-time student notification for published assessment assignment
+    try {
+      await NotificationService.broadcastToCollege({
+        collegeId: tenantId,
+        actorUserId: assignedByUserId,
+        type: "ASSESSMENT_ASSIGNED",
+        source: "SYSTEM_EVENT",
+        title: "New Assessment Published",
+        body: `Your College Placement Office has published a new assessment: "${assessment.title}". Visit Assessments & Practice to check your available assessments.`,
+        actionUrl: "/dashboard/student/assessments",
+        metadata: {
+          assessment_id: assessment.id,
+          assessment_title: assessment.title,
+          cohort_name: effectiveCohortName,
+        },
+        deduplicationPrefix: `assess_${assessment.id}_${(effectiveCohortName || "default").replace(/\s+/g, "_")}`,
+        explicitStudentIds: resolvedStudentIds.length > 0 ? resolvedStudentIds : undefined,
+        audienceType: resolvedStudentIds.length === 0 ? "ALL_STUDENTS" : undefined,
+      });
+    } catch (notifErr) {
+      console.error("[AssignmentService] Failed to broadcast assessment notification:", notifErr);
     }
 
     return {
       success: true,
-      createdCount: 0,
+      createdCount,
       recipientCount: totalActiveRecipients,
     };
   }

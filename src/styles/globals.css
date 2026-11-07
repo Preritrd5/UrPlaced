@@ -177,18 +177,15 @@ body {
 /* ========================================================
    MOBILE VIEWPORT & CHROMIUM COMPOSITOR BACKDROP FIX
    ======================================================== */
-@media (max-width: 768px) {
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
   body {
     background-attachment: scroll !important;
   }
 
-  /* Prevent Chromium mobile Blink compositor backdrop-filter bleeding/blur bugs */
-  .backdrop-blur-xs,
-  .backdrop-blur-sm,
-  .backdrop-blur-md,
-  .backdrop-blur,
-  .backdrop-blur-lg,
-  .backdrop-blur-xl {
+  /* Prevent Chromium mobile Blink/WebKit compositor backdrop-filter bleeding/blur bugs */
+  *,
+  *::before,
+  *::after {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
@@ -332,53 +329,61 @@ body:has([data-modal-open]) {
 }
 
 /* Ensure modal backdrop overlays and radix portals sit strictly above headers, sidebars, and page content */
-.fixed.inset-0,
-.fixed.inset-0.z-50,
-.fixed.inset-0[class*="z-"],
-[class*="fixed"][class*="inset-0"],
+.fixed.inset-0.z-50:not([data-drawer-backdrop]),
+.fixed.inset-0[class*="z-50"]:not([data-drawer-backdrop]),
 [data-radix-portal] {
   margin: 0 !important;
   z-index: 100 !important;
 }
 
-/* De-elevate sticky headers and sidebars whenever a modal or dialog is present in the DOM */
-body:has(.fixed.inset-0) header,
-body:has([role="dialog"]) header,
-body:has([data-radix-portal]) header {
+/* Mobile Navigation Drawer & Backdrop Hierarchy */
+[data-drawer-backdrop] {
+  margin: 0 !important;
+  z-index: 40 !important;
+}
+
+@media (max-width: 767px) {
+  aside[data-drawer="true"] {
+    z-index: 50 !important;
+  }
+}
+
+/* De-elevate sticky headers and sidebars ONLY when a full-screen modal or dialog overlay is present */
+body:has(.fixed.inset-0.z-50:not([data-drawer-backdrop])) header,
+body:has([data-modal-open]) header,
+body:has([data-radix-portal]:has([role="dialog"]:not([aria-label*="Notification" i]))) header {
   z-index: 10 !important;
 }
 
-body:has(.fixed.inset-0) aside,
-body:has([role="dialog"]) aside,
-body:has([data-radix-portal]) aside {
+body:has(.fixed.inset-0.z-50:not([data-drawer-backdrop])) aside,
+body:has([data-modal-open]) aside,
+body:has([data-radix-portal]:has([role="dialog"]:not([aria-label*="Notification" i]))) aside {
   z-index: 10 !important;
 }
 
-/* Re-elevate header and popovers if the dialog is hosted inside the header itself (e.g. notification center) */
+/* Ensure notification centers, popovers, and toast overlays always have maximum elevation */
+[aria-label*="Notification" i][role="dialog"],
+[aria-label*="Notification Center" i][role="dialog"],
 header [role="dialog"],
 header [aria-label*="Notification" i] {
-  z-index: 9999 !important;
+  z-index: 99999 !important;
 }
 
 body:has(header [role="dialog"]) header,
 body:has(header [aria-label*="Notification" i]) header,
 header:has([role="dialog"]),
 header:has([aria-label*="Notification" i]) {
-  z-index: 9999 !important;
+  z-index: 99999 !important;
 }
 
 /* On short viewports or small monitors, prevent modal content truncation by enabling backdrop scroll */
-.fixed.inset-0,
-.fixed.inset-0.z-50,
-.fixed.inset-0[class*="z-"],
-[class*="fixed"][class*="inset-0"] {
+.fixed.inset-0.z-50:not([data-drawer-backdrop]),
+.fixed.inset-0[class*="z-50"]:not([data-drawer-backdrop]) {
   overflow-y: auto !important;
 }
 
-.fixed.inset-0 > *,
-.fixed.inset-0.z-50 > *,
-.fixed.inset-0[class*="z-"] > *,
-[class*="fixed"][class*="inset-0"] > * {
+.fixed.inset-0.z-50:not([data-drawer-backdrop]) > *,
+.fixed.inset-0[class*="z-50"]:not([data-drawer-backdrop]) > * {
   margin-top: auto;
   margin-bottom: auto;
 }
