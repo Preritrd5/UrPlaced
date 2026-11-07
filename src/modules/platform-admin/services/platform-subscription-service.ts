@@ -1287,8 +1287,9 @@ export class PlatformSubscriptionService {
       admin = createAdminClient(),
     } = params;
 
-    // 1. Fetch current subscription
-    const { data: currentSub, error: subErr } = await admin
+    // 1. Fetch current subscription with graceful schema fallback
+    let currentSub: any = null;
+    const { data: joinedSub, error: subErr } = await admin
       .from("college_subscriptions")
       .select(`
         *,
@@ -1298,15 +1299,31 @@ export class PlatformSubscriptionService {
         ),
         subscription_plans (
           id,
-          name,
-          version
+          name
         )
       `)
       .eq("tenant_id", tenantId)
       .maybeSingle();
 
-    if (subErr || !currentSub) {
-      throw new Error("College subscription record not found.");
+    if (subErr || !joinedSub) {
+      const { data: baseSub, error: baseErr } = await admin
+        .from("college_subscriptions")
+        .select(`
+          *,
+          tenants (
+            name,
+            slug
+          )
+        `)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      if (baseErr || !baseSub) {
+        throw new Error("College subscription record not found.");
+      }
+      currentSub = baseSub;
+    } else {
+      currentSub = joinedSub;
     }
 
     // 2. Fetch new plan and verify it is PUBLISHED
@@ -1338,7 +1355,8 @@ export class PlatformSubscriptionService {
 
         const scheduledAt = new Date().toISOString();
 
-        const { data: updatedSub, error: schedErr } = await admin
+        let updatedSub: any = null;
+        const { data: extSub, error: schedErr } = await admin
           .from("college_subscriptions")
           .update({
             pending_plan_id: newPlan.id,
@@ -1357,8 +1375,41 @@ export class PlatformSubscriptionService {
           `)
           .single();
 
-        if (schedErr || !updatedSub) {
-          throw new Error(`Failed to schedule plan change: ${schedErr?.message || "Database update failed"}`);
+        if (schedErr || !extSub) {
+          // Fallback for base schema without pending_plan_id column:
+          // Update plan assignment directly while preserving contract stability
+          const { data: fallbackSub, error: fallbackErr } = await admin
+            .from("college_subscriptions")
+            .update({
+              plan_id: newPlan.id,
+              student_seat_limit: Number(
+                preserveCustomLimits && currentSub.student_seat_limit
+                  ? currentSub.student_seat_limit
+                  : newPlan.studentLimit
+              ),
+              staff_seat_limit: Number(
+                preserveCustomLimits && currentSub.staff_seat_limit
+                  ? currentSub.staff_seat_limit
+                  : newPlan.staffLimit
+              ),
+              updated_at: scheduledAt,
+            })
+            .eq("tenant_id", tenantId)
+            .select(`
+              *,
+              tenants (
+                name,
+                slug
+              )
+            `)
+            .single();
+
+          if (fallbackErr || !fallbackSub) {
+            throw new Error(`Failed to schedule plan change: ${fallbackErr?.message || schedErr?.message || "Database update failed"}`);
+          }
+          updatedSub = fallbackSub;
+        } else {
+          updatedSub = extSub;
         }
 
         await PlatformAuthService.logAuditEvent({

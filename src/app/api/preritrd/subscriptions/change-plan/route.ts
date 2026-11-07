@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to change subscription plan";
-    const status = msg.includes("not found")
+    const status = msg === "College subscription record not found." || msg.includes("does not exist")
       ? 404
-      : msg.includes("Only PUBLISHED plans") || msg.includes("overrideReason")
+      : msg.includes("Only PUBLISHED plans") || msg.includes("overrideReason") || msg.includes("required")
       ? 400
       : msg.includes("UNAUTHORIZED")
       ? 401
