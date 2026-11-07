@@ -19,6 +19,7 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 export default function StudentPlacementMemoryPage() {
   const [records, setRecords] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
@@ -38,9 +39,10 @@ export default function StudentPlacementMemoryPage() {
   async function loadMemoryData() {
     setLoading(true);
     try {
-      const [recRes, repRes] = await Promise.all([
+      const [recRes, repRes, compRes] = await Promise.all([
         fetch("/api/student/memory/records"),
         fetch("/api/student/memory/reports"),
+        fetch("/api/placement/companies?pageSize=50").catch(() => null),
       ]);
       if (recRes.ok) {
         const json = await recRes.json();
@@ -49,6 +51,14 @@ export default function StudentPlacementMemoryPage() {
       if (repRes.ok) {
         const json = await repRes.json();
         setReports(json.reports || []);
+      }
+      if (compRes && compRes.ok) {
+        const json = await compRes.json();
+        const list = json.companies || json.data || [];
+        setCompanies(list);
+        if (list.length > 0) {
+          setCompanyId(list[0].id);
+        }
       }
     } catch (err) {
       console.error("Error loading student memory:", err);
@@ -68,8 +78,10 @@ export default function StudentPlacementMemoryPage() {
     setFeedback(null);
     try {
       // For student debrief, we submit rounds described
+      const selectedComp = companies.find((c) => c.id === companyId);
       const payload = {
-        companyId: companyId || (records[0]?.company_id || "00000000-0000-0000-0000-000000000000"),
+        companyId: companyId || companies[0]?.id || undefined,
+        companyName: selectedComp?.name || "Hiring Partner",
         roleTitle,
         recruitmentCycle,
         roundsDescribed: [
@@ -145,6 +157,25 @@ export default function StudentPlacementMemoryPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmitReport} className="space-y-4">
+              {companies.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold text-[#24283A] block mb-1">
+                    Company *
+                  </label>
+                  <select
+                    value={companyId}
+                    onChange={(e) => setCompanyId(e.target.value)}
+                    className="w-full text-sm p-2 rounded bg-white border border-[#DDDCD5] focus:ring-2 focus:ring-[#5052C9]"
+                  >
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-[#24283A] block mb-1">

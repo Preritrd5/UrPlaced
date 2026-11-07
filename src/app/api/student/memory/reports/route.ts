@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
+import { StudentService } from "@/modules/students/services/student-service";
 import {
   ReportModerationService,
   SubmitExperienceReportInput,
@@ -40,9 +41,13 @@ export async function POST(request: NextRequest) {
     const authContext = await requireAuthContext(Permissions.EXPERIENCE_REPORTS_SUBMIT);
     const body: SubmitExperienceReportInput = await request.json();
 
+    // Resolve student record to ensure valid student foreign key
+    const student = await StudentService.getByUserId(authContext.tenantId, authContext.userId);
+    const studentId = student?.id || authContext.userId;
+
     const result = await ReportModerationService.submitReport(
       authContext.tenantId,
-      authContext.userId,
+      studentId,
       body
     );
 

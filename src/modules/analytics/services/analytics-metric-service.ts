@@ -139,7 +139,7 @@ export class AnalyticsMetricService {
       .from("assessment_attempts")
       .select("id, score_percentage, status")
       .eq("tenant_id", tenantId)
-      .in("status", ["SUBMITTED", "GRADED"]);
+      .in("status", ["SUBMITTED", "SCORED", "RESULT_RELEASED", "GRADED"]);
 
     const attemptList = attempts || [];
     const completedCount = attemptList.length;

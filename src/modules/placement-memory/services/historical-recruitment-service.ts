@@ -15,6 +15,7 @@ import {
   Json,
 } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface CreateHistoricalRecordInput {
   companyId: string;
@@ -57,7 +58,7 @@ export class HistoricalRecruitmentService {
       return { success: false, error: "Missing required recruitment record fields." };
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const insertPayload = {
       tenant_id: tenantId,
@@ -103,7 +104,7 @@ export class HistoricalRecruitmentService {
     tenantId: string,
     filter?: HistoricalRecordFilter
   ): Promise<{ success: boolean; records: HistoricalRecruitmentRecordRow[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     let query = supabase
       .from("historical_recruitment_records")
@@ -142,7 +143,7 @@ export class HistoricalRecruitmentService {
     tenantId: string,
     recordId: string
   ): Promise<{ success: boolean; record?: HistoricalRecruitmentRecordRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from("historical_recruitment_records")
@@ -166,7 +167,7 @@ export class HistoricalRecruitmentService {
     recordId: string,
     questionSetId: string
   ): Promise<{ success: boolean; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { error } = await supabase
       .from("historical_recruitment_records")
@@ -192,7 +193,7 @@ export class HistoricalRecruitmentService {
     recordId: string,
     supersededById: string
   ): Promise<{ success: boolean; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { error } = await supabase
       .from("historical_recruitment_records")

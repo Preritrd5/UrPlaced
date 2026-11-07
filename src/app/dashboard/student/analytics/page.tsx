@@ -184,8 +184,8 @@ export default function StudentAnalyticsPage() {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <Badge
-                          variant={att.status === "SUBMITTED" || att.status === "GRADED" ? "outline" : "secondary"}
-                          className={att.status === "SUBMITTED" || att.status === "GRADED" ? "border-[#2E8F86] text-[#2E8F86]" : ""}
+                          variant={["SUBMITTED", "SCORED", "RESULT_RELEASED", "GRADED"].includes(att.status) ? "outline" : "secondary"}
+                          className={["SUBMITTED", "SCORED", "RESULT_RELEASED", "GRADED"].includes(att.status) ? "border-[#2E8F86] text-[#2E8F86]" : ""}
                         >
                           {att.status}
                         </Badge>

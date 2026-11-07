@@ -15,10 +15,12 @@ import {
   Json,
 } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { HistoricalRecruitmentService } from "./historical-recruitment-service";
 
 export interface SubmitExperienceReportInput {
-  companyId: string;
+  companyId?: string;
+  companyName?: string;
   driveId?: string | null;
   academicYearId?: string | null;
   roleTitle: string;
@@ -44,15 +46,58 @@ export class ReportModerationService {
     studentId: string,
     input: SubmitExperienceReportInput
   ): Promise<{ success: boolean; report?: RecruitmentExperienceReportRow; error?: string }> {
-    if (!input.companyId || !input.roleTitle || !input.recruitmentCycle || !input.roundsDescribed) {
+    if ((!input.companyId && !input.companyName) || !input.roleTitle || !input.recruitmentCycle || !input.roundsDescribed) {
       return { success: false, error: "Missing required recruitment report fields." };
     }
 
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
+
+    let resolvedCompanyId = input.companyId;
+
+    if (resolvedCompanyId) {
+      const { data: existing } = await supabase
+        .from("companies")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("id", resolvedCompanyId)
+        .maybeSingle();
+      if (!existing) {
+        resolvedCompanyId = undefined;
+      }
+    }
+
+    if (!resolvedCompanyId) {
+      const targetName = (input.companyName || "Hiring Partner").trim();
+      const { data: compByName } = await supabase
+        .from("companies")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .ilike("name", targetName)
+        .maybeSingle();
+
+      if (compByName) {
+        resolvedCompanyId = compByName.id;
+      } else {
+        const { data: createdComp } = await supabase
+          .from("companies")
+          .insert({
+            tenant_id: tenantId,
+            name: targetName,
+            industry: "Technology",
+          })
+          .select("id")
+          .single();
+        resolvedCompanyId = createdComp?.id;
+      }
+    }
+
+    if (!resolvedCompanyId) {
+      return { success: false, error: "Unable to associate report with a valid company." };
+    }
 
     const insertPayload = {
       tenant_id: tenantId,
-      company_id: input.companyId,
+      company_id: resolvedCompanyId,
       drive_id: input.driveId || null,
       academic_year_id: input.academicYearId || null,
       role_title: input.roleTitle.trim(),
@@ -95,11 +140,11 @@ export class ReportModerationService {
   public static async listPendingReports(
     tenantId: string
   ): Promise<{ success: boolean; reports: RecruitmentExperienceReportRow[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from("recruitment_experience_reports")
-      .select("*, companies(name), students(full_name, roll_number)")
+      .select("*, companies(name), students(full_name, enrollment_number)")
       .eq("tenant_id", tenantId)
       .eq("moderation_status", "PENDING")
       .order("created_at", { ascending: false });
@@ -128,7 +173,7 @@ export class ReportModerationService {
     auditLog?: ExperienceReportModerationLogRow;
     error?: string;
   }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch current report
     const { data: currentReport, error: fetchErr } = await supabase
@@ -211,11 +256,11 @@ export class ReportModerationService {
     filter: { companyId?: string; driveId?: string },
     isStaff: boolean
   ): Promise<{ success: boolean; reports: Partial<RecruitmentExperienceReportRow>[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     let query = supabase
       .from("recruitment_experience_reports")
-      .select("*, companies(name), students(full_name, roll_number)")
+      .select("*, companies(name), students(full_name, enrollment_number)")
       .eq("tenant_id", tenantId)
       .eq("moderation_status", "APPROVED");
 
@@ -238,7 +283,7 @@ export class ReportModerationService {
         return {
           ...rep,
           student_id: null,
-          students: { full_name: "Anonymous Candidate", roll_number: "REDACTED" },
+          students: { full_name: "Anonymous Candidate", enrollment_number: "REDACTED", roll_number: "REDACTED" },
         };
       }
       return rep;

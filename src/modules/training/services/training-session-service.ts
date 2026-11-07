@@ -261,7 +261,7 @@ export class TrainingSessionService {
       .eq("tenant_id", tenantId)
       .eq("assessment_id", session.baseline_assessment_id)
       .in("student_id", attendedStudentIds)
-      .in("status", ["SUBMITTED", "GRADED"]);
+      .in("status", ["SUBMITTED", "SCORED", "RESULT_RELEASED", "GRADED"]);
 
     if (baseErr) {
       return { success: false, error: baseErr.message };
@@ -274,7 +274,7 @@ export class TrainingSessionService {
       .eq("tenant_id", tenantId)
       .eq("assessment_id", session.follow_up_assessment_id)
       .in("student_id", attendedStudentIds)
-      .in("status", ["SUBMITTED", "GRADED"]);
+      .in("status", ["SUBMITTED", "SCORED", "RESULT_RELEASED", "GRADED"]);
 
     if (followErr) {
       return { success: false, error: followErr.message };

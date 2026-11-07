@@ -1,27 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthContext } from "@/lib/auth/server-context";
 import { Permissions } from "@/modules/identity-access/services/policy-engine";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { StudentService } from "@/modules/students/services/student-service";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const authContext = await requireAuthContext(Permissions.ANALYTICS_READ_OWN);
-    const supabase = await createServerSupabaseClient();
-    const studentId = authContext.userId;
+    let token: string | undefined;
+    const authHeader = request?.headers?.get?.("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    const authContext = await requireAuthContext(Permissions.ANALYTICS_READ_OWN, undefined, token);
+    const admin = createAdminClient();
+
+    // 0. Resolve student record strictly by tenant and user
+    const student = await StudentService.getByUserId(authContext.tenantId, authContext.userId);
+    const studentId = student?.id || authContext.userId;
 
     // 1. Assessment attempts summary
-    const { data: attempts } = await supabase
+    const { data: attempts, error: attemptsErr } = await admin
       .from("assessment_attempts")
-      .select("id, assessment_id, score_percentage, status, started_at, completed_at, assessments(title)")
+      .select("id, assessment_id, score_percentage, status, started_at, submitted_at, assessments(title)")
       .eq("tenant_id", authContext.tenantId)
       .eq("student_id", studentId)
       .order("started_at", { ascending: false });
 
+    if (attemptsErr) {
+      console.error("[Student Analytics] Error fetching attempts:", attemptsErr);
+    }
+
     const attemptList = attempts || [];
-    const completedAttempts = attemptList.filter((a) => a.status === "SUBMITTED" || a.status === "GRADED");
+    const completedAttempts = attemptList.filter((a) =>
+      ["SUBMITTED", "SCORED", "RESULT_RELEASED", "GRADED"].includes(a.status)
+    );
     let avgScore: number | null = null;
     if (completedAttempts.length > 0) {
-      const validScores = completedAttempts.filter((a) => a.score_percentage !== null);
+      const validScores = completedAttempts.filter((a) => a.score_percentage !== null && a.score_percentage !== undefined);
       if (validScores.length > 0) {
         const sum = validScores.reduce((acc, a) => acc + (a.score_percentage || 0), 0);
         avgScore = Number((sum / validScores.length).toFixed(1));
@@ -29,14 +45,14 @@ export async function GET(_request: NextRequest) {
     }
 
     // 2. Practice sessions
-    const { count: practiceCount } = await supabase
+    const { count: practiceCount } = await admin
       .from("preparation_practice_sessions")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", authContext.tenantId)
       .eq("student_id", studentId);
 
     // 3. Mistake Bank Targets
-    const { data: mistakeTargets } = await supabase
+    const { data: mistakeTargets } = await admin
       .from("mistake_review_targets")
       .select("id, status")
       .eq("tenant_id", authContext.tenantId)

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     // 1. Attempts
     let attempts: any[] = [];
     try {
-      const { data: attemptsData } = await supabase
+      const { data: attemptsData } = await adminClient
         .from("assessment_attempts")
         .select(
           "id, status, earned_points, total_points, score_percentage, submitted_at, assessments(title, time_limit_minutes)"

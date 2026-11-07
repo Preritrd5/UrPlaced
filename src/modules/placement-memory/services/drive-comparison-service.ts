@@ -15,6 +15,7 @@ import {
   Json,
 } from "@/types/database";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const MANDATORY_LIMITATIONS_DISCLAIMER =
   "Historical drive patterns represent past hiring rounds and may not predict changes in current drive requirements. Differences in hiring volume, role level, or test vendor should be accounted for.";
@@ -41,7 +42,7 @@ export class DriveComparisonService {
     historicalRecordId: string,
     generatedBy?: string
   ): Promise<{ success: boolean; comparison?: HistoricalDriveComparisonRow; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     // 1. Fetch current drive
     const { data: drive, error: driveErr } = await supabase
@@ -187,7 +188,7 @@ export class DriveComparisonService {
     tenantId: string,
     currentDriveId: string
   ): Promise<{ success: boolean; comparisons: HistoricalDriveComparisonRow[]; error?: string }> {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from("historical_drive_comparisons")

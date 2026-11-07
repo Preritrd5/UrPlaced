@@ -30,26 +30,35 @@ export async function GET(request: NextRequest) {
     if (profile.accountCategory === "STUDENT") {
       // 1. Fetch real student metrics
       try {
-        const { data: attempts } = await supabase
-          .from("assessment_attempts")
-          .select("id, status, percentage, score, max_score")
-          .eq("user_id", profile.id);
-
-        const completedAttempts = attempts?.filter(
-          (a) => a.status === "SUBMITTED" || a.status === "GRADED"
-        ) || [];
-
-        let avgAccuracy = 0;
-        if (completedAttempts.length > 0) {
-          const totalScore = completedAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0);
-          avgAccuracy = Math.round(totalScore / completedAttempts.length);
-        }
-
         const { data: studentRecord } = await admin
           .from("students")
           .select("id")
           .eq("user_id", profile.id)
           .maybeSingle();
+
+        const studentId = studentRecord?.id;
+
+        let completedAttempts: any[] = [];
+        let avgAccuracy = 0;
+
+        if (studentId) {
+          const { data: attempts } = await admin
+            .from("assessment_attempts")
+            .select("id, status, score_percentage, earned_points, total_points")
+            .eq("student_id", studentId);
+
+          completedAttempts = attempts?.filter(
+            (a) => ["SUBMITTED", "SCORED", "RESULT_RELEASED", "GRADED"].includes(a.status)
+          ) || [];
+
+          if (completedAttempts.length > 0) {
+            const validScores = completedAttempts.filter((a) => a.score_percentage !== null && a.score_percentage !== undefined);
+            if (validScores.length > 0) {
+              const totalScore = validScores.reduce((acc, a) => acc + (a.score_percentage || 0), 0);
+              avgAccuracy = Math.round(totalScore / validScores.length);
+            }
+          }
+        }
 
         let totalMistakes = 0;
         let masteredMistakes = 0;
