@@ -1975,15 +1975,15 @@ export default function PlatformSubscriptionsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-surface border border-border/40">
+                  <label htmlFor="preserveLimits" className="text-xs font-semibold text-text-primary cursor-pointer select-none">
+                    Preserve custom seat limits if configured
+                  </label>
                   <Switch
                     id="preserveLimits"
                     checked={preserveLimits}
                     onCheckedChange={setPreserveLimits}
                   />
-                  <label htmlFor="preserveLimits" className="text-xs text-text-primary cursor-pointer">
-                    Preserve custom seat limits if configured
-                  </label>
                 </div>
 
                 </CardContent>

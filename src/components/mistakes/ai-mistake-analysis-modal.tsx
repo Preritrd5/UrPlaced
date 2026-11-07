@@ -48,8 +48,8 @@ export function AIMistakeAnalysisModal({ isOpen, onClose }: AIMistakeAnalysisMod
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#24283A]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden">
-      <div className="bg-[#F8F7F3] border border-[#DDDCD5] rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col min-h-0 max-h-[calc(100dvh-2rem)]">
+    <div className="fixed inset-0 z-50 bg-[#24283A]/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col min-h-0 max-h-[calc(100dvh-2rem)] my-auto">
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-[#DDDCD5] flex items-center justify-between bg-[#FBFAF7] shrink-0">
           <div className="flex items-center gap-2.5">

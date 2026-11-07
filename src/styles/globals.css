@@ -305,8 +305,45 @@ pre {
    GLOBAL SLEEK SCROLLBARS & MODAL BODY SCROLL LOCK
    ======================================================== */
 
-body:has(.fixed.inset-0.z-50) {
+body:has(.fixed.inset-0.z-50),
+body:has([role="dialog"]),
+body:has([data-radix-portal]) {
   overflow: hidden !important;
+}
+
+/* Ensure modal overlays always sit strictly above application headers, sidebars, and sticky controls */
+.fixed.inset-0.z-50,
+.fixed.inset-0[class*="z-"],
+[data-radix-portal],
+div[role="dialog"] {
+  z-index: 100 !important;
+}
+
+/* De-elevate sticky headers and sidebars whenever a modal or dialog is present in the DOM */
+body:has(.fixed.inset-0.z-50) header,
+body:has([role="dialog"]) header,
+body:has([data-radix-portal]) header {
+  z-index: 10 !important;
+}
+
+body:has(.fixed.inset-0.z-50) aside,
+body:has([role="dialog"]) aside,
+body:has([data-radix-portal]) aside {
+  z-index: 10 !important;
+}
+
+/* On short viewports or small monitors, prevent modal content truncation by enabling backdrop scroll */
+.fixed.inset-0.z-50,
+.fixed.inset-0[class*="z-"] {
+  overflow-y: auto !important;
+}
+
+.fixed.inset-0.z-50 > div,
+.fixed.inset-0.z-50 > [class*="Card"],
+.fixed.inset-0[class*="z-"] > div,
+.fixed.inset-0[class*="z-"] > [class*="Card"] {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 * {
@@ -336,6 +373,12 @@ body:has(.fixed.inset-0.z-50) {
   background: rgba(36, 40, 58, 0.38);
 }
 
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .dark ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -352,6 +395,12 @@ body:has(.fixed.inset-0.z-50) {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.38);
+}
+
+.dark ::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ========================================================

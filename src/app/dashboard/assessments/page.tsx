@@ -684,8 +684,8 @@ export default function StaffAssessmentsPage() {
 
       {/* Create Assessment Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="sm:max-w-xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
-          <DialogHeader className="p-6 pb-4 border-b border-border bg-card shrink-0">
+        <DialogContent className="sm:max-w-xl min-h-0 max-h-[calc(100dvh-2.5rem)] flex flex-col p-0 gap-0 overflow-hidden bg-card border border-border shadow-2xl rounded-2xl">
+          <DialogHeader className="p-5 sm:p-6 pb-4 border-b border-border bg-card shrink-0 pr-12 text-left">
             <DialogTitle className="text-xl font-bold font-heading text-text-primary">
               New Assessment Blueprint
             </DialogTitle>
@@ -695,7 +695,7 @@ export default function StaffAssessmentsPage() {
           </DialogHeader>
 
           <form onSubmit={handleCreateAssessment} noValidate className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
               <div>
                 <Label htmlFor="title" className="text-xs font-medium text-text-primary">
                   Title <span className="text-status-danger">*</span>
