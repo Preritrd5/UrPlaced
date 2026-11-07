@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, fireEvent } from "@testing-library/react";
 import { TableContainer, Table } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -87,7 +87,7 @@ describe("Mobile Responsiveness Architecture & Component Invariants", () => {
     expect(toastContainerEl.className).toContain("sm:right-4");
   });
 
-  it("verifies PlatformSidebar mobile drawer has responsive width, dvh bounds, and elevated z-index", async () => {
+  it("verifies PlatformSidebar mobile drawer has responsive width, dvh bounds, isolate, and elevated z-index", async () => {
     const { PlatformSidebar } = await import("@/components/platform-admin/platform-nav");
     const { container } = render(
       <PlatformSidebar adminEmail="urplaced5@gmail.com" adminName="Platform Super Admin" />
@@ -99,9 +99,28 @@ describe("Mobile Responsiveness Architecture & Component Invariants", () => {
 
     const aside = container.querySelector("aside");
     expect(aside).not.toBeNull();
+    expect(aside?.className).toContain("isolate");
     expect(aside?.className).toContain("w-[min(310px,85vw)]");
     expect(aside?.className).toContain("h-[100dvh]");
     expect(aside?.className).toContain("z-50");
     expect(aside?.className).toContain("shadow-2xl");
+    expect(aside?.className).toContain("pointer-events-none");
+  });
+
+  it("verifies mobile drawer backdrop uses solid high-contrast overlay without hardware-glitching backdrop blur", async () => {
+    const { PlatformSidebar } = await import("@/components/platform-admin/platform-nav");
+    const { container } = render(
+      <PlatformSidebar adminEmail="urplaced5@gmail.com" adminName="Platform Super Admin" />
+    );
+
+    const toggleBtn = container.querySelector('button[aria-label="Toggle navigation menu"]');
+    expect(toggleBtn).not.toBeNull();
+    fireEvent.click(toggleBtn!);
+
+    // After clicking toggle, backdrop should be present
+    const backdrop = container.querySelector(".fixed.inset-0.z-40");
+    expect(backdrop).not.toBeNull();
+    expect(backdrop?.className).toContain("bg-[rgba(36,40,58,0.55)]");
+    expect(backdrop?.className).not.toContain("backdrop-blur");
   });
 });

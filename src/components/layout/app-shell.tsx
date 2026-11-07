@@ -225,7 +225,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Mobile Drawer Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm z-40 transition-opacity"
+          className="md:hidden fixed inset-0 bg-[rgba(36,40,58,0.55)] z-40 transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
           aria-hidden="true"
         />
@@ -234,8 +234,10 @@ export function AppShell({ children }: AppShellProps) {
       {/* Sidebar (Desktop persistent, Mobile slide-over) */}
       <aside
         className={cn(
-          "fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-[min(310px,85vw)] sm:w-72 md:w-64 shrink-0 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-[100dvh] max-h-[100dvh] h-screen shadow-2xl md:shadow-none",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          "isolate fixed md:sticky top-0 bottom-0 left-0 z-50 md:z-10 w-[min(310px,85vw)] sm:w-72 md:w-64 shrink-0 bg-card border-r border-border flex flex-col transition-transform duration-200 ease-in-out md:translate-x-0 h-screen h-[100dvh] max-h-[100dvh] shadow-2xl md:shadow-none",
+          mobileMenuOpen
+            ? "translate-x-0 pointer-events-auto"
+            : "-translate-x-full pointer-events-none md:pointer-events-auto"
         )}
       >
         {/* Brand Header */}
@@ -285,7 +287,7 @@ export function AppShell({ children }: AppShellProps) {
                 </div> */}
 
                 <div className="px-3 pb-1">
-                  <div className="inline-flex items-center rounded-full border border-gray-800/40 bg-white/50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-black backdrop-blur-md shadow-sm font-mono">
+                  <div className="inline-flex items-center rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-text-secondary shadow-xs font-mono">
                     {section.title}
                   </div>
                 </div>
