@@ -119,8 +119,8 @@ export function AnswerKeyReviewModal({
   const questionType = activeQuestion?.questionType;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24283A]/50 backdrop-blur-sm p-3 sm:p-4 overflow-hidden">
-      <div className="bg-card w-full max-w-2xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden rounded-2xl shadow-2xl border border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24283A]/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-card w-full max-w-2xl min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden rounded-2xl shadow-2xl border border-border">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-3.5 sm:py-4 shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">

@@ -639,8 +639,8 @@ export default function QuestionSetsPage() {
 
       {/* Create Set Modal */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <div className="bg-card w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden rounded-xl shadow-2xl border border-border">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <div className="bg-card w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden rounded-xl shadow-2xl border border-border">
             <div className="flex items-center justify-between border-b border-border p-4 sm:p-6 pb-3 shrink-0">
               <h3 className="text-base font-bold text-text-primary">Create Question Set</h3>
               <button onClick={() => setCreateModalOpen(false)} className="text-text-secondary hover:text-text-primary">

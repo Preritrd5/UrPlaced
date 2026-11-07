@@ -149,12 +149,12 @@ export function CreateQuestionBankModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-bank-modal-title"
     >
-      <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border flex flex-col min-h-0 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150 max-h-[calc(100dvh-2rem)]">
+      <div className="bg-card w-full max-w-lg my-auto rounded-2xl shadow-2xl border border-border flex flex-col min-h-0 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150 max-h-[calc(100dvh-2rem)]">
         {/* Header */}
         <div className="flex items-start justify-between p-5 sm:p-6 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3">

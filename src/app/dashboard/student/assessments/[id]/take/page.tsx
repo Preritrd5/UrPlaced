@@ -524,8 +524,8 @@ export default function AssessmentTakingPage({
   // Auto-Submission Violation Modal overlay
   if (autoSubmitNotice) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-hidden">
-        <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden border-red-500/50 bg-card shadow-2xl animate-in fade-in duration-200">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+        <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden border-red-500/50 bg-card shadow-2xl animate-in fade-in duration-200">
           <CardHeader className="text-center pb-3 shrink-0 border-b border-border">
             <div className="h-14 w-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
               <ShieldAlert className="h-8 w-8 text-red-600" />
@@ -591,8 +591,8 @@ export default function AssessmentTakingPage({
     <div className="space-y-4 max-w-7xl mx-auto pb-12 select-none" onContextMenu={(e) => e.preventDefault()}>
       {/* FULLSCREEN GATE OVERLAY: Displayed if browser drops out of fullscreen before exam is submitted */}
       {!isFullscreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md overflow-hidden">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden border-primary/40 bg-card shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden border-primary/40 bg-card shadow-2xl animate-in zoom-in-95 duration-150">
             <CardHeader className="text-center pb-2 shrink-0 border-b border-border">
               <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <Maximize2 className="h-7 w-7 text-primary" />
@@ -967,8 +967,8 @@ export default function AssessmentTakingPage({
 
       {/* Submit Confirmation Modal */}
       {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden shadow-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border">
               <CardTitle className="text-lg font-bold">Submit Assessment Attempt?</CardTitle>
               <p className="text-xs text-text-secondary mt-1">

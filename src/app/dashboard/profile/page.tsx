@@ -1711,8 +1711,8 @@ export default function MyProfilePage() {
       {/* PASSWORD CHANGE MODAL */}
       {/* ========================================================= */}
       {showPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-heading flex items-center gap-2">
@@ -1797,8 +1797,8 @@ export default function MyProfilePage() {
       {/* PRIVACY & DATA ISOLATION MODAL */}
       {/* ========================================================= */}
       {showPrivacyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-heading flex items-center gap-2">

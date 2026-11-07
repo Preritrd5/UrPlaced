@@ -60,8 +60,8 @@ export function DuplicateAlertModal({ isOpen, onClose }: DuplicateAlertModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-      <div className="bg-card w-full max-w-3xl rounded-xl shadow-2xl border border-border min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+      <div className="bg-card w-full max-w-3xl rounded-xl shadow-2xl border border-border min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-2 p-4 sm:p-5 border-b border-border shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />

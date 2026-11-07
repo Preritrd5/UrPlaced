@@ -1247,8 +1247,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 1: CHANGE / UPGRADE / DOWNGRADE PLAN MODAL */}
       {/* ========================================================================= */}
       {showPlanModal && data?.subscription && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-3xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-3xl min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
@@ -1388,8 +1388,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 2: BANK TRANSFER DETAILS & UTR SUBMISSION MODAL */}
       {/* ========================================================================= */}
       {showBankTransferModal && selectedInvoiceForUtr && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/30 bg-card">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
@@ -1518,8 +1518,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 3: MANDATE CONSENT MODAL */}
       {/* ========================================================================= */}
       {showConsentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-primary" />
@@ -1588,8 +1588,8 @@ export default function CollegeBillingPage() {
       {/* MODAL 4: PERIOD-END CANCELLATION REQUEST MODAL */}
       {/* ========================================================================= */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/30 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />

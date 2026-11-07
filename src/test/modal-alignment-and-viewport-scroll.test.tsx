@@ -54,4 +54,75 @@ describe("UrPlaced Modal Alignment & Viewport Presentation Audit", () => {
     // Must have max-h-[calc(100dvh-2.5rem)] for clean breathing margin
     expect(pageContent).toContain("max-h-[calc(100dvh-2.5rem)]");
   });
+
+  it("verifies all modal overlays across dashboard billing, question banks, and admin pages use overflow-y-auto and my-auto", () => {
+    const filesToCheck = [
+      "../app/dashboard/billing/page.tsx",
+      "../components/questions/create-question-bank-modal.tsx",
+      "../components/questions/ai-generate-question-modal.tsx",
+      "../components/questions/auto-build-set-modal.tsx",
+      "../components/questions/bulk-add-questions-modal.tsx",
+      "../components/questions/bulk-review-modal.tsx",
+      "../components/questions/answer-key-review-modal.tsx",
+      "../components/questions/duplicate-alert-modal.tsx",
+      "../app/dashboard/profile/page.tsx",
+      "../app/preritrd/(protected)/colleges/page.tsx",
+      "../app/preritrd/(protected)/billing/page.tsx",
+      "../app/preritrd/(protected)/accounts/page.tsx",
+      "../app/preritrd/(protected)/audit-logs/page.tsx",
+      "../app/dashboard/questions/sets/page.tsx",
+      "../app/dashboard/drives/[id]/pipeline/page.tsx",
+      "../app/dashboard/mistakes/page.tsx",
+      "../app/dashboard/student/mistakes/page.tsx",
+      "../app/dashboard/student/mistakes/[targetId]/page.tsx",
+      "../components/companies/company-detail-actions.tsx",
+    ];
+
+    for (const relativePath of filesToCheck) {
+      const filePath = path.resolve(__dirname, relativePath);
+      const content = fs.readFileSync(filePath, "utf-8");
+
+      // Verify that no modal overlay contains "overflow-hidden"
+      const backdropMatches = content.match(/className="[^"]*fixed inset-0[^"]*"/g) || [];
+      expect(backdropMatches.length).toBeGreaterThan(0);
+
+      for (const backdrop of backdropMatches) {
+        expect(backdrop).not.toContain("overflow-hidden");
+        expect(backdrop).toContain("overflow-y-auto");
+      }
+
+      // Verify that the inner card or container has my-auto for vertical centering without clipping
+      expect(content).toContain("my-auto");
+    }
+  });
+
+  it("verifies zero modal overlays in src/ use overflow-hidden", () => {
+    function scanDir(dir: string): string[] {
+      const results: string[] = [];
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory() && entry.name !== "node_modules" && entry.name !== ".next") {
+          results.push(...scanDir(fullPath));
+        } else if (entry.isFile() && (entry.name.endsWith(".tsx") || entry.name.endsWith(".jsx"))) {
+          results.push(fullPath);
+        }
+      }
+      return results;
+    }
+
+    const srcDir = path.resolve(__dirname, "..");
+    const sourceFiles = scanDir(srcDir);
+    const violatingFiles: string[] = [];
+
+    for (const file of sourceFiles) {
+      const content = fs.readFileSync(file, "utf-8");
+      const backdropMatches = content.match(/className="[^"]*fixed inset-0[^"]*overflow-hidden[^"]*"/g) || [];
+      if (backdropMatches.length > 0) {
+        violatingFiles.push(file);
+      }
+    }
+
+    expect(violatingFiles).toEqual([]);
+  });
 });

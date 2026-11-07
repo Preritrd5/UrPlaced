@@ -349,8 +349,8 @@ export function AutoBuildSetModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col rounded-xl shadow-2xl border border-[#DDDCD5] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+      <div className="bg-[#F8F7F3] text-[#24283A] w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col rounded-xl shadow-2xl border border-[#DDDCD5] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#DDDCD5] px-4 sm:px-6 py-3.5 sm:py-4 bg-[#F8F7F3] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">

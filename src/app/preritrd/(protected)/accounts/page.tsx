@@ -408,8 +408,8 @@ export default function PlatformAccountsPage() {
 
       {/* Invite Super Admin Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
                 Invite Super Administrator
@@ -503,8 +503,8 @@ export default function PlatformAccountsPage() {
 
       {/* Confirmation Modal for Admin Status Change */}
       {statusTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -546,8 +546,8 @@ export default function PlatformAccountsPage() {
 
       {/* Permanent Administrator Deletion Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-2xl rounded-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-status-danger/30 bg-status-danger-subtle/40">
               <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-status-danger shrink-0" />

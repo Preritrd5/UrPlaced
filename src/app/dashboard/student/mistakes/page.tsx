@@ -523,8 +523,8 @@ export default function StudentMistakesPage() {
 
       {/* Reschedule Modal */}
       {reschedulingTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-hidden">
-          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl bg-card border-border">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden shadow-2xl bg-card border-border">
             <CardHeader className="shrink-0 pb-3 border-b border-border">
               <CardTitle className="text-lg font-heading text-text-primary">
                 Reschedule Revision Target

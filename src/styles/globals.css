@@ -351,12 +351,11 @@ body:has([data-radix-portal]) main {
 .fixed.inset-0.z-50,
 .fixed.inset-0[class*="z-"] {
   overflow-y: auto !important;
+  align-items: normal !important;
 }
 
-.fixed.inset-0.z-50 > div,
-.fixed.inset-0.z-50 > [class*="Card"],
-.fixed.inset-0[class*="z-"] > div,
-.fixed.inset-0[class*="z-"] > [class*="Card"] {
+.fixed.inset-0.z-50 > *,
+.fixed.inset-0[class*="z-"] > * {
   margin-top: auto;
   margin-bottom: auto;
 }
