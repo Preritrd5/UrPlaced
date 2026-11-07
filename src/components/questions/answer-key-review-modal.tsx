@@ -214,11 +214,11 @@ export function AnswerKeyReviewModal({
                                 : "border-border bg-card text-text-secondary"
                             }`}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold uppercase w-5 text-text-secondary">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                              <span className="font-mono font-bold uppercase shrink-0 min-w-5 text-text-secondary">
                                 {opt.id}.
                               </span>
-                              <span>{opt.text}</span>
+                              <span className="text-text-primary break-words">{opt.text}</span>
                             </div>
                             {isCorrect && (
                               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2E8F86] shrink-0">

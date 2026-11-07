@@ -11,7 +11,7 @@ describe("UrPlaced Modal Alignment & Viewport Presentation Audit", () => {
     // Must elevate modals to z-index: 100
     expect(css).toContain("z-index: 100 !important;");
     // Must de-elevate header and aside to z-index: 10 when modal is active
-    expect(css).toContain("body:has(.fixed.inset-0.z-50) header");
+    expect(css).toContain("body:has(.fixed.inset-0) header");
     expect(css).toContain("body:has([role=\"dialog\"]) header");
     expect(css).toContain("body:has([data-radix-portal]) header");
     expect(css).toContain("z-index: 10 !important;");
@@ -53,6 +53,15 @@ describe("UrPlaced Modal Alignment & Viewport Presentation Audit", () => {
     expect(pageContent).toContain("pr-12");
     // Must have max-h-[calc(100dvh-2.5rem)] for clean breathing margin
     expect(pageContent).toContain("max-h-[calc(100dvh-2.5rem)]");
+  });
+
+  it("verifies Review & Verify Answer Key modal option IDs do not collide with option text", () => {
+    const modalPath = path.resolve(__dirname, "../components/questions/answer-key-review-modal.tsx");
+    const modalContent = fs.readFileSync(modalPath, "utf-8");
+
+    // Must NOT have fixed "w-5" without shrink-0 on opt.id container which causes text overlap with multi-char IDs like OPT_1
+    expect(modalContent).not.toMatch(/<span className="[^"]*(?<!min-)w-5[^"]*">\s*\{opt\.id\}\./);
+    expect(modalContent).toContain("shrink-0 min-w-5");
   });
 
   it("verifies all modal overlays across dashboard billing, question banks, and admin pages use overflow-y-auto and my-auto", () => {

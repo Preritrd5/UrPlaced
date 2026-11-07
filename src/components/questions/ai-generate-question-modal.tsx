@@ -368,7 +368,7 @@ export function AIGenerateQuestionModal({
                                 : "bg-white border-[#DDDCD5] text-[#24283A]"
                             }`}
                           >
-                            <span className="w-5 h-5 rounded-full bg-[#EDECE7] flex items-center justify-center text-[10px] font-bold">
+                            <span className="w-5 h-5 rounded-full bg-[#EDECE7] flex items-center justify-center text-[10px] font-bold shrink-0">
                               {opt.id.replace("opt-", "").toUpperCase()}
                             </span>
                             <span>{opt.text}</span>
