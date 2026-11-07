@@ -348,15 +348,7 @@ export default function StudentDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-border/60">
-                  <div className="text-left sm:text-right">
-                    <div className="text-base font-bold font-heading text-primary">
-                      {Math.round(Number(attempt.score_percentage) || 0)}%
-                    </div>
-                    <div className="text-[11px] text-text-secondary">
-                      {attempt.earned_points ?? 0} / {attempt.total_points ?? 0} pts
-                    </div>
-                  </div>
+                <div className="flex items-center justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/60">
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/dashboard/student/attempts/${attempt.id}/review`}>
                       Review
