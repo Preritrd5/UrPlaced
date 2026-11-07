@@ -83,4 +83,32 @@ export class PlatformConfigService {
       updatedAt: data.updated_at,
     };
   }
+
+  /**
+   * Retrieves current maintenance status.
+   */
+  static async getMaintenanceStatus(admin = createAdminClient()): Promise<{
+    enabled: boolean;
+    message: string;
+    scheduledEnd: string | null;
+  }> {
+    try {
+      const { data } = await admin
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "maintenance_mode")
+        .maybeSingle();
+
+      if (data?.value && typeof data.value === "object") {
+        return {
+          enabled: Boolean(data.value.enabled),
+          message: data.value.message || "UrPlaced is performing scheduled maintenance. Services will resume shortly.",
+          scheduledEnd: data.value.scheduledEnd || null,
+        };
+      }
+    } catch {
+      // Fallback
+    }
+    return { enabled: false, message: "", scheduledEnd: null };
+  }
 }

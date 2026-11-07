@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Lock,
   CreditCard,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,24 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [maintenance, setMaintenance] = React.useState<{ enabled: boolean; message: string } | null>(null);
   const pathname = usePathname();
   const auth = useAuthContext();
+
+  React.useEffect(() => {
+    let mounted = true;
+    fetch("/api/platform/maintenance")
+      .then((r) => r.json())
+      .then((data) => {
+        if (mounted && data.enabled) {
+          setMaintenance({ enabled: true, message: data.message });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const role = auth.role || "STUDENT";
   const subStatus = (auth.tenant as any)?.subscriptionStatus;
@@ -318,6 +335,26 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         <main className="flex-1 py-4 sm:py-8 px-3.5 sm:px-6 lg:px-10 max-w-7xl w-full mx-auto">
+          {/* Scheduled Platform Maintenance Broadcast Banner */}
+          {maintenance?.enabled && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 flex items-start gap-3 shadow-xs">
+              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="font-semibold text-sm flex items-center gap-2">
+                  <span>Scheduled Platform Maintenance Active</span>
+                  <Badge variant="outline" className="text-[10px] font-mono border-amber-400 text-amber-800 dark:text-amber-200">
+                    MAINTENANCE
+                  </Badge>
+                </div>
+                <p className="text-xs text-amber-800/80 dark:text-amber-200/80 leading-relaxed">
+                  {maintenance.message || "UrPlaced is performing scheduled maintenance. Some services may experience temporary interruptions."}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Q1: 7-Day Renewal Grace Period Warning Banner */}
           {isProtectedByGrace && (
             <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">

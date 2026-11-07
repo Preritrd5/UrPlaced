@@ -16,7 +16,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-export const DEFAULT_TARGET_ROLES = [
+const DEFAULT_TARGET_ROLES = [
   "Software Development Engineer (SDE)",
   "Frontend Engineer",
   "Full Stack Developer",
@@ -24,7 +24,7 @@ export const DEFAULT_TARGET_ROLES = [
   "Cloud & DevOps Engineer",
 ];
 
-export const VALID_CADENCES = [
+const VALID_CADENCES = [
   "30 minutes",
   "1-2 hours",
   "1–2 hours",
@@ -35,7 +35,7 @@ export const VALID_CADENCES = [
   "5+ hours",
 ];
 
-export interface UserPreferencesPayload {
+interface UserPreferencesPayload {
   studyReminders?: boolean;
   driveAlerts?: boolean;
   testUpdates?: boolean;

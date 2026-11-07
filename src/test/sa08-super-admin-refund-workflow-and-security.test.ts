@@ -284,6 +284,40 @@ describe("URPLACED — Super Admin Billing Refund Service & Security Suite", () 
     expect(sub.status).toBe("CANCELED");
   });
 
+  // 7b. Decoupled Action Q10: CANCEL_AT_PERIOD_END sets cancel_at_period_end flag while retaining ACTIVE
+  it("7b. Decoupled Action Q10: CANCEL_AT_PERIOD_END retains active access until paid period ends", async () => {
+    // Reset subscription to ACTIVE
+    const sub = mockDatabase.college_subscriptions.find((s) => s.id === "sub-alpha-01");
+    if (sub) {
+      sub.status = "ACTIVE";
+      sub.cancel_at_period_end = false;
+    }
+
+    vi.spyOn(razorpayLib, "getRazorpayClient").mockReturnValue({
+      payments: {
+        refund: vi.fn().mockResolvedValue({
+          id: "rfnd_test_period_end_456",
+          amount: 118,
+          currency: "INR",
+          status: "processed",
+        }),
+      },
+    } as any);
+
+    const result = await RefundService.issueRefund({
+      invoiceId: "f4dcf93c-7515-4a3b-837a-fef5e1af796c",
+      amountInr: 1.18,
+      reason: "Period end cancellation",
+      subscriptionAction: "CANCEL_AT_PERIOD_END",
+      adminId: "admin-super-01",
+      admin: mockAdmin,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.subscriptionStatus).toBe("ACTIVE");
+    expect(sub?.cancel_at_period_end).toBe(true);
+  });
+
   // 8. Gateway error handles gracefully and records administrative reversal in dev/test
   it("8. Gateway rejection with simulated payment handles gracefully without crashing backend", async () => {
     vi.spyOn(razorpayLib, "getRazorpayClient").mockReturnValue({

@@ -403,24 +403,33 @@ export default function SuperAdminProfilePage() {
 
   // Handle Notification Toggle
   async function handleToggleNotification(category: string, channel: "inApp" | "email") {
+    const currentVal = notificationPrefs[channel]?.[category] !== false;
+    const nextVal = !currentVal;
+    const previousPrefs = notificationPrefs;
+
     const updated = {
       ...notificationPrefs,
       [channel]: {
         ...notificationPrefs[channel],
-        [category]: !notificationPrefs[channel]?.[category],
+        [category]: nextVal,
       },
     };
     setNotificationPrefs(updated);
 
     try {
       setNotifSaving(true);
-      await fetch("/api/preritrd/notifications/preferences", {
+      const res = await fetch("/api/preritrd/notifications/preferences", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updated),
       });
+      if (!res.ok) {
+        setNotificationPrefs(previousPrefs);
+        toast.error("Failed to update notification channel.");
+      }
     } catch {
-      // Revert on failure
+      setNotificationPrefs(previousPrefs);
+      toast.error("Network error updating notification preference.");
     } finally {
       setNotifSaving(false);
     }
