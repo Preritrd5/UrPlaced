@@ -112,7 +112,7 @@ export const MASTER_NAVIGATION: {
       },
       {
         id: "student-announcements",
-        name: "Announcements & Notices",
+        name: "Announcements",
         href: "/dashboard/student/announcements",
         icon: Megaphone,
         requiredPermission: Permissions.ANNOUNCEMENTS_READ,

@@ -1117,4 +1117,35 @@ export class NotificationService {
       total: count || 0,
     };
   }
+
+  /**
+   * Deletes an announcement and cascades deletion to child notifications delivered under it.
+   */
+  static async deleteAnnouncement(params: {
+    collegeId: string;
+    announcementId: string;
+  }): Promise<boolean> {
+    const { collegeId, announcementId } = params;
+
+    if (!collegeId || !UUID_REGEX.test(collegeId)) return false;
+    if (!announcementId || !UUID_REGEX.test(announcementId)) return false;
+
+    const admin = createAdminClient();
+
+    // 1. Delete associated notifications
+    await admin
+      .from("notifications")
+      .delete()
+      .eq("announcement_id", announcementId)
+      .eq("college_id", collegeId);
+
+    // 2. Delete the announcement record
+    const { error } = await admin
+      .from("notification_announcements")
+      .delete()
+      .eq("id", announcementId)
+      .eq("college_id", collegeId);
+
+    return !error;
+  }
 }

@@ -14,6 +14,7 @@ import {
   Inbox,
   X,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { useNotifications } from "@/modules/notifications/hooks/use-notifications";
 import type { NotificationRecord } from "@/modules/notifications/types";
@@ -73,6 +74,8 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
     error,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
+    clearAllNotifications,
     refetch,
   } = useNotifications();
 
@@ -252,6 +255,17 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
                     <span>Mark all read</span>
                   </button>
                 )}
+                {notifications.length > 0 && clearAllNotifications && (
+                  <button
+                    type="button"
+                    onClick={() => clearAllNotifications()}
+                    className="text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-red-500/10"
+                    title="Clear all notifications"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Clear all</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
@@ -366,15 +380,29 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
                         )}
                       </div>
 
-                      {/* Unread Dot Indicator */}
-                      {isUnread && (
-                        <div className="shrink-0 pt-1.5">
+                      {/* Unread Dot Indicator & Delete Action */}
+                      <div className="shrink-0 flex items-center gap-1.5 pt-1">
+                        {deleteNotification && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNotification(notif.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-[#292D40]/50 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
+                            title="Delete notification"
+                            aria-label="Delete notification"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {isUnread && (
                           <span
                             className="block w-2 h-2 rounded-full bg-[#5052C9]"
                             title="Unread notification"
                           />
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   );
                 })

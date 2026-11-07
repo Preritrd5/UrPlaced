@@ -60,3 +60,45 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    let token: string | undefined;
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    const supabase = await createClient(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized: Active authenticated session required." },
+        { status: 401 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("notifications")
+      .delete()
+      .eq("recipient_user_id", user.id);
+
+    if (error) {
+      throw new Error(`Failed to clear notifications: ${error.message}`);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "All notifications cleared successfully.",
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to clear notifications." },
+      { status: 500 }
+    );
+  }
+}

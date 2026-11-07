@@ -20,6 +20,8 @@ export interface UseNotificationsReturn {
   refetch: () => Promise<void>;
   activeToasts?: NotificationRecord[];
   dismissToast?: (notificationId: string) => void;
+  deleteNotification?: (notificationId: string) => Promise<void>;
+  clearAllNotifications?: () => Promise<void>;
 }
 
 // Shared in-flight deduplication cache to prevent concurrent redundant fetches (e.g. from mobile and desktop bells)

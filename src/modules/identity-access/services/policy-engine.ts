@@ -319,6 +319,7 @@ export const RoleDefaultPermissions: Record<UserRole, PermissionIdentifier[]> = 
     Permissions.AI_STUDY_TUTOR_USE,
     Permissions.AI_MISTAKE_MASTERY_USE,
     Permissions.AI_DRIVEFIT_EVALUATE,
+    Permissions.ANNOUNCEMENTS_READ,
   ],
 };
 

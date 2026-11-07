@@ -33,6 +33,8 @@ export interface NotificationContextValue {
   refetch: () => Promise<void>;
   activeToasts: NotificationRecord[];
   dismissToast: (notificationId: string) => void;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
 }
 
 export const NotificationContext = createContext<NotificationContextValue | null>(null);
@@ -411,6 +413,42 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setActiveToasts((prev) => prev.filter((t) => t.id !== notificationId));
   }, []);
 
+  const deleteNotification = useCallback(
+    async (notificationId: string) => {
+      if (!notificationId) return;
+
+      setNotifications((prev) => {
+        const target = prev.find((item) => item.id === notificationId);
+        if (target && !target.read_at) {
+          setUnreadCount((c) => Math.max(0, c - 1));
+        }
+        return prev.filter((item) => item.id !== notificationId);
+      });
+      setActiveToasts((prev) => prev.filter((t) => t.id !== notificationId));
+
+      cachedResult = null;
+      try {
+        await fetch(`/api/notifications/${notificationId}`, { method: "DELETE" });
+      } catch {
+        fetchNotifications(false);
+      }
+    },
+    [fetchNotifications]
+  );
+
+  const clearAllNotifications = useCallback(async () => {
+    setNotifications([]);
+    setUnreadCount(0);
+    setActiveToasts([]);
+    cachedResult = null;
+
+    try {
+      await fetch("/api/notifications", { method: "DELETE" });
+    } catch {
+      fetchNotifications(false);
+    }
+  }, [fetchNotifications]);
+
   const value = useMemo(
     () => ({
       notifications,
@@ -425,6 +463,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       },
       activeToasts,
       dismissToast,
+      deleteNotification,
+      clearAllNotifications,
     }),
     [
       notifications,
@@ -436,6 +476,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       fetchNotifications,
       activeToasts,
       dismissToast,
+      deleteNotification,
+      clearAllNotifications,
     ]
   );
 

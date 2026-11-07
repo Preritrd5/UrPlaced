@@ -10,6 +10,7 @@ import { PlatformAdminManagementService } from "@/modules/platform-admin/service
 import { PlatformAuditService } from "@/modules/platform-admin/services/platform-audit-service";
 import { PlatformHealthService } from "@/modules/platform-admin/services/platform-health-service";
 import { can, Permissions, RoleDefaultPermissions } from "@/modules/identity-access/services/policy-engine";
+import { EmailAdapter } from "@/modules/identity-access/services/email-adapter";
 import { POST as verifyMfaPost } from "@/app/api/preritrd/auth/mfa/verify/route";
 
 describe("UrPlaced Platform Super Admin Portal & Strict Option A Isolation", () => {
@@ -157,6 +158,11 @@ describe("UrPlaced Platform Super Admin Portal & Strict Option A Isolation", () 
   });
 
   beforeEach(() => {
+    vi.spyOn(EmailAdapter, "sendCollegePlacementHeadInvitation").mockResolvedValue({
+      success: true,
+      deliveryMethod: "LOCAL_DEV_SINK",
+      messageId: "mock-email-id",
+    });
     mockDatabase = {
       tenants: [
         {

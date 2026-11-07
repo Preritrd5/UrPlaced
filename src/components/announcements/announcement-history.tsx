@@ -17,6 +17,7 @@ import {
   Eye,
   RefreshCw,
   Building,
+  Trash2,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,26 @@ export function AnnouncementHistory({
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [activeAnnouncement, setActiveAnnouncement] = useState<AnnouncementRecord | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/announcements/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+        if (activeAnnouncement?.id === id) {
+          setActiveAnnouncement(null);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete announcement", err);
+    } finally {
+      setDeletingId(null);
+      setDeleteConfirmId(null);
+    }
+  };
 
   const fetchHistory = async () => {
     setIsLoading(true);
@@ -280,7 +301,7 @@ export function AnnouncementHistory({
                   </div>
                 </div>
 
-                <div className="shrink-0 self-end sm:self-center">
+                <div className="shrink-0 self-end sm:self-center flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -289,6 +310,16 @@ export function AnnouncementHistory({
                   >
                     <Eye className="w-3.5 h-3.5 text-[#5052C9]" />
                     View Details
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteConfirmId(item.id)}
+                    className="text-xs border-[#DDDCD5] text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center gap-1.5"
+                    title="Delete announcement"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
                   </Button>
                 </div>
               </CardContent>
@@ -367,7 +398,21 @@ export function AnnouncementHistory({
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const id = activeAnnouncement.id;
+                  setActiveAnnouncement(null);
+                  setDeleteConfirmId(id);
+                }}
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Announcement
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -380,6 +425,40 @@ export function AnnouncementHistory({
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent className="sm:max-w-md bg-[#F8F7F3] border-[#DDDCD5]">
+          <DialogHeader>
+            <DialogTitle className="text-base font-['Outfit'] text-[#24283A] flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              Delete Announcement
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#292D40]/80 pt-1 leading-relaxed">
+              Are you sure you want to permanently delete this announcement? This will remove the broadcast record and clean up associated notifications for students.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex items-center justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteConfirmId(null)}
+              className="text-xs border-[#DDDCD5] text-[#24283A]"
+              disabled={!!deletingId}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+              className="text-xs bg-red-600 hover:bg-red-700 text-white"
+              disabled={!!deletingId}
+            >
+              {deletingId ? "Deleting..." : "Yes, Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );
