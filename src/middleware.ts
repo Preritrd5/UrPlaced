@@ -78,7 +78,7 @@ function shouldRefreshToken(cookies: { name: string; value: string }[]): boolean
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
-      headers: request.headers,
+      headers: new Headers(request.headers),
     },
   });
 
@@ -98,15 +98,12 @@ export async function middleware(request: NextRequest) {
     return applyHeaders(response);
   }
 
-  // Next.js App Router RSC and prefetch requests never perform remote blocking session refresh
+  // Next.js App Router speculative background prefetch requests never perform remote blocking session refresh
   const isPrefetch =
     request.headers.get("next-router-prefetch") === "1" ||
     request.headers.get("purpose") === "prefetch";
-  const isRSC =
-    request.headers.has("rsc") ||
-    request.nextUrl.searchParams.has("_rsc");
 
-  if (isPrefetch || isRSC) {
+  if (isPrefetch) {
     return applyHeaders(response);
   }
 
