@@ -359,12 +359,18 @@ body:has([data-modal-open]) {
 }
 
 /* De-elevate sticky headers and sidebars ONLY when a full-screen modal or dialog overlay is present */
+body:has(.fixed.inset-0) header,
+body:has([role="dialog"]) header,
+body:has([data-radix-portal]) header,
 body:has(.fixed.inset-0.z-50:not([data-drawer-backdrop])) header,
 body:has([data-modal-open]) header,
 body:has([data-radix-portal]:has([role="dialog"]:not([aria-label*="Notification" i]))) header {
   z-index: 10 !important;
 }
 
+body:has(.fixed.inset-0) aside,
+body:has([role="dialog"]) aside,
+body:has([data-radix-portal]) aside,
 body:has(.fixed.inset-0.z-50:not([data-drawer-backdrop])) aside,
 body:has([data-modal-open]) aside,
 body:has([data-radix-portal]:has([role="dialog"]:not([aria-label*="Notification" i]))) aside {
@@ -528,14 +534,37 @@ header:has([aria-label*="Notification" i]) {
 }
 
 /* ========================================================
+   NOTIFICATION POP-UP KEYFRAME ANIMATION
+   ======================================================== */
+
+@keyframes notification-slide-down {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -1.25rem) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.animate-notification-pop {
+  animation: notification-slide-down 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ========================================================
    REDUCED MOTION ACCESSIBILITY
    ======================================================== */
 
 @media (prefers-reduced-motion: reduce) {
   .animate-shimmer::after,
   .animate-pulse,
-  .animate-spin {
+  .animate-spin,
+  .animate-notification-pop {
     animation: none !important;
+  }
+  .animate-notification-pop {
+    transform: translate(-50%, 0) !important;
   }
 
   .animate-brand-loader {

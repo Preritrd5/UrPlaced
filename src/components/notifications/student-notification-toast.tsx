@@ -43,6 +43,38 @@ export function getToastCategoryIcon(type: string) {
   return <Bell className="w-5 h-5 text-primary shrink-0" />;
 }
 
+export function getToastCategoryBadge(type: string) {
+  const upper = (type || "").toUpperCase();
+  if (upper.includes("ASSESSMENT") || upper.includes("TEST")) {
+    return {
+      label: "Assessment Exam",
+      badgeClass: "bg-primary/10 text-primary border-primary/25",
+    };
+  }
+  if (upper.includes("DRIVE") || upper.includes("JOB") || upper.includes("PLACEMENT")) {
+    return {
+      label: "Campus Drive",
+      badgeClass: "bg-secondary/15 text-secondary border-secondary/30",
+    };
+  }
+  if (upper.includes("TRAINING") || upper.includes("LEARN")) {
+    return {
+      label: "Training",
+      badgeClass: "bg-primary/10 text-primary border-primary/25",
+    };
+  }
+  if (upper.includes("URGENT") || upper.includes("ALERT") || upper.includes("WARNING")) {
+    return {
+      label: "Urgent Alert",
+      badgeClass: "bg-status-danger/15 text-status-danger border-status-danger/30",
+    };
+  }
+  return {
+    label: "Announcement",
+    badgeClass: "bg-primary/10 text-primary border-primary/25",
+  };
+}
+
 export function StudentNotificationToast() {
   const router = useRouter();
   const pathname = usePathname();
@@ -58,6 +90,27 @@ export function StudentNotificationToast() {
 
   const currentToast = activeToasts.length > 0 ? activeToasts[0] : null;
   const queueCount = activeToasts.length;
+
+  const effectiveActionUrl = React.useMemo(() => {
+    if (
+      currentToast?.action_url &&
+      currentToast.action_url.startsWith("/") &&
+      !currentToast.action_url.startsWith("//")
+    ) {
+      return currentToast.action_url;
+    }
+    const upper = (currentToast?.type || "").toUpperCase();
+    if (upper.includes("ASSESSMENT") || upper.includes("TEST")) {
+      return "/dashboard/student/assessments";
+    }
+    if (upper.includes("DRIVE") || upper.includes("JOB") || upper.includes("PLACEMENT")) {
+      return "/dashboard/student/drives";
+    }
+    if (upper.includes("ANNOUNCEMENT")) {
+      return "/dashboard/student/announcements";
+    }
+    return "/dashboard/student";
+  }, [currentToast]);
 
   // Auto-dismiss 8-second timer with hover pause
   React.useEffect(() => {
@@ -81,6 +134,8 @@ export function StudentNotificationToast() {
     return null;
   }
 
+  const badgeInfo = getToastCategoryBadge(currentToast.type);
+
   const handleAction = async (e: React.MouseEvent) => {
     e.stopPropagation();
     markAsRead(currentToast.id);
@@ -88,12 +143,8 @@ export function StudentNotificationToast() {
       dismissToast(currentToast.id);
     }
 
-    if (
-      currentToast.action_url &&
-      currentToast.action_url.startsWith("/") &&
-      !currentToast.action_url.startsWith("//")
-    ) {
-      router.push(currentToast.action_url);
+    if (effectiveActionUrl) {
+      router.push(effectiveActionUrl);
     }
   };
 
@@ -113,19 +164,28 @@ export function StudentNotificationToast() {
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
       onBlur={() => setIsPaused(false)}
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] w-[calc(100%-1.5rem)] max-w-md sm:max-w-lg transition-all duration-300 ease-out animate-in fade-in slide-in-from-top-4"
+      className="fixed top-5 left-1/2 -translate-x-1/2 z-[99999] w-[calc(100%-1.5rem)] max-w-md sm:max-w-lg transition-all duration-300 ease-out animate-notification-pop pointer-events-auto shadow-2xl"
     >
-      <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden p-3.5 sm:p-4 flex flex-col gap-3 backdrop-blur-none relative">
-        {/* Top Header Row: Category Icon, Title, Time, Close */}
+      <div className="bg-card border-2 border-primary/30 rounded-2xl shadow-2xl overflow-hidden p-4 flex flex-col gap-3 backdrop-blur-none relative ring-1 ring-black/5">
+        {/* Top Header Row: Category Icon, Badge, Title, Time, Close */}
         <div className="flex items-start justify-between gap-3 min-w-0">
           <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 shrink-0">
+            <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 shrink-0 mt-0.5">
               {getToastCategoryIcon(currentToast.type)}
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-heading font-bold text-sm sm:text-base text-text-primary tracking-tight truncate max-w-[240px] sm:max-w-[320px]">
+                <span
+                  className={cn(
+                    "px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border shrink-0",
+                    badgeInfo.badgeClass
+                  )}
+                >
+                  {badgeInfo.label}
+                </span>
+
+                <span className="font-heading font-bold text-sm sm:text-base text-text-primary tracking-tight truncate max-w-[200px] sm:max-w-[280px]">
                   {currentToast.title}
                 </span>
 
@@ -136,7 +196,7 @@ export function StudentNotificationToast() {
                 )}
               </div>
 
-              <div className="text-[11px] font-mono text-text-muted mt-0.5">
+              <div className="text-[11px] font-mono text-text-muted mt-1">
                 {formatRelativeTime(currentToast.created_at) || "Just now"}
               </div>
             </div>
@@ -158,13 +218,13 @@ export function StudentNotificationToast() {
         </p>
 
         {/* Action Row */}
-        <div className="flex items-center justify-between pt-1 border-t border-border-subtle gap-2">
+        <div className="flex items-center justify-between pt-2 border-t border-border-subtle gap-2">
           <span className="text-[11px] text-text-muted font-mono truncate">
             UrPlaced Notification Center
           </span>
 
           <div className="flex items-center gap-2 shrink-0">
-            {currentToast.action_url && (
+            {effectiveActionUrl && (
               <button
                 type="button"
                 onClick={handleAction}

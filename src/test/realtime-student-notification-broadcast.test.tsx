@@ -422,7 +422,7 @@ describe("Global Real-Time Student Notification Broadcast & Automatic Pop-up Del
   });
 
   describe("4. Top-of-Screen Student Pop-up Component (StudentNotificationToast)", () => {
-    it("renders pop-up with category icon, title, message preview, and View Details action", () => {
+    it("renders pop-up with category icon, badge, title, message preview, and View Details action", () => {
       const mockToastItem = {
         id: "notif-toast-1",
         recipient_user_id: "user-student-alpha",
@@ -452,11 +452,66 @@ describe("Global Real-Time Student Notification Broadcast & Automatic Pop-up Del
       };
 
       render(
-        <NotificationProvider>
-          {/* Inject mock context via wrapper */}
+        <NotificationContext.Provider value={mockContextValue}>
           <StudentNotificationToast />
-        </NotificationProvider>
+        </NotificationContext.Provider>
       );
+
+      expect(screen.getByText("Assessment Exam")).toBeDefined();
+      expect(screen.getByText("New Assessment Published")).toBeDefined();
+      expect(screen.getByText(/Amazon SDE Mock Exam/)).toBeDefined();
+      expect(screen.getByRole("button", { name: /view details/i })).toBeDefined();
+      expect(screen.getByRole("button", { name: /^dismiss$/i })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Dismiss notification" })).toBeDefined();
+    });
+
+    it("renders announcement badge and navigates to fallback announcement destination if action_url is null", () => {
+      const mockToastItem = {
+        id: "notif-announcement-test",
+        recipient_user_id: "user-student-alpha",
+        college_id: collegeA,
+        actor_user_id: headA,
+        type: "ANNOUNCEMENT",
+        title: "Diwali Holidays Announced",
+        body: "Campus will remain closed from Monday through Wednesday.",
+        action_url: null,
+        metadata: {},
+        deduplication_key: null,
+        read_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const mockMarkAsRead = vi.fn();
+      const mockDismiss = vi.fn();
+
+      const mockCtxValue = {
+        notifications: [mockToastItem],
+        unreadCount: 1,
+        isLoading: false,
+        error: null,
+        markAsRead: mockMarkAsRead,
+        markAllAsRead: vi.fn(),
+        refetch: vi.fn(),
+        activeToasts: [mockToastItem],
+        dismissToast: mockDismiss,
+      };
+
+      render(
+        <NotificationContext.Provider value={mockCtxValue}>
+          <StudentNotificationToast />
+        </NotificationContext.Provider>
+      );
+
+      expect(screen.getByText("Announcement")).toBeDefined();
+      expect(screen.getByText("Diwali Holidays Announced")).toBeDefined();
+
+      const viewDetailsBtn = screen.getByRole("button", { name: /view details/i });
+      fireEvent.click(viewDetailsBtn);
+
+      expect(mockMarkAsRead).toHaveBeenCalledWith("notif-announcement-test");
+      expect(mockDismiss).toHaveBeenCalledWith("notif-announcement-test");
+      expect(mockRouterPush).toHaveBeenCalledWith("/dashboard/student/announcements");
     });
 
     it("navigates to action_url, marks notification read, and dismisses when clicking View Details", () => {

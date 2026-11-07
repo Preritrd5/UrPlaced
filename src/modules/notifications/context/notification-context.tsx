@@ -20,6 +20,7 @@ import React, {
 import { usePathname } from "next/navigation";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { createClient } from "@/lib/supabase/client";
+import { getTabAccessToken } from "@/lib/auth/auth-fetch";
 import type { NotificationRecord } from "../types";
 
 export interface NotificationContextValue {
@@ -35,6 +36,36 @@ export interface NotificationContextValue {
 }
 
 export const NotificationContext = createContext<NotificationContextValue | null>(null);
+
+const TOASTED_STORAGE_KEY = "urplaced_toasted_notifications";
+
+function getStoredToastedIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.sessionStorage.getItem(TOASTED_STORAGE_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr);
+      }
+    }
+  } catch {
+    // Ignore storage parsing issues
+  }
+  return new Set();
+}
+
+function storeToastedId(id: string): void {
+  if (typeof window === "undefined" || !id) return;
+  try {
+    const ids = getStoredToastedIds();
+    ids.add(id);
+    const arr = Array.from(ids).slice(-200);
+    window.sessionStorage.setItem(TOASTED_STORAGE_KEY, JSON.stringify(arr));
+  } catch {
+    // Ignore storage quota issues
+  }
+}
 
 let inFlightFetchPromise: Promise<{ notifications: NotificationRecord[]; unreadCount: number }> | null = null;
 let lastFetchTimestamp = 0;
@@ -53,72 +84,119 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const initialLoadCompletedRef = useRef<boolean>(false);
   const seenToastIdsRef = useRef<Set<string>>(new Set());
 
+  // Initialize seenToastIdsRef from sessionStorage on mount in browser
+  useEffect(() => {
+    const stored = getStoredToastedIds();
+    stored.forEach((id) => seenToastIdsRef.current.add(id));
+  }, []);
+
   // Check if currently inside distraction-free examination taking workspace
   const isAssessmentTaking = useMemo(() => {
     return pathname ? /^\/dashboard\/student\/assessments\/[^/]+\/take/.test(pathname) : false;
   }, [pathname]);
 
   // Fetch notifications from server API
-  const fetchNotifications = useCallback(async (isInitial = false) => {
-    if (!auth.isAuthenticated || !auth.userId) {
-      setNotifications([]);
-      setUnreadCount(0);
-      setIsLoading(false);
-      return;
-    }
-
-    if (isInitial) {
-      setIsLoading(true);
-    }
-    setError(null);
-
-    try {
-      if (
-        cachedResult &&
-        cachedResult.userId === auth.userId &&
-        Date.now() - lastFetchTimestamp < 1500
-      ) {
-        setNotifications(cachedResult.notifications);
-        setUnreadCount(cachedResult.unreadCount);
+  const fetchNotifications = useCallback(
+    async (isInitial = false, bypassCache = false) => {
+      if (!auth.isAuthenticated || !auth.userId) {
+        setNotifications([]);
+        setUnreadCount(0);
         setIsLoading(false);
         return;
       }
 
-      if (!inFlightFetchPromise) {
-        inFlightFetchPromise = (async () => {
-          const res = await fetch("/api/notifications?limit=30");
-          if (!res.ok) {
-            throw new Error(`Failed to load notifications: HTTP ${res.status}`);
-          }
-          const data = await res.json();
-          if (!data.success) {
-            throw new Error(data.error || "Failed to load notifications");
-          }
-          const result = {
-            notifications: (data.notifications || []) as NotificationRecord[],
-            unreadCount: typeof data.unreadCount === "number" ? data.unreadCount : 0,
-          };
-          lastFetchTimestamp = Date.now();
-          cachedResult = { ...result, userId: auth.userId! };
-          return result;
-        })().finally(() => {
-          inFlightFetchPromise = null;
-        });
+      if (isInitial) {
+        setIsLoading(true);
       }
+      setError(null);
 
-      const data = await inFlightFetchPromise;
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
+      try {
+        if (
+          !bypassCache &&
+          cachedResult &&
+          cachedResult.userId === auth.userId &&
+          Date.now() - lastFetchTimestamp < 1500
+        ) {
+          setNotifications(cachedResult.notifications);
+          setUnreadCount(cachedResult.unreadCount);
+          setIsLoading(false);
+          return;
+        }
 
-      // Populate seenToastIds with initial historical records so historical notifications never trigger pop-ups on refresh
-      data.notifications.forEach((n) => seenToastIdsRef.current.add(n.id));
-      initialLoadCompletedRef.current = true;
-    } catch (err: any) {
-      setError(err.message || "Unable to fetch notifications");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [auth.isAuthenticated, auth.userId]);
+        if (!inFlightFetchPromise) {
+          inFlightFetchPromise = (async () => {
+            const res = await fetch("/api/notifications?limit=30");
+            if (!res.ok) {
+              throw new Error(`Failed to load notifications: HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            if (!data.success) {
+              throw new Error(data.error || "Failed to load notifications");
+            }
+            const result = {
+              notifications: (data.notifications || []) as NotificationRecord[],
+              unreadCount: typeof data.unreadCount === "number" ? data.unreadCount : 0,
+            };
+            lastFetchTimestamp = Date.now();
+            cachedResult = { ...result, userId: auth.userId! };
+            return result;
+          })().finally(() => {
+            inFlightFetchPromise = null;
+          });
+        }
+
+        const data = await inFlightFetchPromise;
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
+
+        // Determine which notifications are unread and eligible for pop-up toast
+        const now = Date.now();
+        const recentThresholdMs = 24 * 60 * 60 * 1000; // 24 hours
+        const incomingToasts: NotificationRecord[] = [];
+
+        data.notifications.forEach((n) => {
+          // If already read, mark seen so it never toasts
+          if (n.read_at) {
+            seenToastIdsRef.current.add(n.id);
+            return;
+          }
+
+          // If already toasted in this tab/session, skip
+          if (seenToastIdsRef.current.has(n.id)) {
+            return;
+          }
+
+          const createdAtMs = n.created_at ? new Date(n.created_at).getTime() : 0;
+          const isRecent = now - createdAtMs < recentThresholdMs;
+
+          if (isRecent && !isAssessmentTaking) {
+            incomingToasts.push(n);
+            seenToastIdsRef.current.add(n.id);
+            storeToastedId(n.id);
+          } else {
+            // Older than threshold or in exam: mark seen so it does not toast in the future
+            seenToastIdsRef.current.add(n.id);
+            storeToastedId(n.id);
+          }
+        });
+
+        if (incomingToasts.length > 0) {
+          setActiveToasts((prev) => {
+            const prevIds = new Set(prev.map((t) => t.id));
+            const newUnique = incomingToasts.filter((t) => !prevIds.has(t.id));
+            return [...newUnique, ...prev].slice(0, 3);
+          });
+        }
+
+        initialLoadCompletedRef.current = true;
+      } catch (err: any) {
+        setError(err.message || "Unable to fetch notifications");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [auth.isAuthenticated, auth.userId, isAssessmentTaking]
+  );
 
   // Main lifecycle: Realtime channel subscription & tab focus reconciliation
   useEffect(() => {
@@ -134,12 +212,26 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    activeUserIdRef.current = auth.userId;
-    fetchNotifications(true);
+    if (activeUserIdRef.current !== auth.userId) {
+      activeUserIdRef.current = auth.userId;
+      seenToastIdsRef.current = getStoredToastedIds();
+      initialLoadCompletedRef.current = false;
+    }
+
+    fetchNotifications(true, true);
 
     let channel: any = null;
     try {
       const supabase = createClient();
+      const token = getTabAccessToken();
+      if (token && (supabase.realtime as any)?.setAuth) {
+        try {
+          supabase.realtime.setAuth(token);
+        } catch {
+          // Fallback gracefully
+        }
+      }
+
       const channelName = `notifications_ctx:${auth.userId}`;
 
       channel = supabase
@@ -167,16 +259,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               setUnreadCount((prev) => prev + 1);
             }
 
-            // Only trigger visible pop-up toast if:
-            // 1. Initial page load has completed (not a replay of initial state)
-            // 2. Notification hasn't been toasted yet
-            // 3. Student is not in active examination mode
+            // Trigger visible pop-up toast if unread, not yet toasted, and not in exam
             if (
-              initialLoadCompletedRef.current &&
+              !newRecord.read_at &&
               !seenToastIdsRef.current.has(newRecord.id) &&
               !isAssessmentTaking
             ) {
               seenToastIdsRef.current.add(newRecord.id);
+              storeToastedId(newRecord.id);
               setActiveToasts((prev) => {
                 // Keep maximum 3 stacked toasts in queue to prevent viewport congestion
                 const filtered = prev.filter((t) => t.id !== newRecord.id);
@@ -234,15 +324,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // In environments where WebSocket is disabled, REST fetch serves as resilient fallback
     }
 
+    // Active polling interval: Check for new notifications every 3 seconds to guarantee
+    // instantaneous delivery across tabs/browsers without requiring page refresh
+    const pollInterval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        fetchNotifications(false, true);
+      }
+    }, 3000);
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        fetchNotifications(false);
+        fetchNotifications(false, true);
       }
     };
 
     window.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      clearInterval(pollInterval);
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       if (channel) {
         try {
