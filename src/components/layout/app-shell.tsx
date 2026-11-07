@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   X,
@@ -38,8 +38,14 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [maintenance, setMaintenance] = React.useState<{ enabled: boolean; message: string } | null>(null);
+  const [pendingHref, setPendingHref] = React.useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const auth = useAuthContext();
+
+  React.useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -74,6 +80,36 @@ export function AppShell({ children }: AppShellProps) {
         : (subStatus || "ACTIVE");
     return getAuthorizedNavigation(role, auth.isPlatformAdmin, auth.permissions, effectiveSubStatus, isGracePeriod);
   }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading, subStatus, canAccessOperational, isGracePeriod, auth.isPlatformAdmin]);
+
+  // Warm-up prefetch navigation routes in idle background to guarantee instant route transitions
+  React.useEffect(() => {
+    if (!navigationSections.length) return;
+    const prefetchRoutes = () => {
+      navigationSections.forEach((section) => {
+        section.items.forEach((item) => {
+          try {
+            router.prefetch(item.href);
+          } catch {
+            // Ignore prefetch errors
+          }
+        });
+      });
+    };
+
+    if (typeof window !== "undefined") {
+      if ("requestIdleCallback" in window) {
+        const handle = (window as any).requestIdleCallback(prefetchRoutes, { timeout: 2000 });
+        return () => {
+          if ("cancelIdleCallback" in window) {
+            (window as any).cancelIdleCallback(handle);
+          }
+        };
+      } else {
+        const timer = setTimeout(prefetchRoutes, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [navigationSections, router]);
 
   // Only render Student/College Application Shell on /dashboard routes.
   // The public landing page (/), student/college auth routes (/auth/*),
@@ -127,7 +163,11 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row">
+    <div className="min-h-screen bg-background text-text-primary flex flex-col md:flex-row relative">
+      {/* Instant route transition indicator */}
+      {pendingHref && pendingHref !== pathname && (
+        <div className="fixed top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-[#7779D8] to-primary z-[99999] animate-pulse" />
+      )}
       {/* Mobile Header Bar */}
       <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-40">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 mr-2">
@@ -229,9 +269,9 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
 
                 {section.items.map((item) => {
-                  const isActive = item.exactMatch
-                    ? pathname === item.href
-                    : pathname === item.href || pathname.startsWith(item.href + "/");
+                  const isOptimisticActive = pendingHref
+                    ? (item.exactMatch ? pendingHref === item.href : pendingHref === item.href || pendingHref.startsWith(item.href + "/"))
+                    : (item.exactMatch ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/"));
 
                   const Icon = item.icon;
 
@@ -239,10 +279,24 @@ export function AppShell({ children }: AppShellProps) {
                     <Link
                       key={item.id}
                       href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
+                      prefetch={true}
+                      onMouseEnter={() => {
+                        try {
+                          router.prefetch(item.href);
+                        } catch {}
+                      }}
+                      onFocus={() => {
+                        try {
+                          router.prefetch(item.href);
+                        } catch {}
+                      }}
+                      onClick={() => {
+                        setPendingHref(item.href);
+                        setMobileMenuOpen(false);
+                      }}
                       className={cn(
                         "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
-                        isActive
+                        isOptimisticActive
                           ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
                           : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] hover:text-text-primary"
                       )}
@@ -251,7 +305,7 @@ export function AppShell({ children }: AppShellProps) {
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0",
-                            isActive ? "text-primary" : "text-text-secondary"
+                            isOptimisticActive ? "text-primary" : "text-text-secondary"
                           )}
                         />
                         <span className="truncate">{item.name}</span>

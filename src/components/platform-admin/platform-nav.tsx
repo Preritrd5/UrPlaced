@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -124,7 +124,42 @@ export function PlatformSidebar({
   adminName: string;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [pendingHref, setPendingHref] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
+
+  // Warm up platform admin routes in idle background for instant navigation
+  React.useEffect(() => {
+    const prefetchRoutes = () => {
+      PLATFORM_NAVIGATION.forEach((group) => {
+        group.items.forEach((item) => {
+          try {
+            router.prefetch(item.href);
+          } catch {
+            // Non-fatal
+          }
+        });
+      });
+    };
+
+    if (typeof window !== "undefined") {
+      if ("requestIdleCallback" in window) {
+        const handle = (window as any).requestIdleCallback(prefetchRoutes, { timeout: 2000 });
+        return () => {
+          if ("cancelIdleCallback" in window) {
+            (window as any).cancelIdleCallback(handle);
+          }
+        };
+      } else {
+        const timer = setTimeout(prefetchRoutes, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [router]);
 
   async function handleLogout() {
     try {
@@ -145,6 +180,10 @@ export function PlatformSidebar({
 
   return (
     <>
+      {/* Instant route transition indicator */}
+      {pendingHref && pendingHref !== pathname && (
+        <div className="fixed top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-[#7779D8] to-primary z-[99999] animate-pulse" />
+      )}
       {/* Mobile Top Navigation Header */}
       <header className="md:hidden flex items-center justify-between h-16 px-3.5 sm:px-4 bg-card border-b border-border sticky top-0 z-40">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 mr-2">
@@ -226,19 +265,33 @@ export function PlatformSidebar({
 
               {/* Menu Items */}
               {group.items.map((item) => {
-                const isActive = item.exactMatch
-                  ? pathname === item.href
-                  : pathname === item.href || (pathname.startsWith(item.href + "/") && item.href !== "/preritrd/dashboard");
+                const isOptimisticActive = pendingHref
+                  ? (item.exactMatch ? pendingHref === item.href : (pendingHref === item.href || (pendingHref.startsWith(item.href + "/") && item.href !== "/preritrd/dashboard")))
+                  : (item.exactMatch ? pathname === item.href : (pathname === item.href || (pathname.startsWith(item.href + "/") && item.href !== "/preritrd/dashboard")));
                 const Icon = item.icon;
 
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMobileOpen(false)}
+                    prefetch={true}
+                    onMouseEnter={() => {
+                      try {
+                        router.prefetch(item.href);
+                      } catch {}
+                    }}
+                    onFocus={() => {
+                      try {
+                        router.prefetch(item.href);
+                      } catch {}
+                    }}
+                    onClick={() => {
+                      setPendingHref(item.href);
+                      setMobileOpen(false);
+                    }}
                     className={cn(
                       "flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none",
-                      isActive
+                      isOptimisticActive
                         ? "bg-[var(--color-primary-subtle)] text-primary font-semibold"
                         : "text-text-secondary hover:bg-[rgba(36,40,58,0.04)] dark:hover:bg-white/5 hover:text-text-primary"
                     )}
@@ -247,7 +300,7 @@ export function PlatformSidebar({
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          isActive ? "text-primary" : "text-text-secondary"
+                          isOptimisticActive ? "text-primary" : "text-text-secondary"
                         )}
                       />
                       <span className="truncate">{item.title}</span>
