@@ -334,9 +334,17 @@ body:has([data-radix-portal]) aside {
   z-index: 10 !important;
 }
 
-/* Re-elevate header if the dialog is a popover hosted inside the header itself (e.g. notification center) */
-body:has(header [role="dialog"]) header {
-  z-index: 40 !important;
+/* Re-elevate header and popovers if the dialog is hosted inside the header itself (e.g. notification center) */
+header [role="dialog"],
+header [aria-label*="Notification" i] {
+  z-index: 9999 !important;
+}
+
+body:has(header [role="dialog"]) header,
+body:has(header [aria-label*="Notification" i]) header,
+header:has([role="dialog"]),
+header:has([aria-label*="Notification" i]) {
+  z-index: 9999 !important;
 }
 
 /* On short viewports or small monitors, prevent modal content truncation by enabling backdrop scroll */

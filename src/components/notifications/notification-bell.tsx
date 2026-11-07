@@ -174,7 +174,7 @@ export function NotificationBell({ className, size = "default" }: NotificationBe
         <div
           role="dialog"
           aria-label="Notification center"
-          className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-2 sm:w-96 sm:max-w-[calc(100vw-1.5rem)] bg-[#F8F7F3] border border-[#DDDCD5] rounded-2xl shadow-xl overflow-hidden z-50 flex flex-col font-inter animate-in fade-in zoom-in-95 duration-150"
+          className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-2 sm:w-96 sm:max-w-[calc(100vw-1.5rem)] bg-[#F8F7F3] border border-[#DDDCD5] rounded-2xl shadow-xl overflow-hidden z-[9999] flex flex-col font-inter animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Header */}
           <div className="p-3.5 px-4 bg-[#FBFAF7] border-b border-[#DDDCD5] flex items-center justify-between select-none">
