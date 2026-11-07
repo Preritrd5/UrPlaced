@@ -27,6 +27,7 @@ import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import { FloatingAIChatbot } from "@/components/ai/floating-ai-chatbot";
 import { NotificationProvider } from "@/modules/notifications/context/notification-context";
 import { StudentNotificationToast } from "@/components/notifications/student-notification-toast";
+import { FullScreenMaintenance } from "@/components/maintenance/full-screen-maintenance";
 import {
   getAuthorizedNavigation,
   getRoleDefaultDashboard,
@@ -73,16 +74,30 @@ export function AppShell({ children }: AppShellProps) {
 
   React.useEffect(() => {
     let mounted = true;
-    fetch("/api/platform/maintenance")
-      .then((r) => r.json())
-      .then((data) => {
-        if (mounted && data.enabled) {
-          setMaintenance({ enabled: true, message: data.message });
+    const fetchMaintenance = async () => {
+      try {
+        const res = await fetch("/api/platform/maintenance", { cache: "no-store" });
+        const data = await res.json();
+        if (mounted) {
+          if (data?.enabled) {
+            setMaintenance({ enabled: true, message: data.message });
+          } else {
+            setMaintenance(null);
+          }
         }
-      })
-      .catch(() => {});
+      } catch {
+        // Network fallback
+      }
+    };
+
+    fetchMaintenance();
+    const interval = setInterval(fetchMaintenance, 10000);
+    window.addEventListener("focus", fetchMaintenance);
+
     return () => {
       mounted = false;
+      clearInterval(interval);
+      window.removeEventListener("focus", fetchMaintenance);
     };
   }, []);
 
@@ -141,6 +156,33 @@ export function AppShell({ children }: AppShellProps) {
   // inherit the Student or College application shell, headers, sidebars, or account menus.
   if (!pathname || !pathname.startsWith("/dashboard")) {
     return <>{children}</>;
+  }
+
+  // GLOBAL MAINTENANCE MODE LOCKDOWN (Directive Requirement)
+  // When global maintenance mode is enabled, completely hide normal application interface
+  // (sidebar, header, navigation, and dashboard content) for all tenant users.
+  // Super Admin retains unrestricted access to the control plane.
+  if (maintenance?.enabled && !auth.isPlatformAdmin) {
+    return (
+      <FullScreenMaintenance
+        announcement={maintenance.message}
+        onRefresh={() => {
+          fetch("/api/platform/maintenance", { cache: "no-store" })
+            .then((r) => r.json())
+            .then((data) => {
+              if (!data.enabled) {
+                setMaintenance(null);
+                router.refresh();
+              }
+            });
+        }}
+        onSignOut={() => {
+          auth.signOut?.().then(() => {
+            router.push("/auth/signin");
+          });
+        }}
+      />
+    );
   }
 
   // Distraction-Free Active Examination Environment:
@@ -420,26 +462,6 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         <main className="flex-1 py-4 sm:py-8 px-3.5 sm:px-6 lg:px-10 max-w-7xl w-full mx-auto">
-          {/* Scheduled Platform Maintenance Broadcast Banner */}
-          {maintenance?.enabled && (
-            <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 flex items-start gap-3 shadow-xs">
-              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="font-semibold text-sm flex items-center gap-2">
-                  <span>Scheduled Platform Maintenance Active</span>
-                  <Badge variant="outline" className="text-[10px] font-mono border-amber-400 text-amber-800 dark:text-amber-200">
-                    MAINTENANCE
-                  </Badge>
-                </div>
-                <p className="text-xs text-amber-800/80 dark:text-amber-200/80 leading-relaxed">
-                  {maintenance.message || "UrPlaced is performing scheduled maintenance. Some services may experience temporary interruptions."}
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Q1: 7-Day Renewal Grace Period Warning Banner */}
           {isProtectedByGrace && (
             <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">

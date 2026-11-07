@@ -11,6 +11,19 @@ export interface PlatformSettingItem {
 }
 
 export class PlatformConfigService {
+  private static maintenanceCache: {
+    data: { enabled: boolean; message: string; scheduledEnd: string | null };
+    cachedAt: number;
+  } | null = null;
+
+  private static readonly CACHE_TTL_MS = 5000;
+
+  /**
+   * Clears the in-memory maintenance status cache.
+   */
+  static invalidateMaintenanceCache(): void {
+    PlatformConfigService.maintenanceCache = null;
+  }
   /**
    * Retrieves all platform settings.
    */
@@ -74,6 +87,17 @@ export class PlatformConfigService {
       adminClient: admin,
     });
 
+    if (key === "maintenance_mode") {
+      PlatformConfigService.maintenanceCache = {
+        data: {
+          enabled: Boolean(value?.enabled),
+          message: value?.message || "UrPlaced is performing scheduled maintenance. Services will resume shortly.",
+          scheduledEnd: value?.scheduledEnd || null,
+        },
+        cachedAt: Date.now(),
+      };
+    }
+
     return {
       key: data.key,
       value: data.value,
@@ -86,12 +110,24 @@ export class PlatformConfigService {
 
   /**
    * Retrieves current maintenance status.
+   * Leverages an in-memory 5-second cache to avoid redundant database round-trips
+   * while ensuring changes propagate immediately upon Super Admin save.
    */
-  static async getMaintenanceStatus(admin = createAdminClient()): Promise<{
+  static async getMaintenanceStatus(
+    admin = createAdminClient(),
+    forceFresh = false
+  ): Promise<{
     enabled: boolean;
     message: string;
     scheduledEnd: string | null;
   }> {
+    const now = Date.now();
+    if (!forceFresh && PlatformConfigService.maintenanceCache) {
+      if (now - PlatformConfigService.maintenanceCache.cachedAt < PlatformConfigService.CACHE_TTL_MS) {
+        return PlatformConfigService.maintenanceCache.data;
+      }
+    }
+
     try {
       const { data } = await admin
         .from("platform_settings")
@@ -100,15 +136,25 @@ export class PlatformConfigService {
         .maybeSingle();
 
       if (data?.value && typeof data.value === "object") {
-        return {
+        const result = {
           enabled: Boolean(data.value.enabled),
           message: data.value.message || "UrPlaced is performing scheduled maintenance. Services will resume shortly.",
           scheduledEnd: data.value.scheduledEnd || null,
         };
+        PlatformConfigService.maintenanceCache = {
+          data: result,
+          cachedAt: now,
+        };
+        return result;
       }
     } catch {
       // Fallback
     }
-    return { enabled: false, message: "", scheduledEnd: null };
+    const fallback = { enabled: false, message: "", scheduledEnd: null };
+    PlatformConfigService.maintenanceCache = {
+      data: fallback,
+      cachedAt: now,
+    };
+    return fallback;
   }
 }

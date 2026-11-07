@@ -13,7 +13,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_%26_RLS-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com/)
 [![Razorpay](https://img.shields.io/badge/Razorpay-Live_Standard_Checkout_%26_UPI_QR-0C2340?style=for-the-badge&logo=razorpay)](https://razorpay.com/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-2.0_Flash_AI-8E75C2?style=for-the-badge&logo=google)](https://ai.google.dev/)
-[![Vitest](https://img.shields.io/badge/Vitest-123_Files_•_1409_Tests_Passing-729B1B?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-125_Files_•_1430_Tests_Passing-729B1B?style=for-the-badge&logo=vitest)](https://vitest.dev/)
 
 </div>
 
@@ -34,8 +34,10 @@
   - [8. Platform Super Admin Control Plane](#8-platform-super-admin-control-plane)
   - [9. Institutional Billing, Invoicing & Refunds](#9-institutional-billing-invoicing--refunds)
   - [10. Global Navigation Optimization & Smart Session Validation](#10-global-navigation-optimization--smart-session-validation)
+  - [11. Global Maintenance Mode & Full-Screen Tenant Lockdown](#11-global-maintenance-mode--full-screen-tenant-lockdown)
 - [System Architecture & Workflows](#-system-architecture--workflows)
   - [High-Level Architecture Diagram](#high-level-architecture-diagram)
+  - [Global Maintenance Mode & Lockdown Enforcement Architecture](#global-maintenance-mode--lockdown-enforcement-architecture)
   - [Next.js Middleware & RSC Session Refresh Architecture](#nextjs-middleware--rsc-session-refresh-architecture)
   - [Assessment Lifecycle & Regrading Engine](#assessment-lifecycle--regrading-engine)
   - [Multi-Tenant RLS & Auth Isolation](#multi-tenant-rls--auth-isolation)
@@ -139,6 +141,15 @@ Traditional placement management relies on fractured spreadsheets, unmonitored t
 - **Instant Optimistic Visual Transitions (`pendingHref`):** Synchronously updates active link indicators ($<4$ms) and displays a 2px brand gradient progress bar (`linear-gradient(135deg, #7779D8 0%, #5052C9 100%)`) during page load.
 - **Fail-Closed Security Invariant:** Speculative prefetch and RSC requests fail closed without disclosing sensitive student records or placement telemetry to unauthenticated callers.
 
+### 11. Global Maintenance Mode & Full-Screen Tenant Lockdown
+- **Defense-in-Depth Lockdown Engine:** Centrally configured via Super Admin platform switches (`/preritrd/configuration`), enforcing an absolute, full-screen maintenance interface whenever `maintenance_mode = TRUE`.
+- **Complete Tenant UI Erasure:** Replaces all normal navigation, sidebar, application header, user profile controls, dashboard widgets, and child routes (`/dashboard/*`, `/dashboard/student/*`) with `<FullScreenMaintenance />`. Never renders as a banner or dismissible overlay.
+- **Zero Content Flash & Server-Side Security:** Root `DashboardLayout` checks `PlatformConfigService.getMaintenanceStatus()` before streaming any child React Server Component (RSC), preventing in-flight data leaks or initial rendering flash.
+- **HTTP 503 Service Unavailable API Guard:** Intercepts incoming non-exempt tenant API requests (`/api/student/*`, `/api/placement/*`, `/api/notifications/*`, etc.) at the Edge middleware and Server Context layer (`requireAuthContext`), returning status 503 with dynamic broadcast payload and `Retry-After: 300` headers.
+- **Strict Super Admin Exemption:** Super Admin control plane (`/preritrd/*`) and management APIs (`/api/preritrd/*`) remain 100% accessible to verified Super Admins to monitor telemetry, update broadcast messaging, or restore operations.
+- **Critical Integrations Preserved:** Razorpay webhooks (`/api/billing/webhook`, `/api/webhooks/razorpay`), subscription checkouts (`/api/billing/checkout/*`), auth callbacks/signout (`/auth/*`, `/api/auth/signout`), and maintenance status telemetry (`/api/platform/maintenance`) remain operational during lockdown.
+- **In-Memory Caching & Sub-Second Propagation:** 5-second in-memory TTL caching in `PlatformConfigService` and Edge Middleware eliminates database latency while immediately invalidating upon Super Admin configuration save.
+
 ---
 
 ## 🏗 System Architecture & Workflows
@@ -182,6 +193,54 @@ flowchart TB
     ServiceLayer --> AUDIT
     BILLING <-->|Webhooks & Orders| RZP["Razorpay Payment Gateway"]
     AI_SVC <-->|API Calls| GEMINI["Google Gemini API"]
+```
+
+---
+
+### Global Maintenance Mode & Lockdown Enforcement Architecture
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Tenant as Student / Placement Staff
+    actor Admin as Super Admin (/preritrd)
+    participant MW as Next.js Edge Middleware
+    participant DL as DashboardLayout (Server Component)
+    participant Shell as AppShell (Client Polling)
+    participant API as Tenant API / Server Context
+    participant DB as Supabase PostgreSQL
+
+    Admin->>DB: PATCH /api/preritrd/configuration (maintenance_mode = true)
+    DB-->>Admin: Saved & Audit Event Recorded
+    Note over MW,DB: Maintenance Cache invalidated; 5s TTL syncs across edge
+
+    rect rgb(240, 240, 240)
+    Note over Tenant,API: Scenario A: Direct URL Navigation (/dashboard/*)
+    Tenant->>MW: GET /dashboard/student
+    MW->>MW: Check checkGlobalMaintenance() -> TRUE & !isSuperAdmin
+    MW-->>Tenant: Rewrite to /maintenance (Zero flash, HTTP headers set)
+    end
+
+    rect rgb(240, 240, 240)
+    Note over Tenant,DL: Scenario B: Server-Side RSC Request
+    Tenant->>DL: Request /dashboard
+    DL->>DL: PlatformConfigService.getMaintenanceStatus() -> TRUE
+    DL-->>Tenant: Render <FullScreenMaintenance /> (Zero child RSC / DB queries)
+    end
+
+    rect rgb(240, 240, 240)
+    Note over Tenant,API: Scenario C: Tenant-Facing API Request
+    Tenant->>API: GET /api/student/dashboard
+    API->>API: requireAuthContext() checks maintenance
+    API-->>Tenant: HTTP 503 SERVICE_UNAVAILABLE { maintenance: true, announcement }
+    end
+
+    rect rgb(240, 240, 240)
+    Note over Tenant,Shell: Scenario D: Open Tab Dynamic Transition
+    Shell->>API: 10s Poll GET /api/platform/maintenance
+    API-->>Shell: 200 OK { enabled: true, message: "..." }
+    Shell->>Shell: Swap entire DOM tree to <FullScreenMaintenance />
+    end
 ```
 
 ---

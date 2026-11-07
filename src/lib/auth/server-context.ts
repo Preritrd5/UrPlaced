@@ -12,6 +12,21 @@ import { MembershipService } from "@/modules/tenancy/services/membership-service
 import { TenantService } from "@/modules/tenancy/services/tenant-service";
 import { EntitlementService } from "@/modules/platform-admin/services/entitlement-service";
 import { SubscriptionAccessService } from "@/modules/billing/services/subscription-access-service";
+import { PlatformConfigService } from "@/modules/platform-admin/services/platform-config-service";
+
+export class MaintenanceModeError extends Error {
+  readonly status = 503;
+  readonly code = "MAINTENANCE_ACTIVE";
+  readonly announcement: string;
+
+  constructor(announcement?: string) {
+    super("SERVICE_UNAVAILABLE: MAINTENANCE_MODE");
+    this.name = "MaintenanceModeError";
+    this.announcement =
+      announcement ||
+      "UrPlaced is temporarily unavailable due to scheduled platform maintenance. Please check back later.";
+  }
+}
 
 export interface AuthenticatedServerContext {
   userId: string;
@@ -92,6 +107,17 @@ export async function requireAuthContext(
       throw err;
     }
     isPlatformAdmin = user.app_metadata?.is_platform_admin === true;
+  }
+
+  // 1.5. Centralized Global Maintenance Mode Enforcement (Directive Requirement)
+  // When global maintenance is active, all tenant-facing operations, APIs, and direct data
+  // access must be strictly blocked with HTTP 503 Service Unavailable.
+  // Super Admin retains unrestricted access to the platform control plane.
+  if (!isPlatformAdmin) {
+    const maintenance = await PlatformConfigService.getMaintenanceStatus();
+    if (maintenance.enabled) {
+      throw new MaintenanceModeError(maintenance.message);
+    }
   }
 
   // 2. Authoritative server credentials
