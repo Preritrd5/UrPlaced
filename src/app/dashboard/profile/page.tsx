@@ -141,6 +141,7 @@ export default function MyProfilePage() {
 
   // Password change modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -514,28 +515,60 @@ export default function MyProfilePage() {
     e.preventDefault();
     setPasswordMsg(null);
 
+    if (!currentPassword) {
+      setPasswordMsg({ type: "error", text: "Please enter your current password." });
+      return;
+    }
+
     if (newPassword.length < 8) {
-      setPasswordMsg({ type: "error", text: "Password must be at least 8 characters long." });
+      setPasswordMsg({ type: "error", text: "New password must be at least 8 characters long." });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordMsg({ type: "error", text: "Passwords do not match." });
+      setPasswordMsg({ type: "error", text: "New passwords do not match." });
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordMsg({ type: "error", text: "New password must be different from your current password." });
       return;
     }
 
     setPasswordSaving(true);
     try {
       const supabase = createClient();
+      const userEmail = profile?.email || auth.email;
+
+      if (userEmail) {
+        // Re-authenticate to verify the current password is valid
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: currentPassword,
+        });
+
+        if (signInError) {
+          setPasswordMsg({
+            type: "error",
+            text: "Incorrect current password. Please verify and try again.",
+          });
+          return;
+        }
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPassword });
 
       if (error) {
         setPasswordMsg({ type: "error", text: error.message });
       } else {
         setPasswordMsg({ type: "success", text: "Password updated successfully!" });
+        setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
-        setTimeout(() => setShowPasswordModal(false), 2000);
+        setTimeout(() => {
+          setShowPasswordModal(false);
+          setPasswordMsg(null);
+        }, 2000);
       }
     } catch {
       setPasswordMsg({ type: "error", text: "An unexpected error occurred while changing password." });
@@ -1659,8 +1692,11 @@ export default function MyProfilePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setShowPasswordModal(true);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmPassword("");
                   setPasswordMsg(null);
+                  setShowPasswordModal(true);
                 }}
                 className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-surface text-xs text-text-primary text-left transition-colors group"
               >
@@ -1720,14 +1756,20 @@ export default function MyProfilePage() {
                 </CardTitle>
                 <button
                   type="button"
-                  onClick={() => setShowPasswordModal(false)}
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                    setPasswordMsg(null);
+                  }}
                   className="p-1 rounded text-text-secondary hover:text-text-primary"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
               <CardDescription className="text-xs">
-                Enter your new secure password (minimum 8 characters).
+                Enter your current password and your new secure password (minimum 8 characters).
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pr-3 sm:pr-5">
@@ -1741,6 +1783,21 @@ export default function MyProfilePage() {
               )}
 
               <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="currentPassword" required className="text-xs font-semibold">
+                    Current Password
+                  </Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    disabled={passwordSaving}
+                  />
+                </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="newPassword" required className="text-xs font-semibold">
                     New Password
@@ -1778,7 +1835,13 @@ export default function MyProfilePage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowPasswordModal(false)}
+                    onClick={() => {
+                      setShowPasswordModal(false);
+                      setCurrentPassword("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                      setPasswordMsg(null);
+                    }}
                     disabled={passwordSaving}
                   >
                     Cancel
