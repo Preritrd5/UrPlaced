@@ -120,6 +120,18 @@ Traditional placement management relies on fractured spreadsheets, unmonitored t
 - **Cryptographic MFA Assurance:** Enforces genuine TOTP MFA (AAL2) claiming via Supabase Auth with zero reliance on client-side state.
 - **Onboarding Invitations:** Issue, revoke, and track cryptographically hashed invitations for institutional onboarding.
 - **Global Audit Logs:** Comprehensive immutable log tracking every administrative state modification, role change, and deletion action.
+- **Subscription Plan Catalogue, Entitlements Feature Matrix & Versioning Engine:**
+  - **16 Controlled Architectural Features:** Segmented across 5 core modules:
+    1. *Core Placement Operations:* Recruitment Drives & Scheduling (`core_drives_management`), Student Directory & SRN Verification (`student_roster_directory`), Company Relationship Hub (`company_management`).
+    2. *Assessment & Testing Suite:* Standard Assessment Engine (`standard_assessments`), Subject-Wise Question Repository (`subject_question_banks`), Custom & Random Question Sets (`custom_question_sets`).
+    3. *Intelligence & Placement Analytics:* DriveFit Match Scoring (`drivefit_evaluator`), Mistake Bank & Spaced Remediation (`mistake_to_mastery`), Placement Memory & Cohort Intelligence (`placement_memory_analytics`), Automated Eligibility Filtering (`automated_eligibility_engine`).
+    4. *Generative AI Modules:* AI Question Generation with Gemini (`ai_question_generator`), Floating AI Placement Tutor (`ai_tutor_assistant`), Automated Resume & Coding Scoring (`ai_evaluation_pipeline`).
+    5. *Institutional Governance & SLAs:* Department & Academic Structure (`department_hierarchy`), Platform Audit & Compliance Export (`audit_data_export_hub`), Priority Support & Dedicated Liaison (`dedicated_sla_liaison`).
+  - **6 Controlled Institutional Limit Quotas:** Maximum Enrolled Students (`max_students`), Maximum Staff & Faculty Seats (`max_staff`), Maximum Active Recruitment Drives (`max_drives`), Repository Storage Limit (`max_storage_gb`), Assessments Per Academic Year (`max_assessments`), and Monthly AI Token Allocation (`ai_tokens_monthly`).
+  - **Strict Non-Negative Bounds & Data Validation:** Form inputs and API endpoints enforce non-negative constraints on all quotas, pricing, and discount percentages ($0 \le \text{discount} \le 100\%$).
+  - **Immutable Version Incrementing ($v1 \rightarrow v2$):** Updating pricing, quotas, or feature matrix on any published plan automatically increments its version.
+  - **Non-Destructive Subscriber Snapshot Isolation:** Existing college subscribers safely retain their frozen `entitlements_snapshot` locked to their agreed contract version, preventing silent service mutations. Outdated snapshots are flagged with administrative one-click version synchronization.
+  - **Emergency Immediate Override Justification:** Immediate contract changes for active subscribers enforce operational justification logging ($\ge 10$ characters) alongside audit log commitment.
 
 ### 9. Institutional Billing, Payment Gateway & Financial Reconciliation
 - **Razorpay Standard Web Checkout Integration:** End-to-end payment lifecycle via official Razorpay Standard Checkout SDK (`https://checkout.razorpay.com/v1/checkout.js`), enforcing server-authoritative order creation (`POST /api/billing/checkout/create-order`) with server-side paise conversion, INR currency validation, and balance guards.

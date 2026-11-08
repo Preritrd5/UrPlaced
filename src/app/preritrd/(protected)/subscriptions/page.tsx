@@ -154,6 +154,52 @@ export default function PlatformSubscriptionsPage() {
     fetchData();
   }, [fetchData]);
 
+  // Lock body scroll and handle Escape key while any modal dialog is active
+  React.useEffect(() => {
+    const hasOpenModal = Boolean(
+      editingPlan ||
+        isCreateModalOpen ||
+        viewingPlan ||
+        changePlanSub ||
+        planToArchive ||
+        archiveConflict ||
+        subToSync ||
+        viewingSnapshot
+    );
+    if (hasOpenModal) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          if (editingPlan) setEditingPlan(null);
+          else if (isCreateModalOpen) setIsCreateModalOpen(false);
+          else if (viewingPlan) setViewingPlan(null);
+          else if (changePlanSub) setChangePlanSub(null);
+          else if (planToArchive) setPlanToArchive(null);
+          else if (archiveConflict) setArchiveConflict(null);
+          else if (subToSync) setSubToSync(null);
+          else if (viewingSnapshot) setViewingSnapshot(null);
+        }
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [
+    editingPlan,
+    isCreateModalOpen,
+    viewingPlan,
+    changePlanSub,
+    planToArchive,
+    archiveConflict,
+    subToSync,
+    viewingSnapshot,
+  ]);
+
   // Top Metrics Calculation
   const metrics = React.useMemo(() => {
     const totalPlans = plans.length;
@@ -247,6 +293,28 @@ export default function PlatformSubscriptionsPage() {
   // Open Edit Plan Modal
   function handleOpenEditModal(plan: DetailedSubscriptionPlan) {
     setEditingPlan(plan);
+    const populatedLimits: PlanLimitsMap = {
+      max_students: plan.limits?.max_students !== undefined ? plan.limits.max_students : 1000,
+      max_staff: plan.limits?.max_staff !== undefined ? plan.limits.max_staff : 15,
+      max_drives: plan.limits?.max_drives !== undefined ? plan.limits.max_drives : 25,
+      max_storage_gb: plan.limits?.max_storage_gb !== undefined ? plan.limits.max_storage_gb : 50,
+      max_assessments: plan.limits?.max_assessments !== undefined ? plan.limits.max_assessments : 100,
+      ai_tokens_monthly: plan.limits?.ai_tokens_monthly !== undefined ? plan.limits.ai_tokens_monthly : 250000,
+    };
+    const populatedEntitlements: PlanEntitlementsMap = {};
+    CONTROLLED_FEATURE_CATALOGUE.forEach((f) => {
+      populatedEntitlements[f.key] =
+        plan.entitlements && plan.entitlements[f.key] !== undefined
+          ? Boolean(plan.entitlements[f.key])
+          : f.defaultTiers.includes(
+              (plan.slug || plan.id).toLowerCase().includes("enterprise")
+                ? "enterprise"
+                : (plan.slug || plan.id).toLowerCase().includes("growth")
+                ? "growth"
+                : "starter"
+            );
+    });
+
     setPlanForm({
       name: plan.name,
       slug: plan.slug,
@@ -257,8 +325,8 @@ export default function PlatformSubscriptionsPage() {
       currency: plan.currency || "INR",
       billingInterval: plan.billingInterval || "ANNUAL",
       discountPercentage: plan.discountPercentage || 0,
-      limits: { ...plan.limits },
-      entitlements: { ...plan.entitlements },
+      limits: populatedLimits,
+      entitlements: populatedEntitlements,
     });
   }
 
@@ -647,7 +715,7 @@ export default function PlatformSubscriptionsPage() {
                 ₹{metrics.annualRunRate.toLocaleString("en-IN")}
               </div>
               <div className="text-[10px] text-text-secondary font-mono leading-tight">
-                Theoretical annualized projection based on plan price configs &amp; active subscriptions. Unverified until SA-05 payment integration.
+                Annualized projection across active institutional college subscriptions.
               </div>
             </div>
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -1173,7 +1241,12 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 1: CREATE PLAN MODAL */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsCreateModalOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
@@ -1225,8 +1298,11 @@ export default function PlatformSubscriptionsPage() {
                     <label className="text-xs font-semibold text-text-primary">Display Order</label>
                     <Input
                       type="number"
+                      min={0}
                       value={planForm.displayOrder}
-                      onChange={(e) => setPlanForm({ ...planForm, displayOrder: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, displayOrder: Math.max(0, Number(e.target.value) || 0) })
+                      }
                       className="bg-surface border-border text-xs h-9 font-mono"
                     />
                   </div>
@@ -1251,7 +1327,9 @@ export default function PlatformSubscriptionsPage() {
                       required
                       min={0}
                       value={planForm.priceInr}
-                      onChange={(e) => setPlanForm({ ...planForm, priceInr: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, priceInr: Math.max(0, Number(e.target.value) || 0) })
+                      }
                       className="bg-surface border-border text-xs h-9 font-mono"
                     />
                   </div>
@@ -1276,7 +1354,12 @@ export default function PlatformSubscriptionsPage() {
                       min={0}
                       max={100}
                       value={planForm.discountPercentage}
-                      onChange={(e) => setPlanForm({ ...planForm, discountPercentage: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setPlanForm({
+                          ...planForm,
+                          discountPercentage: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                        })
+                      }
                       className="bg-surface border-border text-xs h-9 font-mono"
                     />
                   </div>
@@ -1330,7 +1413,8 @@ export default function PlatformSubscriptionsPage() {
                           placeholder="Leave empty for Unlimited"
                           value={planForm.limits[lim.key] ?? ""}
                           onChange={(e) => {
-                            const val = e.target.value === "" ? null : Number(e.target.value);
+                            const raw = e.target.value;
+                            const val = raw === "" ? null : Math.max(0, parseInt(raw, 10) || 0);
                             setPlanForm({
                               ...planForm,
                               limits: { ...planForm.limits, [lim.key]: val },
@@ -1468,7 +1552,12 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 2: EDIT PLAN MODAL */}
       {editingPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingPlan(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
@@ -1528,8 +1617,11 @@ export default function PlatformSubscriptionsPage() {
                     <label className="text-xs font-semibold text-text-primary">Display Order</label>
                     <Input
                       type="number"
+                      min={0}
                       value={planForm.displayOrder}
-                      onChange={(e) => setPlanForm({ ...planForm, displayOrder: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, displayOrder: Math.max(0, Number(e.target.value) || 0) })
+                      }
                       className="bg-surface border-border text-xs h-9 font-mono"
                     />
                   </div>
@@ -1553,7 +1645,9 @@ export default function PlatformSubscriptionsPage() {
                       required
                       min={0}
                       value={planForm.priceInr}
-                      onChange={(e) => setPlanForm({ ...planForm, priceInr: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setPlanForm({ ...planForm, priceInr: Math.max(0, Number(e.target.value) || 0) })
+                      }
                       className="bg-surface border-border text-xs h-9 font-mono"
                     />
                   </div>
@@ -1578,7 +1672,12 @@ export default function PlatformSubscriptionsPage() {
                       min={0}
                       max={100}
                       value={planForm.discountPercentage}
-                      onChange={(e) => setPlanForm({ ...planForm, discountPercentage: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setPlanForm({
+                          ...planForm,
+                          discountPercentage: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                        })
+                      }
                       className="bg-surface border-border text-xs h-9 font-mono"
                     />
                   </div>
@@ -1620,7 +1719,8 @@ export default function PlatformSubscriptionsPage() {
                           placeholder="Leave empty for Unlimited"
                           value={planForm.limits[lim.key] ?? ""}
                           onChange={(e) => {
-                            const val = e.target.value === "" ? null : Number(e.target.value);
+                            const raw = e.target.value;
+                            const val = raw === "" ? null : Math.max(0, parseInt(raw, 10) || 0);
                             setPlanForm({
                               ...planForm,
                               limits: { ...planForm.limits, [lim.key]: val },
@@ -1746,7 +1846,11 @@ export default function PlatformSubscriptionsPage() {
                   disabled={actionLoading}
                   className="bg-primary hover:bg-[var(--color-primary-hover)] text-white text-xs h-9 px-5"
                 >
-                  {actionLoading ? "Updating..." : `Save Changes & Increment Version`}
+                  {actionLoading
+                    ? "Updating..."
+                    : editingPlan.status === "PUBLISHED"
+                    ? "Save Changes & Increment Version"
+                    : "Save Changes"}
                 </Button>
               </div>
             </form>
@@ -1756,7 +1860,12 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 3: VIEW PLAN DETAILS & ENTITLEMENTS MODAL */}
       {viewingPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setViewingPlan(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-4xl min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-2xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
@@ -1877,7 +1986,12 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 4: CHANGE COLLEGE PLAN MODAL */}
       {changePlanSub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setChangePlanSub(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <CardTitle className="text-base font-bold font-heading text-text-primary">
@@ -2019,7 +2133,12 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 5: VIEW SNAPSHOT ENTITLEMENTS MODAL */}
       {viewingSnapshot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setViewingSnapshot(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="pb-3 border-b border-border/30 shrink-0 flex flex-row items-center justify-between">
               <div>
@@ -2101,7 +2220,12 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 6: ARCHIVE CONFLICT MODAL */}
       {archiveConflict && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setArchiveConflict(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-red-300 shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-red-200 bg-card">
               <div className="flex items-center gap-2 text-red-700">
@@ -2145,7 +2269,12 @@ export default function PlatformSubscriptionsPage() {
       )}
       {/* MODAL 7: ARCHIVE CONFIRMATION MODAL */}
       {planToArchive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPlanToArchive(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center gap-2 text-amber-700">
@@ -2188,7 +2317,12 @@ export default function PlatformSubscriptionsPage() {
 
       {/* MODAL 8: SYNC VERSION CONFIRMATION MODAL */}
       {subToSync && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSubToSync(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto"
+        >
           <Card className="w-full max-w-md min-h-0 max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden bg-card border-border shadow-xl rounded-2xl my-auto">
             <CardHeader className="shrink-0 pb-3 border-b border-border/60 bg-card">
               <div className="flex items-center gap-2 text-primary">

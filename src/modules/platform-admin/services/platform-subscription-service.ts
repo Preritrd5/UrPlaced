@@ -457,6 +457,13 @@ export class PlatformSubscriptionService {
     if (discountPercentage < 0 || discountPercentage > 100) {
       throw new Error("Discount percentage must be between 0 and 100.");
     }
+    if (limitsParam) {
+      for (const [key, val] of Object.entries(limitsParam)) {
+        if (val !== null && val !== undefined && val < 0) {
+          throw new Error(`Limit '${key}' cannot be negative.`);
+        }
+      }
+    }
 
     // Check slug and ID uniqueness
     const { data: existing } = await admin
@@ -469,8 +476,9 @@ export class PlatformSubscriptionService {
       throw new Error(`A subscription plan with identifier '${existing.id}' or slug '${existing.slug}' already exists.`);
     }
 
-    const limits = this.buildDefaultLimits(limitsParam);
-    const entitlements = this.buildDefaultEntitlements(entitlementsParam);
+    const planTierKey = cleanSlug || planId || name;
+    const limits = this.buildDefaultLimits(limitsParam, planTierKey);
+    const entitlements = this.buildDefaultEntitlements(entitlementsParam, planTierKey);
     const legacyFeatures = this.entitlementsToStringArray(entitlements);
     const isActive = status === "PUBLISHED";
     const now = new Date().toISOString();
@@ -775,6 +783,13 @@ export class PlatformSubscriptionService {
     if (discountPercentage !== undefined && (discountPercentage < 0 || discountPercentage > 100)) {
       throw new Error("Discount percentage must be between 0 and 100.");
     }
+    if (limitsParam) {
+      for (const [key, val] of Object.entries(limitsParam)) {
+        if (val !== null && val !== undefined && val < 0) {
+          throw new Error(`Limit '${key}' cannot be negative.`);
+        }
+      }
+    }
 
     // If plan is PUBLISHED and limits, entitlements, or pricing changed, bump version!
     const isMajorChange =
@@ -785,15 +800,22 @@ export class PlatformSubscriptionService {
 
     const newVersion = existing.status === "PUBLISHED" && isMajorChange ? existing.version + 1 : existing.version;
 
-    const updatedLimits: PlanLimitsMap = this.buildDefaultLimits({
-      ...existing.limits,
-      ...(limitsParam || {}),
-    });
+    const planTierKey = existing.slug || existing.id;
+    const updatedLimits: PlanLimitsMap = this.buildDefaultLimits(
+      {
+        ...existing.limits,
+        ...(limitsParam || {}),
+      },
+      planTierKey
+    );
 
-    const updatedEntitlements: PlanEntitlementsMap = this.buildDefaultEntitlements({
-      ...existing.entitlements,
-      ...(entitlementsParam || {}),
-    });
+    const updatedEntitlements: PlanEntitlementsMap = this.buildDefaultEntitlements(
+      {
+        ...existing.entitlements,
+        ...(entitlementsParam || {}),
+      },
+      planTierKey
+    );
 
     const legacyFeatures = this.entitlementsToStringArray(updatedEntitlements);
 

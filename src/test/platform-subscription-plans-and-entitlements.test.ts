@@ -512,6 +512,41 @@ describe("SA-04: Platform Subscription Plans, Entitlements & Versioning", () => 
       ).rejects.toThrow("Price cannot be negative");
     });
 
+    it("rejects plan creation with negative quota limits", async () => {
+      const mockAdmin = createMockAdmin();
+
+      await expect(
+        PlatformSubscriptionService.createPlan({
+          name: "Negative Quota Plan",
+          slug: "negative-quota-plan",
+          priceInr: 10000,
+          limits: {
+            max_students: -50,
+          },
+          adminId: "admin-uuid",
+          admin: mockAdmin as any,
+        })
+      ).rejects.toThrow("Limit 'max_students' cannot be negative.");
+    });
+
+    it("uses tier-specific defaults based on plan slug/name when creating a plan", async () => {
+      const mockAdmin = createMockAdmin();
+
+      const starterPlan = await PlatformSubscriptionService.createPlan({
+        name: "Institutional Starter 2026",
+        slug: "institutional-starter-2026",
+        priceInr: 45000,
+        adminId: "admin-uuid",
+        admin: mockAdmin as any,
+      });
+
+      // Default starter limits must match starter tier specifications
+      expect(starterPlan.limits.max_students).toBe(500);
+      expect(starterPlan.limits.max_staff).toBe(5);
+      expect(starterPlan.limits.max_drives).toBe(5);
+      expect(starterPlan.limits.max_storage_gb).toBe(10);
+    });
+
     it("rejects duplicate plan slug", async () => {
       const mockAdmin = createMockAdmin();
 
@@ -573,6 +608,56 @@ describe("SA-04: Platform Subscription Plans, Entitlements & Versioning", () => 
       expect(preservedSub.entitlements_snapshot.planVersion).toBe(1);
       expect(preservedSub.entitlements_snapshot.limits.max_students).toBe(2500);
       expect(preservedSub.entitlements_snapshot.priceInr).toBe(149999);
+    });
+
+    it("rejects plan update with negative quota limits", async () => {
+      const mockAdmin = createMockAdmin();
+
+      await expect(
+        PlatformSubscriptionService.updatePlan({
+          id: "plan-growth",
+          limits: {
+            max_drives: -5,
+          },
+          adminId: "admin-uuid",
+          admin: mockAdmin as any,
+        })
+      ).rejects.toThrow("Limit 'max_drives' cannot be negative.");
+    });
+
+    it("does not increment plan version when updating a DRAFT plan", async () => {
+      const mockAdmin = createMockAdmin();
+
+      const updatedDraft = await PlatformSubscriptionService.updatePlan({
+        id: "plan-draft-tier",
+        priceInr: 24999,
+        limits: {
+          max_students: 150,
+        },
+        adminId: "admin-uuid",
+        admin: mockAdmin as any,
+      });
+
+      // Draft plans remain on v1 without premature version increments
+      expect(updatedDraft.status).toBe("DRAFT");
+      expect(updatedDraft.version).toBe(1);
+      expect(updatedDraft.priceInr).toBe(24999);
+      expect(updatedDraft.limits.max_students).toBe(150);
+    });
+
+    it("preserves tier-specific fallbacks when updating starter tier plan", async () => {
+      const mockAdmin = createMockAdmin();
+
+      const updatedStarter = await PlatformSubscriptionService.updatePlan({
+        id: "plan-starter",
+        priceInr: 54999,
+        adminId: "admin-uuid",
+        admin: mockAdmin as any,
+      });
+
+      // Starter tier default limits must still be 500 students, not overridden to growth's 2500
+      expect(updatedStarter.limits.max_students).toBe(500);
+      expect(updatedStarter.limits.max_staff).toBe(5);
     });
 
     it("detects when a college subscription has an outdated plan version", async () => {
