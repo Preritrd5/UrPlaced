@@ -19,6 +19,7 @@ import {
   BookOpen,
   BarChart3,
   Sparkles,
+  Bot,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -240,7 +241,19 @@ export default function DashboardPage() {
 
       {/* Quick Placement Actions */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Button asChild variant="primary" className="h-auto py-3 px-4 justify-between">
+        {(auth.isPlatformAdmin || auth.tenant?.entitlements?.["ai_tutor_assistant"] !== false) && (
+          <Button asChild variant="primary" className="h-auto py-3 px-4 justify-between bg-primary-gradient shadow-xs">
+            <Link href="/dashboard/student/tutor">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4" />
+                <span>AI Placement Tutor</span>
+              </div>
+              <ArrowUpRight className="h-4 w-4 opacity-75" />
+            </Link>
+          </Button>
+        )}
+
+        <Button asChild variant={(auth.isPlatformAdmin || auth.tenant?.entitlements?.["ai_tutor_assistant"] !== false) ? "outline" : "primary"} className="h-auto py-3 px-4 justify-between">
           <Link href="/dashboard/assessments">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -261,16 +274,6 @@ export default function DashboardPage() {
         </Button>
 
         <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between">
-          <Link href="/dashboard/mistakes">
-            <div className="flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              <span>Cohort Error Analytics</span>
-            </div>
-            <ArrowUpRight className="h-4 w-4 opacity-75" />
-          </Link>
-        </Button>
-
-        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between">
           <Link href="/dashboard/questions">
             <div className="flex items-center gap-2">
               <FileSpreadsheet className="h-4 w-4" />
@@ -281,8 +284,8 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Phase 09: Placement Memory, Analytics & Training Hub */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Phase 09: Placement Memory, Analytics & Academic Hub */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between border-primary/20 hover:bg-card">
           <Link href="/dashboard/analytics">
             <div className="flex items-center gap-2">
@@ -297,19 +300,29 @@ export default function DashboardPage() {
           <Link href="/dashboard/memory">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-secondary" />
-              <span className="font-semibold text-text-primary">Placement Memory &amp; Debriefs</span>
+              <span className="font-semibold text-text-primary">Placement Memory</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75 text-secondary" />
           </Link>
         </Button>
 
         <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between border-primary/20 hover:bg-card">
-          <Link href="/dashboard/training">
+          <Link href="/dashboard/mistakes">
             <div className="flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-text-primary">Training &amp; Workshops</span>
+              <Award className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-text-primary">Cohort Mistake Bank</span>
             </div>
             <ArrowUpRight className="h-4 w-4 opacity-75 text-primary" />
+          </Link>
+        </Button>
+
+        <Button asChild variant="outline" className="h-auto py-3 px-4 justify-between border-[#2E8F86]/30 bg-[#2E8F86]/5 hover:bg-card">
+          <Link href="/dashboard/settings/academic">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-[#2E8F86]" />
+              <span className="font-semibold text-text-primary">Academic Structure</span>
+            </div>
+            <ArrowUpRight className="h-4 w-4 opacity-75 text-[#2E8F86]" />
           </Link>
         </Button>
       </div>

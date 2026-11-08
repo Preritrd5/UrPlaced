@@ -48,6 +48,8 @@ import {
   PlanFeatureDefinition,
   FeatureCategory,
   EntitlementsSnapshot,
+  extractCanonicalEntitlements,
+  buildCanonicalDefaultEntitlements,
 } from "@/modules/platform-admin/types/subscription-plans";
 
 const CATEGORY_LABELS: Record<FeatureCategory, { title: string; desc: string }> = {
@@ -303,35 +305,7 @@ export default function PlatformSubscriptionsPage() {
       max_assessments: plan.limits?.max_assessments !== undefined ? plan.limits.max_assessments : 100,
       ai_tokens_monthly: plan.limits?.ai_tokens_monthly !== undefined ? plan.limits.ai_tokens_monthly : 250000,
     };
-    const populatedEntitlements: PlanEntitlementsMap = {};
-    const planFeaturesLower = Array.isArray(plan.features)
-      ? plan.features.map((f) => String(f).trim().toLowerCase())
-      : [];
-
-    CONTROLLED_FEATURE_CATALOGUE.forEach((f) => {
-      const isFeatureInList = planFeaturesLower.some((featStr) => {
-        const nameLower = f.name.toLowerCase();
-        const keyLower = f.key.toLowerCase();
-        return (
-          featStr === nameLower ||
-          featStr === keyLower ||
-          featStr.includes(nameLower) ||
-          nameLower.includes(featStr)
-        );
-      });
-
-      populatedEntitlements[f.key] =
-        plan.entitlements && plan.entitlements[f.key] !== undefined
-          ? Boolean(plan.entitlements[f.key])
-          : isFeatureInList ||
-            f.defaultTiers.includes(
-              (plan.slug || plan.id).toLowerCase().includes("enterprise")
-                ? "enterprise"
-                : (plan.slug || plan.id).toLowerCase().includes("growth")
-                ? "growth"
-                : "starter"
-            );
-    });
+    const populatedEntitlements: PlanEntitlementsMap = extractCanonicalEntitlements(plan);
     // Academic department hierarchy is compulsory for all institutional plans
     populatedEntitlements.department_hierarchy = true;
 
@@ -1474,7 +1448,8 @@ export default function PlatformSubscriptionsPage() {
                       onClick={() => {
                         const allTrue: PlanEntitlementsMap = {};
                         CONTROLLED_FEATURE_CATALOGUE.forEach((f) => (allTrue[f.key] = true));
-                        setPlanForm({ ...planForm, entitlements: allTrue });
+                        allTrue.department_hierarchy = true;
+                        setPlanForm((prev) => ({ ...prev, entitlements: allTrue }));
                       }}
                       className="text-[11px] font-bold text-primary hover:underline"
                     >
@@ -1488,7 +1463,7 @@ export default function PlatformSubscriptionsPage() {
                         CONTROLLED_FEATURE_CATALOGUE.forEach((f) => (allFalse[f.key] = false));
                         // Academic department hierarchy is compulsory for all institutional plans
                         allFalse.department_hierarchy = true;
-                        setPlanForm({ ...planForm, entitlements: allFalse });
+                        setPlanForm((prev) => ({ ...prev, entitlements: allFalse }));
                       }}
                       className="text-[11px] font-bold text-text-secondary hover:underline"
                     >
@@ -1522,13 +1497,24 @@ export default function PlatformSubscriptionsPage() {
                           const isCompulsory = feat.key === "department_hierarchy";
                           const isChecked = isCompulsory || Boolean(planForm.entitlements[feat.key]);
                           return (
-                            <label
+                            <div
                               key={feat.key}
-                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs transition-all ${
+                              onClick={() => {
+                                if (isCompulsory) return;
+                                setPlanForm((prev) => ({
+                                  ...prev,
+                                  entitlements: {
+                                    ...prev.entitlements,
+                                    [feat.key]: !isChecked,
+                                    department_hierarchy: true,
+                                  },
+                                }));
+                              }}
+                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs transition-all select-none ${
                                 isChecked
                                   ? "bg-white border-primary/40 shadow-xs"
                                   : "bg-surface/60 border-border/40 opacity-75"
-                              } ${isCompulsory ? "cursor-default border-[#2E8F86]/40 bg-[#2E8F86]/5" : "cursor-pointer"}`}
+                              } ${isCompulsory ? "cursor-default border-[#2E8F86]/40 bg-[#2E8F86]/5" : "cursor-pointer hover:border-primary/60"}`}
                             >
                               <div className="space-y-0.5 pr-2">
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -1549,15 +1535,20 @@ export default function PlatformSubscriptionsPage() {
                               <Switch
                                 checked={isChecked}
                                 disabled={isCompulsory}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(val) => {
                                   if (isCompulsory) return;
-                                  setPlanForm({
-                                    ...planForm,
-                                    entitlements: { ...planForm.entitlements, [feat.key]: val },
-                                  });
+                                  setPlanForm((prev) => ({
+                                    ...prev,
+                                    entitlements: {
+                                      ...prev.entitlements,
+                                      [feat.key]: val,
+                                      department_hierarchy: true,
+                                    },
+                                  }));
                                 }}
                               />
-                            </label>
+                            </div>
                           );
                         })}
                       </div>
@@ -1795,7 +1786,8 @@ export default function PlatformSubscriptionsPage() {
                       onClick={() => {
                         const allTrue: PlanEntitlementsMap = {};
                         CONTROLLED_FEATURE_CATALOGUE.forEach((f) => (allTrue[f.key] = true));
-                        setPlanForm({ ...planForm, entitlements: allTrue });
+                        allTrue.department_hierarchy = true;
+                        setPlanForm((prev) => ({ ...prev, entitlements: allTrue }));
                       }}
                       className="text-[11px] font-bold text-primary hover:underline"
                     >
@@ -1809,7 +1801,7 @@ export default function PlatformSubscriptionsPage() {
                         CONTROLLED_FEATURE_CATALOGUE.forEach((f) => (allFalse[f.key] = false));
                         // Academic department hierarchy is compulsory for all institutional plans
                         allFalse.department_hierarchy = true;
-                        setPlanForm({ ...planForm, entitlements: allFalse });
+                        setPlanForm((prev) => ({ ...prev, entitlements: allFalse }));
                       }}
                       className="text-[11px] font-bold text-text-secondary hover:underline"
                     >
@@ -1841,13 +1833,24 @@ export default function PlatformSubscriptionsPage() {
                           const isCompulsory = feat.key === "department_hierarchy";
                           const isChecked = isCompulsory || Boolean(planForm.entitlements[feat.key]);
                           return (
-                            <label
+                            <div
                               key={feat.key}
-                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs transition-all ${
+                              onClick={() => {
+                                if (isCompulsory) return;
+                                setPlanForm((prev) => ({
+                                  ...prev,
+                                  entitlements: {
+                                    ...prev.entitlements,
+                                    [feat.key]: !isChecked,
+                                    department_hierarchy: true,
+                                  },
+                                }));
+                              }}
+                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs transition-all select-none ${
                                 isChecked
                                   ? "bg-white border-primary/40 shadow-xs"
                                   : "bg-surface/60 border-border/40 opacity-75"
-                              } ${isCompulsory ? "cursor-default border-[#2E8F86]/40 bg-[#2E8F86]/5" : "cursor-pointer"}`}
+                              } ${isCompulsory ? "cursor-default border-[#2E8F86]/40 bg-[#2E8F86]/5" : "cursor-pointer hover:border-primary/60"}`}
                             >
                               <div className="space-y-0.5 pr-2">
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -1868,15 +1871,20 @@ export default function PlatformSubscriptionsPage() {
                               <Switch
                                 checked={isChecked}
                                 disabled={isCompulsory}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(val) => {
                                   if (isCompulsory) return;
-                                  setPlanForm({
-                                    ...planForm,
-                                    entitlements: { ...planForm.entitlements, [feat.key]: val },
-                                  });
+                                  setPlanForm((prev) => ({
+                                    ...prev,
+                                    entitlements: {
+                                      ...prev.entitlements,
+                                      [feat.key]: val,
+                                      department_hierarchy: true,
+                                    },
+                                  }));
                                 }}
                               />
-                            </label>
+                            </div>
                           );
                         })}
                       </div>

@@ -25,6 +25,7 @@ import {
   Award,
   CreditCard,
   User,
+  Bot,
 } from "lucide-react";
 import {
   Permissions,
@@ -303,6 +304,16 @@ export const MASTER_NAVIGATION: {
     section: "Preparation & Training",
     accountCategory: "COLLEGE",
     items: [
+      {
+        id: "college-tutor",
+        name: "AI Placement Tutor",
+        href: "/dashboard/student/tutor",
+        icon: Bot,
+        allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
+        accountCategory: "COLLEGE",
+        entitlementKey: "ai_tutor_assistant",
+        badge: "AI",
+      },
       {
         id: "college-questions",
         name: "Question Bank Sentinel",

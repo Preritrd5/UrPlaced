@@ -290,3 +290,129 @@ export interface DetailedCollegeSubscription {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Authoritative Canonical Entitlements Extractor
+ * Shared between client UI (modal forms, plan cards) and server services.
+ * Invariant: department_hierarchy is strictly compulsory for all colleges and always true.
+ */
+export function buildCanonicalDefaultEntitlements(
+  overrides?: Partial<PlanEntitlementsMap> | null,
+  tierOrPlanId?: string | null
+): PlanEntitlementsMap {
+  const tier = tierOrPlanId
+    ? tierOrPlanId.toLowerCase().includes("enterprise")
+      ? "enterprise"
+      : tierOrPlanId.toLowerCase().includes("growth")
+      ? "growth"
+      : "starter"
+    : null;
+
+  const map: PlanEntitlementsMap = {};
+  for (const feat of CONTROLLED_FEATURE_CATALOGUE) {
+    map[feat.key] = Boolean(tier && (feat.defaultTiers as readonly string[]).includes(tier));
+  }
+  if (tier) {
+    map.department_hierarchy = true; // Compulsory for all valid plan tiers
+  }
+
+  if (overrides) {
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v !== undefined && v !== null) {
+        map[k] = Boolean(v);
+      }
+    }
+  }
+
+  if (tier || overrides?.department_hierarchy) {
+    map.department_hierarchy = true; // Compulsory for all valid plan tiers
+  }
+  return map;
+}
+
+export function extractCanonicalEntitlements(plan: any): PlanEntitlementsMap {
+  if (!plan) {
+    return buildCanonicalDefaultEntitlements();
+  }
+
+  const planTier = plan.slug || plan.id || "";
+
+  // 1. If explicit structured entitlements exist with actual keys
+  if (plan.entitlements && typeof plan.entitlements === "object" && Object.keys(plan.entitlements).length > 0) {
+    const map = buildCanonicalDefaultEntitlements(plan.entitlements, planTier);
+    map.department_hierarchy = true;
+    return map;
+  }
+
+  // 2. If features array exists in the database record (Supabase table subscription_plans.features)
+  if (Array.isArray(plan.features) && plan.features.length > 0) {
+    const map: PlanEntitlementsMap = {};
+    const lowerFeatures = plan.features.map((f: any) => String(f).trim().toLowerCase());
+
+    for (const feat of CONTROLLED_FEATURE_CATALOGUE) {
+      const featNameLower = feat.name.toLowerCase();
+      const featKeyLower = feat.key.toLowerCase();
+      const isMatched = lowerFeatures.some((f: string) => {
+        if (f === featNameLower || f === featKeyLower) return true;
+        if (f.includes(featNameLower) || featNameLower.includes(f)) return true;
+        switch (feat.key) {
+          case "core_drives_management":
+            return f.includes("recruitment drive") || f.includes("drives & scheduling") || f.includes("recruitment drives");
+          case "student_roster_directory":
+            return f.includes("student directory") || f.includes("srn verification") || f.includes("student roster");
+          case "company_management":
+            return f.includes("company relationship") || f.includes("company directory") || f.includes("company relationship hub");
+          case "standard_assessments":
+            return f.includes("assessment engine") || f.includes("standard assessment");
+          case "subject_question_banks":
+            return f.includes("question repository") || f.includes("question bank") || f.includes("subject-wise question");
+          case "custom_question_sets":
+            return f.includes("custom & random") || f.includes("question sets") || f.includes("custom question");
+          case "drivefit_evaluator":
+            return f.includes("drivefit") || f.includes("match scoring");
+          case "mistake_to_mastery":
+            return f.includes("mistake bank") || f.includes("spaced remediation") || f.includes("mistake to mastery");
+          case "placement_memory_analytics":
+            return f.includes("placement memory") || f.includes("cohort intelligence") || f.includes("cohort readiness");
+          case "automated_eligibility_engine":
+            return f.includes("eligibility filtering") || f.includes("eligibility engine");
+          case "ai_question_generator":
+            return f.includes("ai question generation") || f.includes("question generation (gemini)") || f.includes("gemini");
+          case "ai_tutor_assistant":
+            return f.includes("ai placement tutor") || f.includes("floating ai") || f.includes("tutor assistant") || f.includes("ai tutor");
+          case "ai_evaluation_pipeline":
+            return f.includes("resume & coding scoring") || f.includes("coding scoring") || f.includes("resume scoring") || f.includes("ai evaluation");
+          case "department_hierarchy":
+            return f.includes("department") || f.includes("academic structure");
+          case "audit_data_export_hub":
+            return f.includes("platform audit") || f.includes("compliance export") || f.includes("audit data export");
+          case "dedicated_sla_liaison":
+            return f.includes("priority support") || f.includes("dedicated liaison") || f.includes("sla");
+          default:
+            return false;
+        }
+      });
+      map[feat.key] = isMatched;
+    }
+
+    // Compulsory invariant
+    map.department_hierarchy = true;
+    return map;
+  }
+
+  // 3. Fallback to tier defaults
+  return buildCanonicalDefaultEntitlements(null, planTier);
+}
+
+export function canonicalEntitlementsToStringArray(entitlements: PlanEntitlementsMap): string[] {
+  const names: string[] = [];
+  for (const feat of CONTROLLED_FEATURE_CATALOGUE) {
+    if (entitlements[feat.key]) {
+      names.push(feat.name);
+    }
+  }
+  if (!names.some((n) => n.toLowerCase().includes("department"))) {
+    names.push("Department & Academic Structure");
+  }
+  return names;
+}

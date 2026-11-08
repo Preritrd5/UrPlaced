@@ -181,7 +181,8 @@ export class SubscriptionAccessService {
         subscription_plans (
           id,
           name,
-          version
+          version,
+          features
         )
       `)
       .eq("tenant_id", tenantId)
@@ -205,7 +206,8 @@ export class SubscriptionAccessService {
           staff_seat_limit,
           subscription_plans (
             id,
-            name
+            name,
+            features
           )
         `)
         .eq("tenant_id", tenantId)
@@ -253,7 +255,25 @@ export class SubscriptionAccessService {
       );
     }
 
-    const plan = Array.isArray(sub.subscription_plans) ? sub.subscription_plans[0] : sub.subscription_plans;
+    // Direct fallback fetch from subscription_plans if relation join did not return features
+    let plan = Array.isArray(sub.subscription_plans) ? sub.subscription_plans[0] : sub.subscription_plans;
+    if ((!plan || !plan.features || !Array.isArray(plan.features) || plan.features.length === 0) && sub.plan_id) {
+      try {
+        const { data: planRecord } = await admin
+          .from("subscription_plans")
+          .select("id, name, features, entitlements")
+          .eq("id", sub.plan_id)
+          .maybeSingle();
+
+        if (planRecord) {
+          plan = planRecord;
+          sub.subscription_plans = planRecord;
+        }
+      } catch {
+        // Continue if direct plan query encounters any transient error
+      }
+    }
+
     const planName = plan?.name || sub.plan_id;
     const now = new Date();
     const nowTime = now.getTime();
