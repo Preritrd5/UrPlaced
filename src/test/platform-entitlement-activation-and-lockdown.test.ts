@@ -307,39 +307,39 @@ describe("Subscription Entitlement Architecture & Real Feature Controls", () => 
       ).rejects.toThrow(/FORBIDDEN: FEATURE_NOT_IN_PLAN/);
     });
 
-    it("verifies zero universal bypass: disabling department_hierarchy strictly fails closed", async () => {
+    it("verifies department_hierarchy is compulsory across all plans and always permitted for colleges", async () => {
       const mockAdmin = createMockAdmin();
       const snapshot: EntitlementsSnapshot = {
-        planId: "custom",
-        planName: "Restricted Plan",
+        planId: "starter",
+        planName: "Institutional Starter",
         planVersion: 1,
-        priceInr: 0,
+        priceInr: 100000,
         billingCycle: "ANNUAL",
-        limits: { max_students: 100, max_staff: 2, max_drives: 2, max_storage_gb: 5, max_assessments: 2, ai_tokens_monthly: 0 },
+        limits: { max_students: 500, max_staff: 5, max_drives: 5, max_storage_gb: 20, max_assessments: 10, ai_tokens_monthly: 0 },
         entitlements: {
-          department_hierarchy: false, // Super Admin explicitly disabled department structure
+          department_hierarchy: true,
         },
         snapshotAt: new Date().toISOString(),
       };
 
       mockDatabase.college_subscriptions.push({
-        id: "sub-restricted",
-        tenant_id: "col-restricted-01",
-        plan_id: "custom",
+        id: "sub-starter-dept",
+        tenant_id: "col-starter-01",
+        plan_id: "starter",
         status: "ACTIVE",
         plan_version: 1,
         entitlements_snapshot: snapshot,
       });
 
       const res = await SubscriptionAccessService.evaluateAccess({
-        tenantId: "col-restricted-01",
+        tenantId: "col-starter-01",
         featureKey: "department_hierarchy",
         admin: mockAdmin as any,
       });
 
-      expect(res.decision).toBe("DENY_ENTITLEMENT");
-      expect(res.allowed).toBe(false);
-      expect(res.reasonCode).toBe("FEATURE_NOT_IN_PLAN");
+      expect(res.decision).toBe("ALLOW");
+      expect(res.allowed).toBe(true);
+      expect(res.reasonCode).toBe("SUBSCRIPTION_ACTIVE");
     });
   });
 

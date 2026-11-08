@@ -150,7 +150,7 @@ export class PlatformSubscriptionService {
     for (const feat of CONTROLLED_FEATURE_CATALOGUE) {
       map[feat.key] = Boolean(tier && (feat.defaultTiers as readonly string[]).includes(tier));
     }
-    // Department & Academic Structure is fundamental to all institutional operations
+    // Department & Academic Structure is compulsory for all institutional plan tiers
     if (tier) {
       map.department_hierarchy = true;
     }
@@ -159,6 +159,10 @@ export class PlatformSubscriptionService {
       if (v !== undefined && v !== null) {
         map[k] = Boolean(v);
       }
+    }
+    // Compulsory invariant: Academic department hierarchy is required for all colleges across all institutional plan tiers
+    if (tier) {
+      map.department_hierarchy = true;
     }
     return map;
   }

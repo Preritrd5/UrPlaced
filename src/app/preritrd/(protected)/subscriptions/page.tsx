@@ -266,6 +266,8 @@ export default function PlatformSubscriptionsPage() {
     CONTROLLED_FEATURE_CATALOGUE.forEach((f) => {
       initialEntitlements[f.key] = f.defaultTiers.includes("growth");
     });
+    // Academic department hierarchy is compulsory for all institutional plans
+    initialEntitlements.department_hierarchy = true;
 
     setPlanForm({
       name: "",
@@ -314,6 +316,8 @@ export default function PlatformSubscriptionsPage() {
                 : "starter"
             );
     });
+    // Academic department hierarchy is compulsory for all institutional plans
+    populatedEntitlements.department_hierarchy = true;
 
     setPlanForm({
       name: plan.name,
@@ -359,7 +363,10 @@ export default function PlatformSubscriptionsPage() {
           billingInterval: planForm.billingInterval,
           discountPercentage: Number(planForm.discountPercentage),
           limits: planForm.limits,
-          entitlements: planForm.entitlements,
+          entitlements: {
+            ...planForm.entitlements,
+            department_hierarchy: true, // Compulsory for all colleges
+          },
         }),
       });
 
@@ -398,7 +405,10 @@ export default function PlatformSubscriptionsPage() {
           billingInterval: planForm.billingInterval,
           discountPercentage: Number(planForm.discountPercentage),
           limits: planForm.limits,
-          entitlements: planForm.entitlements,
+          entitlements: {
+            ...planForm.entitlements,
+            department_hierarchy: true, // Compulsory for all colleges
+          },
         }),
       });
 
@@ -1460,6 +1470,8 @@ export default function PlatformSubscriptionsPage() {
                       onClick={() => {
                         const allFalse: PlanEntitlementsMap = {};
                         CONTROLLED_FEATURE_CATALOGUE.forEach((f) => (allFalse[f.key] = false));
+                        // Academic department hierarchy is compulsory for all institutional plans
+                        allFalse.department_hierarchy = true;
                         setPlanForm({ ...planForm, entitlements: allFalse });
                       }}
                       className="text-[11px] font-bold text-text-secondary hover:underline"
@@ -1491,30 +1503,43 @@ export default function PlatformSubscriptionsPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {features.map((feat) => {
-                          const isChecked = Boolean(planForm.entitlements[feat.key]);
+                          const isCompulsory = feat.key === "department_hierarchy";
+                          const isChecked = isCompulsory || Boolean(planForm.entitlements[feat.key]);
                           return (
                             <label
                               key={feat.key}
-                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs transition-all ${
                                 isChecked
                                   ? "bg-white border-primary/40 shadow-xs"
                                   : "bg-surface/60 border-border/40 opacity-75"
-                              }`}
+                              } ${isCompulsory ? "cursor-default border-[#2E8F86]/40 bg-[#2E8F86]/5" : "cursor-pointer"}`}
                             >
                               <div className="space-y-0.5 pr-2">
-                                <div className="font-semibold text-text-primary">{feat.name}</div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-semibold text-text-primary">{feat.name}</span>
+                                  {isCompulsory && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] px-1.5 py-0 border-[#2E8F86]/40 text-[#2E8F86] bg-[#2E8F86]/10 font-mono"
+                                    >
+                                      Compulsory (All Plans)
+                                    </Badge>
+                                  )}
+                                </div>
                                 <div className="text-[10px] text-text-secondary leading-snug">
                                   {feat.description}
                                 </div>
                               </div>
                               <Switch
                                 checked={isChecked}
-                                onCheckedChange={(val) =>
+                                disabled={isCompulsory}
+                                onCheckedChange={(val) => {
+                                  if (isCompulsory) return;
                                   setPlanForm({
                                     ...planForm,
                                     entitlements: { ...planForm.entitlements, [feat.key]: val },
-                                  })
-                                }
+                                  });
+                                }}
                               />
                             </label>
                           );
@@ -1766,6 +1791,8 @@ export default function PlatformSubscriptionsPage() {
                       onClick={() => {
                         const allFalse: PlanEntitlementsMap = {};
                         CONTROLLED_FEATURE_CATALOGUE.forEach((f) => (allFalse[f.key] = false));
+                        // Academic department hierarchy is compulsory for all institutional plans
+                        allFalse.department_hierarchy = true;
                         setPlanForm({ ...planForm, entitlements: allFalse });
                       }}
                       className="text-[11px] font-bold text-text-secondary hover:underline"
@@ -1795,30 +1822,43 @@ export default function PlatformSubscriptionsPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {features.map((feat) => {
-                          const isChecked = Boolean(planForm.entitlements[feat.key]);
+                          const isCompulsory = feat.key === "department_hierarchy";
+                          const isChecked = isCompulsory || Boolean(planForm.entitlements[feat.key]);
                           return (
                             <label
                               key={feat.key}
-                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                              className={`flex items-start justify-between gap-3 p-2.5 rounded-xl border text-xs transition-all ${
                                 isChecked
                                   ? "bg-white border-primary/40 shadow-xs"
                                   : "bg-surface/60 border-border/40 opacity-75"
-                              }`}
+                              } ${isCompulsory ? "cursor-default border-[#2E8F86]/40 bg-[#2E8F86]/5" : "cursor-pointer"}`}
                             >
                               <div className="space-y-0.5 pr-2">
-                                <div className="font-semibold text-text-primary">{feat.name}</div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-semibold text-text-primary">{feat.name}</span>
+                                  {isCompulsory && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] px-1.5 py-0 border-[#2E8F86]/40 text-[#2E8F86] bg-[#2E8F86]/10 font-mono"
+                                    >
+                                      Compulsory (All Plans)
+                                    </Badge>
+                                  )}
+                                </div>
                                 <div className="text-[10px] text-text-secondary leading-snug">
                                   {feat.description}
                                 </div>
                               </div>
                               <Switch
                                 checked={isChecked}
-                                onCheckedChange={(val) =>
+                                disabled={isCompulsory}
+                                onCheckedChange={(val) => {
+                                  if (isCompulsory) return;
                                   setPlanForm({
                                     ...planForm,
                                     entitlements: { ...planForm.entitlements, [feat.key]: val },
-                                  })
-                                }
+                                  });
+                                }}
                               />
                             </label>
                           );
