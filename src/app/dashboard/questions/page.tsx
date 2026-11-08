@@ -42,10 +42,15 @@ import { toast } from "@/components/ui/dialog-system";
 
 export default function QuestionsDashboardPage() {
   const router = useRouter();
-  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth, tenant } = useAuthContext();
   const [questions, setQuestions] = useState<any[]>([]);
   const [banks, setBanks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const canUseAIGeneration =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["ai_question_generator"] !== false : true);
+  const canUseCustomSets =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["custom_question_sets"] !== false : true);
 
   const canManageQuestions = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
 
@@ -335,15 +340,28 @@ export default function QuestionsDashboardPage() {
             + Create Question Bank
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAiModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs text-[#5052C9] border-[#5052C9]/30 hover:bg-[#5052C9]/10"
-          >
-            <Sparkles className="w-4 h-4 text-[#5052C9]" />
-            AI Generate
-          </Button>
+          {canUseAIGeneration ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAiModalOpen(true)}
+              className="flex items-center gap-1.5 text-xs text-[#5052C9] border-[#5052C9]/30 hover:bg-[#5052C9]/10"
+            >
+              <Sparkles className="w-4 h-4 text-[#5052C9]" />
+              AI Generate
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              title="AI Question Generation is not included in the college's current subscription plan."
+              className="flex items-center gap-1.5 text-xs opacity-50 cursor-not-allowed border-dashed text-text-secondary"
+            >
+              <Sparkles className="w-4 h-4 text-text-secondary" />
+              AI Generate (Locked)
+            </Button>
+          )}
 
           <Button
             variant="outline"
@@ -355,12 +373,14 @@ export default function QuestionsDashboardPage() {
             Duplicate Alerts
           </Button>
 
-          <Link href="/dashboard/questions/sets">
-            <Button variant="outline" size="sm" className="flex items-center gap-1.5 text-xs">
-              <Layers className="w-4 h-4" />
-              Question Sets
-            </Button>
-          </Link>
+          {canUseCustomSets && (
+            <Link href="/dashboard/questions/sets">
+              <Button variant="outline" size="sm" className="flex items-center gap-1.5 text-xs">
+                <Layers className="w-4 h-4" />
+                Question Sets
+              </Button>
+            </Link>
+          )}
 
           <Link href="/dashboard/questions/import">
             <Button variant="outline" size="sm" className="flex items-center gap-1.5 text-xs">

@@ -117,8 +117,25 @@ export function AppShell({ children }: AppShellProps) {
       canAccessOperational === false || subStatus === "PENDING_PAYMENT"
         ? "NO_SUBSCRIPTION"
         : (subStatus || "ACTIVE");
-    return getAuthorizedNavigation(role, auth.isPlatformAdmin, auth.permissions, effectiveSubStatus, isGracePeriod);
-  }, [role, auth.permissions, auth.isAuthenticated, auth.isLoading, subStatus, canAccessOperational, isGracePeriod, auth.isPlatformAdmin]);
+    return getAuthorizedNavigation(
+      role,
+      auth.isPlatformAdmin,
+      auth.permissions,
+      effectiveSubStatus,
+      isGracePeriod,
+      auth.tenant?.entitlements
+    );
+  }, [
+    role,
+    auth.permissions,
+    auth.isAuthenticated,
+    auth.isLoading,
+    subStatus,
+    canAccessOperational,
+    isGracePeriod,
+    auth.isPlatformAdmin,
+    auth.tenant?.entitlements,
+  ]);
 
   // Warm-up prefetch navigation routes in idle background to guarantee instant route transitions
   React.useEffect(() => {
@@ -616,8 +633,11 @@ export function AppShell({ children }: AppShellProps) {
 
       </div>
 
-      {/* Floating Draggable AI Chatbot */}
-      {auth.isAuthenticated && <FloatingAIChatbot />}
+      {/* Floating Draggable AI Chatbot - Strictly Gated by ai_tutor_assistant Subscription Entitlement */}
+      {auth.isAuthenticated &&
+        (auth.isPlatformAdmin || auth.tenant?.entitlements?.["ai_tutor_assistant"] !== false) && (
+          <FloatingAIChatbot />
+        )}
     </div>
     </NotificationProvider>
   );

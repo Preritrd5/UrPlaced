@@ -21,15 +21,19 @@ import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
 import { SkeletonCard } from "@/components/ui/skeleton";
+import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
 
 export default function PlacementMemoryPage() {
   const router = useRouter();
-  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth, tenant } = useAuthContext();
   const [activeTab, setActiveTab] = useState<"RECORDS" | "COMPARE" | "MODERATION">("RECORDS");
   const [records, setRecords] = useState<any[]>([]);
   const [pendingReports, setPendingReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const isEntitled =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["placement_memory_analytics"] !== false : true);
 
   const canViewMemory = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
 
@@ -105,7 +109,29 @@ export default function PlacementMemoryPage() {
     }
   }
 
-  if (isLoadingAuth || (loading && records.length === 0 && pendingReports.length === 0)) {
+  if (isLoadingAuth) {
+    return (
+      <TableSkeleton
+        title="Placement Memory & Recruitment Intelligence"
+        subtitle="Manage and moderate company hiring debriefs, interview experiences, and recurring interview questions."
+        columns={4}
+        rows={6}
+      />
+    );
+  }
+
+  if (!isEntitled) {
+    return (
+      <FeatureLockedCard
+        featureName="Placement Memory & Cohort Intelligence"
+        featureKey="placement_memory_analytics"
+        description="Cross-year hiring pattern intelligence, debrief records, and placement memory archives are not included in your college's current subscription plan."
+        recommendedPlan="Campus Growth"
+      />
+    );
+  }
+
+  if (loading && records.length === 0 && pendingReports.length === 0) {
     return (
       <TableSkeleton
         title="Placement Memory & Recruitment Intelligence"

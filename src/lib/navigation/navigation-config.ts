@@ -43,6 +43,7 @@ export interface NavigationItem {
   requiredPermission?: PermissionIdentifier;
   allowedRoles?: UserRole[];
   accountCategory: AccountCategory;
+  entitlementKey?: string;
   badge?: string;
   exactMatch?: boolean;
 }
@@ -91,6 +92,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.COMPANIES_READ,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "core_drives_management",
       },
       {
         id: "student-applications",
@@ -100,6 +102,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.CANDIDATES_REGISTER,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "core_drives_management",
       },
       {
         id: "student-offers",
@@ -109,6 +112,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.OUTCOMES_READ_OWN,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "core_drives_management",
       },
       {
         id: "student-announcements",
@@ -133,6 +137,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.AI_STUDY_TUTOR_USE,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "ai_tutor_assistant",
         badge: "AI",
       },
       {
@@ -143,6 +148,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.ASSESSMENTS_ATTEMPT,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "standard_assessments",
       },
       {
         id: "student-memory",
@@ -152,6 +158,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.PLACEMENT_MEMORY_READ,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "placement_memory_analytics",
       },
     ],
   },
@@ -167,6 +174,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.MISTAKE_BANK_MANAGE_OWN,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "mistake_to_mastery",
       },
       {
         id: "student-mastery",
@@ -176,6 +184,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.RESULTS_READ_OWN,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "mistake_to_mastery",
       },
     ],
   },
@@ -191,6 +200,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.ANALYTICS_READ_OWN,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+        entitlementKey: "placement_memory_analytics",
       },
     ],
   },
@@ -240,6 +250,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.STUDENTS_READ,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
         accountCategory: "COLLEGE",
+        entitlementKey: "student_roster_directory",
       },
       {
         id: "college-announcements",
@@ -264,6 +275,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.COMPANIES_READ,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
         accountCategory: "COLLEGE",
+        entitlementKey: "company_management",
       },
       {
         id: "college-drives",
@@ -273,6 +285,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.DRIVES_MANAGE,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF"],
         accountCategory: "COLLEGE",
+        entitlementKey: "core_drives_management",
       },
       {
         id: "college-offers",
@@ -282,6 +295,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.OUTCOMES_MANAGE,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF"],
         accountCategory: "COLLEGE",
+        entitlementKey: "core_drives_management",
       },
     ],
   },
@@ -297,6 +311,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.QUESTIONS_MANAGE,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
         accountCategory: "COLLEGE",
+        entitlementKey: "subject_question_banks",
       },
       {
         id: "college-assessments",
@@ -306,6 +321,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.ASSESSMENTS_READ,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
         accountCategory: "COLLEGE",
+        entitlementKey: "standard_assessments",
       },
       {
         id: "college-training",
@@ -324,6 +340,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.MISTAKE_BANK_READ_COHORT,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
         accountCategory: "COLLEGE",
+        entitlementKey: "mistake_to_mastery",
       },
     ],
   },
@@ -339,6 +356,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.PLACEMENT_MEMORY_READ,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"],
         accountCategory: "COLLEGE",
+        entitlementKey: "placement_memory_analytics",
       },
       {
         id: "college-analytics",
@@ -348,6 +366,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.ANALYTICS_READ_COHORT,
         allowedRoles: ["PLACEMENT_HEAD", "PLACEMENT_STAFF"],
         accountCategory: "COLLEGE",
+        entitlementKey: "placement_memory_analytics",
       },
     ],
   },
@@ -363,6 +382,7 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.DEPARTMENTS_MANAGE,
         allowedRoles: ["PLACEMENT_HEAD"],
         accountCategory: "COLLEGE",
+        entitlementKey: "department_hierarchy",
       },
       {
         id: "college-members",
@@ -410,7 +430,8 @@ export function getAuthorizedNavigation(
   isPlatformAdmin?: boolean,
   userPermissions?: string[],
   subscriptionStatus?: string | null,
-  isGracePeriod?: boolean
+  isGracePeriod?: boolean,
+  entitlements?: Record<string, boolean> | null
 ): NavigationSection[] {
   // Determine user's effective permissions:
   // If userPermissions is undefined, null, or empty array, fall back to RoleDefaultPermissions
@@ -458,6 +479,15 @@ export function getAuthorizedNavigation(
       // 2. Permission match check (if requiredPermission is defined)
       if (item.requiredPermission && !effectivePerms.has(item.requiredPermission)) {
         continue;
+      }
+
+      // 2.5 Feature Entitlement check (SA-04 / SA-06 Controlled feature matrix)
+      // When a feature is disabled in the plan snapshot (entitlements[key] === false),
+      // it must be completely hidden from navigation for institutional users.
+      if (!isPlatformAdmin && item.entitlementKey && entitlements) {
+        if (entitlements[item.entitlementKey] === false) {
+          continue;
+        }
       }
 
       // 3. Strict Subscription Entitlement Filter:

@@ -16,6 +16,8 @@ import {
 import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
 
 interface Message {
   role: "user" | "model";
@@ -25,6 +27,7 @@ interface Message {
 }
 
 export default function StudentAITutorPage() {
+  const { isPlatformAdmin, isLoading: isLoadingAuth, tenant } = useAuthContext();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "model",
@@ -136,6 +139,20 @@ export default function StudentAITutorPage() {
       },
     ]);
   };
+
+  const isEntitled =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["ai_tutor_assistant"] !== false : true);
+
+  if (!isLoadingAuth && !isEntitled) {
+    return (
+      <FeatureLockedCard
+        featureName="Floating AI Placement Tutor"
+        featureKey="ai_tutor_assistant"
+        description="The interactive AI Placement Tutor is not included in your college's current subscription plan."
+        recommendedPlan="Campus Growth"
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">

@@ -159,8 +159,11 @@ export async function GET(_request: NextRequest) {
       questionHotspots,
     });
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
-      return NextResponse.json({ error: err.message }, { status: 403 });
+    if (err.message === "UNAUTHORIZED") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (err.message?.startsWith("FORBIDDEN") || err.message === "NO_ACTIVE_TENANT") {
+      return NextResponse.json({ error: err.message || "Access denied" }, { status: 403 });
     }
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

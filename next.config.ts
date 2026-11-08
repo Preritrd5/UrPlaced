@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["pdfkit"],
   env: {
     NEXT_PUBLIC_SUPABASE_URL:
       process.env.NEXT_PUBLIC_SUPABASE_URL ||

@@ -12,12 +12,15 @@ import { DepartmentService } from "@/modules/academic/services/department-servic
 
 export async function GET() {
   try {
-    const ctx = await requireAuthContext(Permissions.DASHBOARD_READ);
+    const ctx = await requireAuthContext(Permissions.DEPARTMENTS_MANAGE);
     const departments = await DepartmentService.listByTenant(ctx.tenantId);
     return NextResponse.json(departments);
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (error.message?.startsWith("FORBIDDEN") || error.message === "NO_ACTIVE_TENANT") {
+      return NextResponse.json({ error: error.message || "Access denied" }, { status: 403 });
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -56,8 +59,8 @@ export async function POST(request: NextRequest) {
     if (error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    if (error.message?.startsWith("FORBIDDEN") || error.message === "NO_ACTIVE_TENANT") {
+      return NextResponse.json({ error: error.message || "Access denied" }, { status: 403 });
     }
     return NextResponse.json({ error: error.message }, { status: 400 });
   }

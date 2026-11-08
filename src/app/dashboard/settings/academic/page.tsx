@@ -20,15 +20,19 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { ProfileSkeleton } from "@/components/ui/page-skeletons";
+import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
 
 export default function AcademicSettingsPage() {
   const router = useRouter();
-  const { role, isVerifiedMembership, isLoading: isLoadingAuth } = useAuthContext();
+  const { role, isVerifiedMembership, isLoading: isLoadingAuth, isPlatformAdmin, tenant } = useAuthContext();
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const isEntitled =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["department_hierarchy"] !== false : true);
 
   const canManageAcademic = !!isVerifiedMembership && role === "PLACEMENT_HEAD";
 
@@ -57,6 +61,7 @@ export default function AcademicSettingsPage() {
   });
 
   async function loadData() {
+    if (!isEntitled) return;
     setIsLoading(true);
     try {
       const [yearsRes, deptsRes] = await Promise.all([
@@ -74,8 +79,10 @@ export default function AcademicSettingsPage() {
   }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!isLoadingAuth && isEntitled && canManageAcademic) {
+      loadData();
+    }
+  }, [isLoadingAuth, isEntitled, canManageAcademic]);
 
   async function handleCreateYear(e: React.FormEvent) {
     e.preventDefault();
@@ -123,7 +130,22 @@ export default function AcademicSettingsPage() {
     }
   }
 
-  if (isLoadingAuth || (isLoading && academicYears.length === 0 && departments.length === 0)) {
+  if (isLoadingAuth) {
+    return <ProfileSkeleton />;
+  }
+
+  if (!isEntitled) {
+    return (
+      <FeatureLockedCard
+        featureName="Department & Academic Structure"
+        featureKey="department_hierarchy"
+        description="Department hierarchy, degree branches, and academic structure management are not included in your institution's assigned subscription plan."
+        recommendedPlan="Campus Growth"
+      />
+    );
+  }
+
+  if (isLoading && academicYears.length === 0 && departments.length === 0) {
     return <ProfileSkeleton />;
   }
 

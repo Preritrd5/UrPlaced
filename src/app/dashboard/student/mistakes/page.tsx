@@ -26,8 +26,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AIMistakeAnalysisModal } from "@/components/mistakes/ai-mistake-analysis-modal";
 import { toast } from "@/components/ui/dialog-system";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
 
 export default function StudentMistakesPage() {
+  const { isPlatformAdmin, isLoading: isLoadingAuth, tenant } = useAuthContext();
   const [loading, setLoading] = useState(true);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [targets, setTargets] = useState<any[]>([]);
@@ -60,10 +63,15 @@ export default function StudentMistakesPage() {
   const [rescheduleNotes, setRescheduleNotes] = useState<string>("");
   const [savingReschedule, setSavingReschedule] = useState(false);
 
+  const isEntitled =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["mistake_to_mastery"] !== false : true);
+
   useEffect(() => {
-    loadMistakes();
+    if (!isLoadingAuth && isEntitled) {
+      loadMistakes();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStatus, selectedReason, selectedSkill, dueOnly, overdueOnly]);
+  }, [isLoadingAuth, isEntitled, selectedStatus, selectedReason, selectedSkill, dueOnly, overdueOnly]);
 
   async function loadMistakes() {
     try {
@@ -163,6 +171,17 @@ export default function StudentMistakesPage() {
       default:
         return <Badge variant="outline">{reason}</Badge>;
     }
+  }
+
+  if (!isLoadingAuth && !isEntitled) {
+    return (
+      <FeatureLockedCard
+        featureName="Mistake Bank & Spaced Revision"
+        featureKey="mistake_to_mastery"
+        description="The student mistake bank and personalized spaced-revision drills are not included in your college's current subscription plan."
+        recommendedPlan="Campus Growth"
+      />
+    );
   }
 
   return (

@@ -275,9 +275,6 @@ export class PlatformSubscriptionService {
           ? { ...this.buildDefaultEntitlements(null, planTier), ...p.entitlements }
           : this.buildDefaultEntitlements(null, planTier);
 
-      // Department & Academic Structure is standard across all tiers
-      entitlements.department_hierarchy = true;
-
       const rawFeaturesList =
         Array.isArray(p.features) && p.features.length > 0
           ? [...p.features]
@@ -897,6 +894,63 @@ export class PlatformSubscriptionService {
       data = fallbackRes.data;
     }
 
+    // Propagate updated plan entitlements to active college subscriptions when entitlements are explicitly edited
+    let propagatedSubscribersCount = 0;
+    const shouldPropagateEntitlements = entitlementsParam !== undefined;
+
+    if (shouldPropagateEntitlements) {
+      try {
+        const { data: activeSubs, error: subsFetchErr } = await admin
+          .from("college_subscriptions")
+          .select("id, tenant_id, plan_id, plan_version, entitlements_snapshot, student_seat_limit, staff_seat_limit")
+          .or(`plan_id.eq.${id},plan_id.eq.${existing.slug || id}`)
+          .in("status", ["ACTIVE", "TRIALING", "TRIAL", "PAST_DUE", "PAST_DUE_GRACE"]);
+
+        if (!subsFetchErr && activeSubs && activeSubs.length > 0) {
+          for (const sub of activeSubs) {
+            const prevSnapshot =
+              sub.entitlements_snapshot && typeof sub.entitlements_snapshot === "object"
+                ? sub.entitlements_snapshot
+                : {};
+            const customOverrides = prevSnapshot.customOverrides || null;
+
+            const updatedSubSnapshot: EntitlementsSnapshot = {
+              ...prevSnapshot,
+              planId: id,
+              planName: data.name || existing.name,
+              planVersion: Number(data.version || newVersion || 1),
+              entitlements: this.buildDefaultEntitlements(
+                {
+                  ...updatedEntitlements,
+                  ...(customOverrides?.entitlements || {}),
+                },
+                existing.slug || id
+              ),
+              customOverrides: customOverrides || undefined,
+              snapshotAt: new Date().toISOString(),
+            };
+
+            const subUpdatePayload: Record<string, any> = {
+              plan_version: Number(data.version || newVersion || 1),
+              entitlements_snapshot: updatedSubSnapshot,
+              updated_at: new Date().toISOString(),
+            };
+
+            const { error: subUpdateErr } = await admin
+              .from("college_subscriptions")
+              .update(subUpdatePayload)
+              .eq("id", sub.id);
+
+            if (!subUpdateErr) {
+              propagatedSubscribersCount++;
+            }
+          }
+        }
+      } catch {
+        // Do not block plan update if snapshot propagation encounters schema variance
+      }
+    }
+
     await PlatformAuthService.logAuditEvent({
       actorId: adminId,
       action: "PLATFORM_PLAN_UPDATE",
@@ -907,9 +961,25 @@ export class PlatformSubscriptionService {
         previousVersion: existing.version,
         newVersion,
         subscribersPreservedCount: existing.subscribersCount,
+        propagatedSubscribersCount,
       },
       adminClient: admin,
     });
+
+    if (propagatedSubscribersCount > 0) {
+      await PlatformAuthService.logAuditEvent({
+        actorId: adminId,
+        action: "PLATFORM_PLAN_ENTITLEMENTS_SYNC_PROPAGATE",
+        resourceType: "SUBSCRIPTION_PLAN",
+        resourceId: id,
+        metadata: {
+          planName: data.name,
+          planVersion: newVersion,
+          propagatedSubscribersCount,
+        },
+        adminClient: admin,
+      });
+    }
 
     return {
       id: data.id,

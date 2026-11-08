@@ -498,12 +498,8 @@ export class SubscriptionAccessService {
         if (nowTime <= periodEndDate.getTime()) {
           // Retain paid operational access until effective end date
           const resolvedEntitlements = this.extractSnapshotEntitlements(sub, hasVerifiedPayment);
-          const isCoreUniversal =
-            featureKey === "department_hierarchy" ||
-            featureKey === "academic_structure" ||
-            (isStudent && (featureKey === "mistake_to_mastery" || featureKey === "placement_memory_analytics"));
 
-          if (featureKey && !isCoreUniversal && !resolvedEntitlements.features[featureKey]) {
+          if (featureKey && !resolvedEntitlements.features[featureKey]) {
             return makeDenial(
               "DENY_ENTITLEMENT",
               "FEATURE_NOT_IN_PLAN",
@@ -589,17 +585,7 @@ export class SubscriptionAccessService {
       // 2. Feature Key Entitlement Check
       const targetFeature = featureKey || effectiveFeatureKey;
       if (targetFeature) {
-        // Essential institutional operations are guaranteed across ALL subscription plans (Starter, Growth, Enterprise):
-        // 1. Academic Structure & Department Hierarchy: Every college needs departments, branches, and batches.
-        // 2. Assessment Engine & Question Banks: Placement preparation and practice assessments are core to every tier.
-        // 3. Student Roster Directory & Core Placement Drives: Fundamental multi-tenant operations.
-        // 4. Student Mistakes & Mastery Radar: Personal skill growth and question defect reviews are universally accessible to students.
-        const isCoreUniversalFeature =
-          targetFeature === "department_hierarchy" ||
-          targetFeature === "academic_structure" ||
-          (isStudent && (targetFeature === "mistake_to_mastery" || targetFeature === "placement_memory_analytics"));
-
-        const isEntitled = isCoreUniversalFeature || Boolean(features[targetFeature]);
+        const isEntitled = Boolean(features[targetFeature]);
         if (!isEntitled) {
           return makeDenial(
             "DENY_ENTITLEMENT",
@@ -707,8 +693,6 @@ export class SubscriptionAccessService {
         ...snapshot.entitlements,
         ...(snapshot.customOverrides?.entitlements || {}),
       }, planTier);
-      // Academic departments and degree branches are required for all institutional plans
-      features.department_hierarchy = true;
 
       const limits = PlatformSubscriptionService.buildDefaultLimits({
         ...snapshot.limits,
@@ -742,22 +726,117 @@ export class SubscriptionAccessService {
 
   /**
    * Resolves canonical product catalogue feature key from a permission identifier.
+   * Directly maps all 16 CONTROLLED_FEATURE_CATALOGUE modules.
    */
   public static resolveFeatureKeyFromPermission(permission?: string): string | undefined {
     if (!permission) return undefined;
     const p = permission.toLowerCase();
-    if (p.startsWith("drives.") || p.startsWith("stages.") || p.startsWith("candidates.")) return "core_drives_management";
-    if (p.startsWith("students.")) return "student_roster_directory";
-    if (p.startsWith("companies.")) return "company_management";
-    if (p.startsWith("questions.") || p.startsWith("question_sets.")) return "subject_question_banks";
-    if (p.startsWith("assessments.")) return "standard_assessments";
-    if (p.startsWith("mistake_bank.") || p.startsWith("practice.")) return "mistake_to_mastery";
-    if (p.startsWith("placement_memory.") || p.startsWith("analytics.")) return "placement_memory_analytics";
-    if (p.startsWith("eligibility.")) return "automated_eligibility_engine";
-    if (p.startsWith("ai.question") || p.startsWith("ai.generate")) return "ai_question_generator";
-    if (p.startsWith("ai.tutor") || p.startsWith("ai_study_tutor")) return "ai_tutor_assistant";
-    if (p.startsWith("departments.")) return "department_hierarchy";
-    if (p.startsWith("reports.") || p.startsWith("export.")) return "audit_data_export_hub";
+
+    // 1. AI Placement Tutor (Floating AI Tutor & Conversational Guide)
+    if (
+      p === "ai.study_tutor.use" ||
+      p.startsWith("ai.study_tutor") ||
+      p.startsWith("ai.tutor") ||
+      p.startsWith("ai_study_tutor")
+    ) {
+      return "ai_tutor_assistant";
+    }
+
+    // 2. AI Question Generation (Gemini)
+    if (
+      p === "ai.questions.generate" ||
+      p.startsWith("ai.questions") ||
+      p.startsWith("ai.question") ||
+      p.startsWith("ai.generate")
+    ) {
+      return "ai_question_generator";
+    }
+
+    // 3. DriveFit Match Scoring
+    if (p === "ai.drivefit.evaluate" || p.startsWith("ai.drivefit") || p.startsWith("drivefit.")) {
+      return "drivefit_evaluator";
+    }
+
+    // 4. Automated Resume & Coding Scoring / AI Evaluation Pipeline
+    if (
+      p === "ai.placement_intel.read" ||
+      p.startsWith("ai.placement_intel") ||
+      p.startsWith("ai.resume") ||
+      p.startsWith("ai.coding")
+    ) {
+      return "ai_evaluation_pipeline";
+    }
+
+    // 5. Mistake Bank & Spaced Remediation
+    if (
+      p === "ai.mistake_mastery.use" ||
+      p.startsWith("mistake_bank.") ||
+      p.startsWith("practice.") ||
+      p.startsWith("question_defects.") ||
+      p.startsWith("ai.mistake_mastery")
+    ) {
+      return "mistake_to_mastery";
+    }
+
+    // 6. Placement Memory & Cohort Intelligence
+    if (
+      p.startsWith("placement_memory.") ||
+      p.startsWith("analytics.") ||
+      p.startsWith("experience_reports.")
+    ) {
+      return "placement_memory_analytics";
+    }
+
+    // 7. Automated Eligibility Engine
+    if (p.startsWith("eligibility.")) {
+      return "automated_eligibility_engine";
+    }
+
+    // 8. Custom & Random Question Sets
+    if (p.startsWith("question_sets.")) {
+      return "custom_question_sets";
+    }
+
+    // 9. Subject-Wise Question Repository
+    if (p.startsWith("questions.")) {
+      return "subject_question_banks";
+    }
+
+    // 10. Standard Assessment Engine
+    if (p.startsWith("assessments.")) {
+      return "standard_assessments";
+    }
+
+    // 11. Core Recruitment Drives
+    if (p.startsWith("drives.") || p.startsWith("stages.") || p.startsWith("candidates.")) {
+      return "core_drives_management";
+    }
+
+    // 12. Student Directory & SRN Verification
+    if (p.startsWith("students.")) {
+      return "student_roster_directory";
+    }
+
+    // 13. Company Relationship Hub
+    if (p.startsWith("companies.")) {
+      return "company_management";
+    }
+
+    // 14. Department & Academic Structure
+    if (p.startsWith("departments.") || p.startsWith("academic_years.")) {
+      return "department_hierarchy";
+    }
+
+    // 15. Platform Audit & Compliance Export
+    if (p.startsWith("reports.") || p.startsWith("export.")) {
+      return "audit_data_export_hub";
+    }
+
+    // 16. Priority Support & Dedicated Liaison
+    if (p.startsWith("sla.") || p.startsWith("support.liaison")) {
+      return "dedicated_sla_liaison";
+    }
+
     return undefined;
   }
 
@@ -816,6 +895,37 @@ export class SubscriptionAccessService {
         errKey = "FEATURE_NOT_IN_PLAN";
       }
       const err = new Error(`FORBIDDEN: ${errKey}: ${result.message}`);
+      (err as any).decision = result.decision;
+      (err as any).reasonCode = result.reasonCode;
+      (err as any).tenantId = result.tenantId;
+      throw err;
+    }
+    return result;
+  }
+
+  /**
+   * Authoritative feature entitlement assertion: throws structured HTTP 403-compatible Error
+   * if the target feature module is not entitled in the active college subscription plan.
+   */
+  static async assertFeatureEntitlement(
+    tenantId: string,
+    featureKey: string,
+    userRole: string = "PLACEMENT_HEAD",
+    userId?: string,
+    admin = createAdminClient()
+  ): Promise<SubscriptionAccessResult> {
+    const result = await this.evaluateAccess({
+      tenantId,
+      userRole,
+      userId,
+      featureKey,
+      admin,
+    });
+
+    if (!result.allowed) {
+      const err = new Error(
+        `FORBIDDEN: FEATURE_NOT_IN_PLAN: Feature '${featureKey}' is not included in the college's assigned subscription plan (${result.planName || "CURRENT_PLAN"}).`
+      );
       (err as any).decision = result.decision;
       (err as any).reasonCode = result.reasonCode;
       (err as any).tenantId = result.tenantId;

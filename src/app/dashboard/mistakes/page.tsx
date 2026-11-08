@@ -25,12 +25,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { AnalyticsSkeleton, MistakeAnalyticsSkeleton } from "@/components/ui/page-skeletons";
 import { toast } from "@/components/ui/dialog-system";
+import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
 
 export default function PlacementMistakesAnalyticsPage() {
   const router = useRouter();
-  const { role, isPlatformAdmin, isLoading: isLoadingAuth } = useAuthContext();
+  const { role, isPlatformAdmin, isLoading: isLoadingAuth, tenant } = useAuthContext();
   const [activeTab, setActiveTab] = useState<"SKILLS" | "QUESTIONS" | "DEFECTS">("SKILLS");
   const [loading, setLoading] = useState(true);
+
+  const isEntitled =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["mistake_to_mastery"] !== false : true);
 
   const canViewCohortMistakes = isPlatformAdmin || (role && ["PLACEMENT_HEAD", "PLACEMENT_STAFF", "TRAINER"].includes(role));
 
@@ -43,6 +47,12 @@ export default function PlacementMistakesAnalyticsPage() {
       }
     }
   }, [role, canViewCohortMistakes, isLoadingAuth, router]);
+
+  useEffect(() => {
+    if (!isLoadingAuth && isEntitled && canViewCohortMistakes) {
+      loadCohortSummary();
+    }
+  }, [isLoadingAuth, isEntitled, canViewCohortMistakes]);
 
   // Cohort analytics data
   const [summaryData, setSummaryData] = useState<{
@@ -62,14 +72,10 @@ export default function PlacementMistakesAnalyticsPage() {
   const [submittingResolution, setSubmittingResolution] = useState(false);
 
   useEffect(() => {
-    loadCohortSummary();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === "DEFECTS") {
+    if (activeTab === "DEFECTS" && isEntitled) {
       loadDefects();
     }
-  }, [activeTab]);
+  }, [activeTab, isEntitled]);
 
   async function loadCohortSummary() {
     try {
@@ -128,7 +134,22 @@ export default function PlacementMistakesAnalyticsPage() {
     }
   }
 
-  if (isLoadingAuth || loading) {
+  if (isLoadingAuth) {
+    return <MistakeAnalyticsSkeleton />;
+  }
+
+  if (!isEntitled) {
+    return (
+      <FeatureLockedCard
+        featureName="Cohort Mistake Analytics"
+        featureKey="mistake_to_mastery"
+        description="Cohort error analytics and question defect monitoring are not included in your college's assigned subscription plan."
+        recommendedPlan="Campus Growth"
+      />
+    );
+  }
+
+  if (loading) {
     return <MistakeAnalyticsSkeleton />;
   }
 

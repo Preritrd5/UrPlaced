@@ -15,13 +15,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SkeletonCard } from "@/components/ui/skeleton";
+import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
 
 export default function StudentPlacementMemoryPage() {
+  const { isPlatformAdmin, isLoading: isLoadingAuth, tenant } = useAuthContext();
   const [records, setRecords] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+
+  const isEntitled =
+    isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["placement_memory_analytics"] !== false : true);
 
   // Form State
   const [companyId, setCompanyId] = useState("");
@@ -33,8 +39,10 @@ export default function StudentPlacementMemoryPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
 
   useEffect(() => {
-    loadMemoryData();
-  }, []);
+    if (!isLoadingAuth && isEntitled) {
+      loadMemoryData();
+    }
+  }, [isLoadingAuth, isEntitled]);
 
   async function loadMemoryData() {
     setLoading(true);
@@ -115,6 +123,17 @@ export default function StudentPlacementMemoryPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!isLoadingAuth && !isEntitled) {
+    return (
+      <FeatureLockedCard
+        featureName="Target Drive Insights & Placement Memory"
+        featureKey="placement_memory_analytics"
+        description="Cross-year hiring debriefs and past interview experiences are not included in your college's current subscription plan."
+        recommendedPlan="Campus Growth"
+      />
+    );
   }
 
   return (

@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     if (error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
-      return NextResponse.json({ error: "Access denied. Insufficient permissions." }, { status: 403 });
+    if (error.message?.startsWith("FORBIDDEN") || error.message === "NO_ACTIVE_TENANT") {
+      return NextResponse.json({ error: error.message || "Access denied. Insufficient permissions." }, { status: 403 });
     }
     if (error instanceof GeminiServiceError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });

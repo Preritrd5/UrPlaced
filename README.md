@@ -35,6 +35,7 @@
   - [9. Institutional Billing, Invoicing & Refunds](#9-institutional-billing-invoicing--refunds)
   - [10. Global Navigation Optimization & Smart Session Validation](#10-global-navigation-optimization--smart-session-validation)
   - [11. Global Maintenance Mode & Full-Screen Tenant Lockdown](#11-global-maintenance-mode--full-screen-tenant-lockdown)
+  - [12. Centralized Subscription Entitlement Architecture & Real Feature Controls](#12-centralized-subscription-entitlement-architecture--real-feature-controls)
 - [System Architecture & Workflows](#-system-architecture--workflows)
   - [High-Level Architecture Diagram](#high-level-architecture-diagram)
   - [Global Maintenance Mode & Lockdown Enforcement Architecture](#global-maintenance-mode--lockdown-enforcement-architecture)
@@ -162,6 +163,21 @@ Traditional placement management relies on fractured spreadsheets, unmonitored t
 - **Strict Super Admin Exemption:** Super Admin control plane (`/preritrd/*`) and management APIs (`/api/preritrd/*`) remain 100% accessible to verified Super Admins to monitor telemetry, update broadcast messaging, or restore operations.
 - **Critical Integrations Preserved:** Razorpay webhooks (`/api/billing/webhook`, `/api/webhooks/razorpay`), subscription checkouts (`/api/billing/checkout/*`), auth callbacks/signout (`/auth/*`, `/api/auth/signout`), and maintenance status telemetry (`/api/platform/maintenance`) remain operational during lockdown.
 - **In-Memory Caching & Sub-Second Propagation:** 5-second in-memory TTL caching in `PlatformConfigService` and Edge Middleware eliminates database latency while immediately invalidating upon Super Admin configuration save.
+
+### 12. Centralized Subscription Entitlement Architecture & Real Feature Controls
+- **16 Controlled Architectural Features:** Fully operationalized and mapped across 5 functional domains:
+  1. *Core Placement:* `core_drives_management`, `student_roster_directory`, `company_management`
+  2. *Assessment & Testing:* `standard_assessments`, `subject_question_banks`, `custom_question_sets`
+  3. *Intelligence & Analytics:* `drivefit_evaluator`, `mistake_to_mastery`, `placement_memory_analytics`, `automated_eligibility_engine`
+  4. *AI Capabilities:* `ai_question_generator`, `ai_tutor_assistant`, `ai_evaluation_pipeline`
+  5. *Institutional Governance & SLAs:* `department_hierarchy`, `audit_data_export_hub`, `dedicated_sla_liaison`
+- **Instant Plan Edit Propagation:** Editing subscription plan entitlements via Super Admin (`/preritrd/subscriptions` -> Edit Plan) automatically updates the `entitlements_snapshot` and increments `plan_version` across all active, trialing, and grace college subscriptions in real time. Subscribed portals reflect new features or lockdowns immediately without requiring account re-login.
+- **Fail-Closed API Gating:** Server context (`requireAuthContext`) resolves feature keys from requested permissions via `SubscriptionAccessService.resolveFeatureKeyFromPermission()`. Ineligible requests immediately throw `FORBIDDEN: FEATURE_NOT_IN_PLAN` and return HTTP 403.
+- **Strict Zero Universal Bypass:** Removed legacy fallback overrides that hardcoded `department_hierarchy` or student mistake radar to `true`. When a Super Admin disables an entitlement in a plan, it strictly fails closed across all roles.
+- **Frontend Navigation & Direct URL Protection:** Sidebar menu items dynamically filter out unentitled modules. Direct URL attempts to `/dashboard/settings/academic`, `/dashboard/mistakes`, `/dashboard/memory`, or `/dashboard/student/tutor` render the design-system compliant `<FeatureLockedCard />` with an upgrade path for Placement Heads.
+- **Floating AI Placement Tutor Conditional Rendering:** `<FloatingAIChatbot />` in `app-shell.tsx` is strictly conditionally mounted only when `auth.tenant?.entitlements?.["ai_tutor_assistant"] !== false`.
+- **Question Bank AI Generation Switch:** Conditionally locks the AI Generate button and modal in Question Bank Sentinel when `ai_question_generator` is disabled.
+- **Serverless PDFKit Font Resolution:** Added `serverExternalPackages: ["pdfkit"]` in `next.config.ts`, eliminating the Vercel `#standard-fonts/Helvetica` bundle crash and guaranteeing resilient tax invoice PDF downloads.
 
 ---
 
