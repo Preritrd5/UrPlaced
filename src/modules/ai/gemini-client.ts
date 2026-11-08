@@ -2,14 +2,15 @@ import { GoogleGenAI } from "@google/genai";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface GenerateOptions {
-  prompt: string;
+  prompt?: string;
+  parts?: any[];
   systemInstruction?: string;
   temperature?: number;
   maxOutputTokens?: number;
   responseMimeType?: string;
   responseSchema?: any;
   timeoutMs?: number;
-  feature: "STUDY_TUTOR" | "QUESTION_INTELLIGENCE" | "MISTAKE_MASTERY" | "DRIVEFIT" | "PLACEMENT_INTELLIGENCE";
+  feature: "STUDY_TUTOR" | "QUESTION_INTELLIGENCE" | "MISTAKE_MASTERY" | "DRIVEFIT" | "PLACEMENT_INTELLIGENCE" | "RESUME_SCAN" | "DRIVE_MATCH";
   userId?: string;
   tenantId?: string;
 }
@@ -129,7 +130,7 @@ export class GeminiClient {
 
         const apiCallPromise = client.models.generateContent({
           model,
-          contents: options.prompt,
+          contents: options.parts && options.parts.length > 0 ? options.parts : (options.prompt || ""),
           config: generationConfig,
         });
 

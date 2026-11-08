@@ -12,6 +12,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Clock,
+  Target,
+  FileText,
+  User,
+  TrendingUp,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +55,22 @@ export default function StudentDashboardPage() {
     mistakes: [],
   });
 
+  const [careerIntel, setCareerIntel] = React.useState<{
+    completeness: number;
+    missingSections: string[];
+    primaryResume: { id: string; fileName: string } | null;
+    latestScanScore: number | null;
+    matchesCount: number;
+    highestMatchScore: number;
+  }>({
+    completeness: 0,
+    missingSections: [],
+    primaryResume: null,
+    latestScanScore: null,
+    matchesCount: 0,
+    highestMatchScore: 0,
+  });
+
   React.useEffect(() => {
     if (!auth.isLoading) {
       if (!auth.isAuthenticated) {
@@ -67,6 +87,7 @@ export default function StudentDashboardPage() {
         return;
       }
 
+      // Fetch dashboard metrics
       fetch("/api/student/dashboard")
         .then((res) => {
           if (res.ok) return res.json();
@@ -81,6 +102,51 @@ export default function StudentDashboardPage() {
         .finally(() => {
           setLoading(false);
         });
+
+      // Background fetch Career Intelligence summary
+      Promise.allSettled([
+        fetch("/api/student/career-profile").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/student/resumes").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/student/placement-matches?filter=ALL").then((r) => (r.ok ? r.json() : null)),
+      ]).then(([profileRes, resumesRes, matchesRes]) => {
+        let completeness = 0;
+        let missingSections: string[] = [];
+        let primaryResume: { id: string; fileName: string } | null = null;
+        let latestScanScore: number | null = null;
+        let matchesCount = 0;
+        let highestMatchScore = 0;
+
+        if (profileRes.status === "fulfilled" && profileRes.value?.data) {
+          completeness = profileRes.value.data.completeness?.score || 0;
+          missingSections = profileRes.value.data.completeness?.missingSections || [];
+        }
+
+        if (resumesRes.status === "fulfilled" && resumesRes.value?.data) {
+          const list = resumesRes.value.data as any[];
+          const primary = list.find((r) => r.isPrimary) || list[0];
+          if (primary) {
+            primaryResume = { id: primary.id, fileName: primary.fileName };
+          }
+        }
+
+        if (matchesRes.status === "fulfilled" && matchesRes.value?.data) {
+          const list = matchesRes.value.data as any[];
+          matchesCount = list.length;
+          highestMatchScore = list.reduce(
+            (max, item) => Math.max(max, item.matchScore || 0),
+            0
+          );
+        }
+
+        setCareerIntel({
+          completeness,
+          missingSections,
+          primaryResume,
+          latestScanScore,
+          matchesCount,
+          highestMatchScore,
+        });
+      });
     }
   }, [auth.isLoading, auth.isAuthenticated, auth.accountCategory, auth.role, router]);
 
@@ -214,6 +280,168 @@ export default function StudentDashboardPage() {
 
       {/* GitHub / LeetCode Style 365-Day Student Activity Contribution Heatmap */}
       <StudentActivityHeatmap />
+
+      {/* Career Intelligence Command Center */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold font-heading text-text-primary">
+                Career Intelligence &amp; Placement Readiness
+              </h2>
+              <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.5 border-primary/40 text-primary">
+                <Sparkles className="h-3 w-3 mr-1 text-primary inline" /> AI Intelligence
+              </Badge>
+            </div>
+            <p className="text-xs text-text-secondary">
+              Professional profile completeness, AI ATS resume diagnostics, and real-time campus drive matching.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Card 1: Career Profile Completeness */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center">
+                  <User className="h-5 w-5" />
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`text-xs font-mono font-semibold ${
+                    careerIntel.completeness >= 80
+                      ? "border-secondary/50 text-secondary bg-[var(--color-secondary-subtle)]"
+                      : "border-primary/50 text-primary bg-[var(--color-primary-subtle)]"
+                  }`}
+                >
+                  {careerIntel.completeness}% Complete
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">Career Profile</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Professional summary, categorized skills, education, projects, and work experience.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              {/* Progress Bar */}
+              <div className="space-y-1">
+                <div className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border">
+                  <div
+                    className="h-full bg-primary transition-all duration-500 rounded-full"
+                    style={{ width: `${careerIntel.completeness}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-text-secondary">
+                  <span>Profile Strength</span>
+                  <span>{careerIntel.completeness}/100</span>
+                </div>
+              </div>
+
+              {careerIntel.missingSections.length > 0 ? (
+                <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                  Missing: {careerIntel.missingSections.slice(0, 2).join(", ")}
+                  {careerIntel.missingSections.length > 2 && "..."}
+                </p>
+              ) : (
+                <p className="text-[11px] text-secondary bg-[var(--color-secondary-subtle)] p-2 rounded-lg border border-secondary/20">
+                  &check; All 7 core sections complete &amp; verified
+                </p>
+              )}
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/career-profile">
+                  <span>Manage Profile</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card 2: AI Resume & ATS Scanner */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <Badge variant="outline" className="text-xs font-mono font-semibold border-secondary/50 text-secondary">
+                  {careerIntel.primaryResume ? "Resume Active" : "Upload Ready"}
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">AI Resume &amp; ATS</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Upload PDF/DOCX, diagnose ATS parseability risks, and scan against recruiter filters.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Active Resume
+                </span>
+                <p className="text-xs font-semibold text-text-primary truncate">
+                  {careerIntel.primaryResume?.fileName || "No primary resume designated"}
+                </p>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Run automated ATS analysis to check header parseability, keyword density, and bullet point impact.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/resume">
+                  <span>Resume Scanner</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card 3: Smart Placement Matches */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center">
+                  <Target className="h-5 w-5" />
+                </div>
+                <Badge variant="outline" className="text-xs font-mono font-semibold border-primary/50 text-primary">
+                  {careerIntel.matchesCount} Live Drives
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">Smart Drive Matching</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Direct collegiate eligibility tracking &amp; AI competency alignment with campus drives.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Highest Fit Opportunity
+                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text-primary">
+                    {careerIntel.highestMatchScore > 0
+                      ? `${careerIntel.highestMatchScore}% Competency Match`
+                      : "Calculating alignment..."}
+                  </span>
+                  <TrendingUp className="h-3.5 w-3.5 text-secondary" />
+                </div>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Compare verified criteria (CGPA, backlogs) with AI skill gap analysis for immediate application.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/placement-matches">
+                  <span>Explore Matches</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Quick Action Navigation Grid */}
       <div className="space-y-4">

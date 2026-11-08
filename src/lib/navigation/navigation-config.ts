@@ -26,6 +26,7 @@ import {
   CreditCard,
   User,
   Bot,
+  FileText,
 } from "lucide-react";
 import {
   Permissions,
@@ -123,6 +124,38 @@ export const MASTER_NAVIGATION: {
         requiredPermission: Permissions.ANNOUNCEMENTS_READ,
         allowedRoles: ["STUDENT"],
         accountCategory: "STUDENT",
+      },
+    ],
+  },
+  {
+    section: "Career Intelligence",
+    accountCategory: "STUDENT",
+    items: [
+      {
+        id: "student-career-profile",
+        name: "Career Profile",
+        href: "/dashboard/student/career-profile",
+        icon: User,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+      },
+      {
+        id: "student-resume-ats",
+        name: "Resume & ATS Scanner",
+        href: "/dashboard/student/resume",
+        icon: FileText,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "AI",
+      },
+      {
+        id: "student-placement-matches",
+        name: "Smart Drive Matches",
+        href: "/dashboard/student/placement-matches",
+        icon: Target,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "Smart",
       },
     ],
   },
