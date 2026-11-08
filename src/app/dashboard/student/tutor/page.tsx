@@ -12,12 +12,15 @@ import {
   Compass,
   AlertCircle,
   CheckCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
+import { FormattedAIResponse } from "@/components/ai/formatted-ai-response";
 
 interface Message {
   role: "user" | "model";
@@ -47,11 +50,18 @@ export default function StudentAITutorPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [remainingQuota, setRemainingQuota] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleCopyResponse = (text: string, idx: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
   };
 
   useEffect(() => {
@@ -264,13 +274,32 @@ export default function StudentAITutorPage() {
               </div>
 
               <div
-                className={`p-4 rounded-xl max-w-[85%] text-sm leading-relaxed whitespace-pre-wrap font-inter ${
+                className={`p-4 md:p-5 rounded-2xl max-w-[95%] md:max-w-[88%] text-sm leading-relaxed font-inter relative group shadow-sm ${
                   msg.role === "user"
-                    ? "bg-[#5052C9] text-white rounded-tr-none shadow-sm"
-                    : "bg-[#FBFAF7] text-[#24283A] border border-[#DDDCD5] rounded-tl-none shadow-sm"
+                    ? "bg-[#5052C9] text-white rounded-tr-none whitespace-pre-wrap"
+                    : "bg-[#FBFAF7] dark:bg-[#1B1E2A] text-[#24283A] dark:text-[#F2F1F8] border border-[#DDDCD5] dark:border-[#303548] rounded-tl-none"
                 }`}
               >
-                {msg.content}
+                {msg.role === "user" ? (
+                  msg.content
+                ) : (
+                  <>
+                    <FormattedAIResponse content={msg.content} />
+                    <button
+                      onClick={() => handleCopyResponse(msg.content, idx)}
+                      type="button"
+                      className="absolute right-2.5 top-2.5 p-1.5 rounded-lg bg-[#EDECE7]/60 hover:bg-[#DDDCD5] dark:bg-[#252A3A] dark:hover:bg-[#303548] text-[#292D40]/60 dark:text-[#B9BDCD] opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                      title="Copy response markdown"
+                      aria-label="Copy response markdown"
+                    >
+                      {copiedIdx === idx ? (
+                        <Check className="w-3.5 h-3.5 text-[#2E8F86]" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Follow-up suggestions */}

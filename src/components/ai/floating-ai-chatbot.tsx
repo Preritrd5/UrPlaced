@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
+import { FormattedAIResponse } from "@/components/ai/formatted-ai-response";
 
 interface ChatMessage {
   id: string;
@@ -618,25 +619,30 @@ export function FloatingAIChatbot() {
                     </div>
 
                     <div
-                      className={`relative group p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed max-w-[88%] whitespace-pre-wrap break-words ${
+                      className={`relative group p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed max-w-[92%] sm:max-w-[88%] break-words ${
                         msg.role === "user"
-                          ? "bg-gradient-to-r from-[#7779D8] to-[#5052C9] text-white rounded-tr-none shadow-sm"
+                          ? "bg-gradient-to-r from-[#7779D8] to-[#5052C9] text-white rounded-tr-none shadow-sm whitespace-pre-wrap"
                           : msg.isError
-                          ? "bg-red-50 text-red-800 border border-red-200 rounded-tl-none"
-                          : "bg-[#FBFAF7] text-[#24283A] border border-[#DDDCD5] rounded-tl-none shadow-sm"
+                          ? "bg-red-50 text-red-800 border border-red-200 rounded-tl-none whitespace-pre-wrap"
+                          : "bg-[#FBFAF7] dark:bg-[#1B1E2A] text-[#24283A] dark:text-[#F2F1F8] border border-[#DDDCD5] dark:border-[#303548] rounded-tl-none shadow-sm"
                       }`}
                     >
-                      {msg.content}
+                      {msg.role === "model" && !msg.isError ? (
+                        <FormattedAIResponse content={msg.content} />
+                      ) : (
+                        msg.content
+                      )}
 
                       {/* Copy button for model responses */}
                       {msg.role === "model" && !msg.isError && (
                         <button
                           onClick={() => copyToClipboard(msg.content, msg.id)}
-                          className="absolute right-2 top-2 p-1 rounded bg-[#EDECE7]/60 hover:bg-[#EDECE7] text-[#292D40]/60 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Copy response"
+                          className="absolute right-2 top-2 p-1 rounded bg-[#EDECE7]/60 hover:bg-[#EDECE7] dark:bg-[#252A3A] dark:hover:bg-[#303548] text-[#292D40]/60 dark:text-[#B9BDCD] opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Copy response markdown"
+                          aria-label="Copy response markdown"
                         >
                           {copiedId === msg.id ? (
-                            <Check className="w-3 h-3 text-emerald-600" />
+                            <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                           ) : (
                             <Copy className="w-3 h-3" />
                           )}
