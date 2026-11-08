@@ -143,6 +143,7 @@ Traditional placement management relies on fractured spreadsheets, unmonitored t
 
 ### 11. Global Maintenance Mode & Full-Screen Tenant Lockdown
 - **Defense-in-Depth Lockdown Engine:** Centrally configured via Super Admin platform switches (`/preritrd/configuration`), enforcing an absolute, full-screen maintenance interface whenever `maintenance_mode = TRUE`.
+- **Viewport-Perfect Lockdown & Zero Scrollbar:** Rendered in an ultra-modern, viewport-locked full-screen canvas (`h-[100dvh] overflow-hidden`) with authentic official `UrPlacedLogo` website branding, animated platform telemetry radar, and zero browser scrollbars.
 - **Complete Tenant UI Erasure:** Replaces all normal navigation, sidebar, application header, user profile controls, dashboard widgets, and child routes (`/dashboard/*`, `/dashboard/student/*`) with `<FullScreenMaintenance />`. Never renders as a banner or dismissible overlay.
 - **Zero Content Flash & Server-Side Security:** Root `DashboardLayout` checks `PlatformConfigService.getMaintenanceStatus()` before streaming any child React Server Component (RSC), preventing in-flight data leaks or initial rendering flash.
 - **HTTP 503 Service Unavailable API Guard:** Intercepts incoming non-exempt tenant API requests (`/api/student/*`, `/api/placement/*`, `/api/notifications/*`, etc.) at the Edge middleware and Server Context layer (`requireAuthContext`), returning status 503 with dynamic broadcast payload and `Retry-After: 300` headers.
