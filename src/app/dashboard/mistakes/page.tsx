@@ -51,6 +51,7 @@ export default function PlacementMistakesAnalyticsPage() {
   useEffect(() => {
     if (!isLoadingAuth && isEntitled && canViewCohortMistakes) {
       loadCohortSummary();
+      loadDefects();
     }
   }, [isLoadingAuth, isEntitled, canViewCohortMistakes]);
 

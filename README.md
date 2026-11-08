@@ -36,6 +36,7 @@
   - [10. Global Navigation Optimization & Smart Session Validation](#10-global-navigation-optimization--smart-session-validation)
   - [11. Global Maintenance Mode & Full-Screen Tenant Lockdown](#11-global-maintenance-mode--full-screen-tenant-lockdown)
   - [12. Centralized Subscription Entitlement Architecture & Real Feature Controls](#12-centralized-subscription-entitlement-architecture--real-feature-controls)
+  - [13. Institutional Document Generation, Decommissioning Safeguards & Recruitment Intelligence](#13-institutional-document-generation-decommissioning-safeguards--recruitment-intelligence)
 - [System Architecture & Workflows](#-system-architecture--workflows)
   - [High-Level Architecture Diagram](#high-level-architecture-diagram)
   - [Global Maintenance Mode & Lockdown Enforcement Architecture](#global-maintenance-mode--lockdown-enforcement-architecture)
@@ -177,7 +178,17 @@ Traditional placement management relies on fractured spreadsheets, unmonitored t
 - **Frontend Navigation & Direct URL Protection:** Sidebar menu items dynamically filter out unentitled modules. Direct URL attempts to `/dashboard/settings/academic`, `/dashboard/mistakes`, `/dashboard/memory`, or `/dashboard/student/tutor` render the design-system compliant `<FeatureLockedCard />` with an upgrade path for Placement Heads.
 - **Floating AI Placement Tutor Conditional Rendering:** `<FloatingAIChatbot />` in `app-shell.tsx` is strictly conditionally mounted only when `auth.tenant?.entitlements?.["ai_tutor_assistant"] !== false`.
 - **Question Bank AI Generation Switch:** Conditionally locks the AI Generate button and modal in Question Bank Sentinel when `ai_question_generator` is disabled.
-- **Serverless PDFKit Font Resolution:** Added `serverExternalPackages: ["pdfkit"]` in `next.config.ts`, eliminating the Vercel `#standard-fonts/Helvetica` bundle crash and guaranteeing resilient tax invoice PDF downloads.
+- **Serverless PDFKit Font Resolution:** Added `serverExternalPackages: ["pdfkit"]` and `outputFileTracingIncludes` in `next.config.ts`, eliminating Vercel `#standard-fonts/Helvetica` bundle crashes and guaranteeing resilient tax invoice PDF downloads.
+
+### 13. Institutional Document Generation, Decommissioning Safeguards & Recruitment Intelligence
+- **Serverless PDFKit Standard Font Resolution & Fallback:** Configured `serverExternalPackages: ["pdfkit"]` alongside `outputFileTracingIncludes` (`node_modules/pdfkit/**/*`) to trace standard font binaries and AFM metrics into serverless Lambdas. PDF generation is fortified with automatic fallback to statutory printable HTML invoices with `window.print()` functionality, ensuring users and administrators are never blocked by runtime environment font anomalies.
+- **Invoice Management & Status Filtering:** Super Admin financial operations (`/preritrd/billing`) feature full-lifecycle status filtering (`ALL`, `PAID`, `PENDING_PAYMENT`, `PENDING`, `OVERDUE`, `REFUNDED`) with distinct design-system badges, instant invoice previewing (`Content-Disposition: inline`), and export capabilities for CSV and native Excel (`.xlsx`) workbooks.
+- **College Account Decommissioning & Statutory Protections:** Decommissioning interface (`/preritrd/colleges`) enforces a strict dual-track deletion model:
+  - *Permanent Delete:* Complete leaf-first cascading cleanup across 26 dependent tables, Supabase Storage avatars, and Supabase Auth (`auth.users`) records. Safeguarded by the **Statutory Financial Retention Guard**, which strictly rejects permanent deletion if the institution holds paid tax invoices.
+  - *Archive & Lockout:* Instantly revokes session tokens, suspends logins, and cancels active subscriptions while immutably preserving accounting records, tax invoices, and historical audit entries.
+  - *Multi-Factor Confirmation:* Requires an administrative justification ($\ge 5$ characters), checkbox confirmation, and explicit string verification (`DELETE`, `ARCHIVE`, or target college name).
+- **Cohort Mistake Analytics Telemetry & Defect Resolution:** Cohort error analytics (`/dashboard/mistakes`) immediately ingests and computes live telemetry on initial mount across all 4 KPI dimensions: Ingested Errors, Active Reviews, Affected Students, and Pending Question Defects. Question defect tickets support full resolution lifecycle with student remediation synchronization and question bank correction.
+- **Placement Memory & Recruitment Intelligence:** Historical recruitment archives (`/dashboard/memory`) feature explicit source provenance, round structures, and question set associations with multi-parameter filter controls (real-time company/role search, reliability label filtering, and recruitment cycle filtering). Candidate debrief moderation queue supports instantaneous approval and promotion into institutional memory or archival rejection.
 
 ---
 

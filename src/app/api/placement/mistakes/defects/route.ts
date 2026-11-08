@@ -21,9 +21,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(res.reports);
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
-      return NextResponse.json({ error: err.message }, { status: 403 });
+    const msg = err.message || "Failed to list defects";
+    if (msg.includes("UNAUTHORIZED")) {
+      return NextResponse.json({ error: msg }, { status: 401 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    if (msg.includes("FORBIDDEN") || msg.includes("FEATURE_NOT_IN_PLAN")) {
+      return NextResponse.json({ error: msg }, { status: 403 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -19,10 +19,14 @@ export async function GET(
 
     return NextResponse.json({ record: result.record });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN") {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+    const msg = error.message || "Failed to process memory record";
+    if (msg.includes("UNAUTHORIZED")) {
+      return NextResponse.json({ error: msg }, { status: 401 });
     }
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    if (msg.includes("FORBIDDEN") || msg.includes("FEATURE_NOT_IN_PLAN")) {
+      return NextResponse.json({ error: msg }, { status: 403 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
@@ -61,9 +65,13 @@ export async function PATCH(
 
     return NextResponse.json({ error: "Invalid PATCH action or missing arguments" }, { status: 400 });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN") {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+    const msg = error.message || "Failed to process memory record";
+    if (msg.includes("UNAUTHORIZED")) {
+      return NextResponse.json({ error: msg }, { status: 401 });
     }
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    if (msg.includes("FORBIDDEN") || msg.includes("FEATURE_NOT_IN_PLAN")) {
+      return NextResponse.json({ error: msg }, { status: 403 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

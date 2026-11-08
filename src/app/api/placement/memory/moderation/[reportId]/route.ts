@@ -33,9 +33,13 @@ export async function PATCH(
 
     return NextResponse.json({ report: result.report, auditLog: result.auditLog });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN") {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+    const msg = error.message || "Failed to moderate report";
+    if (msg.includes("UNAUTHORIZED")) {
+      return NextResponse.json({ error: msg }, { status: 401 });
     }
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+    if (msg.includes("FORBIDDEN") || msg.includes("FEATURE_NOT_IN_PLAN")) {
+      return NextResponse.json({ error: msg }, { status: 403 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

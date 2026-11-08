@@ -740,17 +740,19 @@ export default function PlatformCollegesPage() {
         </div>
       )}
 
-      {/* Confirmation Modal for College Deletion */}
+      {/* Confirmation Modal for College Deletion / Archival */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[rgba(36,40,58,0.50)] backdrop-blur-sm overflow-y-auto">
           <Card className="w-full max-w-lg min-h-0 max-h-[calc(100dvh-2rem)] my-auto flex flex-col overflow-hidden bg-card border-status-danger/40 shadow-2xl rounded-2xl">
             <CardHeader className="shrink-0 pb-3 border-b border-border bg-status-danger-subtle/40">
               <CardTitle className="text-base font-bold font-heading text-status-danger flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-status-danger" />
-                <span>Delete College Account</span>
+                <span>{deleteMode === "permanent" ? "Delete College Account" : "Archive & Lockout College Account"}</span>
               </CardTitle>
               <CardDescription className="text-xs text-text-secondary">
-                Administrative removal of institutional workspace and associated accounts.
+                {deleteMode === "permanent"
+                  ? "Permanent removal of institutional workspace, students, and authentication records."
+                  : "Immediate operational lockout while preserving historical tax invoices and compliance ledgers."}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pr-3 sm:pr-5 space-y-4">
@@ -841,11 +843,12 @@ export default function PlatformCollegesPage() {
                   </label>
                 </div>
                 <div className="text-[11px] text-text-secondary">
-                  Or type <strong className="font-mono text-text-primary">DELETE</strong> below:
+                  Or type <strong className="font-mono text-text-primary">DELETE</strong>{" "}
+                  {deleteMode === "archive" ? "or ARCHIVE " : ""}below:
                 </div>
                 <Input
                   type="text"
-                  placeholder="Type DELETE to confirm"
+                  placeholder={deleteMode === "permanent" ? "Type DELETE to confirm" : "Type DELETE or ARCHIVE to confirm"}
                   value={confirmTypedName}
                   onChange={(e) => setConfirmTypedName(e.target.value)}
                   className="bg-input border-border text-xs h-8"
@@ -874,16 +877,17 @@ export default function PlatformCollegesPage() {
                   deleteLoading ||
                   (!confirmChecked &&
                     confirmTypedName.trim().toUpperCase() !== "DELETE" &&
+                    (deleteMode !== "archive" || confirmTypedName.trim().toUpperCase() !== "ARCHIVE") &&
                     confirmTypedName.trim().toLowerCase() !== deleteTarget.name.toLowerCase())
                 }
                 className="bg-status-danger hover:opacity-90 text-white text-xs h-9 disabled:opacity-50 cursor-pointer font-semibold"
               >
                 {deleteLoading ? (
                   <span className="flex items-center gap-1.5">
-                    <BrandLoader size="button" /> Deleting...
+                    <BrandLoader size="button" /> Processing...
                   </span>
                 ) : (
-                  `Confirm & Delete`
+                  deleteMode === "permanent" ? "Confirm & Delete" : "Confirm & Archive"
                 )}
               </Button>
             </div>

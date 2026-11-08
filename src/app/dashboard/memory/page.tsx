@@ -22,6 +22,7 @@ import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { TableSkeleton } from "@/components/ui/page-skeletons";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { FeatureLockedCard } from "@/components/ui/feature-locked-card";
+import { toast } from "@/components/ui/dialog-system";
 
 export default function PlacementMemoryPage() {
   const router = useRouter();
@@ -31,6 +32,11 @@ export default function PlacementMemoryPage() {
   const [pendingReports, setPendingReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  // Filter controls
+  const [searchQuery, setSearchQuery] = useState("");
+  const [reliabilityFilter, setReliabilityFilter] = useState("ALL");
+  const [cycleFilter, setCycleFilter] = useState("ALL");
 
   const isEntitled =
     isPlatformAdmin || (tenant?.entitlements ? tenant.entitlements["placement_memory_analytics"] !== false : true);
@@ -51,29 +57,31 @@ export default function PlacementMemoryPage() {
     setLoading(true);
     setActionMessage(null);
     try {
-      if (activeTab === "RECORDS") {
-        const res = await fetch("/api/placement/memory/records");
-        if (res.ok) {
-          const json = await res.json();
-          setRecords(json.records || []);
-        }
-      } else if (activeTab === "MODERATION") {
-        const res = await fetch("/api/placement/memory/moderation");
-        if (res.ok) {
-          const json = await res.json();
-          setPendingReports(json.reports || []);
-        }
+      const [recordsRes, modRes] = await Promise.all([
+        fetch("/api/placement/memory/records"),
+        fetch("/api/placement/memory/moderation"),
+      ]);
+
+      if (recordsRes.ok) {
+        const json = await recordsRes.json();
+        setRecords(json.records || []);
+      }
+      if (modRes.ok) {
+        const json = await modRes.json();
+        setPendingReports(json.reports || []);
       }
     } catch (err) {
       console.error("Error loading placement memory:", err);
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!isLoadingAuth && isEntitled && canViewMemory) {
+      loadData();
+    }
+  }, [isLoadingAuth, isEntitled, canViewMemory, loadData]);
 
   async function handleModerate(reportId: string, decision: "APPROVED" | "REJECTED") {
     try {
@@ -83,16 +91,36 @@ export default function PlacementMemoryPage() {
         body: JSON.stringify({ decision, promoteToMemory: true }),
       });
       if (res.ok) {
-        setActionMessage(`Report successfully ${decision.toLowerCase()} and logged.`);
+        const successText = `Report successfully ${decision.toLowerCase()} and ${decision === "APPROVED" ? "promoted to institutional memory" : "archived"}.`;
+        setActionMessage(successText);
+        toast.success(successText);
         loadData();
       } else {
         const err = await res.json();
         setActionMessage(`Error: ${err.error}`);
+        toast.error(err.error || "Moderation action failed.");
       }
     } catch (err: any) {
       setActionMessage(`Moderation failed: ${err.message}`);
+      toast.error(`Moderation failed: ${err.message}`);
     }
   }
+
+  // Filtered records
+  const filteredRecords = records.filter((rec) => {
+    const matchesSearch =
+      !searchQuery.trim() ||
+      (rec.companies?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (rec.role_title || "").toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesReliability =
+      reliabilityFilter === "ALL" || rec.reliability_label === reliabilityFilter;
+
+    const matchesCycle =
+      cycleFilter === "ALL" || rec.recruitment_cycle === cycleFilter;
+
+    return matchesSearch && matchesReliability && matchesCycle;
+  });
 
   function renderReliabilityBadge(label: string) {
     switch (label) {
@@ -187,24 +215,86 @@ export default function PlacementMemoryPage() {
       {/* Tab Content */}
       {activeTab === "RECORDS" && (
         <Card className="bg-[#F8F7F3] border-[#DDDCD5]">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-[#24283A] font-['Outfit']">
-              Institutional Recruitment Records
-            </CardTitle>
-            <CardDescription className="text-xs text-[#292D40]">
-              Historical drives with explicit source provenance, verified round structures, and question set links
-            </CardDescription>
+          <CardHeader className="pb-3 border-b border-[#DDDCD5]/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg font-semibold text-[#24283A] font-['Outfit']">
+                Institutional Recruitment Records
+              </CardTitle>
+              <CardDescription className="text-xs text-[#292D40]">
+                Historical drives with explicit source provenance, verified round structures, and question set links
+              </CardDescription>
+            </div>
+
+            {/* Filter Controls Bar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="Search company or role..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-[#FBFAF7] border border-[#DDDCD5] text-xs rounded-lg px-3 py-1.5 text-[#24283A] placeholder:text-[#292D40]/50 outline-none w-44"
+              />
+              <select
+                value={reliabilityFilter}
+                onChange={(e) => setReliabilityFilter(e.target.value)}
+                className="bg-[#FBFAF7] border border-[#DDDCD5] text-xs rounded-lg px-2.5 py-1.5 text-[#24283A] outline-none"
+              >
+                <option value="ALL">All Reliability</option>
+                <option value="OFFICIAL_CONFIRMED">Official Confirmed</option>
+                <option value="VERIFIED_HISTORICAL">Verified Historical</option>
+                <option value="CANDIDATE_REPORTED">Candidate Reported</option>
+                <option value="DISPUTED">Disputed</option>
+              </select>
+              <select
+                value={cycleFilter}
+                onChange={(e) => setCycleFilter(e.target.value)}
+                className="bg-[#FBFAF7] border border-[#DDDCD5] text-xs rounded-lg px-2.5 py-1.5 text-[#24283A] outline-none"
+              >
+                <option value="ALL">All Cycles</option>
+                <option value="CAMPUS_DRIVE">Campus Drive</option>
+                <option value="INTERNSHIP">Internship</option>
+                <option value="OFF_CAMPUS">Off Campus</option>
+              </select>
+              {(searchQuery || reliabilityFilter !== "ALL" || cycleFilter !== "ALL") && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setReliabilityFilter("ALL");
+                    setCycleFilter("ALL");
+                  }}
+                  className="text-xs text-[#5052C9] hover:underline px-1 font-semibold"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {loading ? (
               <div className="space-y-3 p-2">
                 {[1, 2, 3, 4].map((i) => (
                   <SkeletonCard key={i} className="h-24" />
                 ))}
               </div>
-            ) : records.length === 0 ? (
-              <div className="text-center py-8 text-[#292D40] text-sm">
-                No historical recruitment records currently archived.
+            ) : filteredRecords.length === 0 ? (
+              <div className="text-center py-10 text-[#292D40] text-sm space-y-2">
+                {records.length > 0 ? (
+                  <>
+                    <p>No historical records match your filter criteria.</p>
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setReliabilityFilter("ALL");
+                        setCycleFilter("ALL");
+                      }}
+                      className="text-xs font-semibold text-[#5052C9] hover:underline"
+                    >
+                      Reset all filters
+                    </button>
+                  </>
+                ) : (
+                  <p>No historical recruitment records currently archived.</p>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -220,7 +310,7 @@ export default function PlacementMemoryPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#DDDCD5]">
-                    {records.map((rec) => (
+                    {filteredRecords.map((rec) => (
                       <tr key={rec.id} className="hover:bg-[#FBFAF7] transition-colors">
                         <td className="py-3 px-4 font-medium text-[#24283A] flex items-center gap-2">
                           <Building2 className="w-4 h-4 text-[#5052C9]" />

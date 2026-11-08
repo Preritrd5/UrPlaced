@@ -65,7 +65,11 @@ export class PlatformBillingService {
       query = query.eq("tenant_id", tenantId);
     }
     if (status && status !== "ALL") {
-      query = query.eq("status", status);
+      if (status === "PENDING_PAYMENT" || status === "PENDING") {
+        query = query.in("status", ["PENDING", "PENDING_PAYMENT"]);
+      } else {
+        query = query.eq("status", status);
+      }
     }
 
     const { data, error } = await query;

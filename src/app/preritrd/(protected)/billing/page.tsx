@@ -381,7 +381,9 @@ export default function PlatformBillingPage() {
               <option value="ALL">All Statuses</option>
               <option value="PAID">PAID</option>
               <option value="PENDING">PENDING</option>
+              <option value="PENDING_PAYMENT">PENDING_PAYMENT</option>
               <option value="OVERDUE">OVERDUE</option>
+              <option value="REFUNDED">REFUNDED</option>
             </select>
           </div>
         </CardHeader>
@@ -438,8 +440,10 @@ export default function PlatformBillingPage() {
                           className={
                             inv.status === "PAID"
                               ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-mono text-[10px]"
-                              : inv.status === "PENDING"
+                              : inv.status === "PENDING" || (inv.status as string) === "PENDING_PAYMENT"
                               ? "bg-amber-100 text-amber-800 border border-amber-300 font-mono text-[10px]"
+                              : inv.status === "REFUNDED"
+                              ? "bg-purple-100 text-purple-800 border border-purple-300 font-mono text-[10px]"
                               : "bg-red-100 text-red-800 font-mono text-[10px]"
                           }
                         >

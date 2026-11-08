@@ -37,9 +37,13 @@ export async function PATCH(
 
     return NextResponse.json(res);
   } catch (err: any) {
-    if (err.message === "UNAUTHORIZED" || err.message === "FORBIDDEN") {
-      return NextResponse.json({ error: err.message }, { status: 403 });
+    const msg = err.message || "Failed to resolve defect";
+    if (msg.includes("UNAUTHORIZED")) {
+      return NextResponse.json({ error: msg }, { status: 401 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    if (msg.includes("FORBIDDEN") || msg.includes("FEATURE_NOT_IN_PLAN")) {
+      return NextResponse.json({ error: msg }, { status: 403 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

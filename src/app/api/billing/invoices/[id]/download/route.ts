@@ -60,6 +60,7 @@ export async function GET(
     }
 
     const format = request.nextUrl.searchParams.get("format") || "pdf";
+    const disposition = request.nextUrl.searchParams.get("disposition") || "attachment";
 
     if (format === "html") {
       const htmlContent = await InvoiceDocumentService.renderInvoiceHtml(invoice.id, admin);
@@ -72,19 +73,35 @@ export async function GET(
       });
     }
 
-    // Default: Genuine binary PDF document
-    const pdfBuffer = await InvoiceDocumentService.generateInvoicePdf(invoice.id, admin);
-    const invoiceNumber = invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`;
+    try {
+      // Default: Genuine binary PDF document
+      const pdfBuffer = await InvoiceDocumentService.generateInvoicePdf(invoice.id, admin);
+      const invoiceNumber = invoice.invoice_number || `INV-${invoice.id.slice(0, 8)}`;
 
-    return new NextResponse(new Uint8Array(pdfBuffer), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${invoiceNumber}.pdf"`,
-        "Content-Length": String(pdfBuffer.length),
-        "Cache-Control": "private, no-transform, no-store, max-age=0",
-      },
-    });
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `${disposition}; filename="${invoiceNumber}.pdf"`,
+          "Content-Length": String(pdfBuffer.length),
+          "Cache-Control": "private, no-transform, no-store, max-age=0",
+        },
+      });
+    } catch (pdfError: any) {
+      console.warn(
+        `[InvoiceDownload] Binary PDF generation encountered an error for invoice ${invoice.id}; rendering statutory printable HTML document as resilient fallback:`,
+        pdfError?.message || pdfError
+      );
+      // Fallback: Statutory printable HTML document with print-to-PDF button
+      const htmlContent = await InvoiceDocumentService.renderInvoiceHtml(invoice.id, admin);
+      return new NextResponse(htmlContent, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "private, no-transform, no-store, max-age=0",
+        },
+      });
+    }
   } catch (error: any) {
     const msg = error.message || "Failed to render invoice document";
     let status = 500;
