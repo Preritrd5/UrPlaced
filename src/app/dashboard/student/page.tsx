@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DashboardSkeleton } from "@/components/ui/page-skeletons";
+import { StudentActivityHeatmap } from "@/components/student/student-activity-heatmap";
 
 export default function StudentDashboardPage() {
   const auth = useAuthContext();
@@ -210,6 +211,9 @@ export default function StudentDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* GitHub / LeetCode Style 365-Day Student Activity Contribution Heatmap */}
+      <StudentActivityHeatmap />
 
       {/* Quick Action Navigation Grid */}
       <div className="space-y-4">
