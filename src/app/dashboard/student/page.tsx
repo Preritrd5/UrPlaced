@@ -117,8 +117,20 @@ export default function StudentDashboardPage() {
         let highestMatchScore = 0;
 
         if (profileRes.status === "fulfilled" && profileRes.value?.data) {
-          completeness = profileRes.value.data.completeness?.score || 0;
-          missingSections = profileRes.value.data.completeness?.missingSections || [];
+          const comp = profileRes.value.data.completeness;
+          completeness =
+            typeof comp?.overallPercentage === "number"
+              ? comp.overallPercentage
+              : typeof comp?.score === "number"
+              ? comp.score
+              : typeof profileRes.value.data.completeness_percentage === "number"
+              ? profileRes.value.data.completeness_percentage
+              : 0;
+
+          const rawMissing = comp?.missingSections || [];
+          missingSections = rawMissing.map((m: any) =>
+            typeof m === "string" ? m : m?.title || m?.sectionKey || "Section"
+          );
         }
 
         if (resumesRes.status === "fulfilled" && resumesRes.value?.data) {
@@ -340,7 +352,11 @@ export default function StudentDashboardPage() {
 
               {careerIntel.missingSections.length > 0 ? (
                 <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
-                  Missing: {careerIntel.missingSections.slice(0, 2).join(", ")}
+                  Missing:{" "}
+                  {careerIntel.missingSections
+                    .slice(0, 2)
+                    .map((m: any) => (typeof m === "string" ? m : m?.title || m?.sectionKey || "Details"))
+                    .join(", ")}
                   {careerIntel.missingSections.length > 2 && "..."}
                 </p>
               ) : (

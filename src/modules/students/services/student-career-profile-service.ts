@@ -69,6 +69,7 @@ export interface CompletenessBreakdown {
 }
 
 export interface ProfileCompletenessResult {
+  score: number;
   overallPercentage: number;
   completedSections: string[];
   missingSections: Array<{
@@ -338,6 +339,7 @@ export class StudentCareerProfileService {
     const isReadyForDrives = overallPercentage >= 70;
 
     return {
+      score: overallPercentage,
       overallPercentage,
       completedSections,
       missingSections,
