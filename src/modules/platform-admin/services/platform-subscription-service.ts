@@ -201,6 +201,93 @@ export class PlatformSubscriptionService {
   }
 
   /**
+   * Authoritatively extracts the canonical PlanEntitlementsMap from a plan record.
+   * Bidirectionally bridges:
+   * 1. Structured JSON `p.entitlements` if present.
+   * 2. Supabase TEXT[] `p.features` column (single source of truth in base/live database).
+   * 3. Plan tier defaults from CONTROLLED_FEATURE_CATALOGUE as fallback.
+   * Invariant: `department_hierarchy` is strictly compulsory for all colleges and always true.
+   */
+  public static extractEntitlementsFromPlan(p: any): PlanEntitlementsMap {
+    if (!p) {
+      const empty = this.buildDefaultEntitlements();
+      empty.department_hierarchy = true;
+      return empty;
+    }
+
+    const planTier = p.slug || p.id;
+
+    // 1. If explicit structured entitlements exist with actual keys, use them
+    if (p.entitlements && typeof p.entitlements === "object" && Object.keys(p.entitlements).length > 0) {
+      const map = this.buildDefaultEntitlements(p.entitlements, planTier);
+      map.department_hierarchy = true;
+      return map;
+    }
+
+    // 2. If features array exists in the database record (Supabase table subscription_plans.features)
+    if (Array.isArray(p.features) && p.features.length > 0) {
+      const map: PlanEntitlementsMap = {} as PlanEntitlementsMap;
+      const lowerFeatures = p.features.map((f: any) => String(f).trim().toLowerCase());
+
+      for (const feat of CONTROLLED_FEATURE_CATALOGUE) {
+        const featNameLower = feat.name.toLowerCase();
+        const featKeyLower = feat.key.toLowerCase();
+        const isMatched = lowerFeatures.some((f: string) => {
+          if (f === featNameLower || f === featKeyLower) return true;
+          if (f.includes(featNameLower) || featNameLower.includes(f)) return true;
+          // Specialized resilient matchers for all 16 catalogue features
+          switch (feat.key) {
+            case "core_drives_management":
+              return f.includes("recruitment drive") || f.includes("drives & scheduling");
+            case "student_roster_directory":
+              return f.includes("student directory") || f.includes("srn verification");
+            case "company_management":
+              return f.includes("company relationship") || f.includes("company directory");
+            case "standard_assessments":
+              return f.includes("assessment engine") || f.includes("standard assessment");
+            case "subject_question_banks":
+              return f.includes("question repository") || f.includes("question bank");
+            case "custom_question_sets":
+              return f.includes("custom & random") || f.includes("question sets");
+            case "drivefit_evaluator":
+              return f.includes("drivefit") || f.includes("match scoring");
+            case "mistake_to_mastery":
+              return f.includes("mistake bank") || f.includes("spaced remediation") || f.includes("mistake to mastery");
+            case "placement_memory_analytics":
+              return f.includes("placement memory") || f.includes("cohort intelligence") || f.includes("cohort readiness");
+            case "automated_eligibility_engine":
+              return f.includes("eligibility filtering") || f.includes("eligibility engine");
+            case "ai_question_generator":
+              return f.includes("ai question generation") || f.includes("question generation (gemini)") || f.includes("gemini");
+            case "ai_tutor_assistant":
+              return f.includes("ai placement tutor") || f.includes("floating ai") || f.includes("tutor assistant");
+            case "ai_evaluation_pipeline":
+              return f.includes("resume & coding scoring") || f.includes("coding scoring") || f.includes("resume scoring");
+            case "department_hierarchy":
+              return f.includes("department") || f.includes("academic structure");
+            case "audit_data_export_hub":
+              return f.includes("platform audit") || f.includes("compliance export") || f.includes("audit data export");
+            case "dedicated_sla_liaison":
+              return f.includes("priority support") || f.includes("dedicated liaison") || f.includes("sla");
+            default:
+              return false;
+          }
+        });
+        map[feat.key] = isMatched;
+      }
+
+      // Department & Academic Structure is compulsory for all institutional plan tiers
+      map.department_hierarchy = true;
+      return map;
+    }
+
+    // 3. Fallback to tier defaults
+    const fallbackMap = this.buildDefaultEntitlements(null, planTier);
+    fallbackMap.department_hierarchy = true;
+    return fallbackMap;
+  }
+
+  /**
    * Lists all platform subscription plans with subscriber counts and metadata.
    */
   static async listPlans(
@@ -274,10 +361,7 @@ export class PlatformSubscriptionService {
               max_storage_gb: p.storage_limit_gb,
             }, planTier);
 
-      const entitlements: PlanEntitlementsMap =
-        p.entitlements && typeof p.entitlements === "object" && Object.keys(p.entitlements).length > 0
-          ? { ...this.buildDefaultEntitlements(null, planTier), ...p.entitlements }
-          : this.buildDefaultEntitlements(null, planTier);
+      const entitlements: PlanEntitlementsMap = this.extractEntitlementsFromPlan(p);
 
       const rawFeaturesList =
         Array.isArray(p.features) && p.features.length > 0
@@ -388,10 +472,16 @@ export class PlatformSubscriptionService {
             max_storage_gb: p.storage_limit_gb,
           }, planTier);
 
-    const entitlements =
-      p.entitlements && typeof p.entitlements === "object" && Object.keys(p.entitlements).length > 0
-        ? { ...this.buildDefaultEntitlements(null, planTier), ...p.entitlements }
-        : this.buildDefaultEntitlements(null, planTier);
+    const entitlements: PlanEntitlementsMap = this.extractEntitlementsFromPlan(p);
+
+    const rawFeatures =
+      Array.isArray(p.features) && p.features.length > 0
+        ? [...p.features]
+        : this.entitlementsToStringArray(entitlements);
+
+    if (!rawFeatures.some((f: string) => f.toLowerCase().includes("department"))) {
+      rawFeatures.push("Department & Academic Structure");
+    }
 
     const planStatus: PlanStatus = p.status || (p.is_active ? "PUBLISHED" : "ARCHIVED");
 
@@ -412,7 +502,7 @@ export class PlatformSubscriptionService {
       storageLimitGb: Number(limits.max_storage_gb || p.storage_limit_gb || 20),
       limits,
       entitlements,
-      features: Array.isArray(p.features) ? p.features : this.entitlementsToStringArray(entitlements),
+      features: rawFeatures,
       version: Number(p.version || 1),
       isActive: planStatus === "PUBLISHED",
       subscribersCount: count || 0,
@@ -817,8 +907,13 @@ export class PlatformSubscriptionService {
       },
       planTierKey
     );
+    // Compulsory invariant: Academic department hierarchy is required for all colleges across all institutional plan tiers
+    updatedEntitlements.department_hierarchy = true;
 
     const legacyFeatures = this.entitlementsToStringArray(updatedEntitlements);
+    if (!legacyFeatures.some((f: string) => f.toLowerCase().includes("department"))) {
+      legacyFeatures.push("Department & Academic Structure");
+    }
 
     const updatePayload: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -1001,8 +1096,8 @@ export class PlatformSubscriptionService {
       staffLimit: Number(data.staff_limit || updatedLimits.max_staff || 10),
       storageLimitGb: Number(data.storage_limit_gb || updatedLimits.max_storage_gb || 20),
       limits: data.limits || updatedLimits,
-      entitlements: data.entitlements || updatedEntitlements,
-      features: Array.isArray(data.features) ? data.features : legacyFeatures,
+      entitlements: updatedEntitlements,
+      features: Array.isArray(data.features) && data.features.length > 0 ? data.features : legacyFeatures,
       version: Number(data.version || newVersion || 1),
       isActive: data.status ? data.status === "PUBLISHED" : Boolean(data.is_active),
       subscribersCount: existing.subscribersCount,

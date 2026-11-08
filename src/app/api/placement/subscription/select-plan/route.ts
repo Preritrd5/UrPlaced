@@ -102,10 +102,7 @@ export async function POST(request: NextRequest) {
             planTier
           );
 
-    const entitlements =
-      rawPlan.entitlements && typeof rawPlan.entitlements === "object" && Object.keys(rawPlan.entitlements).length > 0
-        ? { ...PlatformSubscriptionService.buildDefaultEntitlements(null, planTier), ...rawPlan.entitlements }
-        : PlatformSubscriptionService.buildDefaultEntitlements(null, planTier);
+    const entitlements = PlatformSubscriptionService.extractEntitlementsFromPlan(rawPlan);
 
     const targetPlan = {
       ...rawPlan,

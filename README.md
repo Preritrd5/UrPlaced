@@ -553,7 +553,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the portal.
 UrPlaced maintains a comprehensive automated testing suite powered by **Vitest** and **Testing Library**.
 
 ```bash
-# Run all 123 test suites (1,409 unit & integration tests)
+# Run all 126 test suites (1,446 unit & integration tests)
 npm test
 
 # Run tests in watch mode
@@ -570,14 +570,16 @@ npx tsx scripts/run-production-benchmarks.ts
 ```
 
 ### Test Suite Execution Metrics
-- **Total Test Suites:** `123 passing`
-- **Total Unit & Integration Tests:** `1,409 passing (100% Pass Rate)`
+- **Total Test Suites:** `126 passing`
+- **Total Unit & Integration Tests:** `1,446 passing (100% Pass Rate)`
 - **TypeScript Errors:** `0`
 - **Navigation & Multi-Portal Security Audit Suite:**
   - `navigation-latency-security-audit.test.ts` (17 tests): Verifies fail-closed RSC and segment-prefetch endpoints, rejection of forged/expired cookies and invalid Bearer tokens, strict multi-college tenant isolation, student privacy boundaries, and Super Admin AAL2 MFA enforcement.
+- **Subscription Entitlement & Plan Matrix Engine:**
+  - `platform-subscription-plans-and-entitlements.test.ts` (30 tests) & `platform-entitlement-activation-and-lockdown.test.ts` (11 tests): Bidirectional persistence and reconciliation between Supabase `features TEXT[]` and canonical `PlanEntitlementsMap`, guaranteeing zero toggle resets when reopening edit modals. Enforces compulsory `department_hierarchy` across all tiers.
 - **Payment & Financial Test Coverage:**
   - `sa08-subscription-payment-flow-audit.test.ts`: Server-authoritative order creation, paise computation, and balance validation.
-  - `sa09-invoice-download-and-rendering.test.ts`: PDF invoice and credit note dual-identifier lookup and binary stream verification.
+  - `sa09-invoice-download-and-rendering.test.ts`: PDF invoice and credit note dual-identifier lookup, Vercel serverless font tracing, and binary stream verification.
   - `sa10-razorpay-upi-qr-and-status-polling.test.ts`: Desktop UPI dynamic QR configuration (`flows: ["qr"]`) and 3-second cross-device payment reconciliation polling.
   - `sa11-dynamic-college-registration-plans.test.ts`: Dynamic subscription plan pricing resolution on college onboarding and capacity synchronization.
 - **Platform Invariants Covered:** PostgreSQL RLS tenant isolation, CVE-2026-44575 flight-sanitization verification, CSRF/SSRF guards, Super Admin AAL2 TOTP MFA authentication, question duplicate fingerprinting, autosave race conditions, assessment grading integrity, Mistake Bank spaced repetition, and Razorpay HMAC-SHA256 signature verification.

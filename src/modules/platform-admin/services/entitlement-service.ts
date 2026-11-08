@@ -208,7 +208,8 @@ export class EntitlementService {
           subscription_plans (
             id,
             name,
-            version
+            version,
+            features
           )
         `)
         .eq("tenant_id", tenantId)
@@ -232,7 +233,8 @@ export class EntitlementService {
             staff_seat_limit,
             subscription_plans (
               id,
-              name
+              name,
+              features
             )
           `)
           .eq("tenant_id", tenantId)
@@ -301,7 +303,11 @@ export class EntitlementService {
           ? "growth"
           : "starter";
 
-        effectiveFeatures = PlatformSubscriptionService.buildDefaultEntitlements(null, tier);
+        const plan = Array.isArray(sub.subscription_plans) ? sub.subscription_plans[0] : sub.subscription_plans;
+        effectiveFeatures = plan
+          ? PlatformSubscriptionService.extractEntitlementsFromPlan(plan)
+          : PlatformSubscriptionService.buildDefaultEntitlements(null, tier);
+        effectiveFeatures.department_hierarchy = true;
         effectiveLimits = PlatformSubscriptionService.buildDefaultLimits(null, tier);
         planVersion = Number(sub.plan_version || 1);
         isSnapshotSource = false;

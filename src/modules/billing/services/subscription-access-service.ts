@@ -585,7 +585,12 @@ export class SubscriptionAccessService {
       // 2. Feature Key Entitlement Check
       const targetFeature = featureKey || effectiveFeatureKey;
       if (targetFeature) {
-        const isEntitled = Boolean(features[targetFeature]);
+        const isCoreUniversal =
+          targetFeature === "department_hierarchy" ||
+          targetFeature === "academic_structure" ||
+          (isStudent && (targetFeature === "mistake_to_mastery" || targetFeature === "placement_memory_analytics"));
+
+        const isEntitled = isCoreUniversal || Boolean(features[targetFeature]);
         if (!isEntitled) {
           return makeDenial(
             "DENY_ENTITLEMENT",
@@ -663,7 +668,10 @@ export class SubscriptionAccessService {
         ? "growth"
         : "starter";
 
-      const features = PlatformSubscriptionService.buildDefaultEntitlements(null, tier);
+      const plan = Array.isArray(sub.subscription_plans) ? sub.subscription_plans[0] : sub.subscription_plans;
+      const features = plan
+        ? PlatformSubscriptionService.extractEntitlementsFromPlan(plan)
+        : PlatformSubscriptionService.buildDefaultEntitlements(null, tier);
       // Academic departments and degree branches are required for all institutional plans
       features.department_hierarchy = true;
       const limits = PlatformSubscriptionService.buildDefaultLimits(null, tier);

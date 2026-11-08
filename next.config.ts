@@ -3,9 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdfkit"],
   outputFileTracingIncludes: {
-    "/api/**/*": ["./node_modules/pdfkit/**/*"],
-    "/preritrd/**/*": ["./node_modules/pdfkit/**/*"],
-    "/dashboard/**/*": ["./node_modules/pdfkit/**/*"],
+    "api/**/*": ["./node_modules/pdfkit/**/*"],
+    "preritrd/**/*": ["./node_modules/pdfkit/**/*"],
+    "dashboard/**/*": ["./node_modules/pdfkit/**/*"],
+    "**": ["./node_modules/pdfkit/**/*"],
   },
   env: {
     NEXT_PUBLIC_SUPABASE_URL:

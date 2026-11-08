@@ -304,11 +304,27 @@ export default function PlatformSubscriptionsPage() {
       ai_tokens_monthly: plan.limits?.ai_tokens_monthly !== undefined ? plan.limits.ai_tokens_monthly : 250000,
     };
     const populatedEntitlements: PlanEntitlementsMap = {};
+    const planFeaturesLower = Array.isArray(plan.features)
+      ? plan.features.map((f) => String(f).trim().toLowerCase())
+      : [];
+
     CONTROLLED_FEATURE_CATALOGUE.forEach((f) => {
+      const isFeatureInList = planFeaturesLower.some((featStr) => {
+        const nameLower = f.name.toLowerCase();
+        const keyLower = f.key.toLowerCase();
+        return (
+          featStr === nameLower ||
+          featStr === keyLower ||
+          featStr.includes(nameLower) ||
+          nameLower.includes(featStr)
+        );
+      });
+
       populatedEntitlements[f.key] =
         plan.entitlements && plan.entitlements[f.key] !== undefined
           ? Boolean(plan.entitlements[f.key])
-          : f.defaultTiers.includes(
+          : isFeatureInList ||
+            f.defaultTiers.includes(
               (plan.slug || plan.id).toLowerCase().includes("enterprise")
                 ? "enterprise"
                 : (plan.slug || plan.id).toLowerCase().includes("growth")

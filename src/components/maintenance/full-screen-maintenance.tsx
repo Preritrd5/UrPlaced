@@ -72,7 +72,7 @@ export function FullScreenMaintenance({
       : "UrPlaced is performing scheduled platform maintenance and system upgrades. Services will resume shortly.";
 
   return (
-    <div className="fixed inset-0 h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-screen w-[100dvw] bg-background text-text-primary flex flex-col justify-between items-center px-4 sm:px-6 lg:px-8 py-3.5 sm:py-5 select-none overflow-hidden z-[99999]">
+    <div className="fixed inset-0 min-h-screen min-h-[100dvh] w-screen w-[100dvw] bg-background text-text-primary flex flex-col justify-between items-center px-4 sm:px-6 lg:px-8 py-3.5 sm:py-5 select-none overflow-y-auto z-[99999]">
       {/* Decorative Subtle Architectural Background Mesh & Glows */}
       <div className="absolute inset-0 pointer-events-none -z-10 overflow-hidden">
         {/* Subtle dot matrix pattern */}
