@@ -28,6 +28,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DashboardSkeleton } from "@/components/ui/page-skeletons";
+import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import type { ResumeRecord } from "@/modules/students/services/resume-storage-service";
 import type { ResumeScanRecord } from "@/modules/students/services/resume-scanner-service";
 
@@ -43,6 +44,8 @@ export default function StudentResumePage() {
   const [loading, setLoading] = React.useState(true);
   const [uploading, setUploading] = React.useState(false);
   const [scanning, setScanning] = React.useState(false);
+  const [resumeToDelete, setResumeToDelete] = React.useState<ResumeRecord | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [successMsg, setSuccessMsg] = React.useState<string | null>(null);
 
@@ -171,22 +174,30 @@ export default function StudentResumePage() {
     }
   };
 
-  const handleDelete = async (resumeId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this resume and all its scan diagnostics?")) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!resumeToDelete) return;
     try {
-      const res = await fetch(`/api/student/resumes/${resumeId}`, {
+      setIsDeleting(true);
+      const res = await fetch(`/api/student/resumes/${resumeToDelete.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        setSuccessMsg("Resume deleted.");
-        setSelectedResumeId(null);
-        setActiveScan(null);
+        setSuccessMsg(`Resume "${resumeToDelete.fileName}" was permanently deleted.`);
+        if (selectedResumeId === resumeToDelete.id) {
+          setSelectedResumeId(null);
+          setActiveScan(null);
+        }
+        setResumeToDelete(null);
         await fetchResumes();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        setError(errJson.error || "Failed to delete resume.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to delete resume:", err);
+      setError(err.message || "Failed to delete resume.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -372,9 +383,9 @@ export default function StudentResumePage() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(r.id);
+                            setResumeToDelete(r);
                           }}
-                          className="p-1 hover:text-danger text-text-muted"
+                          className="p-1 hover:text-status-danger text-text-muted transition-colors rounded"
                           title="Delete Resume"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -641,6 +652,20 @@ export default function StudentResumePage() {
           )}
         </div>
       </div>
+
+      {/* Elegant Branded Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={Boolean(resumeToDelete)}
+        onClose={() => {
+          if (!isDeleting) setResumeToDelete(null);
+        }}
+        title="Delete Resume Document"
+        itemName={resumeToDelete?.fileName}
+        description="Are you sure you want to permanently delete this resume? All associated ATS diagnostic scans, parseability scores, and improvement recommendations will be permanently removed. This action cannot be undone."
+        confirmLabel="Permanently Delete"
+        isDeleting={isDeleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
