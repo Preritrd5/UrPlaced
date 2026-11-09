@@ -20,7 +20,9 @@ export interface GenerateOptions {
     | "DRIVE_MATCH"
     | "SKILL_GAP_ANALYSIS"
     | "MOCK_INTERVIEW"
-    | "CAREER_PASSPORT";
+    | "CAREER_PASSPORT"
+    | "PRACTICE_CENTRE"
+    | "COMPANY_PREPARATION";
   userId?: string;
   tenantId?: string;
 }

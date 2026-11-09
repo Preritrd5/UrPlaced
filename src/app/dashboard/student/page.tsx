@@ -20,6 +20,7 @@ import {
   Bot,
   SlidersHorizontal,
   ShieldCheck,
+  BookOpen,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +88,16 @@ export default function StudentDashboardPage() {
     passportVisibility: "PRIVATE",
     interviewSessionsCount: 0,
     interviewAvgScore: null,
+  });
+
+  const [placementPrep, setPlacementPrep] = React.useState<{
+    practiceAttemptsCount: number;
+    practiceAccuracy: number;
+    topRecommendation: string | null;
+  }>({
+    practiceAttemptsCount: 0,
+    practiceAccuracy: 0,
+    topRecommendation: null,
   });
 
   React.useEffect(() => {
@@ -223,6 +234,31 @@ export default function StudentDashboardPage() {
           passportVisibility,
           interviewSessionsCount,
           interviewAvgScore,
+        });
+      });
+
+      // Background fetch Placement Preparation summary (Phase 03)
+      Promise.allSettled([
+        fetch("/api/student/placement-practice").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/student/learning-recommendations").then((r) => (r.ok ? r.json() : null)),
+      ]).then(([practiceRes, recsRes]) => {
+        let practiceAttemptsCount = 0;
+        let practiceAccuracy = 0;
+        let topRecommendation: string | null = null;
+
+        if (practiceRes.status === "fulfilled" && practiceRes.value?.data?.summary) {
+          practiceAttemptsCount = practiceRes.value.data.summary.totalAttempted || 0;
+          practiceAccuracy = practiceRes.value.data.summary.accuracyPercentage || 0;
+        }
+
+        if (recsRes.status === "fulfilled" && recsRes.value?.data?.topPriorityRecommendation) {
+          topRecommendation = recsRes.value.data.topPriorityRecommendation.title;
+        }
+
+        setPlacementPrep({
+          practiceAttemptsCount,
+          practiceAccuracy,
+          topRecommendation,
         });
       });
     }
@@ -675,6 +711,148 @@ export default function StudentDashboardPage() {
               <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
                 <Link href="/dashboard/student/mock-interview">
                   <span>Open Interview Studio</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Global Placement Preparation Suite (Phase 03) */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold font-heading text-text-primary">
+                Placement Preparation &amp; Readiness Suite
+              </h2>
+              <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.5 border-primary/40 text-primary">
+                <Sparkles className="h-3 w-3 mr-1 text-primary inline" /> Phase 03
+              </Badge>
+            </div>
+            <p className="text-xs text-text-secondary">
+              Placement practice centre, company-specific round journeys, and evidence-backed learning recommendations.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Card 1: Practice Centre */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <Badge variant="outline" className="text-xs font-mono font-semibold border-primary/50 text-primary">
+                  {placementPrep.practiceAttemptsCount > 0
+                    ? `${placementPrep.practiceAttemptsCount} Attempted`
+                    : "Ready to Practice"}
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">Practice Centre</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Topic practice, timed tests, and revision across Aptitude, Reasoning, Verbal, and Core CS.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Diagnostic Accuracy
+                </span>
+                <p className="text-xs font-semibold text-text-primary truncate">
+                  {placementPrep.practiceAttemptsCount > 0
+                    ? `${placementPrep.practiceAccuracy}% Test Accuracy`
+                    : "No practice tests attempted"}
+                </p>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Server-evaluated question bank with comprehensive step-by-step solutions and revision banking.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/placement-practice">
+                  <span>Enter Practice Centre</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card 2: Company Preparation */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <Badge variant="outline" className="text-xs font-mono font-semibold border-secondary/50 text-secondary">
+                  Target Tracks
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">Company Preparation</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Recruiter-specific tracks, indicative hiring round workflows, and role requirements.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Featured Employers
+                </span>
+                <p className="text-xs font-semibold text-text-primary truncate">
+                  TCS, Infosys, Accenture, Amazon, Google
+                </p>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Round-by-round checklists, AI company practice questions, and seamless mock interview integration.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/company-preparation">
+                  <span>Explore Company Tracks</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card 3: Learning Recommendations */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <Badge variant="outline" className="text-xs font-mono font-semibold border-primary/50 text-primary">
+                  Smart Actions
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">Learning Recommendations</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Grounded next steps synthesized from your profile, ATS scans, skill gaps, and interview scores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Top Priority Action
+                </span>
+                <p className="text-xs font-semibold text-text-primary truncate">
+                  {placementPrep.topRecommendation || "Personalized Guidance Available"}
+                </p>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Step-by-step role roadmap, explainable recommendations, and automated milestone tracking.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/learning-recommendations">
+                  <span>View Recommendations</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </Button>

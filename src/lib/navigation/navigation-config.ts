@@ -197,6 +197,33 @@ export const MASTER_NAVIGATION: {
     accountCategory: "STUDENT",
     items: [
       {
+        id: "student-placement-practice",
+        name: "Practice Centre",
+        href: "/dashboard/student/placement-practice",
+        icon: BookOpen,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "Practice",
+      },
+      {
+        id: "student-company-preparation",
+        name: "Company Preparation",
+        href: "/dashboard/student/company-preparation",
+        icon: Building2,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "Tracks",
+      },
+      {
+        id: "student-learning-recommendations",
+        name: "Learning Recommendations",
+        href: "/dashboard/student/learning-recommendations",
+        icon: Sparkles,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "Smart",
+      },
+      {
         id: "student-tutor",
         name: "AI Study Tutor",
         href: "/dashboard/student/tutor",
