@@ -250,7 +250,7 @@ export class MockInterviewService {
       throw new Error("Interview session not found.");
     }
     if (session.status === "COMPLETED" || session.status === "ABANDONED") {
-      throw new Error(`Cannot submit answer. Session is already ${session.status.toLowerCase()}.`);
+      throw new Error(`Cannot submit answer. Session is already ${session.status.toLowerCase()} and cannot be modified.`);
     }
 
     // 2. Fetch current turn message
@@ -269,12 +269,128 @@ export class MockInterviewService {
       throw new Error(`Turn for question index ${params.questionIndex} not found.`);
     }
 
-    // Idempotency: If answer already evaluated, return current evaluation
+    // Idempotency & Fault Recovery:
+    // If answer already evaluated, verify whether next turn or completion is missing, and recover!
     if (currentTurnMsg.evaluation && currentTurnMsg.student_answer) {
+      const isCompleted = params.questionIndex >= session.totalQuestions;
+      if (isCompleted) {
+        if ((session.status as string) !== "COMPLETED") {
+          const finalReport = await this.compileFinalSessionReport({
+            session,
+            userId: params.userId,
+          });
+          await admin
+            .from("student_mock_interview_sessions")
+            .update({
+              status: "COMPLETED",
+              completed_at: new Date().toISOString(),
+              overall_score: finalReport.overallScore,
+              relevance_score: finalReport.relevanceScore,
+              technical_accuracy_score: finalReport.technicalAccuracyScore,
+              depth_score: finalReport.depthScore,
+              structure_score: finalReport.structureScore,
+              practical_reasoning_score: finalReport.practicalReasoningScore,
+              communication_score: finalReport.communicationScore,
+              final_feedback_summary: finalReport.summary,
+              strong_answers: finalReport.strongAnswers as any,
+              weak_answers: finalReport.weakAnswers as any,
+              technical_gaps: finalReport.technicalGaps as any,
+              recommended_exercises: finalReport.recommendedExercises as any,
+              suggested_next_level: finalReport.suggestedNextLevel,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", params.sessionId);
+        }
+        const refreshed = await this.getSession(params.tenantId, params.studentId, params.sessionId);
+        return {
+          evaluation: currentTurnMsg.evaluation as any,
+          isCompleted: true,
+          session: refreshed!,
+        };
+      }
+
+      // Check if next turn message was already created
+      const nextQIndex = params.questionIndex + 1;
+      const { data: existingNextTurn } = await admin
+        .from("student_mock_interview_messages")
+        .select("*")
+        .eq("session_id", params.sessionId)
+        .eq("tenant_id", params.tenantId)
+        .eq("student_id", params.studentId)
+        .eq("question_index", nextQIndex)
+        .maybeSingle();
+
+      if (existingNextTurn) {
+        return {
+          evaluation: currentTurnMsg.evaluation as any,
+          isCompleted: false,
+          nextTurn: {
+            id: existingNextTurn.id,
+            questionIndex: existingNextTurn.question_index,
+            questionText: existingNextTurn.question_text,
+            questionCategory: existingNextTurn.question_category,
+            isFollowUp: existingNextTurn.is_follow_up,
+            studentAnswer: existingNextTurn.student_answer,
+            answerSubmittedAt: existingNextTurn.answer_submitted_at,
+            evaluation: existingNextTurn.evaluation,
+            createdAt: existingNextTurn.created_at,
+          },
+          session,
+        };
+      }
+
+      // RECOVERY: Next turn was never created despite evaluation being saved.
+      // Generate and insert the missing next question turn to heal the session.
+      const profile = await StudentCareerProfileService.getProfile(params.tenantId, params.studentId);
+      const primaryResume = await ResumeStorageService.getPrimaryResume(params.tenantId, params.studentId);
+      const nextQ = await this.generateNextQuestion({
+        session,
+        questionIndex: nextQIndex,
+        profile,
+        primaryResume,
+        driveInfo: null,
+        previousTurns: session.turns,
+        userId: params.userId,
+      });
+
+      const { data: recoveredTurnMsg } = await admin
+        .from("student_mock_interview_messages")
+        .insert({
+          tenant_id: params.tenantId,
+          session_id: params.sessionId,
+          student_id: params.studentId,
+          question_index: nextQIndex,
+          question_text: nextQ.questionText,
+          question_category: nextQ.category,
+          is_follow_up: false,
+        })
+        .select("*")
+        .single();
+
+      await admin
+        .from("student_mock_interview_sessions")
+        .update({
+          current_question_index: nextQIndex,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", params.sessionId);
+
+      const refreshed = await this.getSession(params.tenantId, params.studentId, params.sessionId);
       return {
         evaluation: currentTurnMsg.evaluation as any,
-        isCompleted: (session.status as string) === "COMPLETED",
-        session,
+        isCompleted: false,
+        nextTurn: {
+          id: recoveredTurnMsg?.id || `msg-${nextQIndex}`,
+          questionIndex: nextQIndex,
+          questionText: nextQ.questionText,
+          questionCategory: nextQ.category,
+          isFollowUp: false,
+          studentAnswer: null,
+          answerSubmittedAt: null,
+          evaluation: null,
+          createdAt: recoveredTurnMsg?.created_at || new Date().toISOString(),
+        },
+        session: refreshed!,
       };
     }
 
@@ -564,9 +680,10 @@ export class MockInterviewService {
     previousTurns: any[];
     userId?: string;
   }): Promise<{ questionText: string; category: string }> {
+    const interviewType: InterviewType = inputs.session.interview_type || "TECHNICAL";
     const systemInstruction = `You are UrPlaced's AI Placement Interviewer.
-You are conducting a collegiate practice interview.
-You must generate ONE realistic, collegiate-level interview question for Question #${inputs.questionIndex} of ${inputs.session.total_questions}.
+You are conducting a collegiate practice interview in the ${interviewType} category for the role of ${inputs.session.target_role}.
+Generate ONE realistic, collegiate-level interview question for Question #${inputs.questionIndex} of ${inputs.session.total_questions}.
 Output MUST be valid JSON:
 {
   "questionText": string,
@@ -574,7 +691,7 @@ Output MUST be valid JSON:
 }`;
 
     const prompt = `<interview_config>
-Type: ${inputs.session.interview_type}
+Type: ${interviewType}
 Target Role: ${inputs.session.target_role}
 Difficulty: ${inputs.session.difficulty}
 Question Index: ${inputs.questionIndex} of ${inputs.session.total_questions}
@@ -614,18 +731,174 @@ Generate Question #${inputs.questionIndex}. Do not repeat previous questions.`;
       if (parsed.questionText) {
         return {
           questionText: parsed.questionText,
-          category: parsed.category || "TECHNICAL",
+          category: parsed.category || interviewType,
         };
       }
     } catch {
       // Fallback
     }
 
-    return this.getFallbackQuestion(inputs.session.interview_type, inputs.questionIndex, inputs.session.target_role);
+    return this.getFallbackQuestion(interviewType, inputs.questionIndex, inputs.session.target_role);
   }
 
   /**
-   * Evaluates student's answer across 6 documented criteria.
+   * Returns mode-specific rubric guidance and system instruction.
+   */
+  private static getModeSpecificRubric(
+    interviewType: InterviewType,
+    targetRole: string
+  ): { systemInstruction: string; dimensionPrompt: string } {
+    switch (interviewType) {
+      case "HR":
+        return {
+          systemInstruction: `You are UrPlaced's AI Placement HR Interview Evaluation Engine.
+Evaluate the student's HR interview response using the official collegiate HR rubric.
+DIMENSIONS:
+1. relevanceScore: Directly addressed career aspirations, motivation, or personal context asked.
+2. technicalScore: Self-awareness & authenticity — grounded, honest reflection on strengths, growth areas, and work style.
+3. depthScore: Depth of reflection and genuine alignment with role and corporate culture.
+4. structureScore: Cohesive narrative flow without rambling or filler.
+5. practicalReasoningScore: Professional maturity, emotional intelligence, and college-to-corporate readiness.
+6. communicationScore: Professional poise, clarity, respectful tone, and articulation.
+Score each dimension from 0 to 100 based strictly on candidate's actual words. Do not award high scores to vague or empty responses.`,
+          dimensionPrompt: `Evaluate HR competencies: Self-awareness, cultural fit, authentic reflection, and professional communication for a collegiate ${targetRole} candidate.`,
+        };
+
+      case "BEHAVIOURAL":
+        return {
+          systemInstruction: `You are UrPlaced's AI Placement Behavioural Interview Evaluation Engine.
+Evaluate the candidate's situational/behavioural response strictly using the STAR methodology (Situation, Task, Action, Result).
+DIMENSIONS:
+1. relevanceScore: Relevance of the chosen example to the prompt.
+2. technicalScore: Situation & Task clarity — well-defined context, constraints, and individual responsibility.
+3. depthScore: Action — specific, concrete engineering or leadership actions taken personally by candidate.
+4. structureScore: Structured adherence to the STAR framework (Situation -> Task -> Action -> Result).
+5. practicalReasoningScore: Result & Reflection — measurable outcome, impact, and engineering lessons learned.
+6. communicationScore: Clarity, storytelling effectiveness, empathy, and professional delivery.
+Score each dimension from 0 to 100 based strictly on candidate's actual words. Do not award high scores if the STAR method is absent or results are unmentioned.`,
+          dimensionPrompt: `Evaluate against STAR framework (Situation, Task, Action, Result) with emphasis on personal ownership and tangible impact.`,
+        };
+
+      case "PROJECT_BASED":
+        return {
+          systemInstruction: `You are UrPlaced's AI Placement Technical Project Evaluation Engine.
+Evaluate the candidate's response regarding their technical project portfolio and architecture.
+DIMENSIONS:
+1. relevanceScore: Directly explains actual architecture and implementation of the project in question.
+2. technicalScore: Technical accuracy of stack, protocols, database schema, APIs, and algorithms described.
+3. depthScore: Architectural depth — understanding components, scaling boundaries, and individual contribution vs team.
+4. structureScore: System walkthrough structure: Problem -> Architecture -> Implementation -> Challenges.
+5. practicalReasoningScore: Technical trade-offs justified (e.g. why SQL vs NoSQL, why specific libraries, cost vs latency).
+6. communicationScore: Technical articulation — ability to convey complex architectural patterns clearly to another engineer.
+Score each dimension from 0 to 100. Penalize heavily for buzzword dropping without concrete implementation details.`,
+          dimensionPrompt: `Evaluate project implementation depth, system architecture understanding, and justification of technical trade-offs.`,
+        };
+
+      case "COMPANY_SPECIFIC":
+        return {
+          systemInstruction: `You are UrPlaced's AI Placement Company-Specific Practice Evaluation Engine.
+Evaluate the candidate's response against company hiring standards, engineering domain demands, and role specifications.
+DIMENSIONS:
+1. relevanceScore: Alignment with company domain, production expectations, and target role responsibilities.
+2. technicalScore: Domain technical precision (e.g. distributed systems, financial latency, e-commerce concurrency).
+3. depthScore: Depth in solving real-world domain engineering challenges and enterprise constraints.
+4. structureScore: Well-organized engineering proposal or diagnostic approach.
+5. practicalReasoningScore: Realistic business trade-offs, uptime considerations, security, and edge-case mitigation.
+6. communicationScore: Executive/engineering communication clarity and confidence.
+Score each dimension from 0 to 100 based on realistic corporate expectations for an entry-level ${targetRole}.`,
+          dimensionPrompt: `Evaluate role-specific fit, enterprise engineering rigor, and domain-aware problem solving.`,
+        };
+
+      case "TECHNICAL":
+      default:
+        return {
+          systemInstruction: `You are UrPlaced's AI Placement Technical Interview Evaluation Engine.
+Evaluate the student's technical interview response against a strict 6-dimension computer science rubric.
+DIMENSIONS:
+1. relevanceScore: Did the candidate directly answer the technical question asked?
+2. technicalScore: Technical accuracy and conceptual correctness (algorithms, data structures, runtime complexity).
+3. depthScore: Depth beyond textbook definitions — awareness of edge cases, memory limits, and internals.
+4. structureScore: Organized logical flow: problem breakdown -> strategy -> solution -> complexity analysis.
+5. practicalReasoningScore: Practical engineering trade-offs and decision justifications in production contexts.
+6. communicationScore: Precision of technical vocabulary, clarity, and conciseness.
+Score each dimension from 0 to 100. Do not invent passing scores for trivial or incorrect answers.`,
+          dimensionPrompt: `Evaluate algorithmic correctness, complexity analysis, technical depth, and practical reasoning.`,
+        };
+    }
+  }
+
+  /**
+   * Deterministic heuristic evaluator when LLM is unavailable or for ultra-short answers.
+   * Completely avoids fabricating passing scores for empty or trivial answers.
+   */
+  public static evaluateHeuristically(
+    studentAnswer: string,
+    interviewType: InterviewType,
+    questionCategory: string
+  ): AnswerEvaluation {
+    const trimmed = studentAnswer.trim();
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+
+    // Trivial or empty answers (< 10 words)
+    if (wordCount < 10) {
+      return {
+        overallScore: Math.max(10, Math.min(25, wordCount * 2)),
+        relevanceScore: 20,
+        technicalScore: 15,
+        depthScore: 10,
+        structureScore: 15,
+        practicalReasoningScore: 10,
+        communicationScore: 25,
+        whatWentWell: ["Submitted an initial response."],
+        whatWasMissing: [
+          `Answer is too brief (${wordCount} words) to evaluate competence. Collegiate interviews require detailed explanations.`,
+          "Structure your response with clear definitions, approach, examples, and trade-offs.",
+        ],
+        conceptualErrors: ["Insufficient technical evidence provided for meaningful assessment."],
+        improvedAnswerExample: `A competitive interview response should provide 100-250 words outlining the core definition, key mechanisms, concrete examples, and trade-offs.`,
+        followUpRecommendation: "Elaborate with concrete technical examples and avoid one-sentence answers.",
+      };
+    }
+
+    // Heuristic scoring based on length, structural markers, and technical keywords
+    const starMatches = (trimmed.match(/\b(situation|task|action|result|because|therefore|specifically|for example|trade-off|complexity|architecture)\b/gi) || []).length;
+    const structureBonus = Math.min(25, starMatches * 5);
+    const lengthScore = Math.min(55, Math.round(wordCount * 0.6));
+    const baseScore = Math.min(85, Math.max(35, lengthScore + structureBonus));
+
+    const rel = Math.min(85, Math.max(35, baseScore + 5));
+    const tech = Math.min(80, Math.max(30, baseScore));
+    const depth = Math.min(75, Math.max(25, baseScore - 5));
+    const struct = Math.min(85, Math.max(30, baseScore + (starMatches > 2 ? 8 : -5)));
+    const pract = Math.min(75, Math.max(25, baseScore - 5));
+    const comm = Math.min(85, Math.max(40, baseScore + 5));
+    const overall = Math.round((rel * 0.2) + (tech * 0.25) + (depth * 0.15) + (struct * 0.15) + (pract * 0.15) + (comm * 0.1));
+
+    return {
+      overallScore: overall,
+      relevanceScore: rel,
+      technicalScore: tech,
+      depthScore: depth,
+      structureScore: struct,
+      practicalReasoningScore: pract,
+      communicationScore: comm,
+      whatWentWell: [
+        `Addressed the topic with ${wordCount} words.`,
+        starMatches > 0 ? "Utilized structured reasoning indicators." : "Clear communication flow.",
+      ],
+      whatWasMissing: [
+        "[Deterministic Evaluation Notice] Evaluation generated via content heuristics.",
+        "Deepen articulation of edge cases, system trade-offs, and concrete technical metrics.",
+      ],
+      conceptualErrors: [],
+      improvedAnswerExample: `Begin with a concise thesis, walk through architectural or procedural details, and conclude with observable outcomes or complexity bounds.`,
+      followUpRecommendation: "Practice answering under time constraints while covering both high-level architecture and implementation edge cases.",
+    };
+  }
+
+  /**
+   * Evaluates student's answer across 6 documented criteria using mode-specific rubrics.
    */
   private static async evaluateAnswer(inputs: {
     session: any;
@@ -634,16 +907,18 @@ Generate Question #${inputs.questionIndex}. Do not repeat previous questions.`;
     studentAnswer: string;
     userId?: string;
   }): Promise<AnswerEvaluation> {
-    const systemInstruction = `You are UrPlaced's AI Placement Interview Evaluation Engine.
-Evaluate the student's interview response against a transparent 6-dimension rubric.
-Score each dimension from 0 to 100.
-DIMENSIONS:
-1. relevanceScore: Did the student answer what was asked?
-2. technicalScore: Technical accuracy and correctness of concepts.
-3. depthScore: Demonstrated understanding beyond superficial surface buzzwords.
-4. structureScore: Organized reasoning (e.g. STAR method or structured breakdown).
-5. practicalReasoningScore: Realistic engineering trade-offs and decision justifications.
-6. communicationScore: Clarity, professional tone, and scannability.
+    const interviewType: InterviewType = inputs.session.interview_type || "TECHNICAL";
+    const targetRole: string = inputs.session.target_role || "Software Engineer";
+    const cleanAnswer = inputs.studentAnswer.trim();
+
+    // Fast-path: If answer is trivial or empty, use deterministic heuristic evaluator directly
+    if (cleanAnswer.split(/\s+/).filter(Boolean).length < 10) {
+      return this.evaluateHeuristically(cleanAnswer, interviewType, inputs.questionCategory);
+    }
+
+    const { systemInstruction, dimensionPrompt } = this.getModeSpecificRubric(interviewType, targetRole);
+
+    const fullSystemInstruction = `${systemInstruction}
 
 Output MUST be valid JSON:
 {
@@ -657,27 +932,28 @@ Output MUST be valid JSON:
   "whatWentWell": [string, string],
   "whatWasMissing": [string, string],
   "conceptualErrors": [string],
-  "improvedAnswerExample": string (Clearly formulated model answer illustrative of an interview response),
+  "improvedAnswerExample": string (Clearly formulated model answer illustrative of a top collegiate interview response),
   "followUpRecommendation": string
 }`;
 
     const prompt = `<question_context>
-Role: ${inputs.session.target_role}
-Interview Type: ${inputs.session.interview_type}
+Role: ${targetRole}
+Interview Type: ${interviewType}
 Question: ${inputs.questionText}
 Category: ${inputs.questionCategory}
+Guidance: ${dimensionPrompt}
 </question_context>
 
 <student_answer>
-${inputs.studentAnswer.slice(0, 3000)}
+${cleanAnswer.slice(0, 3000)}
 </student_answer>
 
-Evaluate this answer. Be constructive, precise, and encouraging for collegiate placement candidates.`;
+Evaluate this answer against the mode-specific rubric. Be constructive, precise, and objective.`;
 
     try {
       const result = await GeminiClient.generate({
         prompt,
-        systemInstruction,
+        systemInstruction: fullSystemInstruction,
         temperature: 0.2,
         maxOutputTokens: 1200,
         feature: "MOCK_INTERVIEW",
@@ -690,36 +966,31 @@ Evaluate this answer. Be constructive, precise, and encouraging for collegiate p
       else if (text.startsWith("```")) text = text.replace(/^```\s*/i, "").replace(/```\s*$/i, "");
 
       const parsed = JSON.parse(text);
+      const rel = Math.min(100, Math.max(0, Number(parsed.relevanceScore) || 50));
+      const tech = Math.min(100, Math.max(0, Number(parsed.technicalScore) || 50));
+      const depth = Math.min(100, Math.max(0, Number(parsed.depthScore) || 45));
+      const struct = Math.min(100, Math.max(0, Number(parsed.structureScore) || 50));
+      const pract = Math.min(100, Math.max(0, Number(parsed.practicalReasoningScore) || 45));
+      const comm = Math.min(100, Math.max(0, Number(parsed.communicationScore) || 50));
+      const weightedOverall = Math.round((rel * 0.2) + (tech * 0.25) + (depth * 0.15) + (struct * 0.15) + (pract * 0.15) + (comm * 0.1));
+
       return {
-        overallScore: Math.min(100, Math.max(0, Number(parsed.overallScore) || 70)),
-        relevanceScore: Math.min(100, Math.max(0, Number(parsed.relevanceScore) || 75)),
-        technicalScore: Math.min(100, Math.max(0, Number(parsed.technicalScore) || 70)),
-        depthScore: Math.min(100, Math.max(0, Number(parsed.depthScore) || 65)),
-        structureScore: Math.min(100, Math.max(0, Number(parsed.structureScore) || 70)),
-        practicalReasoningScore: Math.min(100, Math.max(0, Number(parsed.practicalReasoningScore) || 65)),
-        communicationScore: Math.min(100, Math.max(0, Number(parsed.communicationScore) || 75)),
-        whatWentWell: Array.isArray(parsed.whatWentWell) ? parsed.whatWentWell : ["Addressed the core subject."],
-        whatWasMissing: Array.isArray(parsed.whatWasMissing) ? parsed.whatWasMissing : ["Could elaborate on edge cases."],
+        overallScore: Math.min(100, Math.max(0, Number(parsed.overallScore) || weightedOverall)),
+        relevanceScore: rel,
+        technicalScore: tech,
+        depthScore: depth,
+        structureScore: struct,
+        practicalReasoningScore: pract,
+        communicationScore: comm,
+        whatWentWell: Array.isArray(parsed.whatWentWell) && parsed.whatWentWell.length > 0 ? parsed.whatWentWell : ["Addressed the question topic."],
+        whatWasMissing: Array.isArray(parsed.whatWasMissing) && parsed.whatWasMissing.length > 0 ? parsed.whatWasMissing : ["Elaborate further on trade-offs and concrete implementation details."],
         conceptualErrors: Array.isArray(parsed.conceptualErrors) ? parsed.conceptualErrors : [],
-        improvedAnswerExample: parsed.improvedAnswerExample || "Consider structuring the answer with problem definition, approach, and trade-off analysis.",
-        followUpRecommendation: parsed.followUpRecommendation || "Review algorithmic complexity and practical code examples for this concept.",
+        improvedAnswerExample: parsed.improvedAnswerExample || "Structure your answer with problem context, architectural approach, and observable trade-offs.",
+        followUpRecommendation: parsed.followUpRecommendation || "Review algorithmic trade-offs and practical code examples for this concept.",
       };
     } catch {
-      // Deterministic evaluation fallback
-      return {
-        overallScore: 72,
-        relevanceScore: 75,
-        technicalScore: 70,
-        depthScore: 70,
-        structureScore: 72,
-        practicalReasoningScore: 68,
-        communicationScore: 75,
-        whatWentWell: ["Clear explanation of fundamental concepts.", "Good communication tone."],
-        whatWasMissing: ["Provide specific architectural examples or trade-offs."],
-        conceptualErrors: [],
-        improvedAnswerExample: `A top-performing answer begins with a concise definition, outlines the primary strategy, and highlights key constraints or edge cases.`,
-        followUpRecommendation: "Practice explaining implementation details under time constraints.",
-      };
+      // Deterministic evaluation fallback grounded in real answer heuristics
+      return this.evaluateHeuristically(cleanAnswer, interviewType, inputs.questionCategory);
     }
   }
 
@@ -754,19 +1025,19 @@ Evaluate this answer. Be constructive, precise, and encouraging for collegiate p
 
     if (evaluatedTurns.length === 0) {
       return {
-        overallScore: 70,
-        relevanceScore: 70,
-        technicalAccuracyScore: 70,
-        depthScore: 70,
-        structureScore: 70,
-        practicalReasoningScore: 70,
-        communicationScore: 70,
-        summary: "Session completed with basic coverage.",
+        overallScore: 0,
+        relevanceScore: 0,
+        technicalAccuracyScore: 0,
+        depthScore: 0,
+        structureScore: 0,
+        practicalReasoningScore: 0,
+        communicationScore: 0,
+        summary: "Session completed without any evaluated turns.",
         strongAnswers: [],
         weakAnswers: [],
         technicalGaps: [],
-        recommendedExercises: ["Review placement preparation topics."],
-        suggestedNextLevel: "INTERMEDIATE",
+        recommendedExercises: ["Review placement preparation topics and complete practice turns."],
+        suggestedNextLevel: "BEGINNER",
       };
     }
 
@@ -919,20 +1190,7 @@ Evaluate this answer. Be constructive, precise, and encouraging for collegiate p
         followUpRecommendation: parsed.followUpRecommendation || "Review algorithmic complexity and practical code examples for this concept.",
       };
     } catch {
-      return {
-        overallScore: 70,
-        relevanceScore: 70,
-        technicalScore: 70,
-        depthScore: 65,
-        structureScore: 70,
-        practicalReasoningScore: 65,
-        communicationScore: 75,
-        whatWentWell: ["Clear explanation of fundamental concepts."],
-        whatWasMissing: ["Provide specific architectural examples or trade-offs."],
-        conceptualErrors: [],
-        improvedAnswerExample: "A top-performing answer begins with a concise definition, outlines the primary strategy, and highlights key constraints or edge cases.",
-        followUpRecommendation: "Practice explaining implementation details under time constraints.",
-      };
+      return this.evaluateHeuristically(clean, "TECHNICAL", "EVALUATION");
     }
   }
 
@@ -961,19 +1219,19 @@ Evaluate this answer. Be constructive, precise, and encouraging for collegiate p
     const evaluated = turns.filter((t) => t.evaluation);
     if (evaluated.length === 0) {
       return {
-        overallScore: 70,
-        relevanceScore: 70,
-        technicalAccuracyScore: 70,
-        depthScore: 70,
-        structureScore: 70,
-        practicalReasoningScore: 70,
-        communicationScore: 70,
-        finalFeedbackSummary: "Practice session completed with introductory answers.",
+        overallScore: 0,
+        relevanceScore: 0,
+        technicalAccuracyScore: 0,
+        depthScore: 0,
+        structureScore: 0,
+        practicalReasoningScore: 0,
+        communicationScore: 0,
+        finalFeedbackSummary: "Practice session completed without any evaluated turns.",
         strongAnswers: [],
         weakAnswers: [],
         technicalGaps: [],
-        recommendedExercises: ["Practice problem formulation under time constraints."],
-        suggestedNextLevel: "INTERMEDIATE",
+        recommendedExercises: ["Practice problem formulation under time constraints and complete interactive turns."],
+        suggestedNextLevel: "BEGINNER",
       };
     }
 

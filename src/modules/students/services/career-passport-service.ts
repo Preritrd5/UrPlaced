@@ -78,7 +78,7 @@ export class CareerPassportService {
   private static defaultSections: IncludedSectionsConfig = {
     show_cgpa: false,
     show_phone: false,
-    show_email: true,
+    show_email: false,
     show_education: true,
     show_skills: true,
     show_projects: true,
@@ -295,12 +295,19 @@ export class CareerPassportService {
     // 4. Compute SHA-256 hash for storage
     const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
-    let expiresAt: string | null = null;
-    if (params.expiresInDays && params.expiresInDays > 0) {
-      const expDate = new Date();
-      expDate.setDate(expDate.getDate() + params.expiresInDays);
-      expiresAt = expDate.toISOString();
+    // Safe expiry validation: default to 30 days if unspecified, validate range 1-365 days
+    let expiryDays = 30;
+    if (params.expiresInDays !== undefined && params.expiresInDays !== null) {
+      const days = Number(params.expiresInDays);
+      if (isNaN(days) || days < 1 || days > 365) {
+        throw new Error("Invalid expiry duration: expiresInDays must be a valid number between 1 and 365 days.");
+      }
+      expiryDays = Math.round(days);
     }
+
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + expiryDays);
+    const expiresAt = expDate.toISOString();
 
     const { data: share, error } = await admin
       .from("career_passport_shares")
@@ -433,10 +440,26 @@ export class CareerPassportService {
       })
       .eq("id", share.id);
 
-    // 5. Fetch Passport & Profile Data
-    const passportData = await this.getPassport(share.tenant_id, share.student_id);
+    // 5. Fetch Passport Record directly to verify visibility and published snapshot
+    const { data: passportRecord } = await admin
+      .from("student_career_passports")
+      .select("*")
+      .eq("tenant_id", share.tenant_id)
+      .eq("student_id", share.student_id)
+      .maybeSingle();
 
-    // 6. Return strictly sanitized view
+    if (!passportRecord || passportRecord.visibility === "PRIVATE") {
+      // If student revoked shareable status or set to PRIVATE, deny public access immediately
+      return null;
+    }
+
+    // Return the approved frozen published snapshot if available
+    if (passportRecord.published_snapshot) {
+      return passportRecord.published_snapshot;
+    }
+
+    // Fallback: build sanitized view from current passport
+    const passportData = await this.getPassport(share.tenant_id, share.student_id);
     return this.buildSanitizedPassportView(passportData);
   }
 
@@ -445,24 +468,34 @@ export class CareerPassportService {
    * Strips all internal database IDs, tenant IDs, and unapproved private details.
    */
   public static buildSanitizedPassportView(data: CareerPassportData): any {
-    const sec = data.includedSections;
+    const sec = data.includedSections || (data as any).included_sections || {
+      show_cgpa: false,
+      show_phone: false,
+      show_email: false,
+      show_education: true,
+      show_skills: true,
+      show_projects: true,
+      show_experience: true,
+      show_certifications: true,
+      show_achievements: true,
+    };
 
     return {
       studentName: data.studentName,
       headline: data.headline,
       summary: data.summary,
-      institution: data.institutionName,
-      degree: data.degree,
-      department: data.departmentName,
-      graduationYear: data.graduationYear,
+      institution: sec.show_education ? data.institutionName : null,
+      degree: sec.show_education ? data.degree : null,
+      department: sec.show_education ? data.departmentName : null,
+      graduationYear: sec.show_education ? data.graduationYear : null,
       cgpa: sec.show_cgpa ? data.cgpa : null,
       email: sec.show_email ? data.email : null,
       phone: sec.show_phone ? data.phone : null,
-      linkedinUrl: data.linkedinUrl,
-      githubUrl: data.githubUrl,
-      portfolioUrl: data.portfolioUrl,
-      careerInterests: data.careerInterests,
-      preferredRoles: data.preferredRoles,
+      linkedinUrl: data.linkedinUrl || null,
+      githubUrl: data.githubUrl || null,
+      portfolioUrl: data.portfolioUrl || null,
+      careerInterests: data.careerInterests || [],
+      preferredRoles: data.preferredRoles || [],
       skills: sec.show_skills
         ? {
             technical: data.technicalSkills.map((s) => ({
@@ -508,6 +541,7 @@ export class CareerPassportService {
             isVerified: Boolean(c.isVerified),
           }))
         : [],
+      achievements: sec.show_achievements ? ((data as any).customAchievements || []) : [],
       version: data.version,
       updatedAt: data.updatedAt,
     };

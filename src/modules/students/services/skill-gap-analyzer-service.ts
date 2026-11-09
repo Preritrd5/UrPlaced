@@ -160,7 +160,35 @@ export class SkillGapAnalyzerService {
     }
 
     // 4. Fetch Student's Assessment & Mistake Target History for Grounded Evaluation
-    const { data: mistakeTargets } = await admin
+    // Query actual student assessment attempts with successful scores
+    const { data: attempts } = await admin
+      .from("assessment_attempts")
+      .select(`
+        id,
+        score_percentage,
+        status,
+        assessments (
+          title,
+          tags
+        )
+      `)
+      .eq("tenant_id", params.tenantId)
+      .eq("student_id", params.studentId)
+      .in("status", ["SUBMITTED", "SCORED", "RESULT_RELEASED"]);
+
+    const demonstratedSkills = new Set<string>();
+    if (attempts) {
+      for (const att of attempts) {
+        if ((att.score_percentage || 0) >= 60 && (att as any).assessments?.tags) {
+          for (const tag of (att as any).assessments.tags) {
+            demonstratedSkills.add(tag.toLowerCase().trim());
+          }
+        }
+      }
+    }
+
+    // Mistake review targets represent weakness areas / areas needing review (NOT proof of mastery)
+    const { data: studentMistakes } = await admin
       .from("mistake_review_targets")
       .select(`
         primary_reason,
@@ -171,25 +199,28 @@ export class SkillGapAnalyzerService {
         )
       `)
       .eq("tenant_id", params.tenantId)
-      .limit(10);
+      .eq("student_id", params.studentId)
+      .limit(15);
 
-    const assessedSkills = (mistakeTargets || [])
-      .map((t: any) => ({
-        skill: t.canonical_skills?.name,
-        category: t.canonical_skills?.category,
-        occurrences: t.occurrence_count,
-      }))
-      .filter((s: any) => Boolean(s.skill));
+    const weaknessSkills = new Set<string>();
+    if (studentMistakes) {
+      for (const m of studentMistakes as any[]) {
+        if (m.canonical_skills?.name) {
+          weaknessSkills.add(m.canonical_skills.name.toLowerCase().trim());
+        }
+      }
+    }
 
     // 5. Classify Student Skills with Strict Multi-tier Evidence
     const classifiedStudentSkills = this.classifyStudentSkillEvidence(
       profile,
       primaryResume,
-      assessedSkills
+      demonstratedSkills,
+      weaknessSkills
     );
 
     // 6. Compute State Hash for Cache Validation
-    const stateInput = `${profile.updatedAt || ""}_${primaryResume?.id || "no-resume"}_${primaryResume?.updatedAt || ""}_${cleanRole}_${params.targetDriveId || "no-drive"}_${params.customJobDescription || ""}`;
+    const stateInput = `${params.studentId}_${profile.updatedAt || ""}_${primaryResume?.id || "no-resume"}_${primaryResume?.updatedAt || ""}_${cleanRole}_${params.targetDriveId || "no-drive"}_${params.customJobDescription || ""}_att:${demonstratedSkills.size}_mistakes:${weaknessSkills.size}`;
     const snapshotHash = crypto.createHash("sha256").update(stateInput).digest("hex").slice(0, 32);
 
     // 7. Check Cache unless forceRefresh is true
@@ -323,7 +354,8 @@ STRICT EVIDENCE & VERIFICATION RULES:
   public static classifyStudentSkillEvidence(
     profile: any,
     primaryResume: any,
-    assessedSkills: any[]
+    demonstratedSkills: Set<string> | any[],
+    weaknessSkills: Set<string> = new Set()
   ): Array<{
     name: string;
     category: string;
@@ -342,13 +374,10 @@ STRICT EVIDENCE & VERIFICATION RULES:
       }
     }
 
-    // 2. Assessed skills from mistake mastery / practice tests
-    const assessmentSkillMap = new Map<string, number>();
-    for (const askill of assessedSkills) {
-      if (askill.skill) {
-        assessmentSkillMap.set(askill.skill.toLowerCase().trim(), askill.occurrences);
-      }
-    }
+    // Convert demonstratedSkills if passed as array (backward compatibility)
+    const demonstratedSet = demonstratedSkills instanceof Set
+      ? demonstratedSkills
+      : new Set((demonstratedSkills || []).map((s: any) => (typeof s === "string" ? s : s.skill || "").toLowerCase().trim()));
 
     // 3. Technical Skills in Profile
     for (const s of profile.technicalSkills || []) {
@@ -359,15 +388,19 @@ STRICT EVIDENCE & VERIFICATION RULES:
       if (s.isVerified) {
         evType = "VERIFIED";
         details = "Officially verified via institutional evaluation";
-      } else if (assessmentSkillMap.has(sNameLower)) {
+      } else if (demonstratedSet.has(sNameLower)) {
         evType = "ASSESSMENT_SUPPORTED";
-        details = "Supported by performance records in placement assessments";
+        details = "Supported by passing scores in completed placement assessments";
       } else if (projectSkills.has(sNameLower)) {
         evType = "PROJECT_SUPPORTED";
         details = "Implemented in documented student projects with source reference";
       } else if (resumeText.includes(sNameLower)) {
         evType = "RESUME_SUPPORTED";
         details = "Detected and extracted from primary verified resume document";
+      }
+
+      if (weaknessSkills.has(sNameLower)) {
+        details += " (Flagged in mistake bank for review)";
       }
 
       classified.set(sNameLower, {

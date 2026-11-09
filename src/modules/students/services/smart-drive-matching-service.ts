@@ -81,39 +81,50 @@ export class SmartDriveMatchingService {
     };
 
     let isEligible = true;
+    let isUnknown = false;
     const failures: string[] = [];
 
     // 1. Min CGPA
-    if (criteria.min_cgpa !== null && criteria.min_cgpa !== undefined) {
+    const minCgpa = criteria.min_cgpa ?? criteria.minCgpa;
+    if (minCgpa !== null && minCgpa !== undefined) {
       const studentCgpa = Number(student.cgpa) || 0;
-      const minCgpa = Number(criteria.min_cgpa);
-      const pass = studentCgpa >= minCgpa;
+      const minVal = Number(minCgpa);
+      const pass = studentCgpa >= minVal;
       reasons.isCgpaEligible = pass;
       if (!pass) {
         isEligible = false;
-        failures.push(`CGPA is ${studentCgpa.toFixed(2)} (Minimum required: ${minCgpa.toFixed(2)})`);
+        failures.push(`CGPA is ${studentCgpa.toFixed(2)} (Minimum required: ${minVal.toFixed(2)})`);
       }
     } else {
       reasons.isCgpaEligible = true;
     }
 
     // 2. Max Active Backlogs
-    if (criteria.max_active_backlogs !== null && criteria.max_active_backlogs !== undefined) {
-      const studentBacklogs = Number(student.active_backlogs) || 0;
-      const maxBacklogs = Number(criteria.max_active_backlogs);
-      const pass = studentBacklogs <= maxBacklogs;
-      reasons.isBacklogEligible = pass;
-      if (!pass) {
+    const maxBacklogs = criteria.max_active_backlogs ?? criteria.max_backlogs ?? criteria.maxBacklogs;
+    if (maxBacklogs !== null && maxBacklogs !== undefined) {
+      if (student.active_backlogs === null || student.active_backlogs === undefined) {
         isEligible = false;
-        failures.push(`Active backlogs: ${studentBacklogs} (Maximum allowed: ${maxBacklogs})`);
+        isUnknown = true;
+        reasons.isBacklogEligible = false;
+        failures.push("Student backlog count is unrecorded in institutional records (Pending Verification)");
+      } else {
+        const studentBacklogs = Number(student.active_backlogs);
+        const maxVal = Number(maxBacklogs);
+        const pass = studentBacklogs <= maxVal;
+        reasons.isBacklogEligible = pass;
+        if (!pass) {
+          isEligible = false;
+          failures.push(`Active backlogs: ${studentBacklogs} (Exceeds maximum allowed: ${maxVal})`);
+        }
       }
     } else {
       reasons.isBacklogEligible = true;
     }
 
     // 3. Department
-    if (criteria.allowed_departments && Array.isArray(criteria.allowed_departments) && criteria.allowed_departments.length > 0) {
-      const pass = student.department_id ? criteria.allowed_departments.includes(student.department_id) : false;
+    const allowedDepts = criteria.allowed_departments ?? criteria.allowedDepartments;
+    if (allowedDepts && Array.isArray(allowedDepts) && allowedDepts.length > 0) {
+      const pass = student.department_id ? allowedDepts.includes(student.department_id) : false;
       reasons.isDepartmentEligible = pass;
       if (!pass) {
         isEligible = false;
@@ -124,12 +135,13 @@ export class SmartDriveMatchingService {
     }
 
     // 4. Graduation Year
-    if (criteria.graduation_year) {
-      const pass = Number(student.graduation_year) === Number(criteria.graduation_year);
+    const targetGradYear = criteria.graduation_year ?? criteria.allowed_graduation_years?.[0] ?? criteria.allowedGraduationYears?.[0];
+    if (targetGradYear) {
+      const pass = Number(student.graduation_year) === Number(targetGradYear);
       reasons.isGraduationYearEligible = pass;
       if (!pass) {
         isEligible = false;
-        failures.push(`Graduation year ${student.graduation_year} does not match target batch ${criteria.graduation_year}`);
+        failures.push(`Graduation year ${student.graduation_year} does not match target batch ${targetGradYear}`);
       }
     } else {
       reasons.isGraduationYearEligible = true;
@@ -139,8 +151,14 @@ export class SmartDriveMatchingService {
       ? "Officially meets all institutional academic eligibility criteria."
       : `Ineligible: ${failures.join("; ")}.`;
 
+    const status: "ELIGIBLE" | "INELIGIBLE" | "UNKNOWN" = isEligible
+      ? "ELIGIBLE"
+      : isUnknown && failures.length === 1
+      ? "UNKNOWN"
+      : "INELIGIBLE";
+
     return {
-      status: isEligible ? "ELIGIBLE" : "INELIGIBLE",
+      status,
       reasons,
     };
   }
@@ -178,11 +196,13 @@ export class SmartDriveMatchingService {
     }
 
     const total = matchedSkills.length + missingSkills.length;
-    let matchScore = 60;
+    let matchScore = 0;
     if (total > 0) {
-      matchScore = Math.round((matchedSkills.length / total) * 60 + 25);
+      matchScore = Math.round((matchedSkills.length / total) * 100);
+    } else {
+      matchScore = 50; // Neutral baseline when drive specifies no skills
     }
-    matchScore = Math.max(30, Math.min(98, matchScore));
+    matchScore = Math.max(0, Math.min(100, matchScore));
 
     return {
       matchScore,
@@ -206,6 +226,14 @@ export class SmartDriveMatchingService {
     const profile = await StudentCareerProfileService.getProfile(tenantId, studentId);
     const resumes = await ResumeStorageService.listResumes(tenantId, studentId);
     const primaryResume = resumes.find((r) => r.isPrimary) || resumes[0] || null;
+
+    // Fetch authoritative institutional student record including actual backlogs
+    const { data: studentRecord } = await admin
+      .from("students")
+      .select("id, cgpa, active_backlogs, tenth_percentage, twelfth_percentage, total_backlogs, department_id, graduation_year, degree, academic_status")
+      .eq("tenant_id", tenantId)
+      .eq("id", studentId)
+      .maybeSingle();
 
     // 2. Fetch all published, active recruitment drives for this college tenant
     const { data: drives, error: driveErr } = await admin
@@ -305,14 +333,14 @@ export class SmartDriveMatchingService {
       const requirements = reqsMap.get(drive.id) || [];
       const appState = appMap.get(drive.id);
 
-      // Official eligibility check
+      // Official eligibility check using canonical student records
       const { status: officialStatus, reasons: eligReasons } = this.evaluateOfficialEligibility(
         {
-          cgpa: profile.cgpa,
-          active_backlogs: 0,
-          department_id: (profile as any).departmentId || null,
-          degree: profile.degree,
-          graduation_year: profile.graduationYear,
+          cgpa: studentRecord?.cgpa !== undefined && studentRecord?.cgpa !== null ? Number(studentRecord.cgpa) : profile.cgpa,
+          active_backlogs: studentRecord?.active_backlogs ?? null,
+          department_id: studentRecord?.department_id || (profile as any).departmentId || null,
+          degree: studentRecord?.degree || profile.degree,
+          graduation_year: studentRecord?.graduation_year || profile.graduationYear,
         },
         criteria
       );
@@ -328,7 +356,7 @@ export class SmartDriveMatchingService {
 
         let isMatched = false;
         for (const s of studentSkillNames) {
-          if (s.includes(reqLower) || reqLower.includes(s)) {
+          if (s === reqLower || s.includes(reqLower) || reqLower.includes(s)) {
             isMatched = true;
             break;
           }
@@ -341,40 +369,27 @@ export class SmartDriveMatchingService {
             missingSkills.push(reqTitle);
           }
         } else {
-          preferredSkills.push(reqTitle);
-        }
-      }
-
-      // If no explicit requirements configured, provide realistic defaults based on drive title
-      if (requirements.length === 0) {
-        const titleLower = drive.title.toLowerCase();
-        if (titleLower.includes("software") || titleLower.includes("developer")) {
-          const defaultReqs = ["Data Structures", "Algorithms", "Problem Solving", "Web Technologies"];
-          for (const d of defaultReqs) {
-            if (studentSkillNames.has(d.toLowerCase())) matchedSkills.push(d);
-            else missingSkills.push(d);
+          if (isMatched) {
+            preferredSkills.push(reqTitle);
           }
-        } else {
-          matchedSkills.push("Analytical Thinking", "Core Engineering Fundamentals");
         }
       }
 
-      // Calculate Match Score (0 to 100%)
-      let matchScore = 60; // baseline
-      const totalSkillsCount = matchedSkills.length + missingSkills.length;
-      if (totalSkillsCount > 0) {
-        const skillRatio = matchedSkills.length / totalSkillsCount;
-        matchScore = Math.round(skillRatio * 60 + 25);
+      // Compute transparent requirement-based match score
+      let matchScore = 0;
+      if (requirements.length > 0) {
+        const totalReqs = matchedSkills.length + missingSkills.length;
+        if (totalReqs > 0) {
+          const ratio = matchedSkills.length / totalReqs;
+          matchScore = Math.round(ratio * 80);
+          if (preferredSkills.length > 0) matchScore += 10;
+          if (profile.projects.length >= 2) matchScore += 10;
+          matchScore = Math.min(100, Math.max(0, matchScore));
+        }
+      } else {
+        // No explicit published skill requirements: calculate based on general profile readiness
+        matchScore = Math.min(100, Math.max(0, Math.round(profile.completeness.overallPercentage * 0.75)));
       }
-
-      // Boost for project count and completeness
-      if (profile.projects.length >= 2) matchScore += 10;
-      else if (profile.projects.length === 1) matchScore += 5;
-
-      if (profile.experience.length >= 1) matchScore += 5;
-
-      // Bound between 30% and 98%
-      matchScore = Math.max(30, Math.min(98, matchScore));
 
       const strengths: string[] = [];
       if (matchedSkills.length > 0) {

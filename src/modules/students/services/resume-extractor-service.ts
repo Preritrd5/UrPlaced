@@ -8,6 +8,7 @@
 
 import * as zlib from "zlib";
 import JSZip from "jszip";
+import * as pdfParse from "pdf-parse";
 
 export interface ExtractionResult {
   text: string;
@@ -16,6 +17,16 @@ export interface ExtractionResult {
   detectedSections: string[];
   parsingStatus: "PARSED" | "PARTIALLY_PARSED" | "FAILED";
   warning?: string;
+  pageCount?: number;
+}
+
+function decodeXmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
 }
 
 export class ResumeExtractorService {
@@ -56,7 +67,49 @@ export class ResumeExtractorService {
    */
   public static async extractDocx(buffer: Buffer): Promise<ExtractionResult> {
     try {
+      if (buffer.length < 50) {
+        return {
+          text: "",
+          wordCount: 0,
+          characterCount: 0,
+          detectedSections: [],
+          parsingStatus: "FAILED",
+          warning: "File is empty or corrupted.",
+        };
+      }
+
+      // Check zip magic number: PK\x03\x04
+      if (buffer[0] !== 0x50 || buffer[1] !== 0x4b || buffer[2] !== 0x03 || buffer[3] !== 0x04) {
+        return {
+          text: "",
+          wordCount: 0,
+          characterCount: 0,
+          detectedSections: [],
+          parsingStatus: "FAILED",
+          warning: "Invalid binary signature: file is not a valid OpenXML archive.",
+        };
+      }
+
       const zip = await JSZip.loadAsync(buffer);
+
+      // Defend against zip decompression bombs & excessive entries
+      let entryCount = 0;
+      const MAX_ENTRIES = 150;
+      zip.forEach(() => {
+        entryCount++;
+      });
+
+      if (entryCount > MAX_ENTRIES) {
+        return {
+          text: "",
+          wordCount: 0,
+          characterCount: 0,
+          detectedSections: [],
+          parsingStatus: "FAILED",
+          warning: "Suspicious archive: exceeds maximum allowed file entries count.",
+        };
+      }
+
       const docXmlFile = zip.file("word/document.xml");
 
       if (!docXmlFile) {
@@ -72,6 +125,7 @@ export class ResumeExtractorService {
 
       const xml = await docXmlFile.async("string");
 
+      // Extract paragraphs and table cells with proper section boundaries
       const paragraphs: string[] = [];
       const pRegex = /<w:p(?:\s[^>]*)?>([\s\S]*?)<\/w:p>/g;
       let pMatch;
@@ -87,7 +141,7 @@ export class ResumeExtractorService {
         }
 
         if (pText.trim()) {
-          paragraphs.push(pText.trim());
+          paragraphs.push(decodeXmlEntities(pText.trim()));
         }
       }
 
@@ -117,13 +171,23 @@ export class ResumeExtractorService {
   }
 
   /**
-   * Extracts text from PDF stream objects
+   * Extracts text from PDF document buffer using production PDF parser
    */
-  public static extractPdf(buffer: Buffer): ExtractionResult {
+  public static async extractPdf(buffer: Buffer): Promise<ExtractionResult> {
     try {
-      const content = buffer.toString("latin1");
+      if (buffer.length < 50) {
+        return {
+          text: "",
+          wordCount: 0,
+          characterCount: 0,
+          detectedSections: [],
+          parsingStatus: "FAILED",
+          warning: "File is empty or corrupted.",
+        };
+      }
 
-      if (!content.startsWith("%PDF")) {
+      const isPdfHeader = buffer.subarray(0, 5).toString("latin1").startsWith("%PDF");
+      if (!isPdfHeader) {
         return {
           text: "",
           wordCount: 0,
@@ -134,60 +198,41 @@ export class ResumeExtractorService {
         };
       }
 
-      let extractedText = "";
-      const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
-      let match;
+      let rawText = "";
+      let pageCount = 1;
 
-      while ((match = streamRegex.exec(content)) !== null) {
-        const streamData = Buffer.from(match[1], "latin1");
-        let decompressed = "";
-
-        try {
-          decompressed = zlib.inflateSync(streamData).toString("latin1");
-        } catch {
-          decompressed = match[1];
-        }
-
-        const btRegex = /BT[\s\S]*?ET/g;
-        let btMatch;
-
-        while ((btMatch = btRegex.exec(decompressed)) !== null) {
-          const block = btMatch[0];
-
-          // Match (text) Tj
-          const tjRegex = /\(([\s\S]*?)\)\s*Tj/g;
-          let tjMatch;
-          while ((tjMatch = tjRegex.exec(block)) !== null) {
-            extractedText += tjMatch[1] + " ";
-          }
-
-          // Match [(t)(e)(x)(t)] TJ
-          const arrayTjRegex = /\[([\s\S]*?)\]\s*TJ/g;
-          let arrayMatch;
-          while ((arrayMatch = arrayTjRegex.exec(block)) !== null) {
-            const inner = arrayMatch[1];
-            const innerTextRegex = /\(([\s\S]*?)\)/g;
-            let innerTextMatch;
-            while ((innerTextMatch = innerTextRegex.exec(inner)) !== null) {
-              extractedText += innerTextMatch[1];
-            }
-            extractedText += " ";
-          }
-          extractedText += "\n";
+      if (typeof pdfParse === "function") {
+        const parsed = await (pdfParse as any)(buffer);
+        rawText = parsed.text || "";
+        pageCount = parsed.numpages || 1;
+      } else if ((pdfParse as any)?.PDFParse) {
+        const parser = new (pdfParse as any).PDFParse({ data: buffer });
+        const res = await parser.getText();
+        rawText = res?.text || "";
+        pageCount = res?.total || 1;
+      } else if ((pdfParse as any)?.default) {
+        const def = (pdfParse as any).default;
+        if (typeof def === "function") {
+          const parsed = await def(buffer);
+          rawText = parsed.text || "";
+          pageCount = parsed.numpages || 1;
+        } else if (def.PDFParse) {
+          const parser = new def.PDFParse({ data: buffer });
+          const res = await parser.getText();
+          rawText = res?.text || "";
+          pageCount = res?.total || 1;
         }
       }
 
-      const cleanText = extractedText
-        .replace(/\\([()\\])/g, "$1")
-        .replace(/\\n/g, "\n")
-        .replace(/\\r/g, "\r")
-        .replace(/\\t/g, "\t")
+      const cleanText = rawText
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
         .replace(/[ \t]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
         .trim();
 
       const wordCount = cleanText ? cleanText.split(/\s+/).length : 0;
       const detectedSections = this.detectSectionHeaders(cleanText);
-
       const isScannedOrEmpty = wordCount < 15;
 
       return {
@@ -195,9 +240,10 @@ export class ResumeExtractorService {
         wordCount,
         characterCount: cleanText.length,
         detectedSections,
+        pageCount: pageCount || 1,
         parsingStatus: isScannedOrEmpty ? "PARTIALLY_PARSED" : "PARSED",
         warning: isScannedOrEmpty
-          ? "PDF contains little or no embedded text layer. Gemini multimodal document vision will be used during scanning."
+          ? "PDF contains little or no embedded text layer (scanned or image-only document). Requires OCR or text-layer PDF."
           : undefined,
       };
     } catch (err: any) {

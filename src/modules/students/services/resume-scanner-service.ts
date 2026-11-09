@@ -118,10 +118,13 @@ export class ResumeScannerService {
       throw new Error("Resume not found or inaccessible.");
     }
 
-    // 2. Fetch document binary from private storage
+    // 2. Fetch document binary from private storage using server-authoritative path
+    const expectedPath = `${tenantId}/${studentId}/${resume.id}.${resume.file_type}`;
+    const storagePath = resume.file_path === expectedPath ? resume.file_path : expectedPath;
+
     const { data: fileData, error: downloadErr } = await admin.storage
       .from(ResumeStorageService.BUCKET_NAME)
-      .download(resume.file_path);
+      .download(storagePath);
 
     if (downloadErr || !fileData) {
       throw new Error(`Failed to download resume file from storage: ${downloadErr?.message}`);
@@ -190,18 +193,35 @@ Return a detailed JSON evaluation with:
     let modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
     let tokenUsage: any = {};
     let durationMs = 0;
+    const isScannedPdf = (!resumeText || resumeText.length < 50) && resume.file_type === "pdf";
 
     try {
       const startTime = Date.now();
-      const aiResponse = await GeminiClient.generate({
-        prompt: userPrompt,
+      const generateOptions: any = {
         systemInstruction,
         temperature: 0.1,
         responseMimeType: "application/json",
         feature: "RESUME_SCAN",
         userId: studentId,
         tenantId,
-      });
+      };
+
+      // Multimodal vision support for scanned PDFs within safe size limits (<= 4MB)
+      if (isScannedPdf && fileBuffer.length <= 4 * 1024 * 1024) {
+        generateOptions.parts = [
+          {
+            inlineData: {
+              mimeType: "application/pdf",
+              data: fileBuffer.toString("base64"),
+            },
+          },
+          { text: userPrompt },
+        ];
+      } else {
+        generateOptions.prompt = userPrompt;
+      }
+
+      const aiResponse = await GeminiClient.generate(generateOptions);
 
       durationMs = Date.now() - startTime;
       tokenUsage = {
@@ -222,6 +242,20 @@ Return a detailed JSON evaluation with:
       analysis = this.generateFallbackAnalysis(resumeText, resume.file_type);
       durationMs = 50;
       tokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      modelName = "rule-based-deterministic-evaluator";
+    }
+
+    // Calculate match score strictly if a target role or job description was provided
+    let calculatedMatchScore: number | null = null;
+    if (targetRole || jobDescription) {
+      const targetQuery = `${targetRole || ""} ${jobDescription || ""}`.toLowerCase();
+      const detected = analysis.skills.detected || [];
+      if (detected.length > 0) {
+        const matches = detected.filter((s) => targetQuery.includes(s.toLowerCase()));
+        calculatedMatchScore = Math.min(100, Math.round((matches.length / detected.length) * 100));
+      } else {
+        calculatedMatchScore = 50;
+      }
     }
 
     // 5. Persist scan to resume_scans table
@@ -239,7 +273,7 @@ Return a detailed JSON evaluation with:
       parseability_score: analysis.scores.parseability,
       content_quality_score: analysis.scores.contentQuality,
       skills_coverage_score: analysis.scores.skillsCoverage,
-      match_score: analysis.scores.skillsCoverage,
+      match_score: calculatedMatchScore,
       analysis_summary: analysis.resumeSummary,
       detected_sections: analysis.detectedSections,
       missing_sections: analysis.missingSections,
@@ -249,6 +283,8 @@ Return a detailed JSON evaluation with:
       improvement_suggestions: analysis.improvementSuggestions as any,
       limitations: [
         "UrPlaced AI Resume Assessment — an estimated diagnostic, not an employer ATS guarantee.",
+        ...(modelName === "rule-based-deterministic-evaluator" ? ["Generated via deterministic rule-based evaluation baseline (AI service unavailable)."] : []),
+        ...(isScannedPdf && fileBuffer.length > 4 * 1024 * 1024 ? ["Scanned PDF document exceeds vision inline size limit (4MB). Please provide a text-based PDF or run OCR."] : []),
         ...analysis.limitations,
       ],
       token_usage: tokenUsage,
@@ -262,7 +298,8 @@ Return a detailed JSON evaluation with:
       .maybeSingle();
 
     if (saveErr) {
-      console.warn("[ResumeScannerService] Failed to insert scan row into resume_scans:", saveErr.message);
+      console.error("[ResumeScannerService] Failed to insert scan row into resume_scans:", saveErr.message);
+      throw new Error(`Failed to persist resume scan diagnostics: ${saveErr.message}`);
     }
 
     return {
@@ -278,7 +315,7 @@ Return a detailed JSON evaluation with:
       parseabilityScore: analysis.scores.parseability,
       contentQualityScore: analysis.scores.contentQuality,
       skillsCoverageScore: analysis.scores.skillsCoverage,
-      matchScore: analysis.scores.skillsCoverage,
+      matchScore: calculatedMatchScore,
       analysisSummary: analysis.resumeSummary,
       detectedSections: analysis.detectedSections,
       missingSections: analysis.missingSections,
@@ -286,10 +323,7 @@ Return a detailed JSON evaluation with:
       issues: analysis.issues,
       skillsAnalysis: analysis.skills,
       improvementSuggestions: analysis.improvementSuggestions,
-      limitations: [
-        "UrPlaced AI Resume Assessment — an estimated diagnostic, not an employer ATS guarantee.",
-        ...analysis.limitations,
-      ],
+      limitations: insertPayload.limitations,
       tokenUsage,
       processingDurationMs: durationMs,
       createdAt: new Date().toISOString(),
@@ -305,27 +339,68 @@ Return a detailed JSON evaluation with:
     const standardSections = ["CONTACT", "EDUCATION", "SKILLS", "PROJECTS", "EXPERIENCE"];
     const missingSections = standardSections.filter((s) => !detectedSections.includes(s));
 
-    let parseability = 80;
+    let parseability = 75;
     if (fileType === "docx") parseability += 5;
     if (wordCount < 100) parseability -= 30;
     if (missingSections.includes("CONTACT")) parseability -= 20;
 
-    let contentQuality = 75;
+    let contentQuality = 70;
     if (wordCount >= 250 && wordCount <= 700) contentQuality += 10;
     if (wordCount < 150) contentQuality -= 25;
 
-    let skillsCoverage = 70;
-    if (detectedSections.includes("PROJECTS")) skillsCoverage += 10;
-    if (detectedSections.includes("SKILLS")) skillsCoverage += 10;
+    // Grounded skill keyword extraction from actual text
+    const lowerText = text.toLowerCase();
+    const commonTechSkills = [
+      "python", "java", "c++", "c#", "c", "javascript", "typescript", "react", "next.js", "angular",
+      "vue", "node.js", "express", "sql", "postgresql", "mysql", "mongodb", "aws", "azure", "docker",
+      "kubernetes", "git", "linux", "html", "css", "rest api", "graphql", "tailwind"
+    ];
+
+    const detectedSkills: string[] = [];
+    for (const skill of commonTechSkills) {
+      const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const boundaryStart = /^\w/.test(skill) ? "\\b" : "";
+      const boundaryEnd = /\w$/.test(skill) ? "\\b" : "(?!\\w)";
+      const regex = new RegExp(`${boundaryStart}${escaped}${boundaryEnd}`, "i");
+      if (regex.test(lowerText)) {
+        detectedSkills.push(
+          skill === "c++"
+            ? "C++"
+            : skill === "c#"
+            ? "C#"
+            : skill.charAt(0).toUpperCase() + skill.slice(1)
+        );
+      }
+    }
+
+    let skillsCoverage = detectedSkills.length > 0 ? Math.min(90, 40 + detectedSkills.length * 8) : 35;
+    if (detectedSections.includes("PROJECTS")) skillsCoverage += 5;
 
     parseability = Math.max(20, Math.min(95, parseability));
     contentQuality = Math.max(20, Math.min(95, contentQuality));
     skillsCoverage = Math.max(20, Math.min(95, skillsCoverage));
     const overallQuality = Math.round(parseability * 0.3 + contentQuality * 0.4 + skillsCoverage * 0.3);
 
+    const improvementSuggestions: ResumeAnalysisOutput["improvementSuggestions"] = [];
+    if (detectedSections.includes("PROJECTS")) {
+      improvementSuggestions.push({
+        section: "Projects",
+        suggestedText: "Architected [Specify system/module] using [Specify technologies] to solve [Specify engineering challenge], optimizing [Specify measurable metric, e.g. latency/throughput by X%].",
+        explanation: "Recruiters evaluate specific engineering contributions and trade-offs rather than generic task descriptions.",
+        requiresStudentInput: true,
+      });
+    } else {
+      improvementSuggestions.push({
+        section: "Projects",
+        suggestedText: "Insufficient evidence to evaluate this section. Add at least two portfolio projects detailing [Specify technologies, architecture decisions, and repository link].",
+        explanation: "Projects provide essential evidence of practical technical capability.",
+        requiresStudentInput: true,
+      });
+    }
+
     return {
       status: "completed",
-      resumeSummary: `Candidate resume with approximately ${wordCount} words across ${detectedSections.length} identified standard sections. Baseline structural parseability is verified.`,
+      resumeSummary: `Candidate resume with approximately ${wordCount} words across ${detectedSections.length} identified standard sections. Baseline structural parseability evaluated via rule-based heuristics.`,
       scores: {
         parseability,
         contentQuality,
@@ -338,7 +413,7 @@ Return a detailed JSON evaluation with:
         {
           title: "Clear Standard Structure",
           explanation: `Document features ${detectedSections.length} identified headings, assisting ATS parsers in indexing competencies.`,
-          evidence: detectedSections.join(", "),
+          evidence: detectedSections.join(", ") || "No standard headings detected",
         },
       ],
       issues: missingSections.length > 0
@@ -353,23 +428,15 @@ Return a detailed JSON evaluation with:
           ]
         : [],
       skills: {
-        detected: ["Problem Solving", "Core Engineering", "Analytical Skills"],
-        evidenceSupported: ["Analytical Skills"],
-        insufficientEvidence: ["Core Engineering"],
+        detected: detectedSkills,
+        evidenceSupported: detectedSkills.slice(0, 4),
+        insufficientEvidence: detectedSkills.slice(4),
         missingForTarget: [],
       },
-      improvementSuggestions: [
-        {
-          section: "Projects",
-          originalText: "Built an application for campus placements.",
-          suggestedText: "Architected a full-stack web application using TypeScript and SQL, serving [Specify actual active student/user count] with [Specify key feature or latency improvement].",
-          explanation: "Incorporate concrete technologies and measurable outcomes without inventing metrics.",
-          requiresStudentInput: true,
-        },
-      ],
+      improvementSuggestions,
       limitations: [
         "UrPlaced AI Resume Assessment — an estimated diagnostic, not an employer ATS guarantee.",
-        "Diagnostic generated using deterministic rule-based evaluation baseline.",
+        "Diagnostic generated using deterministic rule-based evaluation baseline (AI model was not invoked).",
       ],
     };
   }

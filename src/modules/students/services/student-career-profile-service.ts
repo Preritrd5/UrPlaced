@@ -127,6 +127,7 @@ export interface CareerProfileUpdateInput {
   projects?: CareerProject[];
   experience?: CareerExperience[];
   certifications?: CareerCertification[];
+  expectedUpdatedAt?: string;
 }
 
 export class StudentCareerProfileService {
@@ -187,10 +188,10 @@ export class StudentCareerProfileService {
       actionableTips.push("Add a 1-sentence headline summarizing your target role (e.g. 'Aspiring Full Stack Engineer').");
     }
 
-    // 2. Education & Academic Details (Weight: 20%)
+    // 2. Education & Academic Details (Weight: 20%) - Strictly Authoritative
     let eduScore = 0;
-    if (s.degree && s.degree.trim()) eduScore += 10;
-    if (s.cgpa && s.cgpa > 0) eduScore += 10;
+    if (s.degree && typeof s.degree === "string" && s.degree.trim().length >= 2) eduScore += 10;
+    if (s.cgpa !== null && s.cgpa !== undefined && Number(s.cgpa) > 0) eduScore += 10;
 
     const eduComplete = eduScore === 20;
     breakdown.education = {
@@ -210,11 +211,14 @@ export class StudentCareerProfileService {
       });
     }
 
-    // 3. Technical Skills (Weight: 20%)
-    const techSkills = p.technical_skills || [];
+    // 3. Technical Skills (Weight: 20%) - Must have valid non-empty names
+    const rawTechSkills = p.technical_skills || [];
+    const validTechSkills = rawTechSkills.filter(
+      (skill) => skill && typeof skill.name === "string" && skill.name.trim().length >= 2
+    );
     let techScore = 0;
-    if (techSkills.length >= 1) techScore += 10;
-    if (techSkills.length >= 3) techScore += 10;
+    if (validTechSkills.length >= 1) techScore += 10;
+    if (validTechSkills.length >= 3) techScore += 10;
 
     const techComplete = techScore === 20;
     breakdown.technicalSkills = {
@@ -222,7 +226,7 @@ export class StudentCareerProfileService {
       maxScore: 20,
       percentage: Math.round((techScore / 20) * 100),
       isComplete: techComplete,
-      details: `${techSkills.length} technical skills listed`,
+      details: `${validTechSkills.length} valid technical skills listed`,
     };
     if (techComplete) completedSections.push("Technical Skills");
     else {
@@ -235,11 +239,19 @@ export class StudentCareerProfileService {
       actionableTips.push("Add your core programming languages (e.g. Python, Java, TypeScript) with proficiency levels.");
     }
 
-    // 4. Projects (Weight: 20%)
-    const projects = p.projects || [];
+    // 4. Projects (Weight: 20%) - Must have valid title and at least one technology
+    const rawProjects = p.projects || [];
+    const validProjects = rawProjects.filter(
+      (proj) =>
+        proj &&
+        typeof proj.title === "string" &&
+        proj.title.trim().length >= 3 &&
+        Array.isArray(proj.technologies) &&
+        proj.technologies.some((t) => typeof t === "string" && t.trim().length > 0)
+    );
     let projScore = 0;
-    if (projects.length >= 1) projScore += 10;
-    if (projects.length >= 2) projScore += 10;
+    if (validProjects.length >= 1) projScore += 10;
+    if (validProjects.length >= 2) projScore += 10;
 
     const projComplete = projScore === 20;
     breakdown.projects = {
@@ -247,7 +259,7 @@ export class StudentCareerProfileService {
       maxScore: 20,
       percentage: Math.round((projScore / 20) * 100),
       isComplete: projComplete,
-      details: `${projects.length} portfolio projects documented`,
+      details: `${validProjects.length} valid portfolio projects documented`,
     };
     if (projComplete) completedSections.push("Portfolio Projects");
     else {
@@ -260,16 +272,24 @@ export class StudentCareerProfileService {
       actionableTips.push("Add at least one flagship technical project with a GitHub repository link.");
     }
 
-    // 5. Internships & Experience (Weight: 10%)
-    const experience = p.experience || [];
-    const expScore = experience.length >= 1 ? 10 : 0;
+    // 5. Internships & Experience (Weight: 10%) - Must have non-blank organization & designation
+    const rawExperience = p.experience || [];
+    const validExperience = rawExperience.filter(
+      (exp) =>
+        exp &&
+        typeof exp.organization === "string" &&
+        exp.organization.trim().length >= 2 &&
+        typeof exp.designation === "string" &&
+        exp.designation.trim().length >= 2
+    );
+    const expScore = validExperience.length >= 1 ? 10 : 0;
     const expComplete = expScore === 10;
     breakdown.experience = {
       score: expScore,
       maxScore: 10,
       percentage: Math.round((expScore / 10) * 100),
       isComplete: expComplete,
-      details: experience.length >= 1 ? `${experience.length} work experience entries` : "No experience listed",
+      details: validExperience.length >= 1 ? `${validExperience.length} work experience entries` : "No experience listed",
     };
     if (expComplete) completedSections.push("Internships & Experience");
     else {
@@ -281,16 +301,24 @@ export class StudentCareerProfileService {
       });
     }
 
-    // 6. Certifications & Achievements (Weight: 10%)
-    const certs = p.certifications || [];
-    const certScore = certs.length >= 1 ? 10 : 0;
+    // 6. Certifications & Achievements (Weight: 10%) - Must have name and issuing organization
+    const rawCerts = p.certifications || [];
+    const validCerts = rawCerts.filter(
+      (c) =>
+        c &&
+        typeof c.name === "string" &&
+        c.name.trim().length >= 2 &&
+        typeof c.issuingOrganization === "string" &&
+        c.issuingOrganization.trim().length >= 2
+    );
+    const certScore = validCerts.length >= 1 ? 10 : 0;
     const certComplete = certScore === 10;
     breakdown.certifications = {
       score: certScore,
       maxScore: 10,
       percentage: Math.round((certScore / 10) * 100),
       isComplete: certComplete,
-      details: certs.length >= 1 ? `${certs.length} certifications added` : "No certifications listed",
+      details: validCerts.length >= 1 ? `${validCerts.length} certifications added` : "No certifications listed",
     };
     if (certComplete) completedSections.push("Certifications & Achievements");
     else {
@@ -302,12 +330,12 @@ export class StudentCareerProfileService {
       });
     }
 
-    // 7. Professional Links (Weight: 5%)
+    // 7. Professional Links (Weight: 5%) - Must be non-blank
     let linkScore = 0;
     if (
-      (p.linkedin_url && p.linkedin_url.trim()) ||
-      (p.github_url && p.github_url.trim()) ||
-      (p.portfolio_url && p.portfolio_url.trim())
+      (p.linkedin_url && p.linkedin_url.trim().length >= 8) ||
+      (p.github_url && p.github_url.trim().length >= 8) ||
+      (p.portfolio_url && p.portfolio_url.trim().length >= 8)
     ) {
       linkScore = 5;
     }
@@ -501,7 +529,82 @@ export class StudentCareerProfileService {
       throw new Error("Student record not found or inaccessible.");
     }
 
-    // Calculate completeness
+    // 1. Fetch existing profile to check stale writes and preserve legitimate verified statuses
+    const { data: existingProfile } = await admin
+      .from("student_career_profiles")
+      .select("technical_skills, certifications, updated_at")
+      .eq("tenant_id", tenantId)
+      .eq("student_id", studentId)
+      .maybeSingle();
+
+    // Prevent stale writes if client sends expectedUpdatedAt
+    if (input.expectedUpdatedAt && existingProfile?.updated_at) {
+      const existingTime = new Date(existingProfile.updated_at).getTime();
+      const expectedTime = new Date(input.expectedUpdatedAt).getTime();
+      if (existingTime > expectedTime) {
+        throw new Error("STALE_UPDATE: Profile has been modified in another session. Please reload.");
+      }
+    }
+
+    // Build verified skills map from existing profile
+    const verifiedSkillsMap = new Set<string>();
+    if (existingProfile && Array.isArray(existingProfile.technical_skills)) {
+      for (const s of existingProfile.technical_skills as any[]) {
+        if (s.isVerified && s.name) {
+          verifiedSkillsMap.add(s.name.toLowerCase().trim());
+        }
+      }
+    }
+
+    // Build verified certs map from existing profile
+    const verifiedCertsMap = new Set<string>();
+    if (existingProfile && Array.isArray(existingProfile.certifications)) {
+      for (const c of existingProfile.certifications as any[]) {
+        if (c.isVerified && c.name) {
+          verifiedCertsMap.add(c.name.toLowerCase().trim());
+        }
+      }
+    }
+
+    // Sanitize technical skills: student cannot self-award isVerified
+    const sanitizedTechSkills: TechnicalSkill[] = (input.technicalSkills || [])
+      .map((s) => ({
+        name: s.name.trim(),
+        category: s.category || "OTHER",
+        proficiency: s.proficiency || "BEGINNER",
+        isVerified: verifiedSkillsMap.has(s.name.toLowerCase().trim()),
+      }))
+      .filter((s) => s.name.length >= 2);
+
+    // Sanitize soft skills
+    const sanitizedSoftSkills: SoftSkill[] = (input.softSkills || [])
+      .map((s) => ({
+        name: s.name.trim(),
+        proficiency: s.proficiency || "BEGINNER",
+      }))
+      .filter((s) => s.name.length >= 2);
+
+    // Sanitize certifications: student cannot self-award isVerified
+    const sanitizedCerts: CareerCertification[] = (input.certifications || [])
+      .map((c) => ({
+        ...c,
+        name: c.name.trim(),
+        issuingOrganization: c.issuingOrganization.trim(),
+        isVerified: verifiedCertsMap.has(c.name.toLowerCase().trim()),
+      }))
+      .filter((c) => c.name.length >= 2 && c.issuingOrganization.length >= 2);
+
+    // Sanitize projects
+    const sanitizedProjects: CareerProject[] = (input.projects || []).filter(
+      (p) => p && typeof p.title === "string" && p.title.trim().length >= 3
+    );
+
+    // Sanitize experience
+    const sanitizedExperience: CareerExperience[] = (input.experience || []).filter(
+      (e) => e && typeof e.organization === "string" && e.organization.trim().length >= 2
+    );
+
+    // Calculate completeness deterministically from sanitized data
     const completeness = this.calculateCompleteness(student, {
       headline: input.headline,
       bio: input.bio,
@@ -509,11 +612,11 @@ export class StudentCareerProfileService {
       linkedin_url: input.linkedinUrl,
       github_url: input.githubUrl,
       portfolio_url: input.portfolioUrl,
-      technical_skills: input.technicalSkills,
-      soft_skills: input.softSkills,
-      projects: input.projects,
-      experience: input.experience,
-      certifications: input.certifications,
+      technical_skills: sanitizedTechSkills,
+      soft_skills: sanitizedSoftSkills,
+      projects: sanitizedProjects,
+      experience: sanitizedExperience,
+      certifications: sanitizedCerts,
     });
 
     // Update phone in students table if provided
@@ -525,9 +628,9 @@ export class StudentCareerProfileService {
         .eq("id", studentId);
     }
 
-    // Sync skills string array to students table for legacy search/matching compatibility
+    // Sync canonical skills string array to students table for legacy search/matching compatibility
     if (input.technicalSkills) {
-      const allSkillNames = input.technicalSkills.map((s) => s.name.trim()).filter(Boolean);
+      const allSkillNames = Array.from(new Set(sanitizedTechSkills.map((s) => s.name).filter(Boolean)));
       await admin
         .from("students")
         .update({ skills: allSkillNames })
@@ -545,11 +648,11 @@ export class StudentCareerProfileService {
       linkedin_url: input.linkedinUrl?.trim() || null,
       github_url: input.githubUrl?.trim() || null,
       portfolio_url: input.portfolioUrl?.trim() || null,
-      technical_skills: (input.technicalSkills || []) as any,
-      soft_skills: (input.softSkills || []) as any,
-      projects: (input.projects || []) as any,
-      experience: (input.experience || []) as any,
-      certifications: (input.certifications || []) as any,
+      technical_skills: sanitizedTechSkills as any,
+      soft_skills: sanitizedSoftSkills as any,
+      projects: sanitizedProjects as any,
+      experience: sanitizedExperience as any,
+      certifications: sanitizedCerts as any,
       completeness_percentage: completeness.overallPercentage,
       completeness_breakdown: completeness as any,
       updated_at: new Date().toISOString(),
