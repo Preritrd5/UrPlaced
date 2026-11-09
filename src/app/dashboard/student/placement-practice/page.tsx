@@ -165,7 +165,10 @@ export default function PlacementPracticePage() {
         if (json.data) {
           setAttemptId(json.data.attemptId);
           setQuestions(json.data.questions || []);
-          if (json.data.timeLimitSeconds) {
+          if (json.data.deadlineAt) {
+            const diff = Math.max(0, Math.floor((new Date(json.data.deadlineAt).getTime() - Date.now()) / 1000));
+            setSecondsRemaining(diff);
+          } else if (json.data.timeLimitSeconds) {
             setSecondsRemaining(json.data.timeLimitSeconds);
           } else {
             setSecondsRemaining(null);

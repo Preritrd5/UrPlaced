@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
       roleName,
       topic,
       difficulty: difficulty || "INTERMEDIATE",
+      tenantId: authContext.tenantId,
+      userId: authContext.userId,
     });
 
     return NextResponse.json({

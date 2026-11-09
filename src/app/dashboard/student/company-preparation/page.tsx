@@ -240,6 +240,11 @@ export default function CompanyPreparationPage() {
               <CardDescription className="text-xs line-clamp-2 mt-2">
                 {company.description}
               </CardDescription>
+              <div className="mt-2">
+                <span className="text-[10px] text-amber-800 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 inline-block font-mono">
+                  Indicative preparation guidance — not verified current hiring policy
+                </span>
+              </div>
             </CardHeader>
 
             <CardContent className="space-y-4 pt-0">
@@ -426,6 +431,9 @@ export default function CompanyPreparationPage() {
               {/* AI Generated Questions Display */}
               {aiQuestions && aiQuestions.length > 0 && (
                 <div className="space-y-3 pt-3 border-t border-border">
+                  <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20 text-[11px] text-text-secondary">
+                    <strong className="text-primary font-medium">Practice Notice:</strong> All interview questions are simulated AI-generated preparation prompts based on general industry benchmarks. They do not reproduce proprietary or confidential question banks.
+                  </div>
                   <span className="text-xs font-mono text-primary font-semibold">
                     ✨ Generated Practice Questions:
                   </span>
@@ -451,10 +459,15 @@ export default function CompanyPreparationPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-between items-center pt-2">
-              <span className="text-[11px] text-text-secondary font-mono">
-                {selectedCompany.overviewNotes}
-              </span>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-2 border-t border-border">
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] text-text-secondary font-mono">
+                  {selectedCompany.overviewNotes}
+                </span>
+                <span className="text-[10px] text-amber-800 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 font-mono w-fit">
+                  {selectedCompany.provenance?.disclaimer || "Indicative preparation guidance — not a verified current company hiring policy."}
+                </span>
+              </div>
               <Button variant="outline" size="sm" onClick={() => setSelectedCompany(null)}>
                 Close
               </Button>

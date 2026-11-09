@@ -600,7 +600,13 @@ export class PlacementPracticeService {
       questionCount?: number;
       timeLimitMinutes?: number;
     }
-  ): Promise<{ attemptId: string; questions: ClientPracticeQuestion[]; timeLimitSeconds: number | null }> {
+  ): Promise<{
+    attemptId: string;
+    questions: ClientPracticeQuestion[];
+    timeLimitSeconds: number | null;
+    startedAt: string;
+    deadlineAt: string | null;
+  }> {
     const supabase = createAdminClient();
     const count = params.questionCount || 5;
     const timeLimitSeconds = params.timeLimitMinutes ? params.timeLimitMinutes * 60 : null;
@@ -612,42 +618,48 @@ export class PlacementPracticeService {
       count,
     });
 
-    let attemptId = `attempt_${Date.now()}`;
+    const now = new Date();
+    const deadlineAt = timeLimitSeconds
+      ? new Date(now.getTime() + (timeLimitSeconds + 15) * 1000).toISOString()
+      : null;
+    const assignedQuestionIds = questions.map((q) => q.id);
 
-    try {
-      const { data, error } = await supabase
-        .from("placement_practice_attempts")
-        .insert({
-          tenant_id: tenantId,
-          student_id: studentId,
-          practice_mode: params.practiceMode,
-          category: params.category || null,
-          topic: params.topic || null,
-          difficulty: params.difficulty || null,
-          total_questions: questions.length,
-          correct_count: 0,
-          incorrect_count: 0,
-          unanswered_count: questions.length,
-          score_percentage: 0,
-          time_spent_seconds: 0,
-          time_limit_seconds: timeLimitSeconds,
-          status: "IN_PROGRESS",
-          started_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
+    const { data, error } = await supabase
+      .from("placement_practice_attempts")
+      .insert({
+        tenant_id: tenantId,
+        student_id: studentId,
+        practice_mode: params.practiceMode,
+        category: params.category || null,
+        topic: params.topic || null,
+        difficulty: params.difficulty || null,
+        total_questions: questions.length,
+        correct_count: 0,
+        incorrect_count: 0,
+        unanswered_count: questions.length,
+        score_percentage: 0,
+        time_spent_seconds: 0,
+        time_limit_seconds: timeLimitSeconds,
+        assigned_question_ids: assignedQuestionIds,
+        status: "IN_PROGRESS",
+        started_at: now.toISOString(),
+        deadline_at: deadlineAt,
+      })
+      .select("id")
+      .single();
 
-      if (!error && data) {
-        attemptId = data.id;
-      }
-    } catch {
-      // In memory attempt ID fallback
+    if (error || !data) {
+      throw new Error(
+        `Database persistence failure: Failed to initialize practice attempt. ${error?.message || ""}`
+      );
     }
 
     return {
-      attemptId,
+      attemptId: data.id,
       questions,
       timeLimitSeconds,
+      startedAt: now.toISOString(),
+      deadlineAt,
     };
   }
 
@@ -672,6 +684,8 @@ export class PlacementPracticeService {
     unansweredCount: number;
     scorePercentage: number;
     timeSpentSeconds: number;
+    alreadyCompleted?: boolean;
+    isTimedOut?: boolean;
     results: {
       questionId: string;
       questionText: string;
@@ -686,6 +700,60 @@ export class PlacementPracticeService {
   }> {
     const supabase = createAdminClient();
 
+    // 1. Fetch existing attempt and verify tenant/student ownership
+    const { data: attempt, error: fetchError } = await supabase
+      .from("placement_practice_attempts")
+      .select("*")
+      .eq("id", attemptId)
+      .eq("tenant_id", tenantId)
+      .eq("student_id", studentId)
+      .single();
+
+    if (fetchError || !attempt) {
+      throw new Error(`Practice attempt ${attemptId} not found or unauthorized for student.`);
+    }
+
+    // 2. Concurrency & Idempotency: If attempt is already completed, return existing finalized score
+    if (attempt.status === "COMPLETED" || attempt.status === "TIMED_OUT") {
+      const existingBreakdown = (attempt.results_breakdown as any) || {};
+      return {
+        attemptId: attempt.id,
+        totalQuestions: attempt.total_questions || 0,
+        correctCount: attempt.correct_count || 0,
+        incorrectCount: attempt.incorrect_count || 0,
+        unansweredCount: attempt.unanswered_count || 0,
+        scorePercentage: attempt.score_percentage || 0,
+        timeSpentSeconds: attempt.time_spent_seconds || 0,
+        alreadyCompleted: true,
+        isTimedOut: attempt.status === "TIMED_OUT",
+        results: existingBreakdown.evaluatedResults || [],
+      };
+    }
+
+    // 3. Server-enforced timing & deadline validation
+    const nowMs = Date.now();
+    const isTimedOut = Boolean(
+      attempt.deadline_at && nowMs > new Date(attempt.deadline_at).getTime() + 15000
+    );
+
+    // 4. Question Integrity: Discard arbitrary unassigned question IDs
+    const assignedIds: string[] =
+      Array.isArray(attempt.assigned_question_ids) && attempt.assigned_question_ids.length > 0
+        ? attempt.assigned_question_ids
+        : submissions.map((s) => s.questionId);
+
+    const validSubmissions = submissions.filter((s) => assignedIds.includes(s.questionId));
+    const submittedIds = new Set(validSubmissions.map((s) => s.questionId));
+    for (const qId of assignedIds) {
+      if (!submittedIds.has(qId)) {
+        validSubmissions.push({
+          questionId: qId,
+          studentAnswer: [],
+          timeSpentSeconds: 0,
+        });
+      }
+    }
+
     // Map all available questions
     const questionMap = new Map<string, PracticeQuestion>();
     CURATED_QUESTIONS.forEach((q) => questionMap.set(q.id, q));
@@ -694,7 +762,7 @@ export class PlacementPracticeService {
       const { data } = await supabase
         .from("placement_practice_questions")
         .select("*")
-        .in("id", submissions.map((s) => s.questionId));
+        .in("id", validSubmissions.map((s) => s.questionId));
 
       if (data) {
         data.forEach((d: any) => {
@@ -724,7 +792,7 @@ export class PlacementPracticeService {
     let incorrectCount = 0;
     let unansweredCount = 0;
 
-    const evaluatedResults = submissions.map((sub) => {
+    const evaluatedResults = validSubmissions.map((sub) => {
       const q = questionMap.get(sub.questionId) || CURATED_QUESTIONS[0];
       const studentAnsArray = Array.isArray(sub.studentAnswer)
         ? sub.studentAnswer
@@ -759,47 +827,49 @@ export class PlacementPracticeService {
       };
     });
 
-    const totalQuestions = submissions.length;
+    const totalQuestions = validSubmissions.length;
     const scorePercentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    const finalStatus = isTimedOut ? "TIMED_OUT" : "COMPLETED";
 
-    // Persist finalized attempt state
-    try {
-      await supabase
-        .from("placement_practice_attempts")
-        .update({
-          correct_count: correctCount,
-          incorrect_count: incorrectCount,
-          unanswered_count: unansweredCount,
-          score_percentage: scorePercentage,
-          time_spent_seconds: totalDurationSeconds,
-          status: "COMPLETED",
-          completed_at: new Date().toISOString(),
-          results_breakdown: {
-            evaluatedResults,
-          },
-        })
-        .eq("id", attemptId)
-        .eq("tenant_id", tenantId)
-        .eq("student_id", studentId);
+    // 5. Persist finalized attempt state atomically
+    const { error: updateError } = await supabase
+      .from("placement_practice_attempts")
+      .update({
+        correct_count: correctCount,
+        incorrect_count: incorrectCount,
+        unanswered_count: unansweredCount,
+        score_percentage: scorePercentage,
+        time_spent_seconds: totalDurationSeconds,
+        status: finalStatus,
+        submitted_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        results_breakdown: {
+          evaluatedResults,
+        },
+      })
+      .eq("id", attemptId)
+      .eq("tenant_id", tenantId)
+      .eq("student_id", studentId);
 
-      // Record individual responses
-      for (const res of evaluatedResults) {
-        await supabase.from("placement_practice_responses").upsert(
-          {
-            tenant_id: tenantId,
-            attempt_id: attemptId,
-            student_id: studentId,
-            question_id: res.questionId,
-            student_answer: res.studentAnswer,
-            is_correct: res.isCorrect,
-            is_marked_for_review: false,
-            time_spent_seconds: 30,
-          },
-          { onConflict: "attempt_id,question_id" }
-        );
-      }
-    } catch {
-      // Graceful fallback
+    if (updateError) {
+      throw new Error(`Database persistence failure: Failed to record score for attempt ${attemptId}.`);
+    }
+
+    // 6. Record individual responses with composite foreign key integrity
+    for (const res of evaluatedResults) {
+      await supabase.from("placement_practice_responses").upsert(
+        {
+          tenant_id: tenantId,
+          attempt_id: attemptId,
+          student_id: studentId,
+          question_id: res.questionId,
+          student_answer: res.studentAnswer,
+          is_correct: res.isCorrect,
+          is_marked_for_review: false,
+          time_spent_seconds: 30,
+        },
+        { onConflict: "attempt_id,question_id" }
+      );
     }
 
     return {
@@ -810,6 +880,7 @@ export class PlacementPracticeService {
       unansweredCount,
       scorePercentage,
       timeSpentSeconds: totalDurationSeconds,
+      isTimedOut,
       results: evaluatedResults,
     };
   }

@@ -2689,9 +2689,12 @@ export interface Database {
           score_percentage: number;
           time_spent_seconds: number;
           time_limit_seconds: number | null;
+          assigned_question_ids: string[];
           status: string;
           results_breakdown: Json;
           started_at: string;
+          deadline_at: string | null;
+          submitted_at: string | null;
           completed_at: string | null;
           created_at: string;
           updated_at: string;
@@ -2711,9 +2714,12 @@ export interface Database {
           score_percentage?: number;
           time_spent_seconds?: number;
           time_limit_seconds?: number | null;
+          assigned_question_ids?: string[];
           status?: string;
           results_breakdown?: Json;
           started_at?: string;
+          deadline_at?: string | null;
+          submitted_at?: string | null;
           completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -2757,9 +2763,14 @@ export interface Database {
           industry: string;
           website_url: string | null;
           logo_url: string | null;
+          difficulty: string;
           hiring_workflow: Json;
           overview_notes: string | null;
           is_global: boolean;
+          source_url: string | null;
+          source_type: string;
+          verification_date: string | null;
+          disclaimer: string;
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -2773,9 +2784,14 @@ export interface Database {
           industry: string;
           website_url?: string | null;
           logo_url?: string | null;
+          difficulty?: string;
           hiring_workflow?: Json;
           overview_notes?: string | null;
           is_global?: boolean;
+          source_url?: string | null;
+          source_type?: string;
+          verification_date?: string | null;
+          disclaimer?: string;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -2793,6 +2809,7 @@ export interface Database {
           required_skills: string[];
           preferred_skills: string[];
           eligibility_criteria: Json;
+          is_global: boolean;
           created_at: string;
         };
         Insert: {
@@ -2805,6 +2822,7 @@ export interface Database {
           required_skills?: string[];
           preferred_skills?: string[];
           eligibility_criteria?: Json;
+          is_global?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["company_roles"]["Insert"]>;
@@ -2819,6 +2837,7 @@ export interface Database {
           description: string | null;
           modules: Json;
           is_active: boolean;
+          is_global: boolean;
           created_at: string;
         };
         Insert: {
@@ -2830,6 +2849,7 @@ export interface Database {
           description?: string | null;
           modules?: Json;
           is_active?: boolean;
+          is_global?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["company_prep_tracks"]["Insert"]>;

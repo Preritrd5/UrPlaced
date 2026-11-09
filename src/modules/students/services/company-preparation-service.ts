@@ -13,6 +13,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GeminiClient } from "@/modules/ai/gemini-client";
 
+export interface CompanyProvenance {
+  sourceUrl: string;
+  sourceType: "OFFICIAL_CAREERS_PORTAL" | "SECONDARY_RESEARCH" | "INDICATIVE_CURRICULUM";
+  verificationDate: string;
+  disclaimer: string;
+}
+
 export interface CompanyProfileData {
   id: string;
   name: string;
@@ -21,6 +28,8 @@ export interface CompanyProfileData {
   industry: string;
   websiteUrl?: string;
   logoUrl?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
+  provenance: CompanyProvenance;
   hiringWorkflow: {
     roundNumber: number;
     title: string;
@@ -64,6 +73,13 @@ export const CURATED_COMPANIES: CompanyProfileData[] = [
     description: "Global IT services, consulting and business solutions leader. Campus recruitment through TCS NQT (National Qualifier Test) across Ninja and Digital cadres.",
     industry: "Information Technology & Services",
     websiteUrl: "https://www.tcs.com",
+    difficulty: "MEDIUM",
+    provenance: {
+      sourceUrl: "https://www.tcs.com/careers/india/entry-level-hiring",
+      sourceType: "INDICATIVE_CURRICULUM",
+      verificationDate: "2026-10-15",
+      disclaimer: "Indicative preparation guidance — not a verified current company hiring policy.",
+    },
     hiringWorkflow: [
       {
         roundNumber: 1,
@@ -160,6 +176,13 @@ export const CURATED_COMPANIES: CompanyProfileData[] = [
     description: "Multinational information technology company providing business consulting, information technology, and outsourcing services.",
     industry: "Information Technology & Services",
     websiteUrl: "https://www.infosys.com",
+    difficulty: "MEDIUM",
+    provenance: {
+      sourceUrl: "https://www.infosys.com/careers/graduates.html",
+      sourceType: "INDICATIVE_CURRICULUM",
+      verificationDate: "2026-10-15",
+      disclaimer: "Indicative preparation guidance — not a verified current company hiring policy.",
+    },
     hiringWorkflow: [
       {
         roundNumber: 1,
@@ -248,6 +271,13 @@ export const CURATED_COMPANIES: CompanyProfileData[] = [
     description: "Leading global professional services company with leading capabilities in digital, cloud, and security.",
     industry: "Management Consulting & Technology Services",
     websiteUrl: "https://www.accenture.com",
+    difficulty: "EASY",
+    provenance: {
+      sourceUrl: "https://www.accenture.com/in-en/careers/entry-level-jobs",
+      sourceType: "INDICATIVE_CURRICULUM",
+      verificationDate: "2026-10-15",
+      disclaimer: "Indicative preparation guidance — not a verified current company hiring policy.",
+    },
     hiringWorkflow: [
       {
         roundNumber: 1,
@@ -328,6 +358,13 @@ export const CURATED_COMPANIES: CompanyProfileData[] = [
     description: "Multinational technology company focusing on e-commerce, cloud computing (AWS), digital streaming, and artificial intelligence.",
     industry: "Internet & Technology",
     websiteUrl: "https://www.amazon.com",
+    difficulty: "HARD",
+    provenance: {
+      sourceUrl: "https://amazon.jobs/en/teams/university-recruiting",
+      sourceType: "INDICATIVE_CURRICULUM",
+      verificationDate: "2026-10-15",
+      disclaimer: "Indicative preparation guidance — not a verified current company hiring policy.",
+    },
     hiringWorkflow: [
       {
         roundNumber: 1,
@@ -491,21 +528,22 @@ export class CompanyPreparationService {
   ): Promise<boolean> {
     const supabase = createAdminClient();
 
-    try {
-      await supabase.from("student_company_prep_progress").upsert(
-        {
-          tenant_id: tenantId,
-          student_id: studentId,
-          company_id: companyId,
-          is_saved_for_later: isSaved,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "student_id,company_id" }
-      );
-      return true;
-    } catch {
-      return false;
+    const { error } = await supabase.from("student_company_prep_progress").upsert(
+      {
+        tenant_id: tenantId,
+        student_id: studentId,
+        company_id: companyId,
+        is_saved_for_later: isSaved,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "student_id,company_id" }
+    );
+
+    if (error) {
+      throw new Error(`Database persistence failure: could not save company bookmark. ${error.message}`);
     }
+
+    return true;
   }
 
   /**
@@ -522,20 +560,16 @@ export class CompanyPreparationService {
 
     let currentModules: string[] = [];
 
-    try {
-      const { data } = await supabase
-        .from("student_company_prep_progress")
-        .select("completed_module_ids")
-        .eq("tenant_id", tenantId)
-        .eq("student_id", studentId)
-        .eq("company_id", companyId)
-        .maybeSingle();
+    const { data: existingProgress, error: fetchError } = await supabase
+      .from("student_company_prep_progress")
+      .select("completed_module_ids")
+      .eq("tenant_id", tenantId)
+      .eq("student_id", studentId)
+      .eq("company_id", companyId)
+      .maybeSingle();
 
-      if (data?.completed_module_ids) {
-        currentModules = data.completed_module_ids;
-      }
-    } catch {
-      // Continue
+    if (existingProgress?.completed_module_ids) {
+      currentModules = [...existingProgress.completed_module_ids];
     }
 
     if (isCompleted) {
@@ -553,21 +587,21 @@ export class CompanyPreparationService {
     const progressPercentage =
       totalModules > 0 ? Math.round((currentModules.length / totalModules) * 100) : 0;
 
-    try {
-      await supabase.from("student_company_prep_progress").upsert(
-        {
-          tenant_id: tenantId,
-          student_id: studentId,
-          company_id: companyId,
-          completed_module_ids: currentModules,
-          overall_progress_percentage: progressPercentage,
-          last_practiced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "student_id,company_id" }
-      );
-    } catch {
-      // Continue
+    const { error: upsertError } = await supabase.from("student_company_prep_progress").upsert(
+      {
+        tenant_id: tenantId,
+        student_id: studentId,
+        company_id: companyId,
+        completed_module_ids: currentModules,
+        overall_progress_percentage: progressPercentage,
+        last_practiced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "student_id,company_id" }
+    );
+
+    if (upsertError) {
+      throw new Error(`Database persistence failure: could not update module progress. ${upsertError.message}`);
     }
 
     return {
@@ -584,8 +618,11 @@ export class CompanyPreparationService {
     roleName: string;
     topic: string;
     difficulty: string;
+    tenantId?: string;
+    userId?: string;
   }): Promise<{
     isAIGenerated: boolean;
+    disclaimer: string;
     questions: {
       questionText: string;
       questionType: string;
@@ -614,12 +651,24 @@ Format the response strictly as valid JSON adhering to:
 }
 Do not claim these are confidential actual exam leaks; label them purely as illustrative practice questions.`;
 
+    const isValidQuestion = (q: any) =>
+      q &&
+      typeof q.questionText === "string" &&
+      q.questionText.trim().length > 10 &&
+      Array.isArray(q.options) &&
+      q.options.length >= 2 &&
+      typeof q.correctAnswer === "string" &&
+      typeof q.explanation === "string" &&
+      q.explanation.trim().length > 5;
+
     try {
       const response = await GeminiClient.generate({
         prompt: `Generate 3 high-yield practice questions for ${params.companyName} - ${params.roleName} on ${params.topic}`,
         systemInstruction: systemPrompt,
         temperature: 0.2,
         feature: "COMPANY_PREPARATION",
+        tenantId: params.tenantId,
+        userId: params.userId,
       });
 
       if (response && response.text) {
@@ -627,9 +676,10 @@ Do not claim these are confidential actual exam leaks; label them purely as illu
         if (cleanJson.startsWith("```json")) cleanJson = cleanJson.substring(7);
         if (cleanJson.endsWith("```")) cleanJson = cleanJson.slice(0, -3);
         const parsed = JSON.parse(cleanJson);
-        if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+        if (Array.isArray(parsed.questions) && parsed.questions.length > 0 && parsed.questions.every(isValidQuestion)) {
           return {
             isAIGenerated: true,
+            disclaimer: "Simulated AI-generated campus placement practice questions, not confidential company exam material.",
             questions: parsed.questions,
           };
         }
@@ -641,6 +691,7 @@ Do not claim these are confidential actual exam leaks; label them purely as illu
     // Deterministic rule-based fallback questions
     return {
       isAIGenerated: false,
+      disclaimer: "Curated offline illustrative practice questions, not confidential company exam material.",
       questions: [
         {
           questionText: `What is the primary architectural trade-off when implementing a relational database versus a document store for ${params.roleName} workflows at ${params.companyName}?`,

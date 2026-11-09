@@ -10,7 +10,9 @@
 -- 7. student_company_prep_progress: Student progress tracking and saved company tracks
 -- 8. student_learning_recommendations: Evidence-backed personalized learning recommendations
 -- 9. Composite foreign keys linking child records to (tenant_id, student_id) in public.students
--- 10. Extend ai_usage_logs constraint for PRACTICE_CENTRE and COMPANY_PREPARATION
+-- 10. Composite foreign key linking responses to (tenant_id, student_id, attempt_id) in placement_practice_attempts
+-- 11. Immutable column protection trigger for student_learning_recommendations
+-- 12. Extend ai_usage_logs constraint for PRACTICE_CENTRE and COMPANY_PREPARATION
 -- ==============================================================================
 
 -- 1. Placement Practice Questions Table
@@ -36,7 +38,8 @@ CREATE TABLE IF NOT EXISTS public.placement_practice_questions (
     is_global BOOLEAN NOT NULL DEFAULT false,
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    CONSTRAINT uq_practice_questions_tenant_id UNIQUE (tenant_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_practice_questions_cat_topic ON public.placement_practice_questions(category, topic);
@@ -46,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_practice_questions_tenant ON public.placement_pra
 ALTER TABLE public.placement_practice_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.placement_practice_questions FORCE ROW LEVEL SECURITY;
 
--- Questions RLS
+-- Questions RLS: Published questions viewable by students in matching tenant or global; staff manage tenant questions
 CREATE POLICY "Anyone authenticated can view published practice questions"
     ON public.placement_practice_questions
     FOR SELECT
@@ -54,6 +57,11 @@ CREATE POLICY "Anyone authenticated can view published practice questions"
         is_published = true AND (
             is_global = true OR
             tenant_id IS NULL OR
+            EXISTS (
+                SELECT 1 FROM public.students s
+                WHERE s.tenant_id = placement_practice_questions.tenant_id
+                  AND s.user_id = auth.uid()
+            ) OR
             EXISTS (
                 SELECT 1 FROM public.tenant_memberships tm
                 WHERE tm.tenant_id = placement_practice_questions.tenant_id
@@ -68,6 +76,7 @@ CREATE POLICY "Tenant staff can manage tenant practice questions"
     FOR ALL
     USING (
         tenant_id IS NOT NULL AND
+        is_global = false AND
         EXISTS (
             SELECT 1 FROM public.tenant_memberships tm
             WHERE tm.tenant_id = placement_practice_questions.tenant_id
@@ -78,6 +87,7 @@ CREATE POLICY "Tenant staff can manage tenant practice questions"
     )
     WITH CHECK (
         tenant_id IS NOT NULL AND
+        is_global = false AND
         EXISTS (
             SELECT 1 FROM public.tenant_memberships tm
             WHERE tm.tenant_id = placement_practice_questions.tenant_id
@@ -106,15 +116,19 @@ CREATE TABLE IF NOT EXISTS public.placement_practice_attempts (
     score_percentage INTEGER NOT NULL DEFAULT 0 CHECK (score_percentage BETWEEN 0 AND 100),
     time_spent_seconds INTEGER NOT NULL DEFAULT 0,
     time_limit_seconds INTEGER,
+    assigned_question_ids TEXT[] NOT NULL DEFAULT '{}',
     status VARCHAR(32) NOT NULL DEFAULT 'IN_PROGRESS' CHECK (status IN (
         'IN_PROGRESS', 'COMPLETED', 'ABANDONED', 'TIMED_OUT'
     )),
     results_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb,
     started_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    deadline_at TIMESTAMPTZ,
+    submitted_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     CONSTRAINT uq_practice_attempts_tenant_id UNIQUE (tenant_id, id),
+    CONSTRAINT uq_practice_attempts_composite UNIQUE (tenant_id, student_id, id),
     CONSTRAINT fk_practice_attempts_student_composite FOREIGN KEY (tenant_id, student_id)
         REFERENCES public.students(tenant_id, id) ON DELETE CASCADE
 );
@@ -125,22 +139,10 @@ CREATE INDEX IF NOT EXISTS idx_practice_attempts_tenant_student ON public.placem
 ALTER TABLE public.placement_practice_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.placement_practice_attempts FORCE ROW LEVEL SECURITY;
 
--- Attempts RLS: Students SELECT and DELETE own; Server manages writes
+-- Attempts RLS: Students SELECT own only (direct INSERT/UPDATE/DELETE prohibited for audit integrity; server manages writes)
 CREATE POLICY "Students view own practice attempts"
     ON public.placement_practice_attempts
     FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.students s
-            WHERE s.id = placement_practice_attempts.student_id
-              AND s.user_id = auth.uid()
-              AND s.tenant_id = placement_practice_attempts.tenant_id
-        )
-    );
-
-CREATE POLICY "Students delete own practice attempts"
-    ON public.placement_practice_attempts
-    FOR DELETE
     USING (
         EXISTS (
             SELECT 1 FROM public.students s
@@ -179,7 +181,9 @@ CREATE TABLE IF NOT EXISTS public.placement_practice_responses (
     CONSTRAINT uq_practice_response_attempt_q UNIQUE (attempt_id, question_id),
     CONSTRAINT uq_practice_responses_tenant_id UNIQUE (tenant_id, id),
     CONSTRAINT fk_practice_responses_student_composite FOREIGN KEY (tenant_id, student_id)
-        REFERENCES public.students(tenant_id, id) ON DELETE CASCADE
+        REFERENCES public.students(tenant_id, id) ON DELETE CASCADE,
+    CONSTRAINT fk_practice_responses_attempt_composite FOREIGN KEY (tenant_id, student_id, attempt_id)
+        REFERENCES public.placement_practice_attempts(tenant_id, student_id, id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_practice_responses_attempt ON public.placement_practice_responses(attempt_id);
@@ -188,6 +192,7 @@ CREATE INDEX IF NOT EXISTS idx_practice_responses_student ON public.placement_pr
 ALTER TABLE public.placement_practice_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.placement_practice_responses FORCE ROW LEVEL SECURITY;
 
+-- Responses RLS: Students SELECT own only (direct INSERT/UPDATE/DELETE prohibited; server manages evaluation writes)
 CREATE POLICY "Students view own practice responses"
     ON public.placement_practice_responses
     FOR SELECT
@@ -219,17 +224,24 @@ CREATE TABLE IF NOT EXISTS public.company_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    description TEXT,
     industry VARCHAR(128) NOT NULL,
     website_url TEXT,
     logo_url TEXT,
+    difficulty VARCHAR(32) NOT NULL DEFAULT 'MEDIUM' CHECK (difficulty IN ('EASY', 'MEDIUM', 'HARD')),
     hiring_workflow JSONB NOT NULL DEFAULT '[]'::jsonb,
-    overview_notes TEXT,
-    is_global BOOLEAN NOT NULL DEFAULT true,
+    is_global BOOLEAN NOT NULL DEFAULT false,
+    source_url TEXT,
+    source_type VARCHAR(64) NOT NULL DEFAULT 'INDICATIVE_CURRICULUM' CHECK (source_type IN (
+        'OFFICIAL_CAREERS_PORTAL', 'SECONDARY_RESEARCH', 'INDICATIVE_CURRICULUM'
+    )),
+    verification_date DATE,
+    disclaimer TEXT NOT NULL DEFAULT 'Indicative preparation guidance — not a verified current company hiring policy.',
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    CONSTRAINT uq_company_profiles_tenant_id UNIQUE (tenant_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_company_profiles_industry ON public.company_profiles(industry);
@@ -246,6 +258,11 @@ CREATE POLICY "Anyone authenticated can view active company profiles"
             is_global = true OR
             tenant_id IS NULL OR
             EXISTS (
+                SELECT 1 FROM public.students s
+                WHERE s.tenant_id = company_profiles.tenant_id
+                  AND s.user_id = auth.uid()
+            ) OR
+            EXISTS (
                 SELECT 1 FROM public.tenant_memberships tm
                 WHERE tm.tenant_id = company_profiles.tenant_id
                   AND tm.user_id = auth.uid()
@@ -259,6 +276,7 @@ CREATE POLICY "Tenant staff can manage tenant company profiles"
     FOR ALL
     USING (
         tenant_id IS NOT NULL AND
+        is_global = false AND
         EXISTS (
             SELECT 1 FROM public.tenant_memberships tm
             WHERE tm.tenant_id = company_profiles.tenant_id
@@ -269,6 +287,7 @@ CREATE POLICY "Tenant staff can manage tenant company profiles"
     )
     WITH CHECK (
         tenant_id IS NOT NULL AND
+        is_global = false AND
         EXISTS (
             SELECT 1 FROM public.tenant_memberships tm
             WHERE tm.tenant_id = company_profiles.tenant_id
@@ -290,8 +309,10 @@ CREATE TABLE IF NOT EXISTS public.company_roles (
     required_skills TEXT[] NOT NULL DEFAULT '{}',
     preferred_skills TEXT[] NOT NULL DEFAULT '{}',
     eligibility_criteria JSONB NOT NULL DEFAULT '{}'::jsonb,
+    is_global BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
-    CONSTRAINT uq_company_role UNIQUE (company_id, role_slug)
+    CONSTRAINT uq_company_role UNIQUE (company_id, role_slug),
+    CONSTRAINT uq_company_roles_tenant_id UNIQUE (tenant_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_company_roles_company ON public.company_roles(company_id);
@@ -302,7 +323,47 @@ ALTER TABLE public.company_roles FORCE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone authenticated can view company roles"
     ON public.company_roles
     FOR SELECT
-    USING (true);
+    USING (
+        is_global = true OR
+        tenant_id IS NULL OR
+        EXISTS (
+            SELECT 1 FROM public.students s
+            WHERE s.tenant_id = company_roles.tenant_id
+              AND s.user_id = auth.uid()
+        ) OR
+        EXISTS (
+            SELECT 1 FROM public.tenant_memberships tm
+            WHERE tm.tenant_id = company_roles.tenant_id
+              AND tm.user_id = auth.uid()
+              AND tm.status = 'ACTIVE'
+        )
+    );
+
+CREATE POLICY "Tenant staff can manage tenant company roles"
+    ON public.company_roles
+    FOR ALL
+    USING (
+        tenant_id IS NOT NULL AND
+        is_global = false AND
+        EXISTS (
+            SELECT 1 FROM public.tenant_memberships tm
+            WHERE tm.tenant_id = company_roles.tenant_id
+              AND tm.user_id = auth.uid()
+              AND tm.role IN ('PLACEMENT_HEAD', 'PLACEMENT_STAFF', 'TRAINER')
+              AND tm.status = 'ACTIVE'
+        )
+    )
+    WITH CHECK (
+        tenant_id IS NOT NULL AND
+        is_global = false AND
+        EXISTS (
+            SELECT 1 FROM public.tenant_memberships tm
+            WHERE tm.tenant_id = company_roles.tenant_id
+              AND tm.user_id = auth.uid()
+              AND tm.role IN ('PLACEMENT_HEAD', 'PLACEMENT_STAFF', 'TRAINER')
+              AND tm.status = 'ACTIVE'
+        )
+    );
 
 
 -- 6. Company Preparation Tracks Table
@@ -315,7 +376,9 @@ CREATE TABLE IF NOT EXISTS public.company_prep_tracks (
     description TEXT,
     modules JSONB NOT NULL DEFAULT '[]'::jsonb,
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+    is_global BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    CONSTRAINT uq_company_prep_tracks_tenant_id UNIQUE (tenant_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_company_prep_tracks_company ON public.company_prep_tracks(company_id);
@@ -326,7 +389,49 @@ ALTER TABLE public.company_prep_tracks FORCE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone authenticated can view company prep tracks"
     ON public.company_prep_tracks
     FOR SELECT
-    USING (is_active = true);
+    USING (
+        is_active = true AND (
+            is_global = true OR
+            tenant_id IS NULL OR
+            EXISTS (
+                SELECT 1 FROM public.students s
+                WHERE s.tenant_id = company_prep_tracks.tenant_id
+                  AND s.user_id = auth.uid()
+            ) OR
+            EXISTS (
+                SELECT 1 FROM public.tenant_memberships tm
+                WHERE tm.tenant_id = company_prep_tracks.tenant_id
+                  AND tm.user_id = auth.uid()
+                  AND tm.status = 'ACTIVE'
+            )
+        )
+    );
+
+CREATE POLICY "Tenant staff can manage tenant company prep tracks"
+    ON public.company_prep_tracks
+    FOR ALL
+    USING (
+        tenant_id IS NOT NULL AND
+        is_global = false AND
+        EXISTS (
+            SELECT 1 FROM public.tenant_memberships tm
+            WHERE tm.tenant_id = company_prep_tracks.tenant_id
+              AND tm.user_id = auth.uid()
+              AND tm.role IN ('PLACEMENT_HEAD', 'PLACEMENT_STAFF', 'TRAINER')
+              AND tm.status = 'ACTIVE'
+        )
+    )
+    WITH CHECK (
+        tenant_id IS NOT NULL AND
+        is_global = false AND
+        EXISTS (
+            SELECT 1 FROM public.tenant_memberships tm
+            WHERE tm.tenant_id = company_prep_tracks.tenant_id
+              AND tm.user_id = auth.uid()
+              AND tm.role IN ('PLACEMENT_HEAD', 'PLACEMENT_STAFF', 'TRAINER')
+              AND tm.status = 'ACTIVE'
+        )
+    );
 
 
 -- 7. Student Company Preparation Progress Table
@@ -466,6 +571,42 @@ CREATE POLICY "Tenant staff can view student learning recommendations"
               AND tm.status = 'ACTIVE'
         )
     );
+
+-- Trigger Function: Enforce immutable protected columns on student_learning_recommendations
+CREATE OR REPLACE FUNCTION public.enforce_student_recommendation_immutable_columns()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Prevent modification of protected diagnostic / scoring / ownership fields
+    IF OLD.tenant_id IS DISTINCT FROM NEW.tenant_id OR
+       OLD.student_id IS DISTINCT FROM NEW.student_id OR
+       OLD.title IS DISTINCT FROM NEW.title OR
+       OLD.description IS DISTINCT FROM NEW.description OR
+       OLD.category IS DISTINCT FROM NEW.category OR
+       OLD.priority IS DISTINCT FROM NEW.priority OR
+       OLD.supporting_evidence IS DISTINCT FROM NEW.supporting_evidence OR
+       OLD.reason_recommended IS DISTINCT FROM NEW.reason_recommended OR
+       OLD.suggested_action IS DISTINCT FROM NEW.suggested_action OR
+       OLD.destination_route IS DISTINCT FROM NEW.destination_route OR
+       OLD.expected_outcome IS DISTINCT FROM NEW.expected_outcome OR
+       OLD.source_hash IS DISTINCT FROM NEW.source_hash OR
+       OLD.created_at IS DISTINCT FROM NEW.created_at THEN
+        RAISE EXCEPTION 'Database Violation: Cannot modify protected recommendation fields; only status and dismissal_reason may be updated.';
+    END IF;
+
+    IF NEW.status NOT IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'DISMISSED') THEN
+        RAISE EXCEPTION 'Database Violation: Invalid recommendation status: %', NEW.status;
+    END IF;
+
+    NEW.updated_at = timezone('utc', now());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_protect_recommendation_columns ON public.student_learning_recommendations;
+CREATE TRIGGER trg_protect_recommendation_columns
+    BEFORE UPDATE ON public.student_learning_recommendations
+    FOR EACH ROW
+    EXECUTE FUNCTION public.enforce_student_recommendation_immutable_columns();
 
 
 -- 9. Extend ai_usage_logs Feature Constraint for Phase 03

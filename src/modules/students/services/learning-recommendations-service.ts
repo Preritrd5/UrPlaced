@@ -125,12 +125,14 @@ export class LearningRecommendationsService {
 
     // 2. Synthesize fresh recommendations grounded in actual cross-module student evidence
     const freshRecs = await this.synthesizeRecommendationsFromEvidence(tenantId, studentId);
+    const existingMap = new Map(existingList.map((e) => [e.id, e]));
 
-    // Persist synthesized recommendations
-    try {
-      for (const rec of freshRecs) {
-        await supabase.from("student_learning_recommendations").upsert(
-          {
+    // Persist synthesized recommendations without overwriting existing user-chosen status
+    for (const rec of freshRecs) {
+      const existing = existingMap.get(rec.id);
+      if (!existing) {
+        try {
+          await supabase.from("student_learning_recommendations").insert({
             id: rec.id,
             tenant_id: tenantId,
             student_id: studentId,
@@ -146,15 +148,17 @@ export class LearningRecommendationsService {
             status: rec.status,
             source_hash: rec.sourceHash,
             updated_at: new Date().toISOString(),
-          },
-          { onConflict: "id" }
-        );
+          });
+        } catch {
+          // Graceful handling
+        }
       }
-    } catch {
-      // Graceful fallback
     }
 
-    const merged = [...freshRecs, ...existingList.filter((e) => e.status === "COMPLETED")];
+    const merged = [
+      ...freshRecs.map((f) => existingMap.get(f.id) || f),
+      ...existingList.filter((e) => !freshRecs.some((f) => f.id === e.id)),
+    ];
     const activeMerged = merged.filter((r) => r.status === "PENDING" || r.status === "IN_PROGRESS");
     const completedMerged = merged.filter((r) => r.status === "COMPLETED");
     const topPriority = activeMerged.find((r) => r.priority === "HIGH") || activeMerged[0];
@@ -186,8 +190,31 @@ export class LearningRecommendationsService {
         .eq("student_id", studentId)
         .maybeSingle();
 
-      const completeness = profile?.completeness_percentage ?? 0;
-      if (completeness < 80) {
+      if (!profile) {
+        recommendations.push({
+          id: `rec_prof_${studentId.substring(0, 8)}`,
+          tenantId,
+          studentId,
+          title: "Complete Career Profile to 100%",
+          description: "Your career profile is not yet initialized. Campus recruiters prioritize students with verified academic and technical profiles.",
+          category: "CAREER_PREPARATION",
+          priority: "HIGH",
+          supportingEvidence: {
+            source: "Phase 01 Career Profile",
+            metric: "Profile not yet initialized",
+            details: "No career profile record established yet.",
+          },
+          reasonRecommended: "Uninitialized student profiles cannot be matched against automated campus recruitment drives.",
+          suggestedAction: "Complete your basic profile, academic details, and career preferences.",
+          destinationRoute: "/dashboard/student/career-profile",
+          expectedOutcome: "Immediate eligibility for automated campus placement drives.",
+          status: "PENDING",
+          sourceHash: crypto.createHash("sha256").update("profile_uninitialized").digest("hex"),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      } else if (profile.completeness_percentage < 80) {
+        const completeness = profile.completeness_percentage;
         recommendations.push({
           id: `rec_prof_${studentId.substring(0, 8)}`,
           tenantId,
@@ -462,22 +489,27 @@ export class LearningRecommendationsService {
   ): Promise<boolean> {
     const supabase = createAdminClient();
 
-    try {
-      const { error } = await supabase
-        .from("student_learning_recommendations")
-        .update({
-          status,
-          dismissal_reason: dismissalReason || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", recommendationId)
-        .eq("tenant_id", tenantId)
-        .eq("student_id", studentId);
+    const { data, error } = await supabase
+      .from("student_learning_recommendations")
+      .update({
+        status,
+        dismissal_reason: dismissalReason || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", recommendationId)
+      .eq("tenant_id", tenantId)
+      .eq("student_id", studentId)
+      .select("id");
 
-      return !error;
-    } catch {
-      return false;
+    if (error || !data || data.length === 0) {
+      throw new Error(
+        `Database persistence failure: Failed to update recommendation status. ${
+          error?.message || "Record not found or unauthorized."
+        }`
+      );
     }
+
+    return true;
   }
 
   /**
