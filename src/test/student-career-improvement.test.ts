@@ -291,6 +291,77 @@ describe("Phase 02: Global Student Career Improvement System", () => {
       expect(pythonSkill?.isVerified).toBe(true);
       expect(rustSkill?.isVerified).toBe(false);
     });
+
+    it("permanently deletes a share link with strict tenant and student isolation", async () => {
+      const mockDelete = vi.fn().mockReturnThis();
+      const mockEq = vi.fn().mockReturnThis();
+
+      const mockAdmin = {
+        from: vi.fn((table: string) => {
+          if (table === "career_passport_shares") {
+            return {
+              delete: mockDelete,
+              eq: mockEq,
+              then: (resolve: any) => resolve({ data: null, error: null }),
+            };
+          }
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+          };
+        }),
+      };
+
+      const adminSpy = vi.spyOn(await import("@/lib/supabase/admin"), "createAdminClient").mockReturnValue(mockAdmin as any);
+
+      await expect(
+        CareerPassportService.deleteShareLink("tenant-abc", "student-123", "share-999")
+      ).resolves.not.toThrow();
+
+      expect(mockAdmin.from).toHaveBeenCalledWith("career_passport_shares");
+      expect(mockDelete).toHaveBeenCalled();
+      expect(mockEq).toHaveBeenCalledWith("id", "share-999");
+      expect(mockEq).toHaveBeenCalledWith("tenant_id", "tenant-abc");
+      expect(mockEq).toHaveBeenCalledWith("student_id", "student-123");
+
+      adminSpy.mockRestore();
+    });
+
+    it("listShareLinks strictly filters out non-active links (is_active = true)", async () => {
+      const mockEq = vi.fn().mockReturnThis();
+      const mockOrder = vi.fn().mockReturnThis();
+
+      const mockAdmin = {
+        from: vi.fn(() => ({
+          select: vi.fn().mockReturnThis(),
+          eq: mockEq,
+          order: mockOrder,
+          then: (resolve: any) => resolve({
+            data: [
+              {
+                id: "share-1",
+                label: "Public Link 1",
+                is_active: true,
+                expires_at: null,
+                access_count: 2,
+                last_accessed_at: null,
+                created_at: new Date().toISOString(),
+              },
+            ],
+            error: null,
+          }),
+        })),
+      };
+
+      const adminSpy = vi.spyOn(await import("@/lib/supabase/admin"), "createAdminClient").mockReturnValue(mockAdmin as any);
+
+      const links = await CareerPassportService.listShareLinks("tenant-abc", "student-123");
+      expect(mockEq).toHaveBeenCalledWith("is_active", true);
+      expect(links).toHaveLength(1);
+      expect(links[0].id).toBe("share-1");
+
+      adminSpy.mockRestore();
+    });
   });
 
   // =========================================================================

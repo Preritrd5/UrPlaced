@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { BrandLoader } from "@/components/common/brand-loader";
+import { confirmDialog, toast } from "@/components/ui/dialog-system";
 import type {
   CareerPassportData,
   ShareLinkResult,
@@ -47,6 +48,7 @@ export default function CareerPassportPage() {
   const [shareExpiryDays, setShareExpiryDays] = useState<number | null>(30);
   const [newlyCreatedShare, setNewlyCreatedShare] = useState<ShareLinkResult | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [deletingShareId, setDeletingShareId] = useState<string | null>(null);
 
   // Form states
   const [visibility, setVisibility] = useState<"PRIVATE" | "COLLEGE_VISIBLE" | "SHAREABLE">("PRIVATE");
@@ -185,16 +187,35 @@ export default function CareerPassportPage() {
     }
   };
 
-  const handleRevokeShare = async (shareId: string) => {
+  const handleDeleteShare = async (shareId: string, label: string) => {
+    const confirmed = await confirmDialog({
+      title: "Permanently Delete Share Link",
+      description: `Are you sure you want to permanently delete "${label}"? Anyone with this link will immediately lose access to your Career Passport. This action cannot be undone.`,
+      confirmText: "Delete Permanently",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
+    setDeletingShareId(shareId);
     try {
       const res = await fetch(`/api/student/career-passport/shares/${shareId}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        setShareLinks((prev) => prev.filter((s) => s.id !== shareId));
+
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to delete share link.");
       }
-    } catch {
-      // Non-critical
+
+      setShareLinks((prev) => prev.filter((s) => s.id !== shareId));
+      toast.success(`Successfully deleted "${label}".`, "Share Link Deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to permanently delete share link.", "Delete Failed");
+    } finally {
+      setDeletingShareId(null);
     }
   };
 
@@ -460,11 +481,17 @@ export default function CareerPassportPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRevokeShare(link.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 h-auto"
-                        title="Revoke Link"
+                        onClick={() => handleDeleteShare(link.id, link.label)}
+                        disabled={deletingShareId === link.id}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 h-auto transition-colors disabled:opacity-50"
+                        title="Permanently Delete Link"
+                        aria-label={`Permanently delete share link ${link.label}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        {deletingShareId === link.id ? (
+                          <BrandLoader size="inline" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
                       </Button>
                     </div>
                   </div>

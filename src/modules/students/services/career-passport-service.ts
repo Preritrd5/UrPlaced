@@ -341,7 +341,7 @@ export class CareerPassportService {
   }
 
   /**
-   * Lists all share links for a student.
+   * Lists all active share links for a student.
    */
   public static async listShareLinks(
     tenantId: string,
@@ -349,12 +349,18 @@ export class CareerPassportService {
   ): Promise<ShareLinkResult[]> {
     const admin = createAdminClient();
 
-    const { data: shares } = await admin
+    const { data: shares, error } = await admin
       .from("career_passport_shares")
       .select("*")
       .eq("tenant_id", tenantId)
       .eq("student_id", studentId)
+      .eq("is_active", true)
       .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[CareerPassportService] listShareLinks query error:", error);
+      return [];
+    }
 
     return (shares || []).map((s: any) => ({
       id: s.id,
@@ -369,9 +375,9 @@ export class CareerPassportService {
   }
 
   /**
-   * Revokes an active share link.
+   * Permanently deletes a share link for a student.
    */
-  public static async revokeShareLink(
+  public static async deleteShareLink(
     tenantId: string,
     studentId: string,
     shareId: string
@@ -380,17 +386,25 @@ export class CareerPassportService {
 
     const { error } = await admin
       .from("career_passport_shares")
-      .update({
-        is_active: false,
-        updated_at: new Date().toISOString(),
-      })
+      .delete()
       .eq("id", shareId)
       .eq("tenant_id", tenantId)
       .eq("student_id", studentId);
 
     if (error) {
-      throw new Error(error.message || "Failed to revoke share link.");
+      throw new Error(error.message || "Failed to permanently delete share link.");
     }
+  }
+
+  /**
+   * Revokes an active share link (permanently deletes from active shares).
+   */
+  public static async revokeShareLink(
+    tenantId: string,
+    studentId: string,
+    shareId: string
+  ): Promise<void> {
+    return this.deleteShareLink(tenantId, studentId, shareId);
   }
 
   /**
