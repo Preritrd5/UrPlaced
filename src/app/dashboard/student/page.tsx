@@ -191,10 +191,13 @@ export default function StudentDashboardPage() {
         let interviewAvgScore: number | null = null;
 
         if (gapRes.status === "fulfilled" && gapRes.value?.data) {
-          skillGapTargetRole = gapRes.value.data.targetRole || null;
+          const analysisData = gapRes.value.data.analysis || gapRes.value.data;
+          skillGapTargetRole = analysisData.targetRole || null;
           skillGapReadinessScore =
-            typeof gapRes.value.data.readinessScore === "number"
-              ? gapRes.value.data.readinessScore
+            typeof analysisData.overallReadinessScore === "number"
+              ? analysisData.overallReadinessScore
+              : typeof analysisData.readinessScore === "number"
+              ? analysisData.readinessScore
               : null;
         }
 

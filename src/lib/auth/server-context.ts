@@ -56,7 +56,6 @@ export async function requireAuthContext(
     }
   }
 
-  const supabase = await createClient(token);
   let user: any = null;
 
   if (token) {
@@ -65,13 +64,21 @@ export async function requireAuthContext(
       const { data, error } = await adminClient.auth.getUser(token);
       if (!error && data?.user) {
         user = data.user;
+      } else {
+        // Invalid or expired bearer token must fail closed immediately — never leak ambient tab/cookie credentials
+        if (process.env.NODE_ENV !== "test") {
+          console.warn(`[Auth Diagnostic] Invalid or expired bearer token: ${error?.message || "User not found"}`);
+        }
+        throw new Error("UNAUTHORIZED");
       }
-    } catch {
-      // Fallback
+    } catch (err: any) {
+      if (err?.message === "UNAUTHORIZED") {
+        throw err;
+      }
+      throw new Error("UNAUTHORIZED");
     }
-  }
-
-  if (!user) {
+  } else {
+    const supabase = await createClient();
     const {
       data: { user: clientUser },
       error: authError,

@@ -684,38 +684,47 @@ Output MUST be valid JSON formatted exactly as:
   ): Promise<SkillGapAnalysisResult | null> {
     const admin = createAdminClient();
 
-    let query = admin
-      .from("student_skill_gap_analyses")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("student_id", studentId)
-      .order("created_at", { ascending: false });
+    try {
+      let query = admin
+        .from("student_skill_gap_analyses")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("student_id", studentId)
+        .order("created_at", { ascending: false });
 
-    if (targetRole) {
-      query = query.eq("target_role", targetRole.trim());
+      if (targetRole) {
+        query = query.eq("target_role", targetRole.trim());
+      }
+
+      const { data, error } = await query.limit(1).maybeSingle();
+      if (error) {
+        console.error("[SkillGapAnalyzerService] getLatestAnalysis query error:", error);
+        return null;
+      }
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        studentId: data.student_id,
+        tenantId: data.tenant_id,
+        targetRole: data.target_role,
+        targetDriveId: data.target_drive_id,
+        overallReadinessScore: data.overall_readiness_score,
+        summary: data.summary,
+        marketContext: data.market_context || "",
+        matchedSkills: (data.matched_skills as any) || [],
+        missingRequiredSkills: (data.missing_required_skills as any) || [],
+        missingPreferredSkills: (data.missing_preferred_skills as any) || [],
+        skillsWithInsufficientEvidence: (data.skills_with_insufficient_evidence as any) || [],
+        learningRoadmap: (data.learning_roadmap as any) || [],
+        profileSnapshotHash: data.profile_snapshot_hash,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (err) {
+      console.error("[SkillGapAnalyzerService] getLatestAnalysis uncaught exception:", err);
+      return null;
     }
-
-    const { data } = await query.limit(1).maybeSingle();
-    if (!data) return null;
-
-    return {
-      id: data.id,
-      studentId: data.student_id,
-      tenantId: data.tenant_id,
-      targetRole: data.target_role,
-      targetDriveId: data.target_drive_id,
-      overallReadinessScore: data.overall_readiness_score,
-      summary: data.summary,
-      marketContext: data.market_context || "",
-      matchedSkills: (data.matched_skills as any) || [],
-      missingRequiredSkills: (data.missing_required_skills as any) || [],
-      missingPreferredSkills: (data.missing_preferred_skills as any) || [],
-      skillsWithInsufficientEvidence: (data.skills_with_insufficient_evidence as any) || [],
-      learningRoadmap: (data.learning_roadmap as any) || [],
-      profileSnapshotHash: data.profile_snapshot_hash,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-    };
   }
 
   /**
@@ -735,47 +744,66 @@ Output MUST be valid JSON formatted exactly as:
       completionRate: number;
     };
   }> {
+    const defaultSummary = {
+      totalTargeted: 0,
+      inProgress: 0,
+      practiced: 0,
+      evidenceSubmitted: 0,
+      verified: 0,
+      completionRate: 0,
+    };
+
     const admin = createAdminClient();
 
-    const { data: rows } = await admin
-      .from("student_skill_progress")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("student_id", studentId)
-      .order("updated_at", { ascending: false });
+    try {
+      const { data: rows, error } = await admin
+        .from("student_skill_progress")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("student_id", studentId)
+        .order("updated_at", { ascending: false });
 
-    const items: SkillProgressItem[] = (rows || []).map((r: any) => ({
-      id: r.id,
-      studentId: r.student_id,
-      tenantId: r.tenant_id,
-      skillName: r.skill_name,
-      status: r.status,
-      targetRole: r.target_role,
-      evidenceLinks: Array.isArray(r.evidence_links) ? r.evidence_links : [],
-      notes: r.notes,
-      verifiedAt: r.verified_at,
-      updatedAt: r.updated_at,
-    }));
+      if (error) {
+        console.error("[SkillGapAnalyzerService] getSkillProgress query error:", error);
+        return { items: [], summary: defaultSummary };
+      }
 
-    const total = items.length;
-    const inProgress = items.filter((i) => i.status === "IN_PROGRESS").length;
-    const practiced = items.filter((i) => i.status === "PRACTICED").length;
-    const evidenceSubmitted = items.filter((i) => i.status === "EVIDENCE_SUBMITTED").length;
-    const verified = items.filter((i) => i.status === "VERIFIED").length;
-    const completed = practiced + evidenceSubmitted + verified;
-    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+      const items: SkillProgressItem[] = (rows || []).map((r: any) => ({
+        id: r.id,
+        studentId: r.student_id,
+        tenantId: r.tenant_id,
+        skillName: r.skill_name,
+        status: r.status,
+        targetRole: r.target_role,
+        evidenceLinks: Array.isArray(r.evidence_links) ? r.evidence_links : [],
+        notes: r.notes,
+        verifiedAt: r.verified_at,
+        updatedAt: r.updated_at,
+      }));
 
-    return {
-      items,
-      summary: {
-        totalTargeted: total,
-        inProgress,
-        practiced,
-        evidenceSubmitted,
-        verified,
-        completionRate,
-      },
-    };
+      const total = items.length;
+      const inProgress = items.filter((i) => i.status === "IN_PROGRESS").length;
+      const practiced = items.filter((i) => i.status === "PRACTICED").length;
+      const evidenceSubmitted = items.filter((i) => i.status === "EVIDENCE_SUBMITTED").length;
+      const verified = items.filter((i) => i.status === "VERIFIED").length;
+      const completed = practiced + evidenceSubmitted + verified;
+      const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      return {
+        items,
+        summary: {
+          totalTargeted: total,
+          inProgress,
+          practiced,
+          evidenceSubmitted,
+          verified,
+          completionRate,
+        },
+      };
+    } catch (err) {
+      console.error("[SkillGapAnalyzerService] getSkillProgress uncaught exception:", err);
+      return { items: [], summary: defaultSummary };
+    }
   }
 
   /**

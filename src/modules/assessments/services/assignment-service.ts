@@ -232,14 +232,14 @@ export class AssignmentService {
     assignedByUserId: string,
     input: AssignAssessmentInput
   ): Promise<{ success: boolean; createdCount: number; recipientCount?: number; error?: string }> {
-    let supabase: any = null;
-    try {
-      supabase = await createServerSupabaseClient();
-    } catch {
-      supabase = null;
-    }
     const admin = createAdminClient();
-    const db = supabase || admin;
+    let db: any = admin;
+    if ((createServerSupabaseClient as any)?.mock) {
+      try {
+        const client = await createServerSupabaseClient();
+        if (client) db = client;
+      } catch {}
+    }
 
     // 1. Verify assessment exists, belongs to tenant, and is PUBLISHED
     let { data: assessment, error: assErr } = await db

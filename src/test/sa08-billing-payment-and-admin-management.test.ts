@@ -127,6 +127,31 @@ describe("URPLACED SA-08: Complete Institutional Billing, Payment Flow & Super A
             single: vi.fn(async () => ({ data: inserted[0], error: null })),
           };
         }),
+        upsert: vi.fn((payload: any, options?: any) => {
+          const rows = Array.isArray(payload) ? payload : [payload];
+          const conflictCol = options?.onConflict || "id";
+          if (!mockDatabase[table]) mockDatabase[table] = [];
+          rows.forEach((r) => {
+            const existingIdx = mockDatabase[table].findIndex(
+              (item: any) => item[conflictCol] === r[conflictCol]
+            );
+            if (existingIdx >= 0) {
+              mockDatabase[table][existingIdx] = {
+                ...mockDatabase[table][existingIdx],
+                ...r,
+                updated_at: new Date().toISOString(),
+              };
+            } else {
+              mockDatabase[table].push({
+                id: r.id || `mock_${table}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                ...r,
+              });
+            }
+          });
+          return Promise.resolve({ data: rows, error: null });
+        }),
         update: vi.fn((updates: any) => ({
           eq: vi.fn((field: string, val: any) => {
             mockDatabase[table].forEach((r) => {

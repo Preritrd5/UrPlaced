@@ -532,12 +532,27 @@ describe("URPLACED P0 — Global Permanent Deletion & Supabase Hard-Delete Enfor
         success: true,
       } as any);
 
+      const mockAdmin = {
+        from: vi.fn().mockImplementation((table: string) => ({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  single: vi.fn().mockResolvedValue({ data: null, error: { message: "Not found" } }),
+                }),
+              }),
+            }),
+          }),
+        })),
+      };
+
       await expect(
         removeTenantMember({
           membershipId: "mem-1",
           tenantId: "tenant-1",
           actorUserId: "non-placement-head",
           reason: "Staff removal",
+          admin: mockAdmin,
         })
       ).rejects.toThrow(/Unauthorized/);
     });

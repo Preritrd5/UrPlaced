@@ -49,7 +49,6 @@ export async function getCurrentUserProfile(
       }
     }
 
-    const supabase = await createClient(token);
     let user: any = null;
 
     if (token) {
@@ -58,13 +57,15 @@ export async function getCurrentUserProfile(
         const { data, error } = await adminClient.auth.getUser(token);
         if (!error && data?.user) {
           user = data.user;
+        } else {
+          // Explicit token invalid or expired — fail closed immediately to prevent cross-tab identity leaks
+          return null;
         }
       } catch {
-        // Fall back to client getUser
+        return null;
       }
-    }
-
-    if (!user) {
+    } else {
+      const supabase = await createClient();
       const {
         data: { user: clientUser },
         error,

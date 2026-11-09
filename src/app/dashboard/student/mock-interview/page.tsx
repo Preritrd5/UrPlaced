@@ -99,6 +99,11 @@ export default function MockInterviewDashboardPage() {
       if (sessionsRes.ok) {
         const sJson = await sessionsRes.json();
         setSessions(sJson.data || []);
+      } else {
+        const sJson = await sessionsRes.json().catch(() => null);
+        if (sJson?.error && sessionsRes.status !== 404) {
+          console.warn("[MockInterview] loadSessions notice:", sJson.error);
+        }
       }
 
       if (drivesRes.ok) {
@@ -138,8 +143,10 @@ export default function MockInterviewDashboardPage() {
         }),
       });
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to start interview session.");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to start interview session.");
+      }
 
       router.push(`/dashboard/student/mock-interview/${json.data.id}`);
     } catch (err: any) {
@@ -199,9 +206,18 @@ export default function MockInterviewDashboardPage() {
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-2.5">
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
-          <p className="text-xs">{error}</p>
+        <div className="p-4 rounded-xl bg-[#F8F7F3] border border-[#B8B6AC] text-[#24283A] text-sm flex items-start justify-between gap-2.5 shadow-sm">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 shrink-0 text-[#5052C9] mt-0.5" />
+            <p className="text-xs text-[#24283A]">{error}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="text-xs font-medium text-[#747683] hover:text-[#24283A] px-2 py-0.5 rounded transition shrink-0"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 

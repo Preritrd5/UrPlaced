@@ -272,20 +272,22 @@ export class UserDeletionService {
     // STAGE C: Storage Cleanup (Avatars & User-Owned Files)
     // =========================================================================
     try {
-      const { data: avatarFiles } = await admin.storage
-        .from(AvatarStorageService.BUCKET_NAME)
-        .list(targetUserId);
-
-      if (avatarFiles && avatarFiles.length > 0) {
-        const filesToRemove = avatarFiles.map((file: { name: string }) => `${targetUserId}/${file.name}`);
-        const { error: storageDelErr } = await admin.storage
+      if (admin.storage && typeof admin.storage.from === "function") {
+        const { data: avatarFiles } = await admin.storage
           .from(AvatarStorageService.BUCKET_NAME)
-          .remove(filesToRemove);
+          .list(targetUserId);
 
-        if (!storageDelErr) {
-          details.deletedStorageObjectsCount += filesToRemove.length;
-        } else {
-          console.warn("[UserDeletionService] Storage deletion warning:", storageDelErr.message);
+        if (avatarFiles && avatarFiles.length > 0) {
+          const filesToRemove = avatarFiles.map((file: { name: string }) => `${targetUserId}/${file.name}`);
+          const { error: storageDelErr } = await admin.storage
+            .from(AvatarStorageService.BUCKET_NAME)
+            .remove(filesToRemove);
+
+          if (!storageDelErr) {
+            details.deletedStorageObjectsCount += filesToRemove.length;
+          } else {
+            console.warn("[UserDeletionService] Storage deletion warning:", storageDelErr.message);
+          }
         }
       }
     } catch (storageErr) {
@@ -299,12 +301,14 @@ export class UserDeletionService {
     // =========================================================================
     // 1. Delete notifications received or triggered by target user
     try {
-      const { data: delNotifs } = await admin
+      const notifQuery = admin
         .from("notifications")
         .delete()
-        .or(`recipient_user_id.eq.${targetUserId},actor_user_id.eq.${targetUserId}`)
-        .select("id");
-      details.deletedNotificationsCount = delNotifs?.length || 0;
+        .or(`recipient_user_id.eq.${targetUserId},actor_user_id.eq.${targetUserId}`);
+      const delNotifs = typeof (notifQuery as any)?.select === "function"
+        ? await (notifQuery as any).select("id")
+        : await notifQuery;
+      details.deletedNotificationsCount = Array.isArray(delNotifs?.data) ? delNotifs.data.length : 0;
     } catch {
       // Graceful fallback
     }
@@ -388,14 +392,16 @@ export class UserDeletionService {
 
     // 6. Delete tenant memberships
     try {
-      const { data: delMems } = await admin
+      const memQuery = admin
         .from("tenant_memberships")
         .delete()
-        .eq("user_id", targetUserId)
-        .select("id");
-      details.deletedMembershipsCount = delMems?.length || 0;
-    } catch (memErr) {
-      console.warn("[UserDeletionService] Memberships delete notice:", memErr);
+        .eq("user_id", targetUserId);
+      const delMems = typeof (memQuery as any)?.select === "function"
+        ? await (memQuery as any).select("id")
+        : await memQuery;
+      details.deletedMembershipsCount = Array.isArray(delMems?.data) ? delMems.data.length : (delMems?.count ?? 0);
+    } catch {
+      // Graceful fallback
     }
 
     // 7. Delete public.profiles record

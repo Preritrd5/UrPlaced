@@ -44,6 +44,11 @@ export async function createClient(explicitToken?: string) {
           Authorization: authHeader,
         },
       },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
       cookies: {
         getAll() {
           return cookieStore?.getAll?.() || [];
@@ -78,6 +83,11 @@ export async function createClient(explicitToken?: string) {
   }
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
     cookies: {
       getAll() {
         return cookieStore?.getAll?.() || [];

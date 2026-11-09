@@ -411,68 +411,82 @@ export class MockInterviewService {
   ): Promise<MockInterviewSession | null> {
     const admin = createAdminClient();
 
-    const { data: session } = await admin
-      .from("student_mock_interview_sessions")
-      .select(`
-        *,
-        recruitment_drives (title)
-      `)
-      .eq("id", sessionId)
-      .eq("tenant_id", tenantId)
-      .eq("student_id", studentId)
-      .maybeSingle();
+    try {
+      const { data: session, error: sessionErr } = await admin
+        .from("student_mock_interview_sessions")
+        .select(`
+          *,
+          recruitment_drives (title)
+        `)
+        .eq("id", sessionId)
+        .eq("tenant_id", tenantId)
+        .eq("student_id", studentId)
+        .maybeSingle();
 
-    if (!session) return null;
+      if (sessionErr) {
+        console.error("[MockInterviewService] getSession error:", sessionErr);
+        return null;
+      }
 
-    const { data: messages } = await admin
-      .from("student_mock_interview_messages")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("question_index", { ascending: true })
-      .order("created_at", { ascending: true });
+      if (!session) return null;
 
-    const turns: MockInterviewTurn[] = (messages || []).map((m: any) => ({
-      id: m.id,
-      questionIndex: m.question_index,
-      questionText: m.question_text,
-      questionCategory: m.question_category,
-      isFollowUp: m.is_follow_up,
-      studentAnswer: m.student_answer,
-      answerSubmittedAt: m.answer_submitted_at,
-      evaluation: m.evaluation as any,
-      createdAt: m.created_at,
-    }));
+      const { data: messages, error: msgErr } = await admin
+        .from("student_mock_interview_messages")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("question_index", { ascending: true })
+        .order("created_at", { ascending: true });
 
-    return {
-      id: session.id,
-      tenantId: session.tenant_id,
-      studentId: session.student_id,
-      interviewType: session.interview_type as any,
-      targetRole: session.target_role,
-      difficulty: session.difficulty as any,
-      targetDriveId: session.target_drive_id,
-      targetDriveTitle: (session as any).recruitment_drives?.title,
-      totalQuestions: session.total_questions,
-      currentQuestionIndex: session.current_question_index,
-      status: session.status as any,
-      overallScore: session.overall_score,
-      relevanceScore: session.relevance_score,
-      technicalAccuracyScore: session.technical_accuracy_score,
-      depthScore: session.depth_score,
-      structureScore: session.structure_score,
-      practicalReasoningScore: session.practical_reasoning_score,
-      communicationScore: session.communication_score,
-      finalFeedbackSummary: session.final_feedback_summary,
-      strongAnswers: Array.isArray(session.strong_answers) ? session.strong_answers : [],
-      weakAnswers: Array.isArray(session.weak_answers) ? session.weak_answers : [],
-      technicalGaps: Array.isArray(session.technical_gaps) ? session.technical_gaps : [],
-      recommendedExercises: Array.isArray(session.recommended_exercises) ? session.recommended_exercises : [],
-      suggestedNextLevel: session.suggested_next_level,
-      turns,
-      startedAt: session.started_at,
-      completedAt: session.completed_at,
-      createdAt: session.created_at,
-    };
+      if (msgErr) {
+        console.warn("[MockInterviewService] getSession messages query notice:", msgErr);
+      }
+
+      const turns: MockInterviewTurn[] = (messages || []).map((m: any) => ({
+        id: m.id,
+        questionIndex: m.question_index,
+        questionText: m.question_text,
+        questionCategory: m.question_category,
+        isFollowUp: m.is_follow_up,
+        studentAnswer: m.student_answer,
+        answerSubmittedAt: m.answer_submitted_at,
+        evaluation: m.evaluation as any,
+        createdAt: m.created_at,
+      }));
+
+      return {
+        id: session.id,
+        tenantId: session.tenant_id,
+        studentId: session.student_id,
+        interviewType: session.interview_type as any,
+        targetRole: session.target_role,
+        difficulty: session.difficulty as any,
+        targetDriveId: session.target_drive_id,
+        targetDriveTitle: (session as any).recruitment_drives?.title,
+        totalQuestions: session.total_questions,
+        currentQuestionIndex: session.current_question_index,
+        status: session.status as any,
+        overallScore: session.overall_score,
+        relevanceScore: session.relevance_score,
+        technicalAccuracyScore: session.technical_accuracy_score,
+        depthScore: session.depth_score,
+        structureScore: session.structure_score,
+        practicalReasoningScore: session.practical_reasoning_score,
+        communicationScore: session.communication_score,
+        finalFeedbackSummary: session.final_feedback_summary,
+        strongAnswers: Array.isArray(session.strong_answers) ? session.strong_answers : [],
+        weakAnswers: Array.isArray(session.weak_answers) ? session.weak_answers : [],
+        technicalGaps: Array.isArray(session.technical_gaps) ? session.technical_gaps : [],
+        recommendedExercises: Array.isArray(session.recommended_exercises) ? session.recommended_exercises : [],
+        suggestedNextLevel: session.suggested_next_level,
+        turns,
+        startedAt: session.started_at,
+        completedAt: session.completed_at,
+        createdAt: session.created_at,
+      };
+    } catch (err) {
+      console.error("[MockInterviewService] getSession uncaught exception:", err);
+      return null;
+    }
   }
 
   /**
@@ -485,47 +499,57 @@ export class MockInterviewService {
   ): Promise<MockInterviewSession[]> {
     const admin = createAdminClient();
 
-    const { data: rows } = await admin
-      .from("student_mock_interview_sessions")
-      .select(`
-        *,
-        recruitment_drives (title)
-      `)
-      .eq("tenant_id", tenantId)
-      .eq("student_id", studentId)
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    try {
+      const { data: rows, error } = await admin
+        .from("student_mock_interview_sessions")
+        .select(`
+          *,
+          recruitment_drives (title)
+        `)
+        .eq("tenant_id", tenantId)
+        .eq("student_id", studentId)
+        .order("created_at", { ascending: false })
+        .limit(limit);
 
-    return (rows || []).map((s: any) => ({
-      id: s.id,
-      tenantId: s.tenant_id,
-      studentId: s.student_id,
-      interviewType: s.interview_type,
-      targetRole: s.target_role,
-      difficulty: s.difficulty,
-      targetDriveId: s.target_drive_id,
-      targetDriveTitle: s.recruitment_drives?.title,
-      totalQuestions: s.total_questions,
-      currentQuestionIndex: s.current_question_index,
-      status: s.status,
-      overallScore: s.overall_score,
-      relevanceScore: s.relevance_score,
-      technicalAccuracyScore: s.technical_accuracy_score,
-      depthScore: s.depth_score,
-      structureScore: s.structure_score,
-      practicalReasoningScore: s.practical_reasoning_score,
-      communicationScore: s.communication_score,
-      finalFeedbackSummary: s.final_feedback_summary,
-      strongAnswers: Array.isArray(s.strong_answers) ? s.strong_answers : [],
-      weakAnswers: Array.isArray(s.weak_answers) ? s.weak_answers : [],
-      technicalGaps: Array.isArray(s.technical_gaps) ? s.technical_gaps : [],
-      recommendedExercises: Array.isArray(s.recommended_exercises) ? s.recommended_exercises : [],
-      suggestedNextLevel: s.suggested_next_level,
-      turns: [],
-      startedAt: s.started_at,
-      completedAt: s.completed_at,
-      createdAt: s.created_at,
-    }));
+      if (error) {
+        console.error("[MockInterviewService] listSessions query error:", error);
+        return [];
+      }
+
+      return (rows || []).map((s: any) => ({
+        id: s.id,
+        tenantId: s.tenant_id,
+        studentId: s.student_id,
+        interviewType: s.interview_type as any,
+        targetRole: s.target_role,
+        difficulty: s.difficulty as any,
+        targetDriveId: s.target_drive_id,
+        targetDriveTitle: (s as any).recruitment_drives?.title,
+        totalQuestions: s.total_questions,
+        currentQuestionIndex: s.current_question_index,
+        status: s.status as any,
+        overallScore: s.overall_score,
+        relevanceScore: s.relevance_score,
+        technicalAccuracyScore: s.technical_accuracy_score,
+        depthScore: s.depth_score,
+        structureScore: s.structure_score,
+        practicalReasoningScore: s.practical_reasoning_score,
+        communicationScore: s.communication_score,
+        finalFeedbackSummary: s.final_feedback_summary,
+        strongAnswers: Array.isArray(s.strong_answers) ? s.strong_answers : [],
+        weakAnswers: Array.isArray(s.weak_answers) ? s.weak_answers : [],
+        technicalGaps: Array.isArray(s.technical_gaps) ? s.technical_gaps : [],
+        recommendedExercises: Array.isArray(s.recommended_exercises) ? s.recommended_exercises : [],
+        suggestedNextLevel: s.suggested_next_level,
+        turns: [],
+        startedAt: s.started_at,
+        completedAt: s.completed_at,
+        createdAt: s.created_at,
+      }));
+    } catch (err) {
+      console.error("[MockInterviewService] listSessions uncaught exception:", err);
+      return [];
+    }
   }
 
   /**

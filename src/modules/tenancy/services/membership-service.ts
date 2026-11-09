@@ -57,10 +57,11 @@ export async function getUserMemberships(userId: string): Promise<MembershipReco
  */
 export async function getActiveTenantMembership(
   userId: string,
-  tenantId: string
+  tenantId: string,
+  adminClient?: any
 ): Promise<MembershipRecord | null> {
   try {
-    const admin = createAdminClient();
+    const admin = adminClient || createAdminClient();
     const { data, error } = await admin
       .from("tenant_memberships")
       .select("*, tenants(id, name, slug, status)")
@@ -317,11 +318,12 @@ export async function removeTenantMember(params: {
   tenantId: string;
   actorUserId: string;
   reason?: string;
+  admin?: any;
 }): Promise<void> {
-  const admin = createAdminClient();
+  const admin = params.admin || createAdminClient();
 
   // 1. Authorize actor: actor must have PLACEMENT_HEAD role or STAFF_MANAGE in this tenant
-  const actorMembership = await getActiveTenantMembership(params.actorUserId, params.tenantId);
+  const actorMembership = await getActiveTenantMembership(params.actorUserId, params.tenantId, admin);
   if (!actorMembership || actorMembership.status !== "ACTIVE") {
     throw new Error("Unauthorized: Active tenant membership required.");
   }
