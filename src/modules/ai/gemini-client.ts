@@ -10,7 +10,17 @@ export interface GenerateOptions {
   responseMimeType?: string;
   responseSchema?: any;
   timeoutMs?: number;
-  feature: "STUDY_TUTOR" | "QUESTION_INTELLIGENCE" | "MISTAKE_MASTERY" | "DRIVEFIT" | "PLACEMENT_INTELLIGENCE" | "RESUME_SCAN" | "DRIVE_MATCH";
+  feature:
+    | "STUDY_TUTOR"
+    | "QUESTION_INTELLIGENCE"
+    | "MISTAKE_MASTERY"
+    | "DRIVEFIT"
+    | "PLACEMENT_INTELLIGENCE"
+    | "RESUME_SCAN"
+    | "DRIVE_MATCH"
+    | "SKILL_GAP_ANALYSIS"
+    | "MOCK_INTERVIEW"
+    | "CAREER_PASSPORT";
   userId?: string;
   tenantId?: string;
 }

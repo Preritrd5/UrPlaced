@@ -16,6 +16,10 @@ import {
   FileText,
   User,
   TrendingUp,
+  Award,
+  Bot,
+  SlidersHorizontal,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuthContext } from "@/lib/auth/auth-context-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +73,20 @@ export default function StudentDashboardPage() {
     latestScanScore: null,
     matchesCount: 0,
     highestMatchScore: 0,
+  });
+
+  const [careerImprovement, setCareerImprovement] = React.useState<{
+    skillGapTargetRole: string | null;
+    skillGapReadinessScore: number | null;
+    passportVisibility: string;
+    interviewSessionsCount: number;
+    interviewAvgScore: number | null;
+  }>({
+    skillGapTargetRole: null,
+    skillGapReadinessScore: null,
+    passportVisibility: "PRIVATE",
+    interviewSessionsCount: 0,
+    interviewAvgScore: null,
   });
 
   React.useEffect(() => {
@@ -157,6 +175,51 @@ export default function StudentDashboardPage() {
           latestScanScore,
           matchesCount,
           highestMatchScore,
+        });
+      });
+
+      // Background fetch Career Improvement summary (Phase 02)
+      Promise.allSettled([
+        fetch("/api/student/skill-gap").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/student/career-passport").then((r) => (r.ok ? r.json() : null)),
+        fetch("/api/student/mock-interview").then((r) => (r.ok ? r.json() : null)),
+      ]).then(([gapRes, passportRes, interviewRes]) => {
+        let skillGapTargetRole: string | null = null;
+        let skillGapReadinessScore: number | null = null;
+        let passportVisibility = "PRIVATE";
+        let interviewSessionsCount = 0;
+        let interviewAvgScore: number | null = null;
+
+        if (gapRes.status === "fulfilled" && gapRes.value?.data) {
+          skillGapTargetRole = gapRes.value.data.targetRole || null;
+          skillGapReadinessScore =
+            typeof gapRes.value.data.readinessScore === "number"
+              ? gapRes.value.data.readinessScore
+              : null;
+        }
+
+        if (passportRes.status === "fulfilled" && passportRes.value?.data) {
+          passportVisibility = passportRes.value.data.visibility || "PRIVATE";
+        }
+
+        if (interviewRes.status === "fulfilled" && interviewRes.value?.data) {
+          const sessions = Array.isArray(interviewRes.value.data) ? interviewRes.value.data : [];
+          interviewSessionsCount = sessions.length;
+          const completed = sessions.filter(
+            (s: any) => s.status === "COMPLETED" && typeof s.overallScore === "number"
+          );
+          if (completed.length > 0) {
+            const sum = completed.reduce((acc: number, s: any) => acc + s.overallScore, 0);
+            interviewAvgScore = Math.round(sum / completed.length);
+          }
+        }
+
+        setCareerImprovement({
+          skillGapTargetRole,
+          skillGapReadinessScore,
+          passportVisibility,
+          interviewSessionsCount,
+          interviewAvgScore,
         });
       });
     }
@@ -451,6 +514,164 @@ export default function StudentDashboardPage() {
               <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
                 <Link href="/dashboard/student/placement-matches">
                   <span>Explore Matches</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Career Improvement Suite (Phase 02) */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold font-heading text-text-primary">
+                Career Improvement &amp; Practice Suite
+              </h2>
+              <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.5 border-[#2E8F86]/40 text-[#2E8F86]">
+                <Sparkles className="h-3 w-3 mr-1 text-[#2E8F86] inline" /> Mastery Tools
+              </Badge>
+            </div>
+            <p className="text-xs text-text-secondary">
+              Evidence-based skill gap analyzer, verified career passport portfolio, and turn-based AI mock interview studio.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Card 1: AI Skill Gap Analyzer */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center">
+                  <SlidersHorizontal className="h-5 w-5" />
+                </div>
+                <Badge
+                  variant="outline"
+                  className="text-xs font-mono font-semibold border-primary/50 text-primary"
+                >
+                  {careerImprovement.skillGapReadinessScore !== null
+                    ? `${careerImprovement.skillGapReadinessScore}% Ready`
+                    : "Ready to Analyze"}
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">AI Skill Gap Analyzer</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Map target job roles or campus drives to verified skill tiers &amp; phased milestones.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Target Role
+                </span>
+                <p className="text-xs font-semibold text-text-primary truncate">
+                  {careerImprovement.skillGapTargetRole || "No target role evaluated"}
+                </p>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Evaluates verified campus assessments, project evidence, and resume claims into structured learning paths.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/skill-gap">
+                  <span>Analyze Skill Gaps</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card 2: Student Career Passport */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-secondary-subtle)] text-secondary flex items-center justify-center">
+                  <Award className="h-5 w-5" />
+                </div>
+                <Badge
+                  variant="outline"
+                  className="text-xs font-mono font-semibold border-secondary/50 text-secondary"
+                >
+                  {careerImprovement.passportVisibility === "SHAREABLE"
+                    ? "Shareable"
+                    : careerImprovement.passportVisibility === "COLLEGE_VISIBLE"
+                    ? "College Visible"
+                    : "Private"}
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">Student Career Passport</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Verified portfolio with privacy controls, recruiter share links, and branded PDF exports.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Passport Status
+                </span>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                  <ShieldCheck className="h-3.5 w-3.5 text-secondary" />
+                  <span>Student Controlled Visibility</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Cryptographic share tokens ensure tamper-proof portfolio previews for campus and off-campus recruiters.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/career-passport">
+                  <span>Manage Passport</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card 3: AI Mock Interview Studio */}
+          <Card className="border-border bg-card shadow-sm hover:border-primary/40 transition-colors flex flex-col justify-between">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-[var(--color-primary-subtle)] text-primary flex items-center justify-center">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <Badge
+                  variant="outline"
+                  className="text-xs font-mono font-semibold border-primary/50 text-primary"
+                >
+                  {careerImprovement.interviewSessionsCount > 0
+                    ? `${careerImprovement.interviewSessionsCount} Sessions`
+                    : "5 Practice Modes"}
+                </Badge>
+              </div>
+              <CardTitle className="text-base font-heading mt-2">AI Mock Interview Studio</CardTitle>
+              <CardDescription className="text-xs text-text-secondary">
+                Turn-based technical, HR, behavioral, project, and company-specific interview sessions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
+                <span className="text-[11px] text-text-secondary font-mono uppercase tracking-wider block">
+                  Practice Performance
+                </span>
+                <p className="text-xs font-semibold text-text-primary truncate">
+                  {careerImprovement.interviewAvgScore !== null
+                    ? `Average Score: ${careerImprovement.interviewAvgScore}/100`
+                    : "No completed interviews yet"}
+                </p>
+              </div>
+
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                6-dimension rubric evaluation, actionable strengths &amp; weaknesses, and illustrative model answers.
+              </p>
+
+              <Button asChild variant="outline" size="sm" className="w-full justify-between mt-2">
+                <Link href="/dashboard/student/mock-interview">
+                  <span>Open Interview Studio</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </Button>

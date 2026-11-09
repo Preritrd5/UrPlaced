@@ -160,6 +160,39 @@ export const MASTER_NAVIGATION: {
     ],
   },
   {
+    section: "Career Improvement",
+    accountCategory: "STUDENT",
+    items: [
+      {
+        id: "student-skill-gap",
+        name: "Skill Gap Analyzer",
+        href: "/dashboard/student/skill-gap",
+        icon: Compass,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "AI",
+      },
+      {
+        id: "student-career-passport",
+        name: "Career Passport",
+        href: "/dashboard/student/career-passport",
+        icon: Award,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "Pro",
+      },
+      {
+        id: "student-mock-interview",
+        name: "Mock Interview Studio",
+        href: "/dashboard/student/mock-interview",
+        icon: Bot,
+        allowedRoles: ["STUDENT"],
+        accountCategory: "STUDENT",
+        badge: "AI",
+      },
+    ],
+  },
+  {
     section: "Placement Preparation",
     accountCategory: "STUDENT",
     items: [

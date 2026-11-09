@@ -383,4 +383,41 @@ export class ResumeStorageService {
 
     return true;
   }
+
+  /**
+   * Retrieves the student's primary resume (or latest if none designated as primary)
+   */
+  public static async getPrimaryResume(
+    tenantId: string,
+    studentId: string
+  ): Promise<ResumeRecord | null> {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("student_resumes")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("student_id", studentId)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) return null;
+
+    return {
+      id: data.id,
+      tenantId: data.tenant_id,
+      studentId: data.student_id,
+      fileName: data.file_name,
+      filePath: data.file_path,
+      fileSizeBytes: data.file_size_bytes,
+      fileType: data.file_type as any,
+      isPrimary: data.is_primary,
+      parsedText: data.parsed_text,
+      parsingStatus: data.parsing_status as any,
+      parsingError: data.parsing_error,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
 }
