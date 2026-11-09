@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/dialog-system";
+import { FormattedAIResponse } from "@/components/ai/formatted-ai-response";
 import {
   PracticeCategory,
   PracticeDifficulty,
@@ -516,7 +517,7 @@ export default function PlacementPracticePage() {
 
                     <div className="text-xs space-y-1.5 p-3 rounded-lg bg-card border border-border">
                       <div className="font-semibold text-text-primary">Explanation &amp; Solving Approach:</div>
-                      <p className="text-text-secondary leading-relaxed">{res.explanation}</p>
+                      <FormattedAIResponse content={res.explanation} className="text-xs" />
                       {res.solvingApproach && (
                         <p className="text-primary font-mono text-[11px] mt-1">
                           💡 Tip: {res.solvingApproach}
@@ -880,7 +881,7 @@ export default function PlacementPracticePage() {
 
                       <div className="p-3 rounded-lg bg-card border border-border text-xs space-y-1">
                         <span className="font-semibold text-text-primary">Explanation:</span>
-                        <p className="text-text-secondary leading-relaxed">{q.explanation}</p>
+                        <FormattedAIResponse content={q.explanation} className="text-xs" />
                       </div>
                     </div>
                   ))}

@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/dialog-system";
+import { FormattedAIResponse } from "@/components/ai/formatted-ai-response";
 import { CompanyProfileData } from "@/modules/students/services/company-preparation-service";
 
 export default function CompanyPreparationPage() {
@@ -449,8 +450,9 @@ export default function CompanyPreparationPage() {
                           ))}
                         </div>
                       )}
-                      <div className="p-2 rounded bg-surface border border-border text-[11px] text-text-secondary">
-                        <span className="font-semibold text-secondary">Explanation:</span> {q.explanation}
+                      <div className="p-2.5 rounded bg-surface border border-border text-[11px] text-text-secondary space-y-1">
+                        <span className="font-semibold text-secondary">Explanation:</span>
+                        <FormattedAIResponse content={q.explanation} className="text-[11px]" />
                       </div>
                     </div>
                   ))}
