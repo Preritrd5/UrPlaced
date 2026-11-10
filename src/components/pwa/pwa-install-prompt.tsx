@@ -2,10 +2,9 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Download, Share, PlusSquare, X, Check, Laptop, Smartphone } from "lucide-react";
+import { Download, Share, PlusSquare, X, Check, Laptop, Smartphone, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { UrPlacedLogo } from "@/components/ui/urplaced-logo";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 export interface PWAInstallPromptProps {
@@ -18,12 +17,17 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
     isInstallable,
     isInstalled,
     isIos,
+    isAndroid,
+    isMobile,
+    hasNativePrompt,
     isDismissed,
     promptToInstall,
     dismissPrompt,
   } = usePwaInstall();
 
   const [showIosModal, setShowIosModal] = useState(false);
+  const [showMobileModal, setShowMobileModal] = useState(false);
+  const [showDesktopModal, setShowDesktopModal] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
   // If already installed or explicitly dismissed, do not display banner
@@ -37,15 +41,34 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
       return;
     }
 
-    try {
-      setIsInstalling(true);
-      await promptToInstall();
-    } finally {
-      setIsInstalling(false);
+    if (hasNativePrompt) {
+      try {
+        setIsInstalling(true);
+        const accepted = await promptToInstall();
+        if (!accepted && isMobile) {
+          setShowMobileModal(true);
+        }
+      } catch {
+        if (isMobile) {
+          setShowMobileModal(true);
+        }
+      } finally {
+        setIsInstalling(false);
+      }
+      return;
     }
+
+    // When on mobile without native beforeinstallprompt (e.g. Android Firefox, Samsung Internet, Mi Browser)
+    if (isMobile || isAndroid) {
+      setShowMobileModal(true);
+      return;
+    }
+
+    // Desktop browser without prompt
+    setShowDesktopModal(true);
   };
 
-  // 1. Explicit Button Variant (used in header, sidebar, or settings)
+  // 1. Explicit Button Variant (used in desktop header, mobile top bar, sidebar)
   if (variant === "button") {
     return (
       <>
@@ -62,8 +85,10 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
           <span>Install App</span>
         </Button>
 
-        {/* iOS Step-by-Step Instructions Modal */}
+        {/* Platform Guidance Modals */}
         <IosInstallModal isOpen={showIosModal} onClose={() => setShowIosModal(false)} />
+        <MobileInstallModal isOpen={showMobileModal} onClose={() => setShowMobileModal(false)} />
+        <DesktopInstallModal isOpen={showDesktopModal} onClose={() => setShowDesktopModal(false)} />
       </>
     );
   }
@@ -84,7 +109,7 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
                 Install UrPlaced
               </h4>
               <p className="text-xs text-text-secondary truncate">
-                Launch instantly from your desktop or home screen.
+                Launch instantly from your home screen or desktop.
               </p>
             </div>
           </div>
@@ -101,17 +126,19 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
         </div>
 
         <IosInstallModal isOpen={showIosModal} onClose={() => setShowIosModal(false)} />
+        <MobileInstallModal isOpen={showMobileModal} onClose={() => setShowMobileModal(false)} />
+        <DesktopInstallModal isOpen={showDesktopModal} onClose={() => setShowDesktopModal(false)} />
       </>
     );
   }
 
-  // 3. Floating Banner Variant (Bottom Right)
+  // 3. Floating Popup Banner Variant (Prominently displayed across Mobile & Desktop)
   return (
     <>
       <div
         role="region"
         aria-label="Install UrPlaced Application"
-        className={`fixed bottom-4 right-4 z-40 max-w-sm w-full p-4 rounded-2xl bg-card border border-border shadow-lg backdrop-blur-md animate-in slide-in-from-bottom-4 duration-300 ${className}`}
+        className={`fixed bottom-3 inset-x-3 sm:inset-x-auto sm:right-4 sm:bottom-4 z-[9999] sm:max-w-sm p-4 rounded-2xl bg-card border border-border shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5 duration-300 pwa-safe-bottom ${className}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
@@ -134,7 +161,9 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
                 </span>
               </div>
               <p className="text-xs text-text-secondary leading-snug">
-                Fast desktop shortcuts, standalone window, and instant access to campus placement drives.
+                {isMobile
+                  ? "Add UrPlaced to your home screen for quick placement practice, offline shell, and mock interviews."
+                  : "Fast desktop shortcuts, standalone window, and instant access to campus placement drives."}
               </p>
             </div>
           </div>
@@ -144,7 +173,7 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
             onClick={dismissPrompt}
             className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-hover-surface transition-colors shrink-0"
             aria-label="Dismiss installation banner"
-            title="Dismiss for 7 days"
+            title="Dismiss"
           >
             <X className="w-4 h-4" />
           </button>
@@ -173,7 +202,10 @@ export function PWAInstallPrompt({ variant = "banner", className = "" }: PWAInst
         </div>
       </div>
 
+      {/* Platform Instructions Modals */}
       <IosInstallModal isOpen={showIosModal} onClose={() => setShowIosModal(false)} />
+      <MobileInstallModal isOpen={showMobileModal} onClose={() => setShowMobileModal(false)} />
+      <DesktopInstallModal isOpen={showDesktopModal} onClose={() => setShowDesktopModal(false)} />
     </>
   );
 }
@@ -211,7 +243,7 @@ function IosInstallModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                 <Share className="w-3.5 h-3.5 text-primary inline" />
               </p>
               <p className="text-text-secondary text-[11px]">
-                Located in the browser navigation bar at the bottom of your screen.
+                Located in the browser toolbar at the bottom of your screen.
               </p>
             </div>
           </div>
@@ -227,7 +259,7 @@ function IosInstallModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                 <PlusSquare className="w-3.5 h-3.5 text-teal-600 inline" />
               </p>
               <p className="text-text-secondary text-[11px]">
-                Tap the icon featuring a square with a plus sign.
+                Tap the option with the square plus icon.
               </p>
             </div>
           </div>
@@ -243,7 +275,157 @@ function IosInstallModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                 <Check className="w-3.5 h-3.5 text-primary inline" />
               </p>
               <p className="text-text-secondary text-[11px]">
-                UrPlaced will appear on your home screen with its official brand icon.
+                UrPlaced will appear on your home screen with its official icon.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <Button
+            type="button"
+            onClick={onClose}
+            className="bg-primary hover:bg-primary-hover text-white text-xs px-5 h-8"
+          >
+            Got It
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Branded Android / General Mobile Installation Guide Modal
+ */
+function MobileInstallModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md bg-card border-border text-text-primary p-6 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-2 text-left">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Smartphone className="w-4 h-4 text-primary" />
+            </div>
+            <DialogTitle className="text-base font-bold font-heading text-text-primary">
+              Install UrPlaced on Android / Mobile
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-xs text-text-secondary leading-relaxed">
+            Follow these quick steps to install UrPlaced as a native app on your home screen:
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3.5 my-2">
+          {/* Step 1 */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-border/60 text-xs">
+            <div className="w-6 h-6 rounded-full bg-primary/15 text-primary font-mono font-bold flex items-center justify-center shrink-0 text-xs">
+              1
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-text-primary flex items-center gap-1.5">
+                <span>Tap the browser menu</span>
+                <MoreVertical className="w-3.5 h-3.5 text-primary inline" />
+              </p>
+              <p className="text-text-secondary text-[11px]">
+                Tap the three dots (⋮) in the top-right corner of Chrome, Edge, or Samsung Internet.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-border/60 text-xs">
+            <div className="w-6 h-6 rounded-full bg-primary/15 text-primary font-mono font-bold flex items-center justify-center shrink-0 text-xs">
+              2
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-text-primary flex items-center gap-1.5">
+                <span>Select &ldquo;Install app&rdquo; or &ldquo;Add to Home screen&rdquo;</span>
+                <Download className="w-3.5 h-3.5 text-teal-600 inline" />
+              </p>
+              <p className="text-text-secondary text-[11px]">
+                Choose the install option from the browser menu dropdown.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-border/60 text-xs">
+            <div className="w-6 h-6 rounded-full bg-primary/15 text-primary font-mono font-bold flex items-center justify-center shrink-0 text-xs">
+              3
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-text-primary flex items-center gap-1.5">
+                <span>Tap &ldquo;Install&rdquo; to confirm</span>
+                <Check className="w-3.5 h-3.5 text-primary inline" />
+              </p>
+              <p className="text-text-secondary text-[11px]">
+                UrPlaced will install directly to your device app drawer and home screen.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <Button
+            type="button"
+            onClick={onClose}
+            className="bg-primary hover:bg-primary-hover text-white text-xs px-5 h-8"
+          >
+            Got It
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Desktop Installation Guide Modal
+ */
+function DesktopInstallModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md bg-card border-border text-text-primary p-6 rounded-2xl shadow-xl">
+        <DialogHeader className="space-y-2 text-left">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Laptop className="w-4 h-4 text-primary" />
+            </div>
+            <DialogTitle className="text-base font-bold font-heading text-text-primary">
+              Install UrPlaced on Desktop
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-xs text-text-secondary leading-relaxed">
+            Install UrPlaced for a dedicated window and fast desktop launching:
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3.5 my-2">
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-border/60 text-xs">
+            <div className="w-6 h-6 rounded-full bg-primary/15 text-primary font-mono font-bold flex items-center justify-center shrink-0 text-xs">
+              1
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-text-primary">
+                Look at your browser&apos;s address bar
+              </p>
+              <p className="text-text-secondary text-[11px]">
+                Click the Install icon (computer screen with a down arrow or &ldquo;+&rdquo;) on the right side of the URL bar.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-border/60 text-xs">
+            <div className="w-6 h-6 rounded-full bg-primary/15 text-primary font-mono font-bold flex items-center justify-center shrink-0 text-xs">
+              2
+            </div>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-text-primary">
+                Click &ldquo;Install&rdquo; in the confirmation prompt
+              </p>
+              <p className="text-text-secondary text-[11px]">
+                UrPlaced will open in its own clean, standalone application window.
               </p>
             </div>
           </div>

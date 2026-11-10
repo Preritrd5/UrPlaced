@@ -267,6 +267,7 @@ export function AppShell({ children }: AppShellProps) {
           </span>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <PWAInstallPrompt variant="button" className="h-7 px-2 text-[11px] gap-1" />
           <ThemeToggle size="sm" />
           {auth.isAuthenticated && (
             <NotificationBell size="sm" />

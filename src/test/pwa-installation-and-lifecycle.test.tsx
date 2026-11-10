@@ -15,6 +15,7 @@ function TestPwaInstallConsumer({ onRender }: { onRender: (state: ReturnType<typ
       <span data-testid="is-installable">{String(pwa.isInstallable)}</span>
       <span data-testid="is-installed">{String(pwa.isInstalled)}</span>
       <span data-testid="is-ios">{String(pwa.isIos)}</span>
+      <span data-testid="is-mobile">{String(pwa.isMobile)}</span>
       <span data-testid="is-dismissed">{String(pwa.isDismissed)}</span>
       <button data-testid="btn-prompt" onClick={() => pwa.promptToInstall()}>
         Prompt
@@ -29,6 +30,7 @@ function TestPwaInstallConsumer({ onRender }: { onRender: (state: ReturnType<typ
 describe("PWA — Installation Experience and Lifecycle Tests", () => {
   beforeEach(() => {
     localStorage.clear();
+    delete (window as any).__deferredPrompt;
     vi.restoreAllMocks();
 
     window.matchMedia = vi.fn().mockImplementation((query) => ({
@@ -45,15 +47,29 @@ describe("PWA — Installation Experience and Lifecycle Tests", () => {
 
   afterEach(() => {
     localStorage.clear();
+    delete (window as any).__deferredPrompt;
   });
 
-  it("should initialize with default uninstalled states when no prompt has fired", () => {
+  it("should initialize with default uninstalled states when on desktop with no prompt", () => {
     let capturedState: any;
     render(<TestPwaInstallConsumer onRender={(state) => (capturedState = state)} />);
 
     expect(capturedState.isInstalled).toBe(false);
     expect(capturedState.isInstallable).toBe(false);
     expect(capturedState.isDismissed).toBe(false);
+  });
+
+  it("should detect mobile devices (Android) and ensure isInstallable=true even before native prompt fires", () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    );
+
+    let capturedState: any;
+    render(<TestPwaInstallConsumer onRender={(state) => (capturedState = state)} />);
+
+    expect(capturedState.isMobile).toBe(true);
+    expect(capturedState.isAndroid).toBe(true);
+    expect(capturedState.isInstallable).toBe(true);
   });
 
   it("should capture beforeinstallprompt event, set isInstallable=true, and allow promptToInstall()", async () => {
@@ -64,7 +80,7 @@ describe("PWA — Installation Experience and Lifecycle Tests", () => {
     const mockUserChoice = Promise.resolve({ outcome: "accepted", platform: "web" });
 
     const beforeInstallEvent = new Event("beforeinstallprompt") as any;
-    beforeInstallEvent.prompt = mockPrompt;
+    beforeInstallEvent["prompt"] = mockPrompt;
     beforeInstallEvent.userChoice = mockUserChoice;
     beforeInstallEvent.preventDefault = vi.fn();
 
@@ -93,7 +109,7 @@ describe("PWA — Installation Experience and Lifecycle Tests", () => {
     expect(screen.getByTestId("is-installable").textContent).toBe("false");
   });
 
-  it("should persist dismiss state in localStorage with 7-day cooldown", () => {
+  it("should persist dismiss state in localStorage with 24-hour cooldown", () => {
     let capturedState: any;
     render(<TestPwaInstallConsumer onRender={(state) => (capturedState = state)} />);
 
@@ -105,18 +121,18 @@ describe("PWA — Installation Experience and Lifecycle Tests", () => {
     const stored = localStorage.getItem("urplaced_pwa_install_dismissed_until");
     expect(stored).not.toBeNull();
     const expiry = Number(stored);
-    expect(expiry).toBeGreaterThan(Date.now() + 6 * 24 * 60 * 60 * 1000);
+    expect(expiry).toBeGreaterThan(Date.now() + 23 * 60 * 60 * 1000);
   });
 
   it("should render PWAInstallPrompt button variant when installable", () => {
     // Dispatch beforeinstallprompt to make installable
     const beforeInstallEvent = new Event("beforeinstallprompt") as any;
-    beforeInstallEvent.prompt = vi.fn().mockResolvedValue(undefined);
+    beforeInstallEvent["prompt"] = vi.fn().mockResolvedValue(undefined);
     beforeInstallEvent.userChoice = Promise.resolve({ outcome: "accepted" });
     beforeInstallEvent.preventDefault = vi.fn();
 
     const { rerender } = render(<PWAInstallPrompt variant="button" />);
-    // Initially not installable
+    // Initially not installable on desktop
     expect(screen.queryByText("Install App")).toBeNull();
 
     act(() => {
@@ -129,7 +145,7 @@ describe("PWA — Installation Experience and Lifecycle Tests", () => {
 
   it("should render PWAInstallPrompt banner variant with dismissal button", () => {
     const beforeInstallEvent = new Event("beforeinstallprompt") as any;
-    beforeInstallEvent.prompt = vi.fn().mockResolvedValue(undefined);
+    beforeInstallEvent["prompt"] = vi.fn().mockResolvedValue(undefined);
     beforeInstallEvent.userChoice = Promise.resolve({ outcome: "dismissed" });
     beforeInstallEvent.preventDefault = vi.fn();
 
@@ -150,5 +166,22 @@ describe("PWA — Installation Experience and Lifecycle Tests", () => {
     // After dismissal, banner should no longer be visible
     rerender(<PWAInstallPrompt variant="banner" />);
     expect(screen.queryByText("Install UrPlaced App")).toBeNull();
+  });
+
+  it("should render mobile installation popup banner and open guide modal on click", () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    );
+
+    render(<PWAInstallPrompt variant="banner" />);
+    expect(screen.getByText("Install UrPlaced App")).toBeDefined();
+    expect(screen.getByText(/Add UrPlaced to your home screen/i)).toBeDefined();
+
+    const installBtn = screen.getByRole("button", { name: /install now/i });
+    fireEvent.click(installBtn);
+
+    // Guide modal appears explaining 3 steps
+    expect(screen.getByText("Install UrPlaced on Android / Mobile")).toBeDefined();
+    expect(screen.getByText(/Tap the browser menu/i)).toBeDefined();
   });
 });
