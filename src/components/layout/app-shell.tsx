@@ -28,6 +28,7 @@ import { FloatingAIChatbot } from "@/components/ai/floating-ai-chatbot";
 import { NotificationProvider } from "@/modules/notifications/context/notification-context";
 import { StudentNotificationToast } from "@/components/notifications/student-notification-toast";
 import { FullScreenMaintenance } from "@/components/maintenance/full-screen-maintenance";
+import { PWAInstallPrompt } from "@/components/pwa/pwa-install-prompt";
 import {
   getAuthorizedNavigation,
   getRoleDefaultDashboard,
@@ -415,6 +416,9 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* User Identity & Active College Section */}
         <div className="border-t border-border bg-card p-3 space-y-2">
+          {/* PWA Install Button for Mobile Drawer */}
+          <PWAInstallPrompt variant="button" className="w-full justify-center text-xs" />
+
           {/* Tenant Isolation Badge */}
           <div className="flex items-center gap-2 text-[10px] text-text-secondary px-1 pt-1">
             <ShieldCheck className="h-3.5 w-3.5 text-secondary shrink-0" />
@@ -465,6 +469,8 @@ export function AppShell({ children }: AppShellProps) {
                 <span>Switch College ({auth.availableTenants.length})</span>
               </Link>
             )}
+
+            <PWAInstallPrompt variant="button" />
 
             <ThemeToggle size="default" />
 
