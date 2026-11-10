@@ -62,15 +62,21 @@ export async function POST(
       data: scan,
     });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED") {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("UNAUTHORIZED") || msg === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
+    if (
+      msg.startsWith("FORBIDDEN") ||
+      msg.includes("NO_ACTIVE_TENANT") ||
+      msg === "FORBIDDEN" ||
+      msg.includes("MEMBERSHIP_")
+    ) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
     console.error("[Resume Analyze API] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to analyze resume" },
+      { error: "Failed to analyze resume" },
       { status: 500 }
     );
   }

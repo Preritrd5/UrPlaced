@@ -224,18 +224,42 @@ export class StudentService {
     userId: string
   ): Promise<(StudentRow & { department?: { name: string; code: string } }) | null> {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("students")
-      .select("*, department:departments(name, code)")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", userId)
-      .maybeSingle();
+    try {
+      // 1. Primary query with department join
+      const resWithDept = await supabase
+        .from("students")
+        .select("*, department:departments(name, code)")
+        .eq("tenant_id", tenantId)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (error) {
-      throw new Error(`Failed to get student profile: ${error.message}`);
+      if (!resWithDept.error && resWithDept.data) {
+        return resWithDept.data as any;
+      }
+
+      // If no row found with error-free query, student profile simply does not exist yet
+      if (!resWithDept.error && !resWithDept.data) {
+        return null;
+      }
+
+      // 2. If relationship embedding fails (e.g. PGRST200 schema cache or missing relation), fall back to flat select
+      const fallback = await supabase
+        .from("students")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (fallback.error) {
+        console.warn("[StudentService] getByUserId fallback notice:", fallback.error.message);
+        return null;
+      }
+
+      return (fallback.data as any) || null;
+    } catch (err: any) {
+      console.warn("[StudentService] getByUserId uncaught notice:", err?.message);
+      return null;
     }
-
-    return (data as any) || null;
   }
 
   /**

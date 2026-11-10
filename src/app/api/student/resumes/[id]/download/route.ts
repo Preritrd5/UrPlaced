@@ -53,15 +53,21 @@ export async function GET(
       fileName,
     });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED") {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("UNAUTHORIZED") || msg === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
+    if (
+      msg.startsWith("FORBIDDEN") ||
+      msg.includes("NO_ACTIVE_TENANT") ||
+      msg === "FORBIDDEN" ||
+      msg.includes("MEMBERSHIP_")
+    ) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
     console.error("[Resume Download API] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to generate download link" },
+      { error: "Failed to generate download link" },
       { status: 500 }
     );
   }

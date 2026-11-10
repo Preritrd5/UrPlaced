@@ -46,15 +46,21 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: resumes });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED") {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("UNAUTHORIZED") || msg === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
+    if (
+      msg.startsWith("FORBIDDEN") ||
+      msg.includes("NO_ACTIVE_TENANT") ||
+      msg === "FORBIDDEN" ||
+      msg.includes("MEMBERSHIP_")
+    ) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
     console.error("[Resumes API] GET Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to list resumes" },
+      { error: "Failed to list resumes" },
       { status: 500 }
     );
   }
@@ -203,10 +209,16 @@ export async function POST(request: NextRequest) {
       extractionWarning: extraction.warning,
     });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED") {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("UNAUTHORIZED") || msg === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
+    if (
+      msg.startsWith("FORBIDDEN") ||
+      msg.includes("NO_ACTIVE_TENANT") ||
+      msg === "FORBIDDEN" ||
+      msg.includes("MEMBERSHIP_")
+    ) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
     console.error("[Resumes API] POST Error:", error);

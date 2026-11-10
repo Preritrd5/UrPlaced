@@ -8,7 +8,6 @@
 
 import * as zlib from "zlib";
 import JSZip from "jszip";
-import * as pdfParse from "pdf-parse";
 
 export interface ExtractionResult {
   text: string;
@@ -201,27 +200,28 @@ export class ResumeExtractorService {
       let rawText = "";
       let pageCount = 1;
 
-      if (typeof pdfParse === "function") {
-        const parsed = await (pdfParse as any)(buffer);
-        rawText = parsed.text || "";
-        pageCount = parsed.numpages || 1;
-      } else if ((pdfParse as any)?.PDFParse) {
-        const parser = new (pdfParse as any).PDFParse({ data: buffer });
-        const res = await parser.getText();
-        rawText = res?.text || "";
-        pageCount = res?.total || 1;
-      } else if ((pdfParse as any)?.default) {
-        const def = (pdfParse as any).default;
-        if (typeof def === "function") {
-          const parsed = await def(buffer);
-          rawText = parsed.text || "";
-          pageCount = parsed.numpages || 1;
-        } else if (def.PDFParse) {
-          const parser = new def.PDFParse({ data: buffer });
+      try {
+        const pdfModule: any = await import("pdf-parse");
+        const parseFn =
+          typeof pdfModule === "function"
+            ? pdfModule
+            : typeof pdfModule.default === "function"
+            ? pdfModule.default
+            : null;
+
+        if (parseFn) {
+          const parsed = await parseFn(buffer);
+          rawText = parsed?.text || "";
+          pageCount = parsed?.numpages || 1;
+        } else if (pdfModule?.PDFParse || pdfModule?.default?.PDFParse) {
+          const PDFClass = pdfModule?.PDFParse || pdfModule?.default?.PDFParse;
+          const parser = new PDFClass({ data: buffer });
           const res = await parser.getText();
           rawText = res?.text || "";
           pageCount = res?.total || 1;
         }
+      } catch (pdfErr: any) {
+        console.warn("[ResumeExtractorService] PDF parsing engine notice:", pdfErr?.message);
       }
 
       const cleanText = rawText

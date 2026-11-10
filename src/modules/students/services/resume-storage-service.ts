@@ -192,34 +192,39 @@ export class ResumeStorageService {
     tenantId: string,
     studentId: string
   ): Promise<ResumeRecord[]> {
-    const admin = createAdminClient();
-    const { data, error } = await admin
-      .from("student_resumes")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .eq("student_id", studentId)
-      .order("created_at", { ascending: false });
+    try {
+      const admin = createAdminClient();
+      const { data, error } = await admin
+        .from("student_resumes")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("student_id", studentId)
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.warn("[ResumeStorageService] listResumes error:", error.message);
+      if (error) {
+        console.warn("[ResumeStorageService] listResumes notice:", error.message);
+        return [];
+      }
+
+      return (data || []).map((r: any) => ({
+        id: String(r.id || ""),
+        tenantId: String(r.tenant_id || tenantId),
+        studentId: String(r.student_id || studentId),
+        fileName: String(r.file_name || "resume.pdf"),
+        filePath: String(r.file_path || ""),
+        fileSizeBytes: Number(r.file_size_bytes) || 0,
+        fileType: (r.file_type === "docx" ? "docx" : "pdf") as "pdf" | "docx",
+        isPrimary: Boolean(r.is_primary),
+        parsedText: r.parsed_text || null,
+        parsingStatus: (r.parsing_status || "PENDING") as any,
+        parsingError: r.parsing_error || null,
+        createdAt: r.created_at || new Date().toISOString(),
+        updatedAt: r.updated_at || new Date().toISOString(),
+      }));
+    } catch (err: any) {
+      console.warn("[ResumeStorageService] listResumes exception:", err?.message);
       return [];
     }
-
-    return (data || []).map((r) => ({
-      id: r.id,
-      tenantId: r.tenant_id,
-      studentId: r.student_id,
-      fileName: r.file_name,
-      filePath: r.file_path,
-      fileSizeBytes: r.file_size_bytes,
-      fileType: r.file_type as any,
-      isPrimary: r.is_primary,
-      parsedText: r.parsed_text,
-      parsingStatus: r.parsing_status as any,
-      parsingError: r.parsing_error,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    }));
   }
 
   /**

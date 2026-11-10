@@ -58,7 +58,17 @@ export default function StudentResumePage() {
       const res = await fetch("/api/student/resumes");
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || `HTTP ${res.status}`);
+        let userFriendlyMsg = "Failed to load resumes";
+        if (errJson?.error) {
+          userFriendlyMsg = errJson.error;
+        } else if (res.status === 401) {
+          userFriendlyMsg = "Your session has expired. Please sign in again.";
+        } else if (res.status === 403) {
+          userFriendlyMsg = "No active student profile linked to this account. Please verify your student profile.";
+        } else if (res.status >= 500) {
+          userFriendlyMsg = "Resume services are temporarily synchronizing. Please click Retry below.";
+        }
+        throw new Error(userFriendlyMsg);
       }
       const json = await res.json();
       if (json.success && json.data) {
@@ -67,10 +77,17 @@ export default function StudentResumePage() {
           const primary = json.data.find((r: ResumeRecord) => r.isPrimary) || json.data[0];
           setSelectedResumeId(primary.id);
         }
+      } else {
+        setResumes([]);
       }
     } catch (err: any) {
-      console.error("[ResumePage] Fetch resumes error:", err);
-      setError(err.message || "Failed to load resumes");
+      console.warn("[ResumePage] Fetch resumes notice:", err);
+      const msg = err?.message || "Failed to load resumes";
+      setError(
+        msg === "HTTP 500" || msg.includes("500")
+          ? "Resume services are temporarily synchronizing. Please click Retry below."
+          : msg
+      );
     } finally {
       setLoading(false);
     }
@@ -288,9 +305,31 @@ export default function StudentResumePage() {
         </div>
       )}
       {error && (
-        <div className="p-4 rounded-xl bg-danger/10 border border-danger/30 text-danger flex items-center gap-2.5 text-xs font-medium">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{error}</span>
+        <div className="p-4 rounded-xl bg-danger/10 border border-danger/30 text-danger flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-medium animate-in fade-in">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span className="break-words">{error}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fetchResumes()}
+              className="h-7 text-xs px-2.5 border-danger/40 hover:bg-danger/20 text-danger"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Retry
+            </Button>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="p-1 hover:bg-danger/20 rounded text-danger transition-colors text-sm leading-none"
+              aria-label="Dismiss error"
+            >
+              &times;
+            </button>
+          </div>
         </div>
       )}
 

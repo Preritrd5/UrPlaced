@@ -49,15 +49,21 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED") {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("UNAUTHORIZED") || msg === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
+    if (
+      msg.startsWith("FORBIDDEN") ||
+      msg.includes("NO_ACTIVE_TENANT") ||
+      msg === "FORBIDDEN" ||
+      msg.includes("MEMBERSHIP_")
+    ) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
     console.error("[Resume Primary API] Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to set primary resume" },
+      { error: "Failed to set primary resume" },
       { status: 500 }
     );
   }

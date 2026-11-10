@@ -45,14 +45,21 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    if (error.message === "UNAUTHORIZED") {
+    const msg = String(error?.message || "");
+    if (msg.startsWith("UNAUTHORIZED") || msg === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (error.message === "FORBIDDEN" || error.message === "NO_ACTIVE_TENANT") {
+    if (
+      msg.startsWith("FORBIDDEN") ||
+      msg.includes("NO_ACTIVE_TENANT") ||
+      msg === "FORBIDDEN" ||
+      msg.includes("MEMBERSHIP_") ||
+      msg.includes("SUBSCRIPTION_")
+    ) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
     return NextResponse.json(
-      { error: error.message || "Failed to generate passport PDF." },
+      { error: "Failed to generate passport PDF." },
       { status: 500 }
     );
   }

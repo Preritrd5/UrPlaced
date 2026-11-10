@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BrandLoader } from "@/components/common/brand-loader";
 import { FormattedAIResponse } from "@/components/ai/formatted-ai-response";
+import { toast } from "@/components/ui/dialog-system";
+import { MockInterviewSpeechControl } from "@/components/mock-interview/mock-interview-speech-control";
 import type {
   MockInterviewSession,
   MockInterviewTurn,
@@ -130,6 +132,25 @@ export default function MockInterviewSessionPage({
       ...prev,
       [index]: !prev[index],
     }));
+  };
+
+  const handleAppendVoiceTranscript = (chunk: string) => {
+    const trimmed = chunk.trim();
+    if (!trimmed) return;
+
+    setCurrentAnswer((prev) => {
+      const existing = prev.trim();
+      if (!existing) {
+        return trimmed.slice(0, 5000);
+      }
+      const separator = existing.length > 0 ? " " : "";
+      const combined = `${existing}${separator}${trimmed}`;
+      if (combined.length >= 5000) {
+        toast.warning("Maximum character limit (5,000) reached.");
+        return combined.slice(0, 5000);
+      }
+      return combined;
+    });
   };
 
   if (isLoading) {
@@ -656,13 +677,22 @@ export default function MockInterviewSessionPage({
                   {!isTurnEvaluated ? (
                     <form onSubmit={handleSubmitAnswer} className="space-y-4">
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <label className="text-xs font-medium text-[#292D40]">
-                            Your Response
-                          </label>
-                          <span className="text-[11px] font-mono text-[#292D40]/60">
-                            {currentAnswer.length} / 5000 characters
-                          </span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-semibold text-[#24283A]">
+                              Your Response
+                            </label>
+                            <span className="text-[11px] font-mono text-[#292D40]/60">
+                              {currentAnswer.length} / 5000 characters
+                            </span>
+                          </div>
+
+                          <MockInterviewSpeechControl
+                            onAppendTranscript={handleAppendVoiceTranscript}
+                            currentLength={currentAnswer.length}
+                            maxLength={5000}
+                            disabled={isSubmitting}
+                          />
                         </div>
                         <textarea
                           rows={8}
