@@ -1,6 +1,6 @@
 /**
- * Refund and Credit Note Service (SA-05 Workstream 02)
- * Full & Partial refunds, Q10 decoupled subscription actions, and Q11 mandate cancellations.
+ * Refund and Credit Note Service (SA-05 Workstream 02 & Hardened SA-08)
+ * Full & Partial refunds, Q10 decoupled subscription actions, and strict simulated vs genuine payment isolation.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -9,12 +9,17 @@ import { PlatformAuthService } from "@/modules/platform-admin/services/platform-
 
 export type SubscriptionActionOnRefund = "KEEP_ACTIVE" | "CANCEL_IMMEDIATELY" | "CANCEL_AT_PERIOD_END";
 
+export type PaymentClassification = "GENUINE" | "SIMULATED" | "OFFLINE" | "AMBIGUOUS";
+
 export interface IssueRefundParams {
   invoiceId: string;
   amountInr?: number;
   reason: string;
   subscriptionAction: SubscriptionActionOnRefund;
   adminId: string;
+  callerRole?: string; // Optional caller role enforcement ("SUPER_ADMIN")
+  expectedTenantId?: string; // Tenant boundary isolation
+  idempotencyKey?: string; // Idempotency protection key
   admin?: ReturnType<typeof createAdminClient>;
 }
 
@@ -28,12 +33,75 @@ export interface RefundResult {
   invoiceStatus: string;
   subscriptionAction: SubscriptionActionOnRefund;
   subscriptionStatus: string;
+  gateway?: string;
+  isTestReversal?: boolean;
+}
+
+/**
+ * Authoritative Server-Side Payment Classification:
+ * Distinguishes genuine customer gateway payments from explicit simulated/test payments.
+ * Ambiguous records fail closed to prevent accidental fallback.
+ */
+export function classifyPayment(invoice: any, tx?: any): PaymentClassification {
+  if (!invoice) return "AMBIGUOUS";
+
+  // 1. Explicit Simulated / Demo (trusted server-side persistence only)
+  if (
+    invoice.is_demo === true ||
+    invoice.payment_method === "SIMULATED" ||
+    invoice.payment_method === "TEST" ||
+    invoice.payment_classification === "SIMULATED" ||
+    invoice.notes?.includes("[SIMULATED_PAYMENT]") ||
+    invoice.notes?.includes("PAYMENT_CLASSIFICATION:SIMULATED") ||
+    tx?.gateway === "SIMULATED" ||
+    tx?.gateway === "TEST" ||
+    tx?.is_demo === true ||
+    tx?.payment_classification === "SIMULATED"
+  ) {
+    return "SIMULATED";
+  }
+
+  // 2. Explicit Offline / Manual payments (bank transfer, check, offline)
+  if (
+    invoice.payment_method === "BANK_TRANSFER" ||
+    invoice.payment_method === "OFFLINE" ||
+    invoice.payment_method === "MANUAL"
+  ) {
+    return "OFFLINE";
+  }
+
+  // 3. Genuine Razorpay payment
+  const paymentId =
+    invoice.razorpay_payment_id ||
+    (invoice.notes && invoice.notes.match(/pay_[A-Za-z0-9_]+/)?.[0]) ||
+    tx?.payment_id;
+
+  if (
+    (invoice.payment_method === "RAZORPAY" || tx?.gateway === "RAZORPAY" || (paymentId && paymentId.startsWith("pay_"))) &&
+    invoice.is_demo !== true &&
+    invoice.payment_method !== "UNKNOWN"
+  ) {
+    // If paymentId explicitly carries test/mock prefixes assigned by test seeders:
+    if (
+      paymentId &&
+      (paymentId.startsWith("pay_sim_") ||
+        paymentId.startsWith("pay_mock_") ||
+        paymentId.startsWith("pay_demo_") ||
+        paymentId.startsWith("pay_test_"))
+    ) {
+      return "SIMULATED";
+    }
+    return "GENUINE";
+  }
+
+  return "AMBIGUOUS";
 }
 
 export class RefundService {
   /**
    * Issues a full or partial refund for a captured invoice payment.
-   * Decouples refund amount from subscription cancellation per Q10.
+   * Enforces strict separation between genuine Razorpay gateway refunds
+   * and administrative test reversals.
    */
   static async issueRefund(params: IssueRefundParams): Promise<RefundResult> {
     const {
@@ -42,8 +110,18 @@ export class RefundService {
       reason,
       subscriptionAction,
       adminId,
+      callerRole,
+      expectedTenantId,
+      idempotencyKey,
       admin = createAdminClient(),
     } = params;
+
+    // 0. Authorization Gate
+    if (callerRole && callerRole !== "SUPER_ADMIN") {
+      throw new Error(
+        `Unauthorized: Caller with role '${callerRole}' is not authorized to issue refunds. Platform Super Admin access required.`
+      );
+    }
 
     if (!reason || reason.trim().length === 0) {
       throw new Error("Mandatory refund reason is required to issue a refund.");
@@ -65,6 +143,10 @@ export class RefundService {
       notes,
       paid_at,
       payment_method,
+      is_demo,
+      refunded_amount_inr,
+      razorpay_payment_id,
+      razorpay_order_id,
       tenants (
         name,
         slug
@@ -78,7 +160,6 @@ export class RefundService {
     if (!invErr && invData) {
       invoice = invData;
     } else {
-      // Fallback: If not found by initial condition, try the other identifier
       const fallbackQuery = isUuid
         ? admin.from("platform_invoices").select(baseSelect).eq("invoice_number", invoiceId).maybeSingle()
         : admin.from("platform_invoices").select(baseSelect).eq("id", invoiceId).maybeSingle();
@@ -92,6 +173,13 @@ export class RefundService {
       throw new Error(`Invoice not found: ${invoiceId}`);
     }
 
+    // Tenant Isolation Gate
+    if (expectedTenantId && invoice.tenant_id !== expectedTenantId) {
+      throw new Error(
+        `Forbidden: Cross-tenant refund rejected. Invoice belongs to tenant '${invoice.tenant_id}', but caller requested tenant '${expectedTenantId}'.`
+      );
+    }
+
     if (invoice && !invoice.tenants && invoice.tenant_id) {
       try {
         const { data: t } = await admin
@@ -102,6 +190,35 @@ export class RefundService {
         if (t) invoice.tenants = t;
       } catch {
         // Tenants query optional
+      }
+    }
+
+    // Idempotency Check: if idempotencyKey was already successfully processed
+    if (idempotencyKey) {
+      try {
+        const { data: existingRefund } = await admin
+          .from("refunds")
+          .select("*")
+          .eq("idempotency_key", idempotencyKey)
+          .maybeSingle();
+
+        if (existingRefund && existingRefund.status === "SUCCESS") {
+          return {
+            success: true,
+            refundId: existingRefund.refund_id,
+            creditNoteId: existingRefund.credit_note_id || `cn_${existingRefund.id}`,
+            creditNoteNumber: existingRefund.credit_note_number || `CN-REC-${existingRefund.refund_id}`,
+            amountInr: Number(existingRefund.amount_inr),
+            isFullRefund: existingRefund.is_full_refund || false,
+            invoiceStatus: invoice.status,
+            subscriptionAction,
+            subscriptionStatus: "ACTIVE",
+            gateway: existingRefund.gateway,
+            isTestReversal: existingRefund.gateway === "SIMULATED",
+          };
+        }
+      } catch {
+        // Table or column optional
       }
     }
 
@@ -145,7 +262,7 @@ export class RefundService {
     // 2. Fetch associated captured payment transaction (or support administrative offline payments)
     let paymentId = invoice.razorpay_payment_id;
     let orderId = invoice.razorpay_order_id;
-    let gateway = "RAZORPAY";
+    let tx: any = null;
 
     if (!paymentId && invoice.notes) {
       const payMatch = invoice.notes.match(/Payment ID:\s*(pay_[A-Za-z0-9_]+)/i);
@@ -158,39 +275,54 @@ export class RefundService {
       }
     }
 
-    if (!paymentId) {
-      try {
-        const { data: tx } = await admin
-          .from("payment_transactions")
-          .select("payment_id, order_id")
-          .eq("invoice_id", invoiceId)
-          .eq("status", "CAPTURED")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+    try {
+      const txQuery = paymentId
+        ? admin.from("payment_transactions").select("*").eq("payment_id", paymentId).maybeSingle()
+        : admin.from("payment_transactions").select("*").eq("invoice_id", invoice.id).eq("status", "CAPTURED").order("created_at", { ascending: false }).limit(1).maybeSingle();
 
-        if (tx) {
-          paymentId = tx.payment_id;
-          orderId = tx.order_id;
-        }
-      } catch {
-        // Table may not exist in unmigrated environments
+      const { data: foundTx } = await txQuery;
+      if (foundTx) {
+        tx = foundTx;
+        paymentId = paymentId || tx.payment_id;
+        orderId = orderId || tx.order_id;
       }
+    } catch {
+      // Table may not exist in unmigrated environments
     }
 
-    // 3. Initiate Gateway Refund or Administrative Reversal
+    // 3. Classify Payment
+    const classification = classifyPayment(invoice, tx);
+
+    if (classification === "AMBIGUOUS") {
+      await PlatformAuthService.logAuditEvent({
+        actorId: adminId || "SYSTEM_AUDIT",
+        action: "REFUND_REJECTED_AMBIGUOUS_PAYMENT",
+        resourceType: "INVOICE",
+        resourceId: invoice.id,
+        metadata: {
+          reason: "Ambiguous or untrusted payment classification; failing closed for safety.",
+          invoiceNumber: invoice.invoice_number,
+        },
+        adminClient: admin,
+      });
+      throw new Error("Payment classification is ambiguous or untrusted. Administrative refund rejected for security.");
+    }
+
+    // 4. Initiate Gateway Refund or Administrative Reversal
     let rzpRefund: any;
-    if (paymentId && paymentId.startsWith("pay_")) {
+    let gateway = "RAZORPAY";
+    let isTestReversal = false;
+
+    if (classification === "GENUINE") {
+      gateway = "RAZORPAY";
       let razorpayClient: any = null;
       try {
         razorpayClient = getRazorpayClient();
       } catch (clientErr: any) {
-        console.warn("[Refund Service] Razorpay client init notice:", clientErr?.message || clientErr);
+        throw new Error(`Razorpay gateway configuration failure: ${clientErr?.message || "Missing API credentials"}`);
       }
 
       if (razorpayClient && typeof razorpayClient.payments?.fetch === "function") {
-        // Pre-refund reconciliation: verify payment state directly on Razorpay gateway
-        // to prevent duplicate refunds or exceeding live remaining balance.
         try {
           const livePayment = await razorpayClient.payments.fetch(paymentId);
           if (livePayment) {
@@ -214,12 +346,80 @@ export class RefundService {
           if (reconErr?.message?.includes("Gateway Reconciliation Notice")) {
             throw reconErr;
           }
+          const isNotFound = reconErr?.statusCode === 404 || reconErr?.error?.description?.includes("does not exist");
+          if (isNotFound) {
+            throw new Error(`Razorpay payment ${paymentId} not found on remote gateway. Gateway refund cannot be processed.`);
+          }
           console.warn("[Refund Service] Gateway pre-refund reconciliation check notice:", reconErr?.message || reconErr);
         }
       }
 
-      if (razorpayClient) {
+      if (!razorpayClient || typeof razorpayClient.payments?.refund !== "function") {
+        throw new Error("Razorpay client is not configured for refunds.");
+      }
 
+      try {
+        rzpRefund = await razorpayClient.payments.refund(paymentId, {
+          amount: refundAmountPaise,
+          notes: {
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            tenantId: invoice.tenant_id,
+            reason,
+            subscriptionAction,
+          },
+        });
+      } catch (gatewayErr: any) {
+        console.error("[Refund Service] Gateway refund call failed for genuine payment:", {
+          paymentId,
+          invoiceId: invoice.id,
+          statusCode: gatewayErr?.statusCode || gatewayErr?.error?.statusCode,
+          error: gatewayErr?.error?.description || gatewayErr?.message,
+        });
+
+        await PlatformAuthService.logAuditEvent({
+          actorId: adminId || "SYSTEM_SUPER_ADMIN",
+          action: "GENUINE_REFUND_GATEWAY_FAILED",
+          resourceType: "INVOICE",
+          resourceId: invoice.id,
+          metadata: {
+            paymentId,
+            statusCode: gatewayErr?.statusCode || gatewayErr?.error?.statusCode,
+            error: gatewayErr?.error?.description || gatewayErr?.message,
+          },
+          adminClient: admin,
+        });
+
+        const status = gatewayErr?.statusCode || gatewayErr?.error?.statusCode;
+        const desc = gatewayErr?.error?.description || gatewayErr?.message || "Gateway rejection";
+
+        if (status === 401 || status === 403) {
+          throw new Error(`Razorpay gateway authentication failure (${status}): ${desc}`);
+        } else if (status === 404 || desc.includes("The id provided does not exist") || desc.includes("not found")) {
+          throw new Error(`Razorpay payment ${paymentId} not found on remote gateway: ${desc}`);
+        } else if (status === 429) {
+          throw new Error(`Razorpay rate limit exceeded (HTTP 429). Please retry shortly.`);
+        } else if (status >= 500) {
+          throw new Error(`Razorpay remote gateway internal error (HTTP ${status}). Reconciliation required.`);
+        } else if (gatewayErr?.code === "ETIMEDOUT" || gatewayErr?.message?.includes("timeout")) {
+          throw new Error(`Razorpay network timeout. Transaction state uncertain; reconciliation required before retrying.`);
+        } else {
+          throw new Error(`Razorpay refund failed: ${desc}`);
+        }
+      }
+    } else if (classification === "SIMULATED") {
+      gateway = "SIMULATED";
+      isTestReversal = true;
+
+      let razorpayClient: any = null;
+      try {
+        razorpayClient = getRazorpayClient();
+      } catch {
+        // Mock client not available
+      }
+
+      let simulatedSuccess = false;
+      if (razorpayClient && typeof razorpayClient.payments?.refund === "function") {
         try {
           rzpRefund = await razorpayClient.payments.refund(paymentId, {
             amount: refundAmountPaise,
@@ -231,56 +431,43 @@ export class RefundService {
               subscriptionAction,
             },
           });
-        } catch (gatewayErr: any) {
-          console.error("[Refund Service] Gateway refund call failed:", gatewayErr);
-          const errDetails = [
-            gatewayErr?.message,
-            gatewayErr?.description,
-            gatewayErr?.error?.description,
-            gatewayErr?.error?.code,
-            JSON.stringify(gatewayErr || ""),
-          ].filter(Boolean).join(" ");
+          simulatedSuccess = true;
+        } catch (simErr: any) {
+          const desc = simErr?.error?.description || simErr?.message || "";
+          const status = simErr?.statusCode || simErr?.error?.statusCode;
+          const isExpectedTestNotFound =
+            status === 400 ||
+            status === 404 ||
+            desc.includes("does not exist") ||
+            desc.includes("not found");
 
-          const isNonExistentOrMock =
-            process.env.NODE_ENV !== "production" ||
-            paymentId.startsWith("pay_test_") ||
-            paymentId.startsWith("pay_manual_") ||
-            paymentId.startsWith("pay_mock_") ||
-            paymentId.startsWith("pay_demo_") ||
-            paymentId.startsWith("pay_sim_") ||
-            errDetails.includes("does not exist") ||
-            errDetails.includes("BAD_REQUEST_ERROR") ||
-            errDetails.includes("not found") ||
-            errDetails.includes("The id provided does not exist") ||
-            errDetails.includes("Authentication failed") ||
-            errDetails.includes("BAD_REQUEST") ||
-            gatewayErr?.statusCode === 400 ||
-            gatewayErr?.error?.statusCode === 400;
-
-          if (isNonExistentOrMock) {
-            console.warn("[Refund Service] Razorpay payment not found on remote gateway or test payment; recording administrative test reversal.");
-            gateway = "SIMULATED";
-            rzpRefund = {
-              id: `rfnd_sim_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
-              amount: refundAmountPaise,
-              currency: "INR",
-              status: "processed",
-            };
+          if (isExpectedTestNotFound) {
+            // Structured informational log for expected simulated-payment fallback, never console.error
+            console.info("[Refund Service] Expected simulated payment not found on remote gateway; recording authorized administrative test reversal.", {
+              operation: "ADMINISTRATIVE_TEST_REVERSAL",
+              paymentId,
+              invoiceId: invoice.id,
+              classification: "SIMULATED",
+              reason,
+            });
           } else {
-            throw new Error(`Razorpay refund failed: ${gatewayErr?.error?.description || gatewayErr?.message || "Gateway rejection"}`);
+            console.error("[Refund Service] Unexpected internal error during simulated payment refund:", simErr);
+            throw new Error(`Simulated payment refund failed with unexpected internal gateway error: ${desc}`);
           }
         }
-      } else {
-        gateway = "SIMULATED";
+      }
+
+      if (!simulatedSuccess) {
         rzpRefund = {
           id: `rfnd_sim_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
           amount: refundAmountPaise,
           currency: "INR",
           status: "processed",
+          classification: "ADMINISTRATIVE_TEST_REVERSAL",
         };
       }
     } else {
-      // Administrative refund for manual/offline/bank transfer invoices
+      // OFFLINE
       gateway = "OFFLINE";
       paymentId = paymentId || `pay_manual_${invoice.invoice_number}`;
       orderId = orderId || `ord_manual_${invoice.invoice_number}`;
@@ -294,7 +481,7 @@ export class RefundService {
 
     const now = new Date().toISOString();
 
-    // 4. Record in public.refunds (if table exists)
+    // 5. Record in public.refunds (if table exists)
     let refundRecordId = rzpRefund.id;
     try {
       const { data: refundRecord } = await admin
@@ -312,6 +499,8 @@ export class RefundService {
           reason,
           subscription_action: subscriptionAction,
           gateway,
+          classification: isTestReversal ? "ADMINISTRATIVE_TEST_REVERSAL" : "GATEWAY_CONFIRMED",
+          idempotency_key: idempotencyKey || null,
           gateway_response: rzpRefund,
           created_by: adminId,
           created_at: now,
@@ -326,7 +515,7 @@ export class RefundService {
       console.warn("[Refund Service] Note: public.refunds table insert skipped or unavailable.");
     }
 
-    // 5. Update invoice refunded amount and status
+    // 6. Update invoice refunded amount and status
     const newRefundedTotal = Number(((alreadyRefundedPaise + refundAmountPaise) / 100).toFixed(2));
     const updatedInvoiceStatus = isFullRefund ? "REFUNDED" : "PARTIALLY_REFUNDED";
     const updatedNotes = invoice.notes
@@ -354,7 +543,7 @@ export class RefundService {
         .eq("id", invoice.id);
     }
 
-    // 6. Generate Credit Note with exact integer paise reconciliation
+    // 7. Generate Credit Note with exact integer paise reconciliation
     const creditNoteNumber = `CN-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
     const basePortionPaise = Math.round((refundAmountPaise * 100) / 118);
     const taxPortionPaise = refundAmountPaise - basePortionPaise;
@@ -388,7 +577,7 @@ export class RefundService {
       console.warn("[Refund Service] Warning: Credit note record creation issue.");
     }
 
-    // 7. Q10 & Q11: Apply decoupled subscription action & mandate cancellation
+    // 8. Q10 & Q11: Apply decoupled subscription action & mandate cancellation
     let currentSubscriptionStatus = "ACTIVE";
     if (invoice.subscription_id || invoice.tenant_id) {
       const subQuery = invoice.subscription_id
@@ -470,15 +659,14 @@ export class RefundService {
             // Table optional
           }
         }
-        // If KEEP_ACTIVE: do not modify subscription or mandate status!
       }
     }
 
-    // 8. Platform Audit Log
+    // 9. Platform Audit Log
     try {
       await PlatformAuthService.logAuditEvent({
-        actorId: adminId,
-        action: "PLATFORM_INVOICE_REFUND_ISSUED",
+        actorId: adminId || "SYSTEM_SUPER_ADMIN",
+        action: isTestReversal ? "ADMINISTRATIVE_TEST_REVERSAL" : "PLATFORM_INVOICE_REFUND_ISSUED",
         resourceType: "INVOICE",
         resourceId: invoice.id,
         metadata: {
@@ -487,6 +675,8 @@ export class RefundService {
           isFullRefund,
           subscriptionAction,
           reason,
+          gateway,
+          classification: isTestReversal ? "ADMINISTRATIVE_TEST_REVERSAL" : "GATEWAY_CONFIRMED",
         },
         adminClient: admin,
       });
@@ -504,19 +694,25 @@ export class RefundService {
       invoiceStatus: updatedInvoiceStatus,
       subscriptionAction,
       subscriptionStatus: currentSubscriptionStatus,
+      gateway,
+      isTestReversal,
     };
   }
 
   /**
-   * Lists refund records, scoped by tenant for college users, or global for Super Admin.
+   * Lists historical refunds with tenant boundary isolation.
    */
   static async listRefunds(params: {
     tenantId?: string;
     invoiceId?: string;
     status?: string;
+    limit?: number;
+    offset?: number;
     admin?: ReturnType<typeof createAdminClient>;
   } = {}) {
-    const { tenantId, invoiceId, status, admin = createAdminClient() } = params;
+    const admin = params.admin || createAdminClient();
+    const limit = params.limit || 50;
+    const offset = params.offset || 0;
 
     let query = admin
       .from("refunds")
@@ -541,21 +737,22 @@ export class RefundService {
           slug
         )
       `)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    if (tenantId && tenantId !== "ALL") {
-      query = query.eq("tenant_id", tenantId);
+    if (params.tenantId && params.tenantId !== "ALL") {
+      query = query.eq("tenant_id", params.tenantId);
     }
-    if (invoiceId) {
-      query = query.eq("invoice_id", invoiceId);
+    if (params.invoiceId) {
+      query = query.eq("invoice_id", params.invoiceId);
     }
-    if (status && status !== "ALL") {
-      query = query.eq("status", status);
+    if (params.status && params.status !== "ALL") {
+      query = query.eq("status", params.status);
     }
 
     const { data, error } = await query;
     if (error) {
-      // Graceful fallback if refunds table is not available
+      console.warn("[Refund Service] listRefunds error:", error.message);
       return [];
     }
 
