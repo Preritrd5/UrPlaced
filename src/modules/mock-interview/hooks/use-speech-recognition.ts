@@ -59,7 +59,7 @@ export function useSpeechRecognition({
   const maxLengthRef = useRef(maxLength);
   maxLengthRef.current = maxLength;
 
-  // Browser capability detection
+  // Browser capability detection & real-time permission status observer
   useEffect(() => {
     const Ctor = resolveSpeechRecognitionConstructor();
     if (Ctor) {
@@ -68,6 +68,23 @@ export function useSpeechRecognition({
     } else {
       setIsSupported(false);
       setState("UNSUPPORTED");
+    }
+
+    // Real-time permission observer: if user enables mic in Chrome settings, clear error immediately
+    if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "microphone" as PermissionName })
+        .then((permStatus) => {
+          permStatus.onchange = () => {
+            if (permStatus.state === "granted") {
+              setErrorMessage(null);
+              setState("IDLE");
+            }
+          };
+        })
+        .catch(() => {
+          // Unsupported query in some browsers, safe to ignore
+        });
     }
   }, []);
 
@@ -95,7 +112,7 @@ export function useSpeechRecognition({
     }
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const Ctor = resolveSpeechRecognitionConstructor();
     if (!Ctor) {
       setState("UNSUPPORTED");
@@ -124,6 +141,32 @@ export function useSpeechRecognition({
     pendingInterimRef.current = "";
     setInterimTranscript("");
     setErrorMessage(null);
+
+    // Proactively request / verify microphone permission via getUserMedia if available
+    if (typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getUserMedia === "function") {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (mediaErr: any) {
+        if (
+          mediaErr?.name === "NotAllowedError" ||
+          mediaErr?.name === "PermissionDeniedError" ||
+          mediaErr?.message?.includes("Permission denied") ||
+          mediaErr?.message?.includes("not-allowed")
+        ) {
+          setErrorMessage(
+            "Microphone access was denied. Turn on the Microphone toggle in your address bar (tune/lock icon) and click Retry."
+          );
+          setState("ERROR");
+          return;
+        }
+        if (mediaErr?.name === "NotFoundError" || mediaErr?.name === "DevicesNotFoundError") {
+          setErrorMessage("No microphone was found. Please ensure a microphone is connected and enabled.");
+          setState("ERROR");
+          return;
+        }
+      }
+    }
 
     try {
       const recognition = new Ctor();
@@ -200,7 +243,7 @@ export function useSpeechRecognition({
         switch (errorKey) {
           case "not-allowed":
           case "service-not-allowed":
-            userFriendlyMsg = "Microphone access was denied. Please allow microphone permission in your browser settings.";
+            userFriendlyMsg = "Microphone access was denied. Turn on the Microphone toggle in your address bar (tune/lock icon) and click Retry.";
             break;
           case "audio-capture":
             userFriendlyMsg = "No microphone was found. Please ensure a microphone is connected and enabled.";
