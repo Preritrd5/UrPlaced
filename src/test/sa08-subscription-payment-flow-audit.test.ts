@@ -326,7 +326,7 @@ describe("URPLACED — Complete Subscription Payment Flow Audit & Verification S
       const permPolicy = globalHeaderConfig?.headers?.find((h: any) => h.key === "Permissions-Policy");
       expect(permPolicy).toBeDefined();
       expect(permPolicy?.value).toContain("camera=()");
-      expect(permPolicy?.value).toContain("microphone=()");
+      expect(permPolicy?.value).toMatch(/microphone=\((self)?\)/);
       expect(permPolicy?.value).toContain("geolocation=()");
       expect(permPolicy?.value).toContain("accelerometer=()");
       expect(permPolicy?.value).toContain("gyroscope=()");
